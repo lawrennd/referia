@@ -1,3 +1,6 @@
+from .config import *
+from . import assess
+
 # This file processes the data
 
 """2. Ensure that date formats are correct.

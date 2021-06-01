@@ -14,7 +14,7 @@ import clexp.expenses as exp
 
 def outputs():
     """Load in the allocation spread sheet to data frames."""
-    return pd.read_excel(os.path.join(config['datadirectory'], config['allocation']), sheet_name=config['outputs_sheet'], header=3)
+    return pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['outputs_sheet'], header=3)
 
-def addtional():
-    return pd.read_excel(os.path.join(config['datadirectory'], config['allocation']), sheet_name=config['additional_data_sheet'], header=2)    
+def additional():
+    return pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['additional_data_sheet'], header=2)    
