@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
+
 from .config import *
 from IPython.display import Markdown, display
 
@@ -27,7 +29,9 @@ def query_score(ds):
 
 def view(data):
     """Provide a view of the data that allows the user to verify some aspect of its quality."""
-    data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8, ax=ax)
+    ax.set_xticks(range(0,13))
 
 def view_record(ds):
     """Print a view of a single record."""
