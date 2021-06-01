@@ -17,9 +17,9 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = "danalysis"
+NAME = "ref"
 DESCRIPTION = "Template files for performing data analysis with python.."
-URL = "https://github.com/lawrennd/danalysis"
+URL = "https://github.com/lawrennd/ref"
 EMAIL = "emal@domain.here"
 AUTHOR = "Givenname Familyname"
 REQUIRES_PYTHON = ">=3.6.0"
@@ -27,7 +27,11 @@ VERSION = "0.1.0"
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    "pandas", "numpy", "jupyter", "matplotlib", 
+    "pandas",
+    "numpy",
+    "jupyter",
+    "matplotlib",
+    "clexp",
 ]
 
 # What packages are optional?
@@ -35,7 +39,7 @@ EXTRAS = {
     "interactive html plots": ["bokeh",],
 }
 
-PACKAGE_DATA = {"danalysis": ["defaults.yml"]}
+PACKAGE_DATA = {"ref": ["defaults.yml"]}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
