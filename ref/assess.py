@@ -14,8 +14,8 @@ from . import access
 def data():
     outputs = access.outputs()
     additional = access.additional()
-    outputs = outputs.set_index(outputs['REF output identifier'].apply(lambda x: int(x.replace('O', ''))))
-    additional = additional.set_index(additional['REF output identifier'].apply(lambda x: int(x.replace('O', ''))))    
+    outputs.set_index(outputs['REF output identifier'].apply(lambda x: int(x.replace('O', ''))), inplace=True)
+    additional.set_index(additional['REF output identifier'].apply(lambda x: int(x.replace('O', ''))), inplace=True)    
     return outputs.join(additional, rsuffix='additional')
 
 def query(data, index):

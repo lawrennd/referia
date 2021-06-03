@@ -14,13 +14,21 @@ def outputs():
     data =  pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['outputs_sheet'], converters=CONVERTERS, header=3)
     for key in CONVERTERS:
         if key in data.columns:
-            data[key] = data[key].fillna('')	
+            data[key].fillna('', inplace=True)	
     return data 
-    
+
+def upload():
+    """Load in the upload spread sheet to data frames."""
+    data =  pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['upload'])), sheet_name=config['outputs_sheet'], converters=CONVERTERS, header=3)
+    for key in CONVERTERS:
+        if key in data.columns:
+            data[key].fillna('', inplace=True)	
+    return data 
+
 def additional():
     
     data = pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['additional_data_sheet'],  converters=CONVERTERS, header=2)    
     for key in CONVERTERS:
         if key in data.columns:
-            data[key] = data[key].fillna('')	
+            data[key].fillna('', inplace=True)	
     return data
