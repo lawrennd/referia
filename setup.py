@@ -31,7 +31,7 @@ REQUIRED = [
     "numpy",
     "jupyter",
     "matplotlib",
-    "clexp",
+    "unidecode",
 ]
 
 # What packages are optional?

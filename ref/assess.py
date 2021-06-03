@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from .config import *
 from IPython.display import Markdown, display
 
+from unidecode import unidecode
 
 from . import access
 
@@ -24,9 +25,12 @@ def query(data, index):
 def query_score(ds):
     view_record(ds)
     os.system('open ' + '--background ' + '"' + os.path.join(config['datadirectory'],ds['LocalDocumentLink']) + '"')
-    os.system('open ' + '-a "Google Chrome.app" --background ' + '"' + config['search_url'] + ds['Output title'].replace(' ', '%20') + '"')
+    os.system('open ' + '-a "Google Chrome.app" --background ' + '"' + _search_url(ds) + '"')
 
 
+def _search_url(ds):
+    return unidecode(config['search_url'] + ds['Output title'].replace(' ', '%20'))
+    
 def view(data):
     """Provide a view of the data that allows the user to verify some aspect of its quality."""
     fig, ax = plt.subplots(figsize=(8, 5))
