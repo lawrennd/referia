@@ -24,7 +24,8 @@ def query(data, index):
 
 def query_score(ds):
     view_record(ds)
-    os.system('open ' + '--background ' + '"' + os.path.join(config['datadirectory'],ds['LocalDocumentLink']) + '"')
+    if type(ds["LocalDocumentLink"]) is str:
+        os.system('open ' + '--background ' + '"' + os.path.join(config['datadirectory'],ds['LocalDocumentLink']) + '"')
     os.system('open ' + '-a "Google Chrome.app" --background ' + '"' + _search_url(ds) + '"')
 
 
