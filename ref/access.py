@@ -1,7 +1,5 @@
 import os
 import sys
-from datetime import date
-import re
 import pandas as pd
 from .config import *
 
@@ -9,12 +7,20 @@ from .config import *
 
 """Place commands in this file to access the data electronically. Don't remove any missing values, or deal with outliers. Make sure you have legalities correct, both intellectual property and personal data privacy rights. Beyond the legal side also think about the ethical issues around this data. """
 
-
-import clexp.expenses as exp
+CONVERTERS = converters={'Comment':str,'Comment 2':str, 'Comment 4':str}
 
 def outputs():
     """Load in the allocation spread sheet to data frames."""
-    return pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['outputs_sheet'], header=3)
-
+    data =  pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['outputs_sheet'], converters=CONVERTERS, header=3)
+    for key in CONVERTERS:
+        if key in data.columns:
+            data[key] = data[key].fillna('')	
+    return data 
+    
 def additional():
-    return pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['additional_data_sheet'], header=2)    
+    
+    data = pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['additional_data_sheet'],  converters=CONVERTERS, header=2)    
+    for key in CONVERTERS:
+        if key in data.columns:
+            data[key] = data[key].fillna('')	
+    return data
