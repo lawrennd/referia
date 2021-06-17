@@ -87,9 +87,9 @@ def score(index, df, write_df):
         write_df.at[write_index, 'Score'] = score
         write_df.at[write_index, 'Comment 2'] = interdisciplinary_comment
         write_df.at[write_index, 'Comment 4'] = my_comment
-        filename = os.path.expandvars(os.path.join(ref.access.config['datadirectory'], ref.access.config['upload']))
+        filename = os.path.expandvars(os.path.join(config['datadirectory'], config['upload']))
         writer = pd.ExcelWriter(filename, engine='xlsxwriter')
-        write_df.to_excel(writer,sheet_name=ref.access.config['outputs_sheet'], startrow=3,index=False)
+        write_df.to_excel(writer,sheet_name=config['outputs_sheet'], startrow=3,index=False)
         writer.save()
 
 
