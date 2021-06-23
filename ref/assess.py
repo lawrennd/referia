@@ -89,7 +89,7 @@ def score(index, df, write_df):
         write_df.at[write_index, 'Accept DW'] = pd.to_datetime('today') 
         filename = os.path.expandvars(os.path.join(config['datadirectory'], config['upload']))
         
-        writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_formatstr="YYYY-MM-DD HH:MM:SS")
+        writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_format="YYYY-MM-DD HH:MM:SS")
         write_df.to_excel(writer,sheet_name=config['outputs_sheet'], startrow=3,index=False)
         writer.save()
 
