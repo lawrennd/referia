@@ -81,7 +81,6 @@ def score(index, df, write_df):
         score = o_score + s_score + r_score
 
         # Write index
-        print(index)
         write_index = write_df['REF output identifier']=="O" + str(index)
         write_df.at[write_index, 'Comment'] = comment
         write_df.at[write_index, 'Score'] = score
@@ -91,6 +90,9 @@ def score(index, df, write_df):
         writer = pd.ExcelWriter(filename, engine='xlsxwriter')
         write_df.to_excel(writer,sheet_name=config['outputs_sheet'], startrow=3,index=False)
         writer.save()
+        scored = write_df['Score'].count()
+        total = len(write_df['Score'])
+        print("Completed {scored} articles from {total} which is {perc:.3g}%".format(scored=scored, total=total, perc=scored/total*100))
 
 
     def update_index(df, write_df, index):
@@ -128,13 +130,17 @@ def score(index, df, write_df):
 
         interdisciplinary_comment = write_df['Comment 2'][write_index]
         my_comment = write_df['Comment 4'][write_index]    
-
+        widgets.interact_manual.opts['manual_name'] = 'Save Score'
+        scored = write_df['Score'].count()
+        total = len(write_df['Score'])
+        progress_bar = widgets=IntProgress(value = scored, min=0, max=total, step=1, description="Progress", bar_style="") 
         interact_manual(update_df, o_text=o_text, o_score=o_score_range, 
-             s_text=s_text, s_score=s_score_range, 
-             r_text=r_text, r_score=r_score_range,
-             interdisciplinary_comment=interdisciplinary_comment,
-             my_comment=my_comment,
-            df=fixed(df), index=fixed(index), write_df=fixed(write_df))
+                        s_text=s_text, s_score=s_score_range, 
+                        r_text=r_text, r_score=r_score_range,
+                        interdisciplinary_comment=interdisciplinary_comment,
+                        my_comment=my_comment, progress_bar=progress_bar,
+                        df=fixed(df), index=fixed(index),
+                        write_df=fixed(write_df))
 
     index_select = widgets.Dropdown(options=df.index, value=index)
     interact(update_index, index=index_select, df=fixed(df), write_df=fixed(write_df))
