@@ -86,13 +86,12 @@ def score(index, df, write_df):
         write_df.at[write_index, 'Score'] = score
         write_df.at[write_index, 'Comment 2'] = interdisciplinary_comment
         write_df.at[write_index, 'Comment 4'] = my_comment
+        write_df.at[write_index, 'Accept DW'] = pd.to_datetime('today') 
         filename = os.path.expandvars(os.path.join(config['datadirectory'], config['upload']))
-        writer = pd.ExcelWriter(filename, engine='xlsxwriter')
+        
+        writer = pd.ExcelWriter(filename, engine='xlsxwriter', datetime_formatstr="YYYY-MM-DD HH:MM:SS")
         write_df.to_excel(writer,sheet_name=config['outputs_sheet'], startrow=3,index=False)
         writer.save()
-        scored = write_df['Score'].count()
-        total = len(write_df['Score'])
-        print("Completed {scored} articles from {total} which is {perc:.3g}%".format(scored=scored, total=total, perc=scored/total*100))
 
 
     def update_index(df, write_df, index):
@@ -108,9 +107,15 @@ def score(index, df, write_df):
         s_score = 2
         r_score = 2
 
+        scored = write_df['Score'].count()
+        total = len(write_df['Score'])
+
+        progress_label = "Completed {scored} articles from {total} which is {perc:.3g}%".format(scored=scored, total=total, perc=scored/total*100)
+        
         write_index = write_df[write_df['REF output identifier']=="O" + str(index)].index[0]
 
         print(write_df.at[write_index, 'Comment'])
+        print(progress_label)
         if match := re.search('O:\s*(.*)\s*([0-4])\.?\s*S:\s*(.*)\s*([0-4])\.?\s*R:\s*(.*)\s*([0-4])\.?\s*', 
                               write_df.at[write_index, 'Comment']):
             o_text = "O: " + match.group(1).strip()
@@ -128,17 +133,23 @@ def score(index, df, write_df):
         r_score_range = widgets.IntSlider(min=0, max=4, step=1, value=r_score)    
 
 
+
         interdisciplinary_comment = write_df['Comment 2'][write_index]
         my_comment = write_df['Comment 4'][write_index]    
+        progress_bar = widgets.IntProgress(value = scored, min=0, max=total, step=1, description="Progress", bar_style="")
         widgets.interact_manual.opts['manual_name'] = 'Save Score'
-        scored = write_df['Score'].count()
-        total = len(write_df['Score'])
-        progress_bar = widgets=IntProgress(value = scored, min=0, max=total, step=1, description="Progress", bar_style="") 
-        interact_manual(update_df, o_text=o_text, o_score=o_score_range, 
-                        s_text=s_text, s_score=s_score_range, 
-                        r_text=r_text, r_score=r_score_range,
+ 
+        interact_manual(update_df,
+                        progress_bar=progress_bar,
+                        progress_label=progress_label,
+                        o_text=o_text,
+                        o_score=o_score_range, 
+                        s_text=s_text,
+                        s_score=s_score_range, 
+                        r_text=r_text,
+                        r_score=r_score_range,
                         interdisciplinary_comment=interdisciplinary_comment,
-                        my_comment=my_comment, progress_bar=progress_bar,
+                        my_comment=my_comment,
                         df=fixed(df), index=fixed(index),
                         write_df=fixed(write_df))
 
