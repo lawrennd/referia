@@ -110,7 +110,7 @@ def score(index, df, write_df):
         scored = write_df['Score'].count()
         total = len(write_df['Score'])
         remain = total - scored
-        progress_label = "{remain} articles to go. {scored} articles from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100)
+        progress_label = "{remain} articles to go. Scored {scored} articles from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100)
         
         write_index = write_df[write_df['REF output identifier']=="O" + str(index)].index[0]
 
@@ -155,7 +155,7 @@ def score(index, df, write_df):
 
     index_select = widgets.Dropdown(options=df.index, value=index)
     interact(update_index, index=index_select, df=fixed(df), write_df=fixed(write_df))
-
+    print("Saved")
 
 
     
