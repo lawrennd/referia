@@ -109,8 +109,8 @@ def score(index, df, write_df):
 
         scored = write_df['Score'].count()
         total = len(write_df['Score'])
-
-        progress_label = "Completed {scored} articles from {total} which is {perc:.3g}%".format(scored=scored, total=total, perc=scored/total*100)
+        remain = total - scored
+        progress_label = "{remain} articles to go. {scored} articles from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100)
         
         write_index = write_df[write_df['REF output identifier']=="O" + str(index)].index[0]
 
