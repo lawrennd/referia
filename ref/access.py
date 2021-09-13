@@ -7,11 +7,27 @@ from .config import *
 
 """Place commands in this file to access the data electronically. Don't remove any missing values, or deal with outliers. Make sure you have legalities correct, both intellectual property and personal data privacy rights. Beyond the legal side also think about the ethical issues around this data. """
 
-CONVERTERS = converters={'Comment':str,'Comment 2':str, 'Comment 4':str}
+CONVERTERS = converters={'Comment':str,'Comment 1':str,'Comment 2':str, 'Comment 4':str}
 
 def outputs():
     """Load in the allocation spread sheet to data frames."""
     data =  pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['outputs_sheet'], converters=CONVERTERS, header=3)
+    for key in CONVERTERS:
+        if key in data.columns:
+            data[key].fillna('', inplace=True)	
+    return data 
+
+def case_studies():
+    """Load in the allocation spread sheet to data frames."""
+    data =  pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['case_study_sheet'], converters=CONVERTERS, header=3)
+    for key in CONVERTERS:
+        if key in data.columns:
+            data[key].fillna('', inplace=True)	
+    return data 
+
+def environment():
+    """Load in the allocation spread sheet environments to data frames."""
+    data =  pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['environment_sheet'], converters=CONVERTERS, header=3)
     for key in CONVERTERS:
         if key in data.columns:
             data[key].fillna('', inplace=True)	
@@ -25,9 +41,25 @@ def upload():
             data[key].fillna('', inplace=True)	
     return data 
 
+def upload_case_study():
+    """Load in the upload spread sheet to data frames."""
+    data =  pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['upload'])), sheet_name=config['case_study_sheet'], converters=CONVERTERS, header=3)
+    for key in CONVERTERS:
+        if key in data.columns:
+            data[key].fillna('', inplace=True)	
+    return data 
+
 def additional():
     
     data = pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['additional_data_sheet'],  converters=CONVERTERS, header=2)    
+    for key in CONVERTERS:
+        if key in data.columns:
+            data[key].fillna('', inplace=True)	
+    return data
+
+def additional_case_studies():
+    
+    data = pd.read_excel(os.path.expandvars(os.path.join(config['datadirectory'], config['allocation'])), sheet_name=config['additional_case_study_data_sheet'],  converters=CONVERTERS, header=2)    
     for key in CONVERTERS:
         if key in data.columns:
             data[key].fillna('', inplace=True)	
