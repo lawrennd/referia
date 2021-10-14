@@ -16,8 +16,8 @@ from . import access
 def data():
     outputs = access.outputs()
     additional = access.additional()
-    outputs.set_index(outputs['REF output identifier'].apply(lambda x: int(x.replace('O', ''))), inplace=True)
-    additional.set_index(additional['REF output identifier'].apply(lambda x: int(x.replace('O', ''))), inplace=True)    
+    outputs.set_index(outputs['REF output identifier'].apply(lambda x: int(x.replace('O', '').replace('o', ''))), inplace=True)
+    additional.set_index(additional['REF output identifier'].apply(lambda x: int(x.replace('O', '').replace('o', ''))), inplace=True)    
     return outputs.join(additional, rsuffix='additional')
 
 def case_study_data():
@@ -116,7 +116,8 @@ def score(index, df, write_df):
             score = o_score + s_score + r_score
 
             # Write index
-            write_index = write_df['REF output identifier']=="O" + str(index)
+            write_index = write_df['REF output identifier']=="o" + str(index)
+
             write_df.at[write_index, 'Comment'] = comment
             write_df.at[write_index, 'Score'] = score
             write_df.at[write_index, 'Comment 2'] = interdisciplinary_comment
@@ -129,7 +130,7 @@ def score(index, df, write_df):
         if 'Case study title' in df.columns:
             sheet_name=config['case_study_sheet']
         else:
-            sheet_name=config['output_sheet']
+            sheet_name=config['outputs_sheet']
         write_df.to_excel(writer,sheet_name=sheet_name, startrow=3,index=False)
         writer.save()
 
@@ -192,7 +193,7 @@ def score(index, df, write_df):
             s_score = 2
             r_score = 2
 
-            write_index = write_df[write_df['REF output identifier']=="O" + str(index)].index[0]
+            write_index = write_df[write_df['REF output identifier']=="o" + str(index)].index[0]
 
             print(write_df.at[write_index, 'Comment'])
             print(progress_label)
