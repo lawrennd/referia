@@ -1,6 +1,6 @@
 datadirectory: $HOME/Documents/ref
 allocation: 2021-10-09-NLawrence-UOA11-Personal.xlsx
-upload: upload_this_version.xlsx
+upload: upload_this_version2.xlsx
 outputs_sheet: Outputs
 additional_data_sheet: Additional output data
 case_study_sheet: Impact case studies
