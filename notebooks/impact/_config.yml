@@ -1,3 +1,5 @@
+index: "REF case study identifier"
+browser: Google Chrome.app
 allocation:
   type: excel
   sheet: Impact case studies
@@ -21,3 +23,11 @@ scores:
   filename: upload_this_version_impact.xlsx
   converters: {'Comment':str,'Comment 1':str,'Comment 2':str, 'Comment 4':str}
   header: 3
+
+search:
+  url: https://www.semanticscholar.org/search?q=
+  field: Case study title
+
+localpdf:
+  directory:
+  field: LocalDocumentLink

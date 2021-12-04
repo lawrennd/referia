@@ -14,43 +14,12 @@ from . import access
 """Place commands in this file to assess the data you have downloaded. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data (e.g. in bokeh). Ensure that date formats are correct and correctly timezoned."""
 
 def data():
-    outputs = access.outputs()
+    """Joint the two data together, the allocation and additional information."""
+    outputs = access.allocation()
     additional = access.additional()
-    outputs.set_index(outputs['REF output identifier'].apply(lambda x: int(x.replace('O', '').replace('o', ''))), inplace=True)
-    additional.set_index(additional['REF output identifier'].apply(lambda x: int(x.replace('O', '').replace('o', ''))), inplace=True)    
-    return outputs.join(additional, rsuffix='additional')
-
-def case_study_data():
-    case_studies = access.case_studies()
-    additional = access.additional_case_studies()
-    case_studies.set_index(case_studies['REF case study identifier'].apply(lambda x: int(x.replace('i', ''))), inplace=True)
-    additional.set_index(additional['REF case study identifier'].apply(lambda x: int(x.replace('i', ''))), inplace=True)    
-    return case_studies.join(additional, rsuffix='additional')
-
-def query(data, index):
-    ds = data.loc[index]
-    query_score(ds)
-
-    
-def query_score(ds):
-    view_record(ds)
-    if type(ds["LocalDocumentLink"]) is str:
-        os.system('open ' + '--background ' + '"' + os.path.join(config['datadirectory'],ds['LocalDocumentLink']) + '"')
-    os.system('open ' + '-a "Google Chrome.app" --background ' + '"' + _search_url(ds) + '"')
-
-
-def _search_url(ds):
-    if 'Output title' in ds.index:
-        title = ds['Output title']
-    elif 'Case study title' in ds.index:
-        title = ds['Case study title']
-    return unidecode(config['search_url'] + title.replace(' ', '%20'))
-    
-def view(data):
-    """Provide a view of the data that allows the user to verify some aspect of its quality."""
-    fig, ax = plt.subplots(figsize=(8, 5))
-    data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8, ax=ax)
-    ax.set_xticks(range(0,13))
+    outputs.set_index(outputs[config["index"]], inplace=True)
+    additional.set_index(outputs[config["index"]], inplace=True)    
+    return outputs.join(additional, rsuffix="additional")
 
 def view_record(ds):
     """Print a view of a single record."""
@@ -84,6 +53,36 @@ def view_record(ds):
 """.format(prefix=prefix,
            title = ds['Case study title'],
            covid_statement=ds['COVID-19 statement'])))
+
+
+def query(data, index):
+    ds = data.loc[index]
+    query_score(ds)
+
+    
+def query_score(ds):
+    view_record(ds)
+    if "localpdf" in config and "field" in config["localpdf"] and ds[config["localpdf"]["field"]] is str:
+        os.system('open ' + '--background ' + '"' + os.path.join(config["localpdf"]["directory"],ds[config["localpdf"]["field"]]) + '"')
+    if "search" in config and "url" in config["search"] and "field" in config["search"]:
+        if "browser" in config:
+            browser=config["browser"]
+        else:
+            browser="Google Chrome.app" 
+        os.system('open ' + '-a "' + browser + '" --background ' + '"' + _search_url(ds) + '"')
+
+
+def _search_url(ds):
+    """Construct the search query"""
+    query = ds[config["search"]["field"]].replace(' ', '%20')
+    return unidecode(config["search"]["url"] + query)
+    
+def view(data):
+    """Provide a view of the data that allows the user to verify some aspect of its quality."""
+    fig, ax = plt.subplots(figsize=(8, 5))
+    data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8, ax=ax)
+    ax.set_xticks(range(0,13))
+
 
 def score(index, df, write_df):
     """Present a paper for assessment"""
