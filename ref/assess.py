@@ -48,8 +48,8 @@ def view_text(ds):
                     format[field] = ds[column] 
                 
             show_display = True
-            if "condition" in view:
-                for condition in view["condition"]:
+            if "conditions" in view:
+                for condition in view["conditions"]:
                     if "present" in condition:
                         if not condition["present"]["field"] in ds:
                             show_display = False
