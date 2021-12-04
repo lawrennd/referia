@@ -1,0 +1,23 @@
+allocation:
+  type: excel
+  sheet: Impact case studies
+  filename: 2021-10-09-NLawrence-UOA11-Personal.xlsx
+  directory: $HOME/Documents/ref
+  converters: {'Comment':str,'Comment 1':str,'Comment 2':str, 'Comment 4':str}
+  header: 3
+
+additional:
+  type: excel
+  sheet: Additional case study data
+  filename: 2021-10-09-NLawrence-UOA11-Personal.xlsx
+  directory: $HOME/Documents/ref
+  converters: {}
+  header: 3
+
+scores:
+  type: excel
+  sheet:
+  directory: $HOME/Documents/ref
+  filename: upload_this_version_impact.xlsx
+  converters: {'Comment':str,'Comment 1':str,'Comment 2':str, 'Comment 4':str}
+  header: 3
