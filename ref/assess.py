@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import Markdown, display
-from ipywidgets import IntSlider, Text, Dropdown
+from ipywidgets import IntSlider, Text, Dropdown, Label
 from ipywidgets import interact, interactive, fixed, interact_manual
 
 from .config import *
@@ -43,8 +43,8 @@ def view_text(ds):
     if "viewer" in config:
         for view in config["viewer"]:
             format = {}
-            if "format" in config["viewer"]:
-                for field, column in config["viewer"]["format"].items():
+            if "format" in view:
+                for field, column in view["format"].items():
                     format[field] = ds[column] 
                 
             show_display = True
@@ -93,17 +93,14 @@ def score(index, df, write_df):
             raise ValueError("Invalid index")
 
         ds = df.loc[index]
+        write_ds = write_df.loc[index]
         view_series(ds)
 
         scored = write_df[config["scored"]["field"]].count()
-        total = len(config["scored"]["field"])
+        total = len(write_df[config["scored"]["field"]])
         remain = total - scored
-        progress_label = "{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100)
-        
 
         interact_args = {}
-        ds = df.loc[index]
-        write_ds = write_df.loc[index]
         if "scorer" in config:
             for score in config["scorer"]:
                 if score["field"] in write_ds:
@@ -117,10 +114,10 @@ def score(index, df, write_df):
                 else:
                     raise Exception("Have not loaded " + score["type"] + " interaction type.")
         
+        interact_args["progress_label"] = Label("{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100))
                     
         interact_manual(
             update_df, 
-            progress_label=progress_label,
             index=fixed(index),
             df=fixed(df),
             write_df=fixed(write_df),

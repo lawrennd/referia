@@ -48,22 +48,9 @@ scores:
 
 viewer:
 - display: "### {title}
-
-{volume}
-
-### {year}, {cites}
-    
-{additional}
 "
   format:
-    volume: Volume title
-    title: Output title
-    year: Year
-    cites: Citation count
-    additional: Additional output information
-  condition:
-  - present:
-      field: Volume title
+    title: Case study title
 
 search:
   url: https://www.semanticscholar.org/search?q=
