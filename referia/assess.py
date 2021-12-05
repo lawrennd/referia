@@ -21,23 +21,30 @@ def data():
         return allocation.join(additional, rsuffix="additional")
     else:
         return allocation
-    
+
+
+def view_pdfs(ds):
+    if "localpdf" in config:
+        for display in config["localpdf"]:
+            if "field" in display and ds[display["field"]] is str:
+                os.system('open ' + '--background ' + '"' + os.path.expandvars(os.path.join(display["directory"],ds[display["field"]])) + '"')
+
+def view_urls(ds):
+    if "browser" in config:
+        browser=config["browser"]
+    else:
+        browser="Google Chrome.app" 
+    if "urls" in config:
+        for display in config["browser"]:
+            if "url" in display and "field" in display and ds[display["field"]] is str:
+                os.system('open ' + '-a "' + browser + '" --background ' + '"' + unidecode(display["url"] + ds[display["field"]].replace(" ", "%20")) + '"')
+
 def view_series(ds):
+    view_pdfs(ds)
+    view_urls(ds)
     display(Markdown(view_text(ds)))
-    if "localpdf" in config and "field" in config["localpdf"] and ds[config["localpdf"]["field"]] is str:
-        os.system('open ' + '--background ' + '"' + os.path.join(config["localpdf"]["directory"],ds[config["localpdf"]["field"]]) + '"')
-    if "search" in config and "url" in config["search"] and "field" in config["search"]:
-        if "browser" in config:
-            browser=config["browser"]
-        else:
-            browser="Google Chrome.app" 
-        os.system('open ' + '-a "' + browser + '" --background ' + '"' + _search_url(ds) + '"')
 
 
-def _search_url(ds):
-    """Construct the search query"""
-    query = ds[config["search"]["field"]].replace(' ', '%20')
-    return unidecode(config["search"]["url"] + query)
 
 
 def view_text(ds):

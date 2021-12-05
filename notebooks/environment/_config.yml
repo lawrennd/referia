@@ -50,10 +50,10 @@ viewer:
   format:
     submissionid: REF Submission Id
 
-
 localpdf:
-  directory: $HOME/Documents/ref
-  field: LocalDocumentLink
+- display:
+    directory: $HOME/Documents/ref
+    field: LocalDocumentLink
 
 scored:
   field: "Strategy Score"
