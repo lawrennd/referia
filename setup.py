@@ -17,9 +17,9 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = "pyreview"
+NAME = "referia"
 DESCRIPTION = "Template files for performing data analysis with python.."
-URL = "https://github.com/lawrennd/pyreview"
+URL = "https://github.com/lawrennd/referia"
 EMAIL = "emal@domain.here"
 AUTHOR = "Givenname Familyname"
 REQUIRES_PYTHON = ">=3.6.0"
@@ -39,7 +39,7 @@ EXTRAS = {
     "interactive html plots": ["bokeh",],
 }
 
-PACKAGE_DATA = {"pyreview": ["defaults.yml"]}
+PACKAGE_DATA = {"referia": ["defaults.yml"]}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
