@@ -17,9 +17,9 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 # Package meta-data.
-NAME = "ref"
+NAME = "pyreview"
 DESCRIPTION = "Template files for performing data analysis with python.."
-URL = "https://github.com/lawrennd/ref"
+URL = "https://github.com/lawrennd/pyreview"
 EMAIL = "emal@domain.here"
 AUTHOR = "Givenname Familyname"
 REQUIRES_PYTHON = ">=3.6.0"
@@ -39,7 +39,7 @@ EXTRAS = {
     "interactive html plots": ["bokeh",],
 }
 
-PACKAGE_DATA = {"ref": ["defaults.yml"]}
+PACKAGE_DATA = {"pyreview": ["defaults.yml"]}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
