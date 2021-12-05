@@ -16,8 +16,11 @@ from . import access
 def data():
     """Joint the two data together, the allocation and additional information."""
     allocation = access.allocation()
-    additional = access.additional()    
-    return allocation.join(additional, rsuffix="additional")
+    if "additional" in config:
+        additional = access.additional()    
+        return allocation.join(additional, rsuffix="additional")
+    else:
+        return allocation
     
 def view_series(ds):
     display(Markdown(view_text(ds)))
@@ -76,15 +79,15 @@ def clean_string(instring):
 
 def score(index, df, write_df):
                     
-    def update_df(df, write_df, index=fixed(0), **kwargs):
+    def update_df(df, write_df, index, progress_label, **kwargs):
         details = config["scorer"]
         fields = {}
         for display in details:
             fields[clean_string(display["field"])] = display["field"]
         for key, value in kwargs.items():
-                    
-            write_df.at[index, fields[key]] = value
-            write_df.at[index, details["timestamp_field"]] = pd.to_datetime("today")                    
+            if fields[key] in write_df.columns:
+                write_df.at[index, fields[key]] = value
+        write_df.at[index, config["timestamp_field"]] = pd.to_datetime("today")                    
         access.write_scores(write_df)
 
 
@@ -106,8 +109,6 @@ def score(index, df, write_df):
                 if score["field"] in write_ds:
                     if pd.notna(write_ds[score["field"]]):
                         score["args"]["value"] = write_ds[score["field"]]
-                    else:
-                        raise Exception("No field " + score["field"] + " in data series.")
                 globs = globals()
                 if score["type"] in globs:
                     interact_args[clean_string(score["field"])] = globs[score["type"]](**score["args"])
