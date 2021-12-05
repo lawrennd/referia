@@ -51,9 +51,8 @@ viewer:
     submissionid: REF Submission Id
 
 localpdf:
-- display:
-    directory: $HOME/Documents/ref
-    field: LocalDocumentLink
+- directory: $HOME/Documents/ref
+  field: LocalDocumentLink
 
 scored:
   field: "Strategy Score"
@@ -70,7 +69,7 @@ scorer:
     min: 0
     max: 8
     step: 1
-    description: "Strategy Score"
+    description: "Strategy"
 - field: "Strategy1"
   type: Label
   args:
@@ -79,7 +78,7 @@ scorer:
   type: Text
   args:
     value: ""
-    description: "Structure Comment"
+    description: "Structure"
 - field: "Strategy2"
   type: Label
   args:
@@ -88,7 +87,7 @@ scorer:
   type: Text
   args:
     value: ""
-    description: "Strategy Comment"
+    description: "Strategy"
 - field: "Strategy3"
   type: Label
   args:
@@ -97,7 +96,7 @@ scorer:
   type: Text
   args:
     value: ""
-    description: "Impact Comment"
+    description: "Impact"
 - field: "Strategy4"
   type: Label
   args:
@@ -106,7 +105,7 @@ scorer:
   type: Text
   args:
     value: ""
-    description: "Interdisciplinarity Comment"
+    description: "Interdisciplinarity"
 - field: "Strategy5"
   type: Label
   args:
@@ -115,7 +114,7 @@ scorer:
   type: Text
   args:
     value: ""
-    description: "Open Research Comment"
+    description: "Open Research"
 - field: Strategy6
   type: Label
   args:
@@ -124,12 +123,12 @@ scorer:
   type: Text
   args:
     value: ""
-    description: "Research Integrity Comment"
+    description: "Research Integrity"
 - field: "Strategy Overall"
   type: Text
   args:
     value: ""
-    description: "Strategy Overall Comment"
+    description: "Strategy Overall"
 - field: "People Score"
   type: IntSlider
   args:
@@ -137,7 +136,7 @@ scorer:
     min: 0
     max: 8
     step: 1
-    description: "People Score"
+    description: "People"
 - field: "Income Score"
   type: IntSlider
   args:
@@ -145,7 +144,7 @@ scorer:
     min: 0
     max: 8
     step: 1
-    description: "Income Score"
+    description: "Income"
 - field: "Collaboration Score"
   type: IntSlider
   args:
@@ -153,7 +152,7 @@ scorer:
     min: 0
     max: 8
     step: 1
-    description: "Collaboration Score"
+    description: "Collaboration"
     
 timestamp_field: "Timestamp"
     

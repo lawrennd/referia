@@ -53,14 +53,12 @@ viewer:
     title: Case study title
 
 urls:
-- display:
-    url: https://www.semanticscholar.org/search?q=
-    field: Case study title
+- url: https://www.semanticscholar.org/search?q=
+  field: Case study title
 
 localpdf:
-- display:
-    directory: $HOME/Documents/ref
-    field: LocalDocumentLink
+- directory: $HOME/Documents/ref
+  field: LocalDocumentLink
 
 scored:
   field: "Significance Score"

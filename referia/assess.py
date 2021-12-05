@@ -26,7 +26,7 @@ def data():
 def view_pdfs(ds):
     if "localpdf" in config:
         for display in config["localpdf"]:
-            if "field" in display and ds[display["field"]] is str:
+            if "field" in display and type(ds[display["field"]]) is str:
                 os.system('open ' + '--background ' + '"' + os.path.expandvars(os.path.join(display["directory"],ds[display["field"]])) + '"')
 
 def view_urls(ds):
@@ -35,8 +35,8 @@ def view_urls(ds):
     else:
         browser="Google Chrome.app" 
     if "urls" in config:
-        for display in config["browser"]:
-            if "url" in display and "field" in display and ds[display["field"]] is str:
+        for display in config["urls"]:
+            if "url" in display and "field" in display and type(ds[display["field"]]) is str:
                 os.system('open ' + '-a "' + browser + '" --background ' + '"' + unidecode(display["url"] + ds[display["field"]].replace(" ", "%20")) + '"')
 
 def view_series(ds):
