@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import Markdown, display
-from ipywidgets import IntSlider, Text, Dropdown, Label
+from ipywidgets import IntSlider, Text, Dropdown, Label, Layout
 from ipywidgets import interact, interactive, fixed, interact_manual
 
 from .config import *
@@ -27,7 +27,11 @@ def view_pdfs(ds):
     if "localpdf" in config:
         for display in config["localpdf"]:
             if "field" in display and type(ds[display["field"]]) is str:
-                os.system('open ' + '--background ' + '"' + os.path.expandvars(os.path.join(display["directory"],ds[display["field"]])) + '"')
+                filename = os.path.expandvars(os.path.join(display["directory"],ds[display["field"]]))
+                if os.path.exists(filename):
+                    os.system('open ' + '--background ' + '"' + filename + '"')
+                else:
+                    print("Warning localpdf " + filename + " does not exist.")
 
 def view_urls(ds):
     if "browser" in config:
@@ -117,6 +121,9 @@ def score(index, df, write_df):
                     if pd.notna(write_ds[score["field"]]):
                         score["args"]["value"] = write_ds[score["field"]]
                 globs = globals()
+                if "layout" in score:
+                    score["args"]["layout"] = Layout(**score["layout"])
+                    
                 if score["type"] in globs:
                     interact_args[clean_string(score["field"])] = globs[score["type"]](**score["args"])
                 else:
