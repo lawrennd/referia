@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import Markdown, display
-from ipywidgets import IntSlider, Text, Textarea, Dropdown, Label, Layout, HTML, HTMLMath
+from ipywidgets import IntSlider, FloatSlider, Text, Textarea, Dropdown, Label, Layout, HTML, HTMLMath
 from ipywidgets import interact, interactive, fixed, interact_manual
 
 from .config import *
@@ -49,32 +49,44 @@ def view_series(ds):
     display(Markdown(view_text(ds)))
 
 
+def view_to_text(view, ds):
+    format = {}
+    if "format" in view:
+        for key, column in view["format"].items():
+            format[key] = ds[column] 
+
+    show_display = True
+    if "conditions" in view:
+        for condition in view["conditions"]:
+            if "present" in condition:
+                if not condition["present"]["field"] in ds:
+                    show_display = False
+                    break
+            if "equal" in condition:
+                if not ds[condition["equal"]["field"]] == condition["equal"]["value"]:
+                    show_display = False
+                    break
+    if show_display:
+        return view["display"].format(**format)
+    else:
+        return ""
+    
+def viewer_to_text(key, ds):
+    """Create a formatted text output from a yaml entry with base text and format keys."""
+    text = ""
+    if key in config:
+        for view in config[key]:
+            text += view_to_text(view, ds)
+    return text
+
 
 
 def view_text(ds):
     """Text that views a a single record."""
-    text = ""
     if "viewer" in config:
-        for view in config["viewer"]:
-            format = {}
-            if "format" in view:
-                for field, column in view["format"].items():
-                    format[field] = ds[column] 
-                
-            show_display = True
-            if "conditions" in view:
-                for condition in view["conditions"]:
-                    if "present" in condition:
-                        if not condition["present"]["field"] in ds:
-                            show_display = False
-                            break
-                    if "equal" in condition:
-                        if not ds[condition["equal"]["field"]] == condition["equal"]["value"]:
-                            show_display = False
-                            break
-            if show_display:
-                text += view["display"].format(**format)
-    return text
+        return viewer_to_text("viewer", ds)
+    else:
+        return ""
 
 def view(data):
     """Provide a view of the data that allows the user to verify some aspect of its quality."""
@@ -98,7 +110,15 @@ def score(index, df, write_df):
         for key, value in kwargs.items():
             if fields[key] in write_df.columns:
                 write_df.at[index, fields[key]] = value
-        write_df.at[index, config["timestamp_field"]] = pd.to_datetime("today")                    
+        write_df.at[index, config["timestamp_field"]] = pd.to_datetime("today")
+        if "combinator" in config:
+            for view in config["combinator"]:
+                if "field" in view:
+                    write_df.at[index, view["field"]] = view_to_text(view, write_df.loc[index])
+                else:
+                    print("Warning missing key 'field' in combinator view.")
+            
+
         access.write_scores(write_df)
 
 
@@ -139,7 +159,7 @@ def score(index, df, write_df):
             **interact_args
         )
 
-
+            
 
     index_select = Dropdown(options=df.index, value=index)
     interact(update_index, index=index_select, df=fixed(df), write_df=fixed(write_df))
