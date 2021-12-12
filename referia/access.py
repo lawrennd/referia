@@ -10,11 +10,16 @@ from .config import *
 def str_type(val):
     return str(val)
 
+def bool_type(val):
+    return bool(val)
+
 def read_excel(details):
     """Read scoring data from an excel spreadsheet."""
     converters = {}
-    for converter in details["converters"]:
-        converters[converter["field"]] = globals()[converter["type"]]
+    if "converters" in details:
+        if details["converters"] is not None:
+            for converter in details["converters"]:
+                converters[converter["field"]] = globals()[converter["type"]]
     data =  pd.read_excel(
         os.path.expandvars(
             os.path.join(details["directory"],
