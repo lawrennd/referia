@@ -1,17 +1,24 @@
 import os
 import re
 from unidecode import unidecode
+import random
+import string
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import Markdown, display
-from ipywidgets import IntSlider, FloatSlider, Text, Textarea, Dropdown, Label, Layout, HTML, HTMLMath
+from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Dropdown, Label, Layout, HTML, HTMLMath
 from ipywidgets import interact, interactive, fixed, interact_manual
 
 from .config import *
 from . import access
 
 """Place commands in this file to assess the data you have downloaded. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data (e.g. in bokeh). Ensure that date formats are correct and correctly timezoned."""
+
+def MyCheckbox(**args):
+    # Deal with weird bug where value is passed as an np.bool_ by wrapping Checkbox
+    args["value"] = bool(args["value"])
+    return Checkbox(**args)
 
 def data():
     """Joint the two data together, the allocation and additional information."""
@@ -106,10 +113,17 @@ def score(index, df, write_df):
         details = config["scorer"]
         fields = {}
         for display in details:
-            fields[clean_string(display["field"])] = display["field"]
+            if "field" in display:
+                fields[clean_string(display["field"])] = display["field"]
         for key, value in kwargs.items():
-            if fields[key] in write_df.columns:
-                write_df.at[index, fields[key]] = value
+            if key in fields:
+                if fields[key] in write_df.columns:
+                    write_df.at[index, fields[key]] = value
+                else:
+                    print("Warning " + fields[key] + " not in write columns ... adding.")
+                    write_df[fields[key]] = None
+                    write_df.at[index, fields[key]] = value
+                    
         write_df.at[index, config["timestamp_field"]] = pd.to_datetime("today")
         if "combinator" in config:
             for view in config["combinator"]:
@@ -129,28 +143,37 @@ def score(index, df, write_df):
         ds = df.loc[index]
         write_ds = write_df.loc[index]
         view_series(ds)
-
-        scored = write_df[config["scored"]["field"]].count()
-        total = len(write_df[config["scored"]["field"]])
-        remain = total - scored
+        
+        if config["scored"]["field"] in write_df:
+            scored = write_df[config["scored"]["field"]].count()
+            total = len(write_df[config["scored"]["field"]])
+            remain = total - scored
 
         interact_args = {}
         if "scorer" in config:
             for score in config["scorer"]:
-                if score["field"] in write_ds:
-                    if pd.notna(write_ds[score["field"]]):
-                        score["args"]["value"] = write_ds[score["field"]]
+                if "field" in score:
+                    name = clean_string(score["field"])
+                    if score["field"] in write_ds:
+                        if pd.notna(write_ds[score["field"]]):
+                            score["args"]["value"] = write_ds[score["field"]]
+                    else:
+                        print("Warning " + score["field"] + " not in write_ds")
+                else:
+                    name = ''.join(random.choice(string.ascii_letters) for _ in range(39))
                 globs = globals()
                 if "layout" in score:
                     score["args"]["layout"] = Layout(**score["layout"])
                     
                 if score["type"] in globs:
-                    interact_args[clean_string(score["field"])] = globs[score["type"]](**score["args"])
+                    interact_args[name] = globs[score["type"]](**score["args"])
                 else:
                     raise Exception("Have not loaded " + score["type"] + " interaction type.")
         
-        interact_args["progress_label"] = Label("{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100))
-                    
+        if config["scored"]["field"] in write_df:
+            interact_args["progress_label"] = Label("{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100))
+        else:
+            interact_args["progress_label"] = fixed("None")
         interact_manual(
             update_df, 
             index=fixed(index),

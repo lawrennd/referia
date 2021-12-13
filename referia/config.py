@@ -1,9 +1,10 @@
 import os
 import yaml
+import numpy as np
 
 default_file = os.path.join(os.path.dirname(__file__), "defaults.yml")
 local_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "machine.yml"))
-user_file = '_config.yml'
+user_file = '_referia.yml'
 
 config = {}
 
@@ -33,3 +34,4 @@ if config=={}:
 for key, item in config.items():
     if item is str:
         config[key] = os.path.expandvars(item)
+
