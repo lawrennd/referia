@@ -1,5 +1,8 @@
 import os
 import re
+
+import copy
+
 from unidecode import unidecode
 import random
 import string
@@ -13,7 +16,6 @@ from ipywidgets import interact, interactive, fixed, interact_manual
 from .config import *
 from . import access
 
-"""Place commands in this file to assess the data you have downloaded. How are missing values encoded, how are outliers encoded? What do columns represent, makes rure they are correctly labeled. How is the data indexed. Create visualisation routines to assess the data (e.g. in bokeh). Ensure that date formats are correct and correctly timezoned."""
 
 def MyCheckbox(**args):
     # Deal with weird bug where value is passed as an np.bool_ by wrapping Checkbox
@@ -47,8 +49,14 @@ def view_urls(ds):
         browser="Google Chrome.app" 
     if "urls" in config:
         for display in config["urls"]:
-            if "url" in display and "field" in display and type(ds[display["field"]]) is str:
-                os.system('open ' + '-a "' + browser + '" --background ' + '"' + unidecode(display["url"] + ds[display["field"]].replace(" ", "%20")) + '"')
+            if "url" in display:
+                if "field" in display and type(ds[display["field"]]) is str:
+                    urlterm = ds[display["field"]]
+                elif "display" in display:
+                    urlterm = view_to_text(display, ds)
+                else:
+                    urlterm = ""
+                os.system('open ' + '-a "' + browser + '" --background ' + '"' + unidecode(display["url"] + urlterm.replace(" ", "%20")) + '"')
 
 def view_series(ds):
     view_pdfs(ds)
@@ -151,7 +159,8 @@ def score(index, df, write_df):
 
         interact_args = {}
         if "scorer" in config:
-            for score in config["scorer"]:
+            for orig_score in config["scorer"]:
+                score = copy.deepcopy(orig_score)
                 if "field" in score:
                     name = clean_string(score["field"])
                     if score["field"] in write_ds:

@@ -1,3 +1,5 @@
+from pandas.api.types import is_bool_dtype, is_integer_dtype, is_float_dtype, is_string_dtype
+
 """Utility functions for helping, e.g. to create the relevant yaml files quickly."""
 
 def camel_capitalize(text):
@@ -25,6 +27,7 @@ def to_camel_case(text):
 
 
 def draft_combinator(fieldname, columns):
+    print("combinator:")
     print("- field: {fieldname}".format(fieldname=fieldname))
     print("  display: \"")
     for column in columns:
@@ -33,3 +36,54 @@ def draft_combinator(fieldname, columns):
     print("  format:")
     for column in columns:
         print("    {field}: {fieldContent}".format(field=to_camel_case(column), fieldContent=column))
+
+
+
+def draft_skills(dtypes, width="800px"):
+    print("scorer:")
+    for column, dtype in dtypes.items():
+        print("""- type: HTML
+  args:
+    value: "<h3>{column}</h3>
+
+<p></p>"
+  layout:
+    max_width: {width}
+- field: "{column}" """.format(column=column, width=width))
+        if is_string_dtype(dtype):
+            print("""  type: Textarea
+  args:
+    value: ""
+    description: "{column}"
+  layout:
+    max_width: {width}""".format(column=column, width=width))
+        elif is_integer_dtype(dtype):
+            print("""  type: IntSlider
+  args:
+    value: 0
+    min: 0
+    max: 5
+    step: 1
+    description: "{column}"
+  layout:
+    max_width: {width}""".format(column=column, width=width))  
+        elif is_float_dtype(dtype):
+            print("""  type: FloatSlider
+  args:
+    value: 0
+    min: 0
+    max: 5
+    step: 0.5
+    description: "{column}"
+  layout:
+    max_width: {width}""".format(column=column, width=width))  
+        elif is_bool_dtype(dtype):
+            print("""  type: MyCheckbox
+  args:
+    value: False
+    description: "{column}" """.format(column=column))  
+
+          
+
+
+        
