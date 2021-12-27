@@ -2,6 +2,9 @@ import os
 import re
 
 import copy
+import tempfile
+from shutil import copy2
+import filecmp
 
 from unidecode import unidecode
 import random
@@ -10,11 +13,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import Markdown, display
-from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Dropdown, Label, Layout, HTML, HTMLMath
+from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath
 from ipywidgets import interact, interactive, fixed, interact_manual
 
 from .config import *
+from .util import to_camel_case
 from . import access
+
+
+TMPPDFFILES={}
 
 
 def MyCheckbox(**args):
@@ -31,14 +38,59 @@ def data():
     else:
         return allocation
 
+def clear_temp_files():
+    delete_keys = []
+    for filename, values in TMPPDFFILES.items():
+        destname = os.path.join(values["tmpdirectory"], filename)
+        delete_keys.append(filename)
+        if os.path.exists(destname):
+            print("Removing temporary " + filename)
+            os.remove(destname)
+
+    for key in delete_keys:
+        del TMPPDFFILES[key]
+
+def open_pdf(filename):
+    os.system('open ' + '--background ' + '"' + filename + '"')
+    
+def edit_pdfs(ds):
+    """Use the system viewer to show a PDF containing relevant information to the assessment."""
+
+    if "editpdf" in config:
+        for display in config["editpdf"]:
+            if "field" in display and type(ds[display["field"]]) is str:
+                storedirectory = os.path.expandvars(display["storedirectory"])
+                origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),ds[display["field"]])
+                editfilename = ds[config["allocation"]["index"]] + "_" + to_camel_case(display["field"]) + ".pdf"
+                destfile = os.path.join(storedirectory,editfilename)
+                if not os.path.exists(storedirectory):
+                    os.makedirs(storedirectory)
+                
+                if not os.path.exists(destfile):
+                    if os.path.exists(origfile):
+                        copy2(origfile, destfile)
+                    else:
+                        print("Warning editpdf " + origfile + " does not exist.")
+                open_pdf(destfile)
 
 def view_pdfs(ds):
+    """Use the system viewer to show a PDF containing relevant information to the assessment."""
+
     if "localpdf" in config:
         for display in config["localpdf"]:
             if "field" in display and type(ds[display["field"]]) is str:
                 filename = os.path.expandvars(os.path.join(display["directory"],ds[display["field"]]))
                 if os.path.exists(filename):
-                    os.system('open ' + '--background ' + '"' + filename + '"')
+                    tmpdirectory = tempfile.gettempdir()
+                    destfile = ds[config["allocation"]["index"]] + "_" + to_camel_case(display["field"]) + ".pdf"
+                    destname = os.path.join(tmpdirectory, destfile)
+                    if not os.path.exists(destname):
+                        copy2(filename, destname)
+                    TMPPDFFILES[destfile] = {
+                        "origfile": filename,
+                        "tmpdirectory": tmpdirectory,
+                    }
+                    open_pdf(destname)
                 else:
                     print("Warning localpdf " + filename + " does not exist.")
 
@@ -59,7 +111,9 @@ def view_urls(ds):
                 os.system('open ' + '-a "' + browser + '" --background ' + '"' + unidecode(display["url"] + urlterm.replace(" ", "%20")) + '"')
 
 def view_series(ds):
+    clear_temp_files()    
     view_pdfs(ds)
+    edit_pdfs(ds)
     view_urls(ds)
     display(Markdown(view_text(ds)))
 
@@ -140,8 +194,9 @@ def score(index, df, write_df):
                 else:
                     print("Warning missing key 'field' in combinator view.")
             
-
         access.write_scores(write_df)
+
+        
 
 
     def update_index(df, write_df, index):

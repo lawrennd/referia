@@ -10,21 +10,24 @@ def camel_capitalize(text):
     
 
 def to_camel_case(text):
+    """Remove non alpha-numeric characters and camelize capitalisation"""
     text = text.replace("/", " or ")
     text = text.replace("@", " at ")
-    non_alpha_chars = [ch for ch in set(list(text)) if not ch.isalnum()]
-    for ch in non_alpha_chars:
-        text = text.replace(ch, " ")
-    s = text.split()
-    if len(text) == 0:
-        return A
-    if s[0] == s[0].upper():
-        start = s[0]
-    else:
-        start = s[0].lower()
-        
-    return start + ''.join(camel_capitalize(i) for i in s[1:])
+    non_alpha_chars = set([ch for ch in set(list(text)) if not ch.isalnum()])
+    if len(non_alpha_chars) > 0:
+        for ch in non_alpha_chars:
+            text = text.replace(ch, " ")
+        s = text.split()
+        if len(text) == 0:
+            return A
+        if s[0] == s[0].upper():
+            start = s[0]
+        else:
+            start = s[0].lower()
 
+        return start + ''.join(camel_capitalize(i) for i in s[1:])
+    else:
+        return text
 
 def draft_combinator(fieldname, columns):
     print("combinator:")
