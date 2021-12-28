@@ -125,13 +125,13 @@ scorer:
 
 combinator:
 - field: Comment
-  display: "Thoughtfulness: {thoughtfullness} *{thoughtfulnessExpectation} bar*\n
+  display: "Thoughtfulness: {thoughtfulnessComment} *{thoughtfulnessExpectation} bar*\n
 Expense: {expenseComment} *{expenseExpectation} bar*\n
 \n
 Overal: {overallComment} **Score: {overallScore}"
   format:
-    thoughtfullnessComment: Thoughtfulness
-    thoughtfullnessExpectation: Thoughtfulness Expectation
+    thoughtfulnessComment: Thoughtfulness
+    thoughtfulnessExpectation: Thoughtfulness Expectation
     expenseComment: Expense
     expenseExpectation: Expense Expectation
     overallComment: Overall
