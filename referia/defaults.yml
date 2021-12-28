@@ -1,3 +1,4 @@
 # Place configure information you want everyone to have here.
-data_url: https://raw.githubusercontent.com/lawrennd/datasets_mirror/main/
-search_url: https://www.semanticscholar.org/search?q=
+logging:
+  level: 20
+  filename: referia.log

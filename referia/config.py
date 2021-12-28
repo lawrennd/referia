@@ -35,3 +35,12 @@ for key, item in config.items():
     if item is str:
         config[key] = os.path.expandvars(item)
 
+if "logging" in config:
+    if not "level" in config["logging"]:
+        config["logging"]["level"] = 20
+    
+    if not "filename" in config["logging"]:
+        config["logging"]["filename"] = "referia.log"
+else:
+    config["logging"] = {"level": 20, "filename": "referia.log"}
+

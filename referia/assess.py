@@ -17,12 +17,17 @@ from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobo
 from ipywidgets import interact, interactive, fixed, interact_manual
 
 from .config import *
+from .log import Logger
 from .util import to_camel_case
 from . import access
 
-
 TMPPDFFILES={}
 
+log = Logger(
+    name=__name__,
+    level=config["logging"]["level"],
+    filename=config["logging"]["filename"]
+)
 
 def MyCheckbox(**args):
     # Deal with weird bug where value is passed as an np.bool_ by wrapping Checkbox
@@ -44,7 +49,7 @@ def clear_temp_files():
         destname = os.path.join(values["tmpdirectory"], filename)
         delete_keys.append(filename)
         if os.path.exists(destname):
-            print("Removing temporary " + filename)
+            log.info("Removing temporary file {filename}.".format(filename=destname))
             os.remove(destname)
 
     for key in delete_keys:
@@ -68,9 +73,10 @@ def edit_pdfs(ds):
                 
                 if not os.path.exists(destfile):
                     if os.path.exists(origfile):
+                        log.debug("Copying {origfile} to {destfile}.".format(origfile=origfile, destfile=destfile))
                         copy2(origfile, destfile)
                     else:
-                        print("Warning editpdf " + origfile + " does not exist.")
+                        log.warning("Warning editpdf {origfile} does not exist.".format(origfile=origfile))
                 open_pdf(destfile)
 
 def view_pdfs(ds):
@@ -78,13 +84,20 @@ def view_pdfs(ds):
 
     if "localpdf" in config:
         for display in config["localpdf"]:
+            filename = ""
+            tmpname = ""
             if "field" in display and type(ds[display["field"]]) is str:
                 filename = os.path.expandvars(os.path.join(display["directory"],ds[display["field"]]))
-                if os.path.exists(filename):
+                tmpname = to_camel_case(display["field"])
+            elif "file" in display:
+                filename = os.path.expandvars(os.path.join(display["directory"], display["file"]))
+            if os.path.exists(filename):
+                if len(tmpname)>0:
                     tmpdirectory = tempfile.gettempdir()
-                    destfile = ds[config["allocation"]["index"]] + "_" + to_camel_case(display["field"]) + ".pdf"
+                    destfile = ds[config["allocation"]["index"]] + "_" + tmpname + ".pdf"
                     destname = os.path.join(tmpdirectory, destfile)
                     if not os.path.exists(destname):
+                        log.debug("Copying {origfile} to {destfile}.".format(origfile=filename, destfile=destname))
                         copy2(filename, destname)
                     TMPPDFFILES[destfile] = {
                         "origfile": filename,
@@ -92,7 +105,9 @@ def view_pdfs(ds):
                     }
                     open_pdf(destname)
                 else:
-                    print("Warning localpdf " + filename + " does not exist.")
+                    open_pdf(filename)
+            else:
+                log.warning("localpdf {filename} does not exist.".format(filename=filename))
 
 def view_urls(ds):
     if "browser" in config:
@@ -182,17 +197,27 @@ def score(index, df, write_df):
                 if fields[key] in write_df.columns:
                     write_df.at[index, fields[key]] = value
                 else:
-                    print("Warning " + fields[key] + " not in write columns ... adding.")
+                    log.info("{field} not in write columns ... adding.".format(field=fields[key]))
                     write_df[fields[key]] = None
                     write_df.at[index, fields[key]] = value
-                    
-        write_df.at[index, config["timestamp_field"]] = pd.to_datetime("today")
+
+        if "timestamp_field" in config:
+            timestamp_field = config["timestamp_field"]
+        else:
+            timestamp_field = "Timestamp"
+        write_df.at[index, timestamp_field] = pd.to_datetime("today")
+        if "created_field" in config:
+            created_field = config["created_field"]
+        else:
+            created_field = "Created"
+        if created_field not in write_df.columns or write_df.at[index, created_field] == "" or pd.isna(write_df.at[index, created_field]):
+            write_df.at[index, created_field] = pd.to_datetime("today")
         if "combinator" in config:
             for view in config["combinator"]:
                 if "field" in view:
                     write_df.at[index, view["field"]] = view_to_text(view, write_df.loc[index])
                 else:
-                    print("Warning missing key 'field' in combinator view.")
+                    log.error("Missing key 'field' in combinator view.")
             
         access.write_scores(write_df)
 
@@ -202,7 +227,9 @@ def score(index, df, write_df):
     def update_index(df, write_df, index):
         if index not in df.index:
             raise ValueError("Invalid index")
+        log.info("Index {index} selected.".format(index=index))
 
+        
         ds = df.loc[index]
         write_ds = write_df.loc[index]
         view_series(ds)
@@ -222,9 +249,9 @@ def score(index, df, write_df):
                         if pd.notna(write_ds[score["field"]]):
                             score["args"]["value"] = write_ds[score["field"]]
                     else:
-                        print("Warning " + score["field"] + " not in write_ds")
+                        log.warning("{field} not in write_ds".format(field=score["field"]))
                 else:
-                    name = ''.join(random.choice(string.ascii_letters) for _ in range(39))
+                    name = "".join(random.choice(string.ascii_letters) for _ in range(39))
                 globs = globals()
                 if "layout" in score:
                     score["args"]["layout"] = Layout(**score["layout"])
@@ -247,9 +274,15 @@ def score(index, df, write_df):
         )
 
             
+    if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in df:
+        if "ascending" in config["sortby"]:
+            ascending = config["sortby"]["ascending"]
+        else:
+            ascending=True
+        log.info("Sorting by {field}".format(field=config["sortby"]["field"]))
+        df.sort_values(by=config["sortby"]["field"], ascending=ascending, inplace=True)
 
     index_select = Dropdown(options=df.index, value=index)
     interact(update_index, index=index_select, df=fixed(df), write_df=fixed(write_df))
-    print("Saved")
 
 

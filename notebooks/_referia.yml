@@ -1,0 +1,138 @@
+browser: "Google Chrome.app"
+sortby:
+  field: index
+  ascending: True
+timestamp_field: Timestamp
+created_field: Created
+
+allocation:
+  index: keyname
+  type: excel
+  filename: gifts.xlsx
+  sheet: Sheet1
+  directory: .
+  header: 0
+
+additional:
+  index: keyname
+  type: excel
+  filename: details.xlsx
+  sheet: Sheet1
+  directory: .
+  header: 0
+
+
+scores:
+  index: keyname
+  type: excel
+  sheet: Sheet1
+  directory: .
+  filename: scores.xlsx
+  header: 0
+
+scored:
+  field: Overall Score
+
+viewer:
+- display: "# {keyname}: {description}"
+  format:
+    keyname: keyname
+    description: Description
+
+urls:
+- url: ""
+  field: AdditionalInfo
+
+scorer:
+- type: HTML
+  args:
+    value: "<h4>Gift Thoughtfulness</h4>
+<p>How thoughtful was the gift, does it match who you are?</p>"
+    layout:
+      width: "800px"
+- field: "Thoughtfulness"
+  type: Textarea
+  args:
+    value: ""
+    description: "Comment"
+    layout:
+      width: "800px"
+- field: "Thoughtfulness Expectation"
+  type: Combobox
+  args:
+    placeholder: Against expectations
+    options:
+      - Raises
+      - Meets
+      - Lowers
+    description: Expectation
+- type: HTML
+  args:
+    value: "<h4>Gift Expense</h4>
+<p>How expensive was the gift?</p>"
+    layout:
+      width: "800px"
+- field: "Expense"
+  type: Textarea
+  args:
+    value: ""
+    description: "Comment"
+    layout:
+      width: "800px"
+- field: "Expense Expectation"
+  type: Combobox
+  args:
+    placeholder: Against expectations
+    options:
+      - Raises
+      - Meets
+      - Lowers
+    description: Expectation
+- type: HTML
+  args:
+    value: '<h4>Overall</h4>'
+    layout:
+      width: "800px"
+- field: "Overall"
+  type: Textarea
+  args:
+    value: ""
+    description: "Comments"
+    layout:
+      width: "800px"
+- field: "Overall Score"
+  type: FloatSlider
+  args:
+    value: 5
+    min: 0
+    max: 10
+    step: 1
+    description: "Score"
+    layout:
+      width: "800px"
+- type: HTML
+  args:
+    value: '<h4>Other Comments</h4>'
+    layout:
+      width: "800px"
+- field: "Other Comments"
+  type: Textarea
+  args:
+    value: ""
+    description: "Comment"
+    layout:
+      width: "800px"
+
+combinator:
+- field: Comment
+  display: "Thoughtfulness: {thoughtfullness} *{thoughtfulnessExpectation} bar*\n
+Expense: {expenseComment} *{expenseExpectation} bar*\n
+\n
+Overal: {overallComment} **Score: {overallScore}"
+  format:
+    thoughtfullnessComment: Thoughtfulness
+    thoughtfullnessExpectation: Thoughtfulness Expectation
+    expenseComment: Expense
+    expenseExpectation: Expense Expectation
+    overallComment: Overall
+    overallScore: Overall Score
