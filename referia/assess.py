@@ -358,6 +358,7 @@ def score(index=None, df=None, write_df=None):
     if index is not None:
         set_index(index)
 
+    INTERACT_ARGS = {}
     # Process the different scorers in from the _referia.yml file 
     if "scorer" in config:
         for score in config["scorer"]:
