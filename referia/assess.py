@@ -1,7 +1,7 @@
 import os
 import re
 
-import copy
+import json
 import tempfile
 from shutil import copy2
 import filecmp
@@ -25,6 +25,10 @@ from . import access
 TMPPDFFILES={}
 DATA = None
 WRITEDATA = None
+INDEX = None
+INTERACT_ARGS = {}
+COLUMN_NAMES = {}
+DEFAULT_WRITEDF_VALS = pd.Series()
 
 interact_manual.opts["manual_name"] = "Save Score"
 
@@ -197,47 +201,198 @@ def view(data):
     ax.set_xticks(range(0,13))
 
 
+def extract_scorer(orig_score):
+    """Interpret a scoring element from the yaml file and create the relevant widgets to be past to the interact command"""
+    global WRITEDATA
+    global COLUMN_NAMES
+    interact_args = {}
+    score = json.loads(json.dumps(orig_score))
 
+    if score["type"] == "CriterionComment":
+        prefix = score["prefix"]
+        criterion = score["criterion"]
+        if "width" in score:
+            width = score["width"]
+        else:
+            width = "800px"
+        criterion = {
+            "field": "_" + prefix + " Criterion",
+            "type": "HTML",
+            "args": {
+                "value": criterion,
+                "layout": {"width": width},
+            }
+        }
+        comment = {
+            "field": prefix + " Comment",
+            "type": "Textarea",
+            "args": {
+                "value": "",
+                "description": "Comment",
+                "layout": {"width": width},
+            }
+        }
+        for sub_score in [criterion, comment]:
+            interact_args = {**interact_args, **extract_scorer(sub_score)}
+        return interact_args
+        
+
+    if score["type"] == "CriterionCommentRaisesMeetsLowers":
+        criterioncomment = json.loads(json.dumps(score))
+        criterioncomment["type"] = "CriterionComment"
+
+        prefix = score["prefix"]
+        expectation = {
+            "field": prefix + " Expectation",
+            "type": "Combobox",
+            "args": {
+                "placeholder": "Against expectations",
+                "options": [
+                    "Raises",
+                    "Meets",
+                    "Lowers",
+                    ],
+                "description": "Expectation",
+            }
+        }
+        for sub_score in [criterioncomment, expectation]:
+            interact_args = {**interact_args, **extract_scorer(sub_score)}
+        return interact_args
+
+    if score["type"] == "CriterionCommentScore":
+        criterioncomment = json.loads(json.dumps(score))
+        criterioncomment["type"] = "CriterionComment"
+        if "width" in score:
+            width = score["width"]
+        else:
+            width = "800px"
+
+        prefix = score["prefix"]
+        if "min" in score:
+            minval = score["min"]
+        else:
+            minval = 0
+        if "max" in score:
+            maxval = score["max"]
+        else:
+            maxval = 10
+        if "step" in score:
+            step = score["step"]
+        else:
+            step = 1
+        if "value" in score:
+            value = score["value"]
+        else:
+            value = int(((maxval-minval)/2)/step)*step + minval
+
+        score = {
+            "field": prefix + " Score",
+            "type": "FloatSlider",
+            "args": {
+                "min": minval,
+                "max": maxval,
+                "step": step,
+                "value": value,
+                "description": "Score",
+                "layout": {"width": width},
+            }
+        }
+        for sub_score in [criterioncomment, score]:
+            interact_args = {**interact_args, **extract_scorer(sub_score)}
+        return interact_args
+    
+    global_variables = globals()
+    if "field" in score:
+        name = clean_string(score["field"])
+        COLUMN_NAMES[name] = score["field"]
+
+        # Create an instance of the object to extract default value.
+        DEFAULT_WRITEDF_VALS[score["field"]] = global_variables[score["type"]]().value
+        if "args" in score and "value" in score["args"]:
+            DEFAULT_WRITEDF_VALS[score["field"]] = score["args"]["value"]
+    else:
+        # Field name is missing, generate a random one.
+        name = "_" + "".join(random.choice(string.ascii_letters) for _ in range(39))
+        COLUMN_NAMES[name] = name
+
+    # Deal with HTML descriptions (setting them to blank if not set)
+    if score["type"] in ["HTML", "HTMLMath"]:
+        if "args" not in score:
+            score["args"] = {"description": " "}
+        else:
+            if "description" not in score:
+                score["args"]["description"] = " "
+
+    global_variables = globals()
+    if "layout" in score:
+        score["args"]["layout"] = Layout(**score["layout"])
+    elif score["type"] in global_variables:
+        interact_args[name] = global_variables[score["type"]](**score["args"])
+    else:
+        raise Exception("Have not loaded " + score["type"] + " interaction type.")
+    return interact_args
 
 def clean_string(instring):
     return re.sub("\W+|^(?=\d)","_", instring)
 
-def score(index, df=None, write_df=None):
+def set_index(index):
+    """Index setter"""
+    global INDEX
+    if index not in DATA.index:
+        raise ValueError("Invalid index")
+    else:
+        INDEX = index
+        log.info("Index {index} selected.".format(index=index))
+        
+def get_index():
+    global INDEX
+    return INDEX
+
+        
+def score(index=None, df=None, write_df=None):
+    global DATA
+    global INTERACT_ARGS
     if df is not None or write_df is not None:
         log.warning("Passing of data frames to score is deprecated. These values are not used.")
-    global DATA
-                    
-    def update_df(index, progress_label, **kwargs):
+        
+    if index is not None:
+        set_index(index)
+
+    # Process the different scorers in from the _referia.yml file 
+    if "scorer" in config:
+        for score in config["scorer"]:
+            INTERACT_ARGS = {**INTERACT_ARGS, **extract_scorer(score)}
+
+    
+    def update_df(progress_label, **kwargs):
         global WRITEDATA
-        details = config["scorer"]
-        fields = {}
-        for display in details:
-            if "field" in display:
-                fields[clean_string(display["field"])] = display["field"]
+
         for key, value in kwargs.items():
-            if key in fields:
-                if fields[key] in WRITEDATA.columns:
-                    WRITEDATA.at[index, fields[key]] = value
+            # fields starting with "_" are not transferred
+            # (typically HTML widgets for prompting input)
+            if key[0] != "_":
+                if COLUMN_NAMES[key] in WRITEDATA.columns:
+                    WRITEDATA.at[get_index(), COLUMN_NAMES[key]] = value
                 else:
-                    log.info("{field} not in write columns ... adding.".format(field=fields[key]))
-                    WRITEDATA[fields[key]] = None
-                    WRITEDATA.at[index, fields[key]] = value
+                    log.info("{field} not in write columns ... adding.".format(field=COLUMN_NAMES[key]))
+                    WRITEDATA[COLUMN_NAMES[key]] = None
+                    WRITEDATA.at[get_index(), COLUMN_NAMES[key]] = value
 
         if "timestamp_field" in config:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        WRITEDATA.at[index, timestamp_field] = pd.to_datetime("today")
+        WRITEDATA.at[get_index(), timestamp_field] = pd.to_datetime("today")
         if "created_field" in config:
             created_field = config["created_field"]
         else:
             created_field = "Created"
-        if created_field not in WRITEDATA.columns or WRITEDATA.at[index, created_field] == "" or pd.isna(WRITEDATA.at[index, created_field]):
-            WRITEDATA.at[index, created_field] = pd.to_datetime("today")
+        if created_field not in WRITEDATA.columns or WRITEDATA.at[get_index(), created_field] == "" or pd.isna(WRITEDATA.at[get_index(), created_field]):
+            WRITEDATA.at[get_index(), created_field] = pd.to_datetime("today")
         if "combinator" in config:
             for view in config["combinator"]:
                 if "field" in view:
-                    WRITEDATA.at[index, view["field"]] = view_to_text(view, WRITEDATA.loc[index])
+                    WRITEDATA.at[get_index(), view["field"]] = view_to_text(view, WRITEDATA.loc[get_index()])
                 else:
                     log.error("Missing key 'field' in combinator view.")
             
@@ -246,67 +401,51 @@ def score(index, df=None, write_df=None):
         
 
 
-    def update_index(index):
+    def update_score_row(index):
         global DATA
         global WRITEDATA
-        if index not in DATA.index:
-            raise ValueError("Invalid index")
-        log.info("Index {index} selected.".format(index=index))
+        global INTERACT_ARGS
+        global COLUMN_NAMES
+        
+        set_index(index)
+        view_series(DATA.loc[get_index()])
 
-        
-        ds = DATA.loc[index]
-        write_ds = WRITEDATA.loc[index]
-        view_series(ds)
-        
+
+        # Now update the widget entries with values from the WRITEDATA if they exist otherwise set to default
+        for key, widget in INTERACT_ARGS.items():
+            if COLUMN_NAMES[key][0] != "_":
+                if COLUMN_NAMES[key] not in DEFAULT_WRITEDF_VALS:
+                    DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]] = None
+
+                widget.value = DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]]
+                if COLUMN_NAMES[key] in WRITEDATA.columns:
+                    if pd.notna(WRITEDATA.at[get_index(), COLUMN_NAMES[key]]):
+                        widget.value = WRITEDATA.at[get_index(), COLUMN_NAMES[key]]
+                else:
+                    log.warning("{field} not in WRITEDATA".format(field=COLUMN_NAMES[key]))
+                    WRITEDATA[COLUMN_NAMES[key]] = None
+
+                    
+        total = len(WRITEDATA.index)
+        remain = total
+        progress_label = fixed("None")
         if config["scored"]["field"] in WRITEDATA:
             scored = WRITEDATA[config["scored"]["field"]].count()
-            total = len(WRITEDATA[config["scored"]["field"]])
-            remain = total - scored
+            remain -= scored
+            progress_label = Label("{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100))
 
-        interact_args = {}
-        if "scorer" in config:
-            for orig_score in config["scorer"]:
-                score = copy.deepcopy(orig_score)
-                if "field" in score:
-                    name = clean_string(score["field"])
-                    if score["field"] in write_ds:
-                        if pd.notna(write_ds[score["field"]]):
-                            score["args"]["value"] = write_ds[score["field"]]
-                    else:
-                        log.warning("{field} not in write_ds".format(field=score["field"]))
-                else:
-                    name = "_" + "".join(random.choice(string.ascii_letters) for _ in range(39))
-
-                # Deal with HTML descriptions (setting them to blank if not set)
-                if score["type"] in ["HTML", "HTMLMath"]:
-                    if "args" not in score:
-                        score["args"] = {"description": " "}
-                    else:
-                        if "description" not in score:
-                            score["args"]["description"] = " "
-                            
-                global_variables = globals()
-                if "layout" in score:
-                    score["args"]["layout"] = Layout(**score["layout"])
-                    
-                if score["type"] in global_variables:
-                    interact_args[name] = global_variables[score["type"]](**score["args"])
-                else:
-                    raise Exception("Have not loaded " + score["type"] + " interaction type.")
-        
-        if config["scored"]["field"] in WRITEDATA:
-            interact_args["progress_label"] = Label("{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100))
-        else:
-            interact_args["progress_label"] = fixed("None")
+        interact_args = {
+            "progress_label": progress_label,
+            **INTERACT_ARGS
+        }
 
         interact_manual(
             update_df, 
-            index=fixed(index),
             **interact_args
         )
 
             
-    index_select = Dropdown(options=DATA.index, value=index)
-    interact(update_index, index=index_select)
+    index_select=Dropdown(options=DATA.index, value=get_index())
+    interact(update_score_row, index=index_select)
     
 

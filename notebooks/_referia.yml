@@ -4,7 +4,8 @@ sortby:
   ascending: True
 timestamp_field: Timestamp
 created_field: Created
-
+logging:
+  level: 10
 allocation:
   index: keyname
   type: excel
@@ -44,85 +45,24 @@ urls:
   field: AdditionalInfo
 
 scorer:
-- type: HTML
-  args:
-    value: "<h4>Gift Thoughtfulness</h4>
+- type: CriterionCommentRaisesMeetsLowers
+  criterion: "<h4>Gift Thoughtfulness</h4>
 <p>How thoughtful was the gift, does it match who you are?</p>"
-    layout:
-      width: "800px"
-- field: "Thoughtfulness"
-  type: Textarea
-  args:
-    value: ""
-    description: "Comment"
-    layout:
-      width: "800px"
-- field: "Thoughtfulness Expectation"
-  type: Combobox
-  args:
-    placeholder: Against expectations
-    options:
-      - Raises
-      - Meets
-      - Lowers
-    description: Expectation
-- type: HTML
-  args:
-    value: "<h4>Gift Expense</h4>
+  prefix: Thoughtfulness
+- type: CriterionCommentRaisesMeetsLowers
+  criterion: "<h4>Gift Expense</h4>
 <p>How expensive was the gift?</p>"
-    layout:
-      width: "800px"
-- field: "Expense"
-  type: Textarea
-  args:
-    value: ""
-    description: "Comment"
-    layout:
-      width: "800px"
-- field: "Expense Expectation"
-  type: Combobox
-  args:
-    placeholder: Against expectations
-    options:
-      - Raises
-      - Meets
-      - Lowers
-    description: Expectation
-- type: HTML
-  args:
-    value: '<h4>Overall</h4>'
-    description: " "
-    layout:
-      width: "800px"
-- field: "Overall"
-  type: Textarea
-  args:
-    value: ""
-    description: "Comments"
-    layout:
-      width: "800px"
-- field: "Overall Score"
-  type: FloatSlider
-  args:
-    value: 5
-    min: 0
-    max: 10
-    step: 1
-    description: "Score"
-    layout:
-      width: "800px"
-- type: HTML
-  args:
-    value: '<h4>Other Comments</h4>'
-    layout:
-      width: "800px"
-- field: "Other Comments"
-  type: Textarea
-  args:
-    value: ""
-    description: "Comment"
-    layout:
-      width: "800px"
+  prefix: Expense
+- type: CriterionCommentScore
+  criterion: '<h4>Overall</h4>'
+  prefix: Overall
+  value: 5
+  min: 0
+  max: 10
+  step: 1
+- type: CriterionComment
+  criterion: '<h4>Other Comments</h4>'
+  prefix: Other
 
 combinator:
 - field: Comment
@@ -131,9 +71,9 @@ Expense: {expenseComment} *{expenseExpectation} bar*\n
 \n
 Overall: {overallComment} **Score: {overallScore}**"
   format:
-    thoughtfulnessComment: Thoughtfulness
+    thoughtfulnessComment: Thoughtfulness Comment
     thoughtfulnessExpectation: Thoughtfulness Expectation
-    expenseComment: Expense
+    expenseComment: Expense Comment
     expenseExpectation: Expense Expectation
-    overallComment: Overall
+    overallComment: Overall Comment
     overallScore: Overall Score
