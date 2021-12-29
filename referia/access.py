@@ -120,14 +120,18 @@ def write_markdown_file(data, filename, include_content=True):
             
     return data
 
+def extract_full_filename(details):
+    """Return the filename from the details of directory and filename"""
+    return os.path.join(
+        os.path.expandvars(details["directory"]),
+        details["filename"],
+    )
+
 
 def read_excel(details):
     """Read scoring data from an excel spreadsheet."""
     dtypes = extract_dtypes(details)
-    filename = os.path.join(
-        os.path.expandvars(details["directory"]),
-        details["filename"],
-    )
+    filename = extract_full_filename(details)
     log.info("Reading excel file {filename}".format(filename=filename))
     data =  pd.read_excel(
         filename,
@@ -147,10 +151,7 @@ def finalize_df(df, details):
 
 def write_excel(df, details):
     """Write data to an excel spreadsheet."""
-    filename = os.path.join(
-        os.path.expandvars(details["directory"]),
-        details["filename"],
-    )
+    filename = extract_full_filename(details)
     log.info("Writing excel file {filename}".format(filename=filename))
         
     writer = pd.ExcelWriter(
@@ -193,14 +194,33 @@ def allocation():
     return read_data(config["allocation"])
 
 
-def scores():
+def scores(index=None):
     """Load in the scoring spread sheet to data frames."""
-    return read_data(config["scores"])
+    filename = extract_full_filename(config["scores"])
+    if os.path.exists(filename):
+        return read_data(config["scores"])
+    elif index is not None:
+        log.info("Creating new DataFrame for write data from index as {filename} is not found.".format(filename=filename))
+        return pd.DataFrame(index=index, data=index)
+    else:
+        raise FileNotFoundError(
+            errno.ENOENT,
+            os.strerror(errno.ENOENT), filename
+            )
 
 
 def additional():
     """Load in the additional spread sheet to data frames."""
-    return read_data(config["additional"])
+    if type(config["additional"]) is list:
+        for i, source in enumerate(config["additional"]):
+            if i == 0:
+                additional = read_data(source)
+            else:
+                additional = additional.join(read_data(source), rsuffix="_" + str(i))
+    else:
+        additional = read_data(config["additional"])
+
+    return additional
     
 def write_scores(df):
     """Load in the scoring spread sheet to data frames."""

@@ -16,12 +16,17 @@ from IPython.display import Markdown, display
 from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath
 from ipywidgets import interact, interactive, fixed, interact_manual
 
+from .widgets import MyCheckbox
 from .config import *
 from .log import Logger
 from .util import to_camel_case
 from . import access
 
 TMPPDFFILES={}
+DATA = None
+WRITEDATA = None
+
+interact_manual.opts["manual_name"] = "Save Score"
 
 log = Logger(
     name=__name__,
@@ -29,20 +34,33 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
-def MyCheckbox(**args):
-    # Deal with weird bug where value is passed as an np.bool_ by wrapping Checkbox
-    args["value"] = bool(args["value"])
-    return Checkbox(**args)
+
+def load_data():
+    """Joint the two data together, the allocation and additional information."""
+    global DATA
+    global WRITEDATA
+    DATA = access.allocation()
+    if "additional" in config:
+        additional = access.additional()
+        log.info("Joining allocation and additional information.")
+        DATA = DATA.join(additional, rsuffix="additional")
+
+    # If sorting is requested do it here.
+    if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in DATA:
+        if "ascending" in config["sortby"]:
+            ascending = config["sortby"]["ascending"]
+        else:
+            ascending=True
+        log.info("Sorting by {field}".format(field=config["sortby"]["field"]))
+        DATA.sort_values(by=config["sortby"]["field"], ascending=ascending, inplace=True)
+    WRITEDATA = access.scores(DATA.index)
 
 def data():
-    """Joint the two data together, the allocation and additional information."""
-    allocation = access.allocation()
-    if "additional" in config:
-        additional = access.additional()    
-        return allocation.join(additional, rsuffix="additional")
-    else:
-        return allocation
+    global DATA
+    load_data()
+    return DATA
 
+    
 def clear_temp_files():
     delete_keys = []
     for filename, values in TMPPDFFILES.items():
@@ -184,9 +202,13 @@ def view(data):
 def clean_string(instring):
     return re.sub("\W+|^(?=\d)","_", instring)
 
-def score(index, df, write_df):
+def score(index, df=None, write_df=None):
+    if df is not None or write_df is not None:
+        log.warning("Passing of data frames to score is deprecated. These values are not used.")
+    global DATA
                     
-    def update_df(df, write_df, index, progress_label, **kwargs):
+    def update_df(index, progress_label, **kwargs):
+        global WRITEDATA
         details = config["scorer"]
         fields = {}
         for display in details:
@@ -194,49 +216,51 @@ def score(index, df, write_df):
                 fields[clean_string(display["field"])] = display["field"]
         for key, value in kwargs.items():
             if key in fields:
-                if fields[key] in write_df.columns:
-                    write_df.at[index, fields[key]] = value
+                if fields[key] in WRITEDATA.columns:
+                    WRITEDATA.at[index, fields[key]] = value
                 else:
                     log.info("{field} not in write columns ... adding.".format(field=fields[key]))
-                    write_df[fields[key]] = None
-                    write_df.at[index, fields[key]] = value
+                    WRITEDATA[fields[key]] = None
+                    WRITEDATA.at[index, fields[key]] = value
 
         if "timestamp_field" in config:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        write_df.at[index, timestamp_field] = pd.to_datetime("today")
+        WRITEDATA.at[index, timestamp_field] = pd.to_datetime("today")
         if "created_field" in config:
             created_field = config["created_field"]
         else:
             created_field = "Created"
-        if created_field not in write_df.columns or write_df.at[index, created_field] == "" or pd.isna(write_df.at[index, created_field]):
-            write_df.at[index, created_field] = pd.to_datetime("today")
+        if created_field not in WRITEDATA.columns or WRITEDATA.at[index, created_field] == "" or pd.isna(WRITEDATA.at[index, created_field]):
+            WRITEDATA.at[index, created_field] = pd.to_datetime("today")
         if "combinator" in config:
             for view in config["combinator"]:
                 if "field" in view:
-                    write_df.at[index, view["field"]] = view_to_text(view, write_df.loc[index])
+                    WRITEDATA.at[index, view["field"]] = view_to_text(view, WRITEDATA.loc[index])
                 else:
                     log.error("Missing key 'field' in combinator view.")
             
-        access.write_scores(write_df)
+        access.write_scores(WRITEDATA)
 
         
 
 
-    def update_index(df, write_df, index):
-        if index not in df.index:
+    def update_index(index):
+        global DATA
+        global WRITEDATA
+        if index not in DATA.index:
             raise ValueError("Invalid index")
         log.info("Index {index} selected.".format(index=index))
 
         
-        ds = df.loc[index]
-        write_ds = write_df.loc[index]
+        ds = DATA.loc[index]
+        write_ds = WRITEDATA.loc[index]
         view_series(ds)
         
-        if config["scored"]["field"] in write_df:
-            scored = write_df[config["scored"]["field"]].count()
-            total = len(write_df[config["scored"]["field"]])
+        if config["scored"]["field"] in WRITEDATA:
+            scored = WRITEDATA[config["scored"]["field"]].count()
+            total = len(WRITEDATA[config["scored"]["field"]])
             remain = total - scored
 
         interact_args = {}
@@ -251,38 +275,38 @@ def score(index, df, write_df):
                     else:
                         log.warning("{field} not in write_ds".format(field=score["field"]))
                 else:
-                    name = "".join(random.choice(string.ascii_letters) for _ in range(39))
-                globs = globals()
+                    name = "_" + "".join(random.choice(string.ascii_letters) for _ in range(39))
+
+                # Deal with HTML descriptions (setting them to blank if not set)
+                if score["type"] in ["HTML", "HTMLMath"]:
+                    if "args" not in score:
+                        score["args"] = {"description": " "}
+                    else:
+                        if "description" not in score:
+                            score["args"]["description"] = " "
+                            
+                global_variables = globals()
                 if "layout" in score:
                     score["args"]["layout"] = Layout(**score["layout"])
                     
-                if score["type"] in globs:
-                    interact_args[name] = globs[score["type"]](**score["args"])
+                if score["type"] in global_variables:
+                    interact_args[name] = global_variables[score["type"]](**score["args"])
                 else:
                     raise Exception("Have not loaded " + score["type"] + " interaction type.")
         
-        if config["scored"]["field"] in write_df:
+        if config["scored"]["field"] in WRITEDATA:
             interact_args["progress_label"] = Label("{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100))
         else:
             interact_args["progress_label"] = fixed("None")
+
         interact_manual(
             update_df, 
             index=fixed(index),
-            df=fixed(df),
-            write_df=fixed(write_df),
             **interact_args
         )
 
             
-    if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in df:
-        if "ascending" in config["sortby"]:
-            ascending = config["sortby"]["ascending"]
-        else:
-            ascending=True
-        log.info("Sorting by {field}".format(field=config["sortby"]["field"]))
-        df.sort_values(by=config["sortby"]["field"], ascending=ascending, inplace=True)
-
-    index_select = Dropdown(options=df.index, value=index)
-    interact(update_index, index=index_select, df=fixed(df), write_df=fixed(write_df))
-
+    index_select = Dropdown(options=DATA.index, value=index)
+    interact(update_index, index=index_select)
+    
 

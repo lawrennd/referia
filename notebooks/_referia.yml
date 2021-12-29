@@ -91,6 +91,7 @@ scorer:
 - type: HTML
   args:
     value: '<h4>Overall</h4>'
+    description: " "
     layout:
       width: "800px"
 - field: "Overall"
@@ -128,7 +129,7 @@ combinator:
   display: "Thoughtfulness: {thoughtfulnessComment} *{thoughtfulnessExpectation} bar*\n
 Expense: {expenseComment} *{expenseExpectation} bar*\n
 \n
-Overal: {overallComment} **Score: {overallScore}"
+Overall: {overallComment} **Score: {overallScore}**"
   format:
     thoughtfulnessComment: Thoughtfulness
     thoughtfulnessExpectation: Thoughtfulness Expectation
