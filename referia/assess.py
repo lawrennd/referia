@@ -78,7 +78,15 @@ def clear_temp_files():
         del TMPPDFFILES[key]
 
 def open_pdf(filename):
+    """Use the system viewer to open a PDF."""
+    log.info("Opening file {filename}.".format(filename=filename))
     os.system('open ' + '--background ' + '"' + filename + '"')
+
+def open_url(urlname):
+    """Use the browser to open URL."""
+    log.info("Opening url {urlname}.".format(urlname=urlname))
+    os.system('open ' + '-a "' + browser + '" --background ' + '"' + urlname + '"')
+
     
 def edit_pdfs(ds):
     """Use the system viewer to show a PDF containing relevant information to the assessment."""
@@ -145,7 +153,9 @@ def view_urls(ds):
                     urlterm = view_to_text(display, ds)
                 else:
                     urlterm = ""
-                os.system('open ' + '-a "' + browser + '" --background ' + '"' + unidecode(display["url"] + urlterm.replace(" ", "%20")) + '"')
+                urlname = unidecode(display["url"] + urlterm.replace(" ", "%20"))
+                open_url(urlname)
+
 
 def view_series(ds):
     clear_temp_files()    
