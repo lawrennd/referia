@@ -431,7 +431,8 @@ def score(index=None, df=None, write_df=None):
 
                 widget.value = DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]]
                 if COLUMN_NAMES[key] in WRITEDATA.columns:
-                    if pd.notna(WRITEDATA.at[get_index(), COLUMN_NAMES[key]]):
+                    dval = WRITEDATA.at[get_index(), COLUMN_NAMES[key]]
+                    if pd.notna(dval) and dval != "":
                         widget.value = WRITEDATA.at[get_index(), COLUMN_NAMES[key]]
                 else:
                     log.warning("{field} not in WRITEDATA".format(field=COLUMN_NAMES[key]))

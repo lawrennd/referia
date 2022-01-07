@@ -166,6 +166,7 @@ def read_gsheet(details):
     gsheet = gspd.Spread(
         spread=filename,
         sheet=sheet,
+        config=config["gspread_pandas"],
     )
     data= gsheet.sheet_to_df(
         index=None,
@@ -211,6 +212,7 @@ def write_gsheet(df, details):
         spread=filename,
         sheet=sheet,
         create_spread=True,
+        config=config["gspread_pandas"],
     )
     gsheet.df_to_sheet(
         df=df,
@@ -251,7 +253,9 @@ def allocation():
 def scores(index=None):
     """Load in the scoring spread sheet to data frames."""
     filename = extract_full_filename(config["scores"])
-    if os.path.exists(filename):
+    if config["scores"]["type"] == "gsheet":
+        return read_data(config["scores"])
+    elif os.path.exists(filename):
         return read_data(config["scores"])
     elif index is not None:
         log.info(f"Creating new DataFrame for write data from index as {filename} is not found.")
@@ -282,5 +286,3 @@ def write_scores(df):
         write_excel(df, config["scores"])
     elif config["scores"]["type"] == "gsheet":
         write_gsheet(df, config["scores"])
-        
-    return data 

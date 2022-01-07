@@ -2,6 +2,8 @@ import os
 import yaml
 import numpy as np
 
+import gspread_pandas.conf as gspdconf
+
 default_file = os.path.join(os.path.dirname(__file__), "defaults.yml")
 local_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "machine.yml"))
 user_file = '_referia.yml'
@@ -44,3 +46,17 @@ if "logging" in config:
 else:
     config["logging"] = {"level": 20, "filename": "referia.log"}
 
+conf_dir = None
+file_name = "google_secret.json"
+
+if "google_oauth" in config:
+    if "directory" in config["google_oauth"]:
+        conf_dir = os.path.expandvars(config["google_oauth"]["directory"])
+    if "keyfile" in config["google_oauth"]:
+        file_name = config["google_oauth"]["keyfile"]
+    
+    
+config["gspread_pandas"] = gspdconf.get_config(
+    conf_dir=conf_dir,
+    file_name=file_name,
+    )
