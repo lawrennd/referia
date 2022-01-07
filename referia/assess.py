@@ -84,6 +84,11 @@ def open_pdf(filename):
 
 def open_url(urlname):
     """Use the browser to open URL."""
+    if "browser" in config:
+        browser=config["browser"]
+    else:
+        browser="Google Chrome.app" 
+    
     log.info("Opening url {urlname}.".format(urlname=urlname))
     os.system('open ' + '-a "' + browser + '" --background ' + '"' + urlname + '"')
 
@@ -140,10 +145,6 @@ def view_pdfs(ds):
                 log.warning("localpdf {filename} does not exist.".format(filename=filename))
 
 def view_urls(ds):
-    if "browser" in config:
-        browser=config["browser"]
-    else:
-        browser="Google Chrome.app" 
     if "urls" in config:
         for display in config["urls"]:
             if "url" in display:

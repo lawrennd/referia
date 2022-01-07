@@ -32,6 +32,7 @@ REQUIRED = [
     "jupyter",
     "matplotlib",
     "unidecode",
+    "frontmatter", 
 ]
 
 # What packages are optional?
