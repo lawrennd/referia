@@ -16,7 +16,7 @@ from IPython.display import Markdown, display
 from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath
 from ipywidgets import interact, interactive, fixed, interact_manual
 
-import pydftk as tk
+import pypdftk as tk
 
 from .widgets import MyCheckbox
 from .config import *
@@ -94,7 +94,12 @@ def open_url(urlname):
     log.info("Opening url {urlname}.".format(urlname=urlname))
     os.system('open ' + '-a "' + browser + '" --background ' + '"' + urlname + '"')
 
-    
+def notempty(val):
+    return pd.notna(val) and val!=""
+
+def empty(val):
+    return pd.isna(val) or val==""
+
 def edit_pdfs(ds):
     """Use the system viewer to show a PDF containing relevant information to the assessment."""
 
@@ -111,13 +116,14 @@ def edit_pdfs(ds):
                 if not os.path.exists(destfile):
                     if os.path.exists(origfile):
                         if "pages" in display and "first" in display["pages"] and "last" in display["pages"]:
-                            firstpage = ds[display["pages"]["first"]]
-                            lastpage = ds[display["pages"]["last"]]
-                            log.info(f"Extracting {destfile} from {origfile} pages {firstpage}-{lastpage}")
-                            tk.get_pages(
-                                pdf_path=origfile,
-                                ranges=[[firstpage, lastpage]],
-                                out_file=desfile,
+                            firstpage = int(ds[display["pages"]["first"]])
+                            lastpage = int(ds[display["pages"]["last"]])
+                            if notempty(firstpage) and notempty(lastpage) and notempty(display["field"]):
+                                log.info(f"Extracting {destfile} from {origfile} pages {firstpage}-{lastpage}")
+                                tk.get_pages(
+                                    pdf_path=origfile,
+                                    ranges=[[firstpage, lastpage]],
+                                    out_file=destfile,
                                 )
                         else:
                             log.info(f"Copying {origfile} to {destfile}.")
@@ -267,10 +273,11 @@ def extract_scorer(orig_score):
         prefix = score["prefix"]
         expectation = {
             "field": prefix + " Expectation",
-            "type": "Combobox",
+            "type": "Dropdown",
             "args": {
                 "placeholder": "Against expectations",
                 "options": [
+                    "",
                     "Raises",
                     "Meets",
                     "Lowers",
@@ -282,6 +289,31 @@ def extract_scorer(orig_score):
             interact_args = {**interact_args, **extract_scorer(sub_score)}
         return interact_args
 
+    if score["type"] == "CriterionCommentRaisesMeetsLowersFlag":
+        criterioncomment = json.loads(json.dumps(score))
+        criterioncomment["type"] = "CriterionComment"
+
+        prefix = score["prefix"]
+        expectation = {
+            "field": prefix + " Expectation",
+            "type": "Dropdown",
+            "args": {
+                "placeholder": "Against expectations",
+                "options": [
+                    "",
+                    "Raises",
+                    "Meets",
+                    "Lowers",
+                    "Flag",
+                    ],
+                "value": "",
+                "description": "Expectation",
+            }
+        }
+        for sub_score in [criterioncomment, expectation]:
+            interact_args = {**interact_args, **extract_scorer(sub_score)}
+        return interact_args
+    
     if score["type"] == "CriterionCommentScore":
         criterioncomment = json.loads(json.dumps(score))
         criterioncomment["type"] = "CriterionComment"
@@ -411,7 +443,7 @@ def score(index=None, df=None, write_df=None):
             created_field = config["created_field"]
         else:
             created_field = "Created"
-        if created_field not in WRITEDATA.columns or WRITEDATA.at[get_index(), created_field] == "" or pd.isna(WRITEDATA.at[get_index(), created_field]):
+        if created_field not in WRITEDATA.columns or empty(WRITEDATA.at[get_index(), created_field]):
             WRITEDATA.at[get_index(), created_field] = pd.to_datetime("today")
         if "combinator" in config:
             for view in config["combinator"]:
@@ -444,7 +476,7 @@ def score(index=None, df=None, write_df=None):
                 widget.value = DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]]
                 if COLUMN_NAMES[key] in WRITEDATA.columns:
                     dval = WRITEDATA.at[get_index(), COLUMN_NAMES[key]]
-                    if pd.notna(dval) and dval != "":
+                    if notempty(dval):
                         widget.value = WRITEDATA.at[get_index(), COLUMN_NAMES[key]]
                 else:
                     log.warning("{field} not in WRITEDATA".format(field=COLUMN_NAMES[key]))
