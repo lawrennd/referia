@@ -110,9 +110,9 @@ def edit_pdfs(ds):
                 
                 if not os.path.exists(destfile):
                     if os.path.exists(origfile):
-                        if "pages" in display:
-                            firstpage = display["pages"]["first"]
-                            lastpage = display["pages"]["last"]
+                        if "pages" in display and "first" in display["pages"] and "last" in display["pages"]:
+                            firstpage = ds[display["pages"]["first"]]
+                            lastpage = ds[display["pages"]["last"]]
                             log.info(f"Extracting {destfile} from {origfile} pages {firstpage}-{lastpage}")
                             tk.get_pages(
                                 pdf_path=origfile,
