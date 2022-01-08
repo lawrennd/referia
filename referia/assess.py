@@ -120,7 +120,7 @@ def edit_pdfs(ds):
                                 out_file=desfile,
                                 )
                         else:
-                            log.info(f"Copying {origfile} to {destfile}."))
+                            log.info(f"Copying {origfile} to {destfile}.")
                             copy2(origfile, destfile)
                     else:
                         log.warning("Warning editpdf {origfile} does not exist.".format(origfile=origfile))
