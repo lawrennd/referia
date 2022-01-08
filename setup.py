@@ -32,7 +32,9 @@ REQUIRED = [
     "jupyter",
     "matplotlib",
     "unidecode",
-    "frontmatter", 
+    "frontmatter",
+    "gspread_pandas",
+    "pypdftk",
 ]
 
 # What packages are optional?

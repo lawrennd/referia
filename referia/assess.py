@@ -16,6 +16,8 @@ from IPython.display import Markdown, display
 from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath
 from ipywidgets import interact, interactive, fixed, interact_manual
 
+import pydftk as tk
+
 from .widgets import MyCheckbox
 from .config import *
 from .log import Logger
@@ -108,8 +110,18 @@ def edit_pdfs(ds):
                 
                 if not os.path.exists(destfile):
                     if os.path.exists(origfile):
-                        log.debug("Copying {origfile} to {destfile}.".format(origfile=origfile, destfile=destfile))
-                        copy2(origfile, destfile)
+                        if "pages" in display:
+                            firstpage = display["pages"]["first"]
+                            lastpage = display["pages"]["last"]
+                            log.info(f"Extracting {destfile} from {origfile} pages {firstpage}-{lastpage}")
+                            tk.get_pages(
+                                pdf_path=origfile,
+                                ranges=[[firstpage, lastpage]],
+                                out_file=desfile,
+                                )
+                        else:
+                            log.info(f"Copying {origfile} to {destfile}."))
+                            copy2(origfile, destfile)
                     else:
                         log.warning("Warning editpdf {origfile} does not exist.".format(origfile=origfile))
                 open_pdf(destfile)
