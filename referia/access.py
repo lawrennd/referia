@@ -9,10 +9,14 @@ import frontmatter
 import numpy as np
 import pandas as pd
 
-import gspread_pandas as gspd
+    
 from .log import Logger
 from .config import *
 
+try:
+    import gspread_pandas as gspd
+except ImportError:
+    GSPREAD_AVAILABLE=False
 # This file accesses the data
 
 """Place commands in this file to access the data electronically. Don't remove any missing values, or deal with outliers. Make sure you have legalities correct, both intellectual property and personal data privacy rights. Beyond the legal side also think about the ethical issues around this data. """
@@ -173,23 +177,24 @@ def read_excel(details):
     )
     return finalize_df(data, details)
 
-def read_gsheet(details):
-    """Read data from a Google sheet."""
-    dtypes = extract_dtypes(details)
-    filename = extract_full_filename(details)
-    log.info(f"Reading Google sheet named {filename}")
-    sheet = extract_sheet(details)
-    gsheet = gspd.Spread(
-        spread=filename,
-        sheet=sheet,
-        config=config["gspread_pandas"],
-    )
-    data= gsheet.sheet_to_df(
-        index=None,
-        header_rows=details["header"]+1,
-        start_row=details["header"]+1,
-    )
-    return finalize_df(data, details)
+if GSPREAD_AVAILABLE:
+    def read_gsheet(details):
+        """Read data from a Google sheet."""
+        dtypes = extract_dtypes(details)
+        filename = extract_full_filename(details)
+        log.info(f"Reading Google sheet named {filename}")
+        sheet = extract_sheet(details)
+        gsheet = gspd.Spread(
+            spread=filename,
+            sheet=sheet,
+            config=config["gspread_pandas"],
+        )
+        data= gsheet.sheet_to_df(
+            index=None,
+            header_rows=details["header"]+1,
+            start_row=details["header"]+1,
+        )
+        return finalize_df(data, details)
     
 
 def finalize_df(df, details):
@@ -219,25 +224,26 @@ def write_excel(df, details):
     )
     writer.save()
     
-def write_gsheet(df, details):
-    """Read data from a Google sheet."""
-    filename = extract_full_filename(details)
-    sheet = extract_sheet(details)
-    log.info(f"Writing Google sheet named {filename}")
-    gsheet = gspd.Spread(
-        spread=filename,
-        sheet=sheet,
-        create_spread=True,
-        config=config["gspread_pandas"],
-    )
-    gsheet.df_to_sheet(
-        df=df,
-        index=False,
-        headers=True,
-        replace=True,
-        sheet=sheet,
-        start=(details["header"]+1,1),
-    )
+if GSPREAD_AVAILABLE:
+    def write_gsheet(df, details):
+        """Read data from a Google sheet."""
+        filename = extract_full_filename(details)
+        sheet = extract_sheet(details)
+        log.info(f"Writing Google sheet named {filename}")
+        gsheet = gspd.Spread(
+            spread=filename,
+            sheet=sheet,
+            create_spread=True,
+            config=config["gspread_pandas"],
+        )
+        gsheet.df_to_sheet(
+            df=df,
+            index=False,
+            headers=True,
+            replace=True,
+            sheet=sheet,
+            start=(details["header"]+1,1),
+        )
 
 def read_data(details):
     if details["type"] == "excel":
