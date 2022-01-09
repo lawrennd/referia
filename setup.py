@@ -34,6 +34,8 @@ REQUIRED = [
     "unidecode",
     "frontmatter",
     "google-api-python-client",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
     "gspread",
     "gspread_pandas",
     "pypdftk",
