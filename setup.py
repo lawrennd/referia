@@ -33,6 +33,8 @@ REQUIRED = [
     "matplotlib",
     "unidecode",
     "frontmatter",
+    "google-api-python-client",
+    "gspread",
     "gspread_pandas",
     "pypdftk",
 ]
