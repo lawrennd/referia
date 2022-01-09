@@ -95,6 +95,22 @@ def read_directory(details, read_file, read_file_args={}, default_glob="*.yaml")
         data[-1]["source_filename"] = filename
     return finalize_df(pd.json_normalize(data), details)
 
+def read_moodle_directory(details):
+    """Read scoring data from a directory of yaml files."""
+    glob_text = "Participant_*_assignsubmission_file_"
+    globname = os.path.join(
+        os.path.expandvars(details["directory"]),
+        glob_text,
+    )
+    directorynames = glob.glob(globname)
+
+    # log.info(f"Reading directory {globname}")
+    # data = []
+    # for filename in filenames:
+    #     data.append(read_file(filename, **read_file_args))
+    #     data[-1]["source_filename"] = filename
+    # return finalize_df(pd.json_normalize(data), details)
+
 def read_yaml_file(filename):
     """Read a yaml file and return a python dictionary."""
     with open(filename, "r") as stream:
@@ -236,6 +252,10 @@ def read_data(details):
             read_file=read_yaml_file,
             default_glob="*.yaml",
                               )
+    elif details["type"] == "moodle_directory":
+        return read_moodle_directory(
+            details=details,
+        )
     elif details["type"] == "markdown":
         return read_markdown(details)
     elif details["type"] == "markdown_directory":

@@ -16,6 +16,8 @@ from IPython.display import Markdown, display
 from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath
 from ipywidgets import interact, interactive, fixed, interact_manual
 
+from pandas.api.types import is_string_dtype, is_numeric_dtype
+
 import pypdftk as tk
 
 from .widgets import MyCheckbox
@@ -73,17 +75,34 @@ def clear_temp_files():
         destname = os.path.join(values["tmpdirectory"], filename)
         delete_keys.append(filename)
         if os.path.exists(destname):
-            log.info("Removing temporary file {filename}.".format(filename=destname))
+            log.info(f"Removing temporary file \"{filename}\".")
             os.remove(destname)
 
     for key in delete_keys:
         del TMPPDFFILES[key]
 
+def open_localfile(filename):
+    """Open a local file."""
+    _, ext = os.path.splitext(filename)             
+    if ext == ".pdf":
+        open_pdf(filename)
+    elif ext == ".mp4":
+        open_video(filename)
+    else:
+        log.info(f"Opening file \"{filename}\".")
+        os.system(f"open --background \"{filename}\"")
+    
+    
 def open_pdf(filename):
     """Use the system viewer to open a PDF."""
-    log.info("Opening file {filename}.".format(filename=filename))
-    os.system('open ' + '--background ' + '"' + filename + '"')
+    log.info(f"Opening file \"{filename}\".")
+    os.system(f"open --background \"{filename}\"")
 
+def open_video(filename):
+    """Use the system viewer to open a video."""
+    log.info(f"Opening file {filename}.")
+    os.system(f"open --background \"{filename}\"")
+    
 def open_url(urlname):
     """Use the browser to open URL."""
     if "browser" in config:
@@ -91,8 +110,8 @@ def open_url(urlname):
     else:
         browser="Google Chrome.app" 
     
-    log.info("Opening url {urlname}.".format(urlname=urlname))
-    os.system('open ' + '-a "' + browser + '" --background ' + '"' + urlname + '"')
+    log.info(f"Opening url \"{urlname}\".")
+    os.system(f"open -a \"{browser}\" --background \"{urlname}\"")
 
 def notempty(val):
     return pd.notna(val) and val!=""
@@ -108,7 +127,7 @@ def edit_pdfs(ds):
             if "field" in display and type(ds[display["field"]]) is str:
                 storedirectory = os.path.expandvars(display["storedirectory"])
                 origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),ds[display["field"]])
-                editfilename = ds[config["allocation"]["index"]] + "_" + to_camel_case(display["field"]) + ".pdf"
+                editfilename = str(ds[config["allocation"]["index"]]) + "_" + to_camel_case(display["field"]) + ".pdf"
                 destfile = os.path.join(storedirectory,editfilename)
                 if not os.path.exists(storedirectory):
                     os.makedirs(storedirectory)
@@ -119,49 +138,65 @@ def edit_pdfs(ds):
                             firstpage = int(ds[display["pages"]["first"]])
                             lastpage = int(ds[display["pages"]["last"]])
                             if notempty(firstpage) and notempty(lastpage) and notempty(display["field"]):
-                                log.info(f"Extracting {destfile} from {origfile} pages {firstpage}-{lastpage}")
+                                log.info(f"Extracting \"{destfile}\" from \"{origfile}\" pages {firstpage}-{lastpage}")
                                 tk.get_pages(
                                     pdf_path=origfile,
                                     ranges=[[firstpage, lastpage]],
                                     out_file=destfile,
                                 )
                         else:
-                            log.info(f"Copying {origfile} to {destfile}.")
+                            log.info(f"Copying \"{origfile}\" to \"{destfile}\".")
                             copy2(origfile, destfile)
                     else:
-                        log.warning("Warning editpdf {origfile} does not exist.".format(origfile=origfile))
+                        log.warning("Warning editpdf \"{origfile}\" does not exist.".format(origfile=origfile))
                 open_pdf(destfile)
 
+
+def view_directory(ds, display):
+    """View a directory containing relevant information to the assessment."""
+    pass
+
+def view_file(ds, display):
+    """View a file containing relevant information to the assessment."""
+    filename = ""
+    tmpname = ""
+    if "field" in display and type(ds[display["field"]]) is str:
+        filename = os.path.expandvars(os.path.join(display["directory"],ds[display["field"]]))
+        tmpname = to_camel_case(display["field"])
+    elif "file" in display:
+        filename = os.path.expandvars(os.path.join(display["directory"], display["file"]))
+    if os.path.exists(filename):
+        _, ext = os.path.splitext(filename)             
+        if len(tmpname)>0:
+            tmpdirectory = tempfile.gettempdir()
+            destfile = str(ds[config["allocation"]["index"]]) + "_" + tmpname + ext
+            destname = os.path.join(tmpdirectory, destfile)
+            if not os.path.exists(destname):
+                log.debug("Copying \"{origfile}\" to \"{destfile}\".".format(origfile=filename, destfile=destname))
+                copy2(filename, destname)
+            TMPPDFFILES[destfile] = {
+                "origfile": filename,
+                "tmpdirectory": tmpdirectory,
+            }
+            open_localfile(destname)
+        else:
+            open_localfile(filename)
+    else:
+        log.warning("view_file \"{filename}\" does not exist.".format(filename=filename))
+    
+    
 def view_pdfs(ds):
     """Use the system viewer to show a PDF containing relevant information to the assessment."""
-
     if "localpdf" in config:
         for display in config["localpdf"]:
-            filename = ""
-            tmpname = ""
-            if "field" in display and type(ds[display["field"]]) is str:
-                filename = os.path.expandvars(os.path.join(display["directory"],ds[display["field"]]))
-                tmpname = to_camel_case(display["field"])
-            elif "file" in display:
-                filename = os.path.expandvars(os.path.join(display["directory"], display["file"]))
-            if os.path.exists(filename):
-                if len(tmpname)>0:
-                    tmpdirectory = tempfile.gettempdir()
-                    destfile = ds[config["allocation"]["index"]] + "_" + tmpname + ".pdf"
-                    destname = os.path.join(tmpdirectory, destfile)
-                    if not os.path.exists(destname):
-                        log.debug("Copying {origfile} to {destfile}.".format(origfile=filename, destfile=destname))
-                        copy2(filename, destname)
-                    TMPPDFFILES[destfile] = {
-                        "origfile": filename,
-                        "tmpdirectory": tmpdirectory,
-                    }
-                    open_pdf(destname)
-                else:
-                    open_pdf(filename)
-            else:
-                log.warning("localpdf {filename} does not exist.".format(filename=filename))
-
+            view_file(ds, display)
+            
+def view_videos(ds):
+    """Use the system viewer to show a PDF containing relevant information to the assessment."""
+    if "localvideo" in config:
+        for display in config["localvideo"]:
+            view_file(ds, display)
+                
 def view_urls(ds):
     if "urls" in config:
         for display in config["urls"]:
@@ -177,7 +212,8 @@ def view_urls(ds):
 
 
 def view_series(ds):
-    clear_temp_files()    
+    clear_temp_files()
+    view_videos(ds)
     view_pdfs(ds)
     edit_pdfs(ds)
     view_urls(ds)
@@ -403,6 +439,34 @@ def get_index():
     global INDEX
     return INDEX
 
+
+def set_value(value, index, column):
+    """Set a value to the write data frame"""    
+    # If trying to set a numeric valued column's entry to a string, set the type of column to object.
+    if column not in WRITEDATA.columns:
+        add_column(COLUMN_NAMES[key])
+
+    coltype = WRITEDATA.dtypes[column]
+    if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
+        log.info(f"Changing column \"{column}\" type to 'object' due to string input.")
+        WRITEDATA[column] = WRITEDATA[column].astype('object')
+
+    WRITEDATA.at[get_index(), column] = value
+
+def get_value(index, column):
+    """Get a value from the data frame(s)"""
+    if column in WRITEDATA.columns:
+        return WRITEDATA.at[index, column]
+    elif column in DATA.columns:
+        return DATA.at[index, column]
+
+def add_column(column):
+    if column not in WRITEDATA.columns:
+        log.info(f"\"{column}\" not in write columns ... adding.")
+        WRITEDATA[column] = None
+    else:
+        log.warning(f"\"{column}\" requested to be added to write data but already exists.")
+        
         
 def score(index=None, df=None, write_df=None):
     global DATA
@@ -427,28 +491,35 @@ def score(index=None, df=None, write_df=None):
             # fields starting with "_" are not transferred
             # (typically HTML widgets for prompting input)
             if key[0] != "_":
-                if COLUMN_NAMES[key] in WRITEDATA.columns:
-                    WRITEDATA.at[get_index(), COLUMN_NAMES[key]] = value
-                else:
-                    log.info("{field} not in write columns ... adding.".format(field=COLUMN_NAMES[key]))
-                    WRITEDATA[COLUMN_NAMES[key]] = None
-                    WRITEDATA.at[get_index(), COLUMN_NAMES[key]] = value
+                set_value(value, get_index(), COLUMN_NAMES[key])
 
         if "timestamp_field" in config:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        WRITEDATA.at[get_index(), timestamp_field] = pd.to_datetime("today")
+        set_value(
+            pd.to_datetime("today"),
+            get_index(),
+            timestamp_field
+        )
         if "created_field" in config:
             created_field = config["created_field"]
         else:
             created_field = "Created"
-        if created_field not in WRITEDATA.columns or empty(WRITEDATA.at[get_index(), created_field]):
-            WRITEDATA.at[get_index(), created_field] = pd.to_datetime("today")
+        if created_field not in WRITEDATA.columns or empty(get_value(get_index(), created_field)):
+            set_value(
+                pd.to_datetime("today"),
+                get_index(),
+                created_field
+            )
         if "combinator" in config:
             for view in config["combinator"]:
                 if "field" in view:
-                    WRITEDATA.at[get_index(), view["field"]] = view_to_text(view, WRITEDATA.loc[get_index()])
+                    set_value(
+                        view_to_text(view, WRITEDATA.loc[get_index()]),
+                        get_index(),
+                        view["field"]
+                    )                    
                 else:
                     log.error("Missing key 'field' in combinator view.")
             
@@ -475,12 +546,11 @@ def score(index=None, df=None, write_df=None):
 
                 widget.value = DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]]
                 if COLUMN_NAMES[key] in WRITEDATA.columns:
-                    dval = WRITEDATA.at[get_index(), COLUMN_NAMES[key]]
+                    dval = get_value(get_index(), COLUMN_NAMES[key])
                     if notempty(dval):
-                        widget.value = WRITEDATA.at[get_index(), COLUMN_NAMES[key]]
+                        widget.value = dval
                 else:
-                    log.warning("{field} not in WRITEDATA".format(field=COLUMN_NAMES[key]))
-                    WRITEDATA[COLUMN_NAMES[key]] = None
+                    add_column(COLUMN_NAMES[key])
 
                     
         total = len(WRITEDATA.index)
