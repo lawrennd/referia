@@ -13,7 +13,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import Markdown, display
-from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath
+from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker
 from ipywidgets import interact, interactive, fixed, interact_manual
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype
@@ -444,7 +444,7 @@ def set_value(value, index, column):
     """Set a value to the write data frame"""    
     # If trying to set a numeric valued column's entry to a string, set the type of column to object.
     if column not in WRITEDATA.columns:
-        add_column(COLUMN_NAMES[key])
+        add_column(column)
 
     coltype = WRITEDATA.dtypes[column]
     if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
@@ -556,10 +556,11 @@ def score(index=None, df=None, write_df=None):
         total = len(WRITEDATA.index)
         remain = total
         progress_label = fixed("None")
-        if config["scored"]["field"] in WRITEDATA:
-            scored = WRITEDATA[config["scored"]["field"]].count()
-            remain -= scored
-            progress_label = Label("{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100))
+        if "scored" in config:
+            if config["scored"]["field"] in WRITEDATA:
+                scored = WRITEDATA[config["scored"]["field"]].count()
+                remain -= scored
+                progress_label = Label("{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100))
 
         interact_args = {
             "progress_label": progress_label,

@@ -86,8 +86,9 @@ def read_directory(details, read_file, read_file_args={}, default_glob="*.yaml")
     else:
         glob_text = default_glob
 
+    directory = os.path.expandvars(details["directory"])
     globname = os.path.join(
-        os.path.expandvars(details["directory"]),
+        directory,
         glob_text,
     )
     filenames = glob.glob(globname)
@@ -96,7 +97,8 @@ def read_directory(details, read_file, read_file_args={}, default_glob="*.yaml")
     data = []
     for filename in filenames:
         data.append(read_file(filename, **read_file_args))
-        data[-1]["source_filename"] = filename
+        data[-1]["source_directory"] = directory
+        data[-1]["source_filename"] = os.path.basename(filename)
     return finalize_df(pd.json_normalize(data), details)
 
 def read_moodle_directory(details):
@@ -247,30 +249,47 @@ if GSPREAD_AVAILABLE:
 
 def read_data(details):
     if details["type"] == "excel":
-        return read_excel(details)
+        df = read_excel(details)
     elif details["type"] == "gsheet":
-        return read_gsheet(details)
+        df = read_gsheet(details)
     elif details["type"] == "yaml":
-        return read_yaml(details)
+        df = read_yaml(details)
     elif details["type"] == "yaml_directory":
-        return read_directory(
+        df = read_directory(
             details=details,
             read_file=read_yaml_file,
             default_glob="*.yaml",
                               )
     elif details["type"] == "moodle_directory":
-        return read_moodle_directory(
+        df = read_moodle_directory(
             details=details,
         )
     elif details["type"] == "markdown":
-        return read_markdown(details)
+        df = read_markdown(details)
     elif details["type"] == "markdown_directory":
-        return read_directory(
+        df = read_directory(
             details=details,
             read_file=read_markdown_file,
             default_glob="*.md"
                               )
-    
+        
+    if "fields" in details:
+        if "format" in details:
+            kwargbase = details["format"]
+        else:
+            kwargbase = {}
+        for field in details["fields"]:
+            column = pd.Series()
+            for index in df.index:
+                kwarg = {}
+                for key, item in kwargbase.items():
+                    kwarg[key] = df[item][index]
+                print(kwarg)
+                column[index] = field["value"].format(**kwarg)
+            df[field["name"]] = column
+
+    return df
+
 def allocation():
     """Load in the allocation spread sheet to data frames."""
     return read_data(config["allocation"])
