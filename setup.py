@@ -38,6 +38,7 @@ REQUIRED = [
     "google-auth-oauthlib",
     "gspread",
     "gspread_pandas",
+    "ipyfilechooser",
     "pypdftk",
 ]
 

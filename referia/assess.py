@@ -20,7 +20,7 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype
 
 import pypdftk as tk
 
-from .widgets import MyCheckbox
+from .widgets import MyCheckbox, MyFileChooser
 from .config import *
 from .log import Logger
 from .util import to_camel_case
@@ -33,6 +33,7 @@ INDEX = None
 INTERACT_ARGS = {}
 COLUMN_NAMES = {}
 DEFAULT_WRITEDF_VALS = pd.Series()
+DEFAULT_WRITEDF_SOURCE = pd.Series()
 
 interact_manual.opts["manual_name"] = "Save Score"
 
@@ -83,15 +84,30 @@ def clear_temp_files():
 
 def open_localfile(filename):
     """Open a local file."""
-    _, ext = os.path.splitext(filename)             
+    _, ext = os.path.splitext(filename)
+    ext = ext.lower()
     if ext == ".pdf":
         open_pdf(filename)
     elif ext == ".mp4":
         open_video(filename)
+    elif ext == ".py":
+        open_python(filename)
+    elif ext == ".md" or ext == ".markdown":
+        open_markdown(filename)
     else:
         log.info(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
-    
+
+
+def open_markdown(filename):
+    """Use the system viewer to open a markdown file."""
+    log.info(f"Opening file \"{filename}\".")
+    os.system(f"open --background \"{filename}\"")
+
+def open_python(filename):
+    """Use the system viewer to open a python file."""
+    log.info(f"Opening file \"{filename}\".")
+    os.system(f"open --background \"{filename}\"")
     
 def open_pdf(filename):
     """Use the system viewer to open a PDF."""
@@ -100,7 +116,7 @@ def open_pdf(filename):
 
 def open_video(filename):
     """Use the system viewer to open a video."""
-    log.info(f"Opening file {filename}.")
+    log.info(f"Opening file \"{filename}\".")
     os.system(f"open --background \"{filename}\"")
     
 def open_url(urlname):
@@ -119,37 +135,51 @@ def notempty(val):
 def empty(val):
     return pd.isna(val) or val==""
 
-def edit_pdfs(ds):
+def copy_file(origfile, destfile, ds, display):
+    """Copy a file, or pages from it, for separate editing or viewing."""
+    _, ext = os.path.splitext(origfile)
+    ext = ext.lower()
+
+    if os.path.exists(origfile):
+        if ext == ".pdf" and "pages" in display and "first" in display["pages"] and "last" in display["pages"]:
+            # Extract pages from a PDF
+            firstpage = ds[display["pages"]["first"]]
+            lastpage = ds[display["pages"]["last"]]
+            if notempty(firstpage) and notempty(lastpage) and notempty(display["field"]):
+                firstpage = int(firstpage)
+                lastpage = int(lastpage)
+                log.info(f"Extracting \"{destfile}\" from \"{origfile}\" pages {firstpage}-{lastpage}")
+                tk.get_pages(
+                    pdf_path=origfile,
+                    ranges=[[firstpage,
+                             lastpage]],
+                    out_file=destfile,
+                )
+        else:
+            log.info(f"Copying \"{origfile}\" to \"{destfile}\".")
+            copy2(origfile, destfile)
+    else:
+        log.warning(f"Warning edit file \"{origfile}\" does not exist.")
+
+
+def edit_files(ds):
     """Use the system viewer to show a PDF containing relevant information to the assessment."""
 
+    displays = []
     if "editpdf" in config:
-        for display in config["editpdf"]:
-            if "field" in display and type(ds[display["field"]]) is str:
-                storedirectory = os.path.expandvars(display["storedirectory"])
-                origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),ds[display["field"]])
-                editfilename = str(ds[config["allocation"]["index"]]) + "_" + to_camel_case(display["field"]) + ".pdf"
-                destfile = os.path.join(storedirectory,editfilename)
-                if not os.path.exists(storedirectory):
-                    os.makedirs(storedirectory)
-                
-                if not os.path.exists(destfile):
-                    if os.path.exists(origfile):
-                        if "pages" in display and "first" in display["pages"] and "last" in display["pages"]:
-                            firstpage = int(ds[display["pages"]["first"]])
-                            lastpage = int(ds[display["pages"]["last"]])
-                            if notempty(firstpage) and notempty(lastpage) and notempty(display["field"]):
-                                log.info(f"Extracting \"{destfile}\" from \"{origfile}\" pages {firstpage}-{lastpage}")
-                                tk.get_pages(
-                                    pdf_path=origfile,
-                                    ranges=[[firstpage, lastpage]],
-                                    out_file=destfile,
-                                )
-                        else:
-                            log.info(f"Copying \"{origfile}\" to \"{destfile}\".")
-                            copy2(origfile, destfile)
-                    else:
-                        log.warning("Warning editpdf \"{origfile}\" does not exist.".format(origfile=origfile))
-                open_pdf(destfile)
+        displays += config["editpdf"]
+        
+    for display in displays:
+        if "field" in display and type(ds[display["field"]]) is str:
+            storedirectory = os.path.expandvars(display["storedirectory"])
+            origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),ds[display["field"]])
+            editfilename = str(ds[config["allocation"]["index"]]) + "_" + to_camel_case(display["field"]) + ".pdf"
+            destfile = os.path.join(storedirectory,editfilename)
+            if not os.path.exists(storedirectory):
+                os.makedirs(storedirectory)
+            if not os.path.exists(destfile):
+                copy_file(origfile, destfile, ds, display)
+            open_localfile(destfile)
 
 
 def view_directory(ds, display):
@@ -166,7 +196,7 @@ def view_file(ds, display):
     elif "file" in display:
         filename = os.path.expandvars(os.path.join(display["directory"], display["file"]))
     if os.path.exists(filename):
-        _, ext = os.path.splitext(filename)             
+        _, ext = os.path.splitext(filename)
         if len(tmpname)>0:
             tmpdirectory = tempfile.gettempdir()
             destfile = str(ds[config["allocation"]["index"]]) + "_" + tmpname + ext
@@ -185,38 +215,41 @@ def view_file(ds, display):
         log.warning("view_file \"{filename}\" does not exist.".format(filename=filename))
     
     
-def view_pdfs(ds):
+def view_files(ds):
     """Use the system viewer to show a PDF containing relevant information to the assessment."""
+    displays = []
     if "localpdf" in config:
-        for display in config["localpdf"]:
-            view_file(ds, display)
-            
-def view_videos(ds):
-    """Use the system viewer to show a PDF containing relevant information to the assessment."""
+        displays += config["localpdf"]
     if "localvideo" in config:
-        for display in config["localvideo"]:
-            view_file(ds, display)
+        displays += config["localvideo"]
+
+    for display in displays:
+        view_file(ds, display)
+            
                 
 def view_urls(ds):
+    """View any urls that are provided."""
+    displays = []
     if "urls" in config:
-        for display in config["urls"]:
-            if "url" in display:
-                if "field" in display and type(ds[display["field"]]) is str:
-                    urlterm = ds[display["field"]]
-                elif "display" in display:
-                    urlterm = view_to_text(display, ds)
-                else:
-                    urlterm = ""
-                urlname = unidecode(display["url"] + urlterm.replace(" ", "%20"))
-                open_url(urlname)
+        displays += config["urls"]
+        
+    for display in displays:
+        if "url" in display:
+            if "field" in display and type(ds[display["field"]]) is str:
+                urlterm = ds[display["field"]]
+            elif "display" in display:
+                urlterm = view_to_text(display, ds)
+            else:
+                urlterm = ""
+            urlname = unidecode(display["url"] + urlterm.replace(" ", "%20"))
+            open_url(urlname)
 
 
 def view_series(ds):
     clear_temp_files()
-    view_videos(ds)
-    view_pdfs(ds)
-    edit_pdfs(ds)
+    view_files(ds)
     view_urls(ds)
+    edit_files(ds)
     display(Markdown(view_text(ds)))
 
 
@@ -399,8 +432,20 @@ def extract_scorer(orig_score):
 
         # Create an instance of the object to extract default value.
         DEFAULT_WRITEDF_VALS[score["field"]] = global_variables[score["type"]]().value
+        if "value" in score:
+            DEFAULT_WRITEDF_VALS[score["field"]] = score["value"]               
         if "args" in score and "value" in score["args"]:
             DEFAULT_WRITEDF_VALS[score["field"]] = score["args"]["value"]
+        if "default" in score:
+            if "source" in score["default"]:
+                source = score["default"]["source"]
+                if source in DATA.columns or source in WRITEDATA.columns:
+                    DEFAULT_WRITEDF_SOURCE[score["field"]] = source
+                else:
+                    log.warning(f"Missing column \"{source}\" in DATA and WRITEDATA.")
+            if "value" in score["default"]:
+                DEFAULT_WRITEDF_VALS[score["field"]] = score["default"]["value"]
+                
     else:
         # Field name is missing, generate a random one.
         name = "_" + "".join(random.choice(string.ascii_letters) for _ in range(39))
@@ -538,13 +583,18 @@ def score(index=None, df=None, write_df=None):
         view_series(DATA.loc[get_index()])
 
 
-        # Now update the widget entries with values from the WRITEDATA if they exist otherwise set to default
+        # Now update the widget entries with values from the WRITEDATA if they exist otherwise relevant column from DATA or otherwise set to default
         for key, widget in INTERACT_ARGS.items():
             if COLUMN_NAMES[key][0] != "_":
                 if COLUMN_NAMES[key] not in DEFAULT_WRITEDF_VALS:
                     DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]] = None
-
                 widget.value = DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]]
+                # Take default from existing column in DATA
+                if COLUMN_NAMES[key] in DEFAULT_WRITEDF_SOURCE:
+                    dval = get_value(get_index(), DEFAULT_WRITEDF_SOURCE[COLUMN_NAMES[key]])
+                    if notempty(dval):
+                        widget.value = dval
+                # Take default from existing column in WRITEDATA
                 if COLUMN_NAMES[key] in WRITEDATA.columns:
                     dval = get_value(get_index(), COLUMN_NAMES[key])
                     if notempty(dval):

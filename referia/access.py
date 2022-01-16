@@ -2,6 +2,9 @@ import os
 import glob
 
 import sys
+import re
+import tempfile
+
 import yaml
 
 import frontmatter
@@ -67,20 +70,21 @@ def extract_full_filename(details):
         os.path.expandvars(details["directory"]),
         details["filename"],
     )
- 
 
+    
 def read_yaml(details):
-    """Read scoring data from a yaml file."""
+    """Read data from a yaml file."""
     filename = os.path.join(
         os.path.expandvars(details["directory"]),
         details["filename"],
     )
     data =  read_yaml_file(filename)
-    return finalize_df(data, details)
+    return data
     
 
-def read_directory(details, read_file, read_file_args={}, default_glob="*.yaml"):
-    """Read scoring data from a directory of yaml files."""
+
+def read_directory(details, read_file=None, read_file_args={}, default_glob="*.yaml"):
+    """Read scoring data from a directory of files."""
     if "glob" in details:
         glob_text = details["glob"]
     else:
@@ -92,31 +96,26 @@ def read_directory(details, read_file, read_file_args={}, default_glob="*.yaml")
         glob_text,
     )
     filenames = glob.glob(globname)
-
+    if len(filenames) == 0:
+        log.warning(f"No files in {globname}")
+    
     log.info(f"Reading directory {globname}")
     data = []
     for filename in filenames:
-        data.append(read_file(filename, **read_file_args))
-        data[-1]["source_directory"] = directory
-        data[-1]["source_filename"] = os.path.basename(filename)
-    return finalize_df(pd.json_normalize(data), details)
+        if read_file is None:
+            data.append({})
+        else:
+            data.append(read_file(filename, **read_file_args))
+        data[-1]["Source Root"] = directory
+        if os.path.isdir(filename):
+            data[-1]["Source Directory Name"] = os.path.basename(filename)
+        elif os.path.isfile(filename):
+            data[-1]["Source File Name"] = os.path.basename(filename)
+        else:
+            log.warning(f"File {filename} is not a file or a directory.")
+    return pd.json_normalize(data)
 
-def read_moodle_directory(details):
-    """Read scoring data from a directory of yaml files."""
-    glob_text = "Participant_*_assignsubmission_file_"
-    globname = os.path.join(
-        os.path.expandvars(details["directory"]),
-        glob_text,
-    )
-    directorynames = glob.glob(globname)
-
-    # log.info(f"Reading directory {globname}")
-    # data = []
-    # for filename in filenames:
-    #     data.append(read_file(filename, **read_file_args))
-    #     data[-1]["source_filename"] = filename
-    # return finalize_df(pd.json_normalize(data), details)
-
+        
 def read_yaml_file(filename):
     """Read a yaml file and return a python dictionary."""
     with open(filename, "r") as stream:
@@ -128,6 +127,7 @@ def read_yaml_file(filename):
             data = {}
     return data
 
+    
 def read_markdown_file(filename, include_content=True):
     """Read a markdown file and return a python dictionary."""
     with open(filename, "r") as stream:
@@ -177,7 +177,7 @@ def read_excel(details):
         dtype=dtypes,
         header=details["header"],
     )
-    return finalize_df(data, details)
+    return data
 
 if GSPREAD_AVAILABLE:
     def read_gsheet(details):
@@ -196,7 +196,7 @@ if GSPREAD_AVAILABLE:
             header_rows=details["header"]+1,
             start_row=details["header"]+1,
         )
-        return finalize_df(data, details)
+        return data
     
 
 def finalize_df(df, details):
@@ -248,47 +248,86 @@ if GSPREAD_AVAILABLE:
         )
 
 def read_data(details):
+    globname = None
+    if "glob" in details:
+        globname = details["glob"]
     if details["type"] == "excel":
         df = read_excel(details)
     elif details["type"] == "gsheet":
         df = read_gsheet(details)
     elif details["type"] == "yaml":
         df = read_yaml(details)
+    elif details["type"] == "markdown":
+        df = read_markdown(details)
     elif details["type"] == "yaml_directory":
+        if globname is None or globname == "":
+            default_glob = "*.yaml"
+        else:
+            default_glob = globname
         df = read_directory(
             details=details,
             read_file=read_yaml_file,
-            default_glob="*.yaml",
-                              )
-    elif details["type"] == "moodle_directory":
-        df = read_moodle_directory(
-            details=details,
+            default_glob=default_glob,
         )
-    elif details["type"] == "markdown":
-        df = read_markdown(details)
     elif details["type"] == "markdown_directory":
+        if globname is None or globname == "":
+            default_glob = "*.md"
+        else:
+            default_glob = globname
         df = read_directory(
             details=details,
             read_file=read_markdown_file,
-            default_glob="*.md"
-                              )
-        
-    if "fields" in details:
-        if "format" in details:
-            kwargbase = details["format"]
+            default_glob=globname,
+        )
+    elif details["type"] == "directory":
+        if globname is None or globname == "":
+            default_glob = "*"
         else:
-            kwargbase = {}
-        for field in details["fields"]:
-            column = pd.Series()
-            for index in df.index:
-                kwarg = {}
-                for key, item in kwargbase.items():
-                    kwarg[key] = df[item][index]
-                print(kwarg)
-                column[index] = field["value"].format(**kwarg)
-            df[field["name"]] = column
+            default_glob = globname
+        df = read_directory(
+            details=details,
+            read_file=None,
+            default_glob=globname,
+        )
 
-    return df
+    if "format" in details:
+        kwargbase = details["format"]
+    else:
+        kwargbase = {}
+
+    if "fields" in details:
+        for field in details["fields"]:
+            column = pd.Series(index=df.index, dtype="object")
+            if "name" in field:
+                if "value" in field:
+                    for index in df.index:
+                        kwarg = {}
+                        for key, item in kwargbase.items():
+                            kwarg[key] = df.at[index, item]
+                        column[index] = field["value"].format(**kwarg)
+
+                if "source" in field and "regexp" in field:
+                    regexp = field["regexp"]
+                    if field["source"] not in df.columns:
+                        log.warning(f"No column {source} in DataFrame.".format(source=field["source"]))
+                    for index in df.index:
+                        source = df.at[index, field["source"]]
+                        match = re.match(
+                            regexp,
+                            source,
+                        )
+                        if match:
+                            if len(match.groups())>1:
+                                log.warning(f"Multiple regular expression matches in {regexp}.")
+                            column[index] = match.group(1)
+                        else:
+                            log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
+                else:
+                    log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\" (for format derived fields) in fields.")
+                df[field["name"]] = column
+            else:
+                log.warning(f"No \"name\" associated with field entry.")
+    return finalize_df(df, details)
 
 def allocation():
     """Load in the allocation spread sheet to data frames."""
