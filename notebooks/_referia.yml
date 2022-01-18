@@ -14,6 +14,16 @@ allocation:
   directory: .
   header: 0
 
+mapping:
+  keyname: keyname
+  description: Description
+  thoughtfulnessComment: Thoughtfulness Comment
+  thoughtfulnessExpectation: Thoughtfulness Expectation
+  expenseComment: Expense Comment
+  expenseExpectation: Expense Expectation
+  overallComment: Overall Comment
+  overallScore: Overall Score
+
 additional:
   index: keyname
   type: excel
@@ -36,9 +46,6 @@ scored:
 
 viewer:
 - display: "# {keyname}: {description}"
-  format:
-    keyname: keyname
-    description: Description
 
 urls:
 - url: ""
@@ -70,10 +77,3 @@ combinator:
 Expense: {expenseComment} *{expenseExpectation} bar*\n
 \n
 Overall: {overallComment} **Score: {overallScore}**"
-  format:
-    thoughtfulnessComment: Thoughtfulness Comment
-    thoughtfulnessExpectation: Thoughtfulness Expectation
-    expenseComment: Expense Comment
-    expenseExpectation: Expense Expectation
-    overallComment: Overall Comment
-    overallScore: Overall Score

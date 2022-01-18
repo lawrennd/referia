@@ -10,13 +10,6 @@ timestamp_field: Timestamp
 created_field: Created
 logging:
   level: 20
-allocation:
-  index: keyname
-  type: gsheet
-  filename: 1Pk_QrEO-Y0vJnPKjnotnvzqONiGFVjyAYGgsEeI71HI
-  sheet: Sheet1
-  directory: 
-  header: 0
 
 mapping:
   keyname: keyname
@@ -27,11 +20,19 @@ mapping:
   expenseExpectation: Expense Expectation
   overallComment: Overall Comment
   overallScore: Overall Score
+
+allocation:
+  index: keyname
+  type: excel
+  filename: gifts.xlsx
+  sheet: Sheet1
+  directory: 
+  header: 0
   
 additional:
   index: keyname
-  type: gsheet
-  filename: 1uES2onG5atX0Te0Xsk-vuYz4R2n7pesUDfe1ffg7-u4
+  type: excel
+  filename: details.xlsx
   sheet: Sheet1
   directory: 
   header: 0
@@ -39,10 +40,10 @@ additional:
 
 scores:
   index: keyname
-  type: gsheet
+  type: excel
   sheet: Sheet1
   directory: 
-  filename: Christmas Scores
+  filename: scores.xlsx
   header: 0
 
 scored:

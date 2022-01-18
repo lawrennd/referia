@@ -41,6 +41,13 @@ def draft_combinator(fieldname, columns):
         print("    {field}: {fieldContent}".format(field=to_camel_case(column), fieldContent=column))
 
 
+def mapping(fieldname, columns):
+    print("mapping:")
+    for column in columns:
+        print("  {field}: {fieldContent}".format(field=to_camel_case(column), fieldContent=column))
+
+        
+
 
 def draft_skills(dtypes, width="800px"):
     print("scorer:")

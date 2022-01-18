@@ -60,8 +60,9 @@ def load_data():
             ascending = config["sortby"]["ascending"]
         else:
             ascending=True
-        log.info("Sorting by {field}".format(field=config["sortby"]["field"]))
-        DATA.sort_values(by=config["sortby"]["field"], ascending=ascending, inplace=True)
+        field = field=config["sortby"]["field"]
+        log.info(f"Sorting by \"{field}\"")
+        DATA.sort_values(by=field, ascending=ascending, inplace=True)
     WRITEDATA = access.scores(DATA.index)
 
 def data():
@@ -135,7 +136,7 @@ def notempty(val):
 def empty(val):
     return pd.isna(val) or val==""
 
-def copy_file(origfile, destfile, ds, display):
+def copy_file(origfile, destfile, display):
     """Copy a file, or pages from it, for separate editing or viewing."""
     _, ext = os.path.splitext(origfile)
     ext = ext.lower()
@@ -143,8 +144,8 @@ def copy_file(origfile, destfile, ds, display):
     if os.path.exists(origfile):
         if ext == ".pdf" and "pages" in display and "first" in display["pages"] and "last" in display["pages"]:
             # Extract pages from a PDF
-            firstpage = ds[display["pages"]["first"]]
-            lastpage = ds[display["pages"]["last"]]
+            firstpage = get_value(get_index(), display["pages"]["first"])
+            lastpage = get_value(get_index(), display["pages"]["last"])
             if notempty(firstpage) and notempty(lastpage) and notempty(display["field"]):
                 firstpage = int(firstpage)
                 lastpage = int(lastpage)
@@ -162,7 +163,7 @@ def copy_file(origfile, destfile, ds, display):
         log.warning(f"Warning edit file \"{origfile}\" does not exist.")
 
 
-def edit_files(ds):
+def edit_files():
     """Use the system viewer to show a PDF containing relevant information to the assessment."""
 
     displays = []
@@ -170,28 +171,31 @@ def edit_files(ds):
         displays += config["editpdf"]
         
     for display in displays:
-        if "field" in display and type(ds[display["field"]]) is str:
+        if "field" in display:
+            val = get_value(get_index(), display["field"])
+        if type(val) is str:
             storedirectory = os.path.expandvars(display["storedirectory"])
-            origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),ds[display["field"]])
-            editfilename = str(ds[config["allocation"]["index"]]) + "_" + to_camel_case(display["field"]) + ".pdf"
+            origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),val)
+            editfilename = str(get_value(get_index(), config["allocation"]["index"])) + "_" + to_camel_case(display["field"]) + ".pdf"
             destfile = os.path.join(storedirectory,editfilename)
             if not os.path.exists(storedirectory):
                 os.makedirs(storedirectory)
             if not os.path.exists(destfile):
-                copy_file(origfile, destfile, ds, display)
+                copy_file(origfile, destfile, display)
             open_localfile(destfile)
 
 
-def view_directory(ds, display):
+def view_directory(display):
     """View a directory containing relevant information to the assessment."""
     pass
 
-def view_file(ds, display):
+def view_file(display):
     """View a file containing relevant information to the assessment."""
     filename = ""
     tmpname = ""
-    if "field" in display and type(ds[display["field"]]) is str:
-        filename = os.path.expandvars(os.path.join(display["directory"],ds[display["field"]]))
+    val = get_value(get_index(), display["field"])
+    if type(val) is str:
+        filename = os.path.expandvars(os.path.join(display["directory"],val))
         tmpname = to_camel_case(display["field"])
     elif "file" in display:
         filename = os.path.expandvars(os.path.join(display["directory"], display["file"]))
@@ -199,10 +203,10 @@ def view_file(ds, display):
         _, ext = os.path.splitext(filename)
         if len(tmpname)>0:
             tmpdirectory = tempfile.gettempdir()
-            destfile = str(ds[config["allocation"]["index"]]) + "_" + tmpname + ext
+            destfile = str(get_value(get_index(), config["allocation"]["index"])) + "_" + tmpname + ext
             destname = os.path.join(tmpdirectory, destfile)
             if not os.path.exists(destname):
-                log.debug("Copying \"{origfile}\" to \"{destfile}\".".format(origfile=filename, destfile=destname))
+                log.debug(f"Copying \"{filename}\" to \"{destname}\".")
                 copy2(filename, destname)
             TMPPDFFILES[destfile] = {
                 "origfile": filename,
@@ -212,10 +216,10 @@ def view_file(ds, display):
         else:
             open_localfile(filename)
     else:
-        log.warning("view_file \"{filename}\" does not exist.".format(filename=filename))
+        log.warning(f"view_file \"{filename}\" does not exist.")
     
     
-def view_files(ds):
+def view_files():
     """Use the system viewer to show a PDF containing relevant information to the assessment."""
     displays = []
     if "localpdf" in config:
@@ -224,10 +228,10 @@ def view_files(ds):
         displays += config["localvideo"]
 
     for display in displays:
-        view_file(ds, display)
+        view_file(display)
             
                 
-def view_urls(ds):
+def view_urls():
     """View any urls that are provided."""
     displays = []
     if "urls" in config:
@@ -235,60 +239,90 @@ def view_urls(ds):
         
     for display in displays:
         if "url" in display:
-            if "field" in display and type(ds[display["field"]]) is str:
-                urlterm = ds[display["field"]]
+            if "field" in display:
+                val = get_value(get_index(), display["field"])
+            else:
+                val = None
+            if "field" in display and type(val) is str:
+                urlterm = val
             elif "display" in display:
-                urlterm = view_to_text(display, ds)
+                urlterm = view_to_text(display)
             else:
                 urlterm = ""
             urlname = unidecode(display["url"] + urlterm.replace(" ", "%20"))
             open_url(urlname)
 
 
-def view_series(ds):
+def view_series():
     clear_temp_files()
-    view_files(ds)
-    view_urls(ds)
-    edit_files(ds)
-    display(Markdown(view_text(ds)))
+    view_files()
+    view_urls()
+    edit_files()
+    display(Markdown(view_text()))
 
+def automapping():
+    """Generate dictionary of mapping between variable names and column names."""
+    mapping = {}
+    for column in columns:
+        field = to_camel_case(column)
+        mapping[field] = column
 
-def view_to_text(view, ds):
+def mapping(mapping=None):
+    """Generate dictionary of mapping between variable names and column values."""
+    if mapping is None:
+        if "mapping" in config:
+            mapping = config["mapping"]
+        else:
+            mapping = automapping()
+            
     format = {}
-    if "format" in view:
-        for key, column in view["format"].items():
-            format[key] = ds[column] 
+    for key, column in mapping.items():
+        format[key] = get_value(get_index(), column)
 
+    return format
+    
+
+def conditions(entry):
+    
     show_display = True
-    if "conditions" in view:
-        for condition in view["conditions"]:
+    if "conditions" in entry:
+        for condition in entry["conditions"]:
             if "present" in condition:
-                if not condition["present"]["field"] in ds:
-                    show_display = False
-                    break
+                if not condition["present"]["field"] in columns():
+                    return False
+                    
             if "equal" in condition:
-                if not ds[condition["equal"]["field"]] == condition["equal"]["value"]:
-                    show_display = False
-                    break
-    if show_display:
+                if not get_value(get_index(), condition["equal"]["field"]) == condition["equal"]["value"]:
+                    return False
+                    
+    return True
+
+def view_to_text(view):
+    """Create the text of the view."""
+    if "format" in view:
+        format = mapping(view["format"])
+    else:
+        format = mapping()
+
+    if conditions(view):
         return view["display"].format(**format)
     else:
         return ""
     
-def viewer_to_text(key, ds):
+def viewer_to_text(key):
     """Create a formatted text output from a yaml entry with base text and format keys."""
     text = ""
     if key in config:
         for view in config[key]:
-            text += view_to_text(view, ds)
+            text += view_to_text(view)
     return text
 
 
 
-def view_text(ds):
+def view_text():
     """Text that views a a single record."""
     if "viewer" in config:
-        return viewer_to_text("viewer", ds)
+        return viewer_to_text("viewer")
     else:
         return ""
 
@@ -459,6 +493,18 @@ def extract_scorer(orig_score):
             if "description" not in score:
                 score["args"]["description"] = " "
 
+    if "source" in score:
+        # Set arguments of widget from data fields if source is given
+        if "args" in score["source"]:
+            for arg, field in score["source"]["args"]:
+                if arg not in score["args"]:
+                    score["args"][arg] = get_value(get_index(), field)
+        if "criterion" in score["source"]:
+            criterion = score["source"]["criterion"]
+            if "display" in criterion:
+                score["criterion"] = criterion["display"].format(**mapping())
+                                 
+    # Set arguments of widget from data fields if appropriate.                
     global_variables = globals()
     if "layout" in score:
         score["args"]["layout"] = Layout(**score["layout"])
@@ -478,7 +524,7 @@ def set_index(index):
         raise ValueError("Invalid index")
     else:
         INDEX = index
-        log.info("Index {index} selected.".format(index=index))
+        log.info(f"Index {index} selected.")
         
 def get_index():
     global INDEX
@@ -488,6 +534,9 @@ def get_index():
 def set_value(value, index, column):
     """Set a value to the write data frame"""    
     # If trying to set a numeric valued column's entry to a string, set the type of column to object.
+    if column in DATA.columns:
+        log.warning(f"Warning attempting to write to DATA.")
+    
     if column not in WRITEDATA.columns:
         add_column(column)
 
@@ -504,7 +553,10 @@ def get_value(index, column):
         return WRITEDATA.at[index, column]
     elif column in DATA.columns:
         return DATA.at[index, column]
-
+    else:
+        log.warning(f"\"{column}\" not in WRITEDATA or DATA returning \"None\"")
+        return None
+    
 def add_column(column):
     if column not in WRITEDATA.columns:
         log.info(f"\"{column}\" not in write columns ... adding.")
@@ -561,7 +613,7 @@ def score(index=None, df=None, write_df=None):
             for view in config["combinator"]:
                 if "field" in view:
                     set_value(
-                        view_to_text(view, WRITEDATA.loc[get_index()]),
+                        view_to_text(view),
                         get_index(),
                         view["field"]
                     )                    
@@ -580,7 +632,7 @@ def score(index=None, df=None, write_df=None):
         global COLUMN_NAMES
         
         set_index(index)
-        view_series(DATA.loc[get_index()])
+        view_series()
 
 
         # Now update the widget entries with values from the WRITEDATA if they exist otherwise relevant column from DATA or otherwise set to default
@@ -610,7 +662,8 @@ def score(index=None, df=None, write_df=None):
             if config["scored"]["field"] in WRITEDATA:
                 scored = WRITEDATA[config["scored"]["field"]].count()
                 remain -= scored
-                progress_label = Label("{remain} to go. Scored {scored} from {total} which is {perc:.3g}%".format(remain=remain, scored=scored, total=total, perc=scored/total*100))
+                perc=scored/total*100
+                progress_label = Label(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
 
         interact_args = {
             "progress_label": progress_label,
