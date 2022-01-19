@@ -44,15 +44,76 @@ log = Logger(
 )
 
 
+def finalize_df(df, details):
+    """for field in dtypes:
+        if dtypes[field] is str_type:
+            data[field].fillna("", inplace=True)"""
+
+
+
+    if "fields" in details:
+        for field in details["fields"]:
+            column = pd.Series(index=df.index, dtype="object")
+            if "name" in field:
+                if "value" in field:
+                    for index in df.index:
+                        set_index(index)
+                        format = mapping()
+                        column[get_index()] = field["value"].format(**format)
+
+                elif "source" in field and "regexp" in field:
+                    regexp = field["regexp"]
+                    if field["source"] not in df.columns:
+                        log.warning(f"No column {source} in DataFrame.".format(source=field["source"]))
+                    for index in df.index:
+                        source = df.at[index, field["source"]]
+                        match = re.match(
+                            regexp,
+                            source,
+                        )
+                        if match:
+                            if len(match.groups())>1:
+                                log.warning(f"Multiple regular expression matches in {regexp}.")
+                            column[index] = match.group(1)
+                        else:
+                            log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
+                else:
+                    log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\" (for format derived fields) in fields.")
+                df[field["name"]] = column
+            else:
+                log.warning(f"No \"name\" associated with field entry.")
+    
+    df.set_index(df[details["index"]], inplace=True)
+    return df
+
+
+def allocation():
+    """Load in the allocation spread sheet to data frames."""
+    global DATA
+    DATA = access.allocation()
+    DATA = finalize_df(DATA, config["allocation"])
+
+def additional():
+    """Load in the allocation spread sheet to data frames."""
+    global DATA
+    DATA = DATA.join(access.additional(), rsuffix="additional")
+    DATA = finalize_df(DATA, config["additional"])
+
+def scores(index=None):
+    """Load in the allocation spread sheet to data frames."""
+    global WRITEDATA
+    WRITEDATA = access.scores(index)
+    WRITEDATA = finalize_df(WRITEDATA, config["scores"])
+
+
 def load_data():
     """Joint the two data together, the allocation and additional information."""
     global DATA
     global WRITEDATA
-    DATA = access.allocation()
+    allocation()
     if "additional" in config:
-        additional = access.additional()
         log.info("Joining allocation and additional information.")
-        DATA = DATA.join(additional, rsuffix="additional")
+        additional()
 
     # If sorting is requested do it here.
     if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in DATA:
@@ -63,7 +124,7 @@ def load_data():
         field = field=config["sortby"]["field"]
         log.info(f"Sorting by \"{field}\"")
         DATA.sort_values(by=field, ascending=ascending, inplace=True)
-    WRITEDATA = access.scores(DATA.index)
+    scores(DATA.index)
 
 def data():
     global DATA
@@ -520,7 +581,7 @@ def clean_string(instring):
 def set_index(index):
     """Index setter"""
     global INDEX
-    if index not in DATA.index:
+    if DATA is not None and index not in DATA.index:
         raise ValueError("Invalid index")
     else:
         INDEX = index
@@ -528,6 +589,9 @@ def set_index(index):
         
 def get_index():
     global INDEX
+    if INDEX is None and DATA is not None:
+        log.info(f"No index set, using first index of data.")
+        set_index(DATA.index[0])
     return INDEX
 
 
@@ -549,9 +613,9 @@ def set_value(value, index, column):
 
 def get_value(index, column):
     """Get a value from the data frame(s)"""
-    if column in WRITEDATA.columns:
+    if WRITEDATA is not None and column in WRITEDATA.columns:
         return WRITEDATA.at[index, column]
-    elif column in DATA.columns:
+    elif DATA is not None and column in DATA.columns:
         return DATA.at[index, column]
     else:
         log.warning(f"\"{column}\" not in WRITEDATA or DATA returning \"None\"")
@@ -647,7 +711,7 @@ def score(index=None, df=None, write_df=None):
                     if notempty(dval):
                         widget.value = dval
                 # Take default from existing column in WRITEDATA
-                if COLUMN_NAMES[key] in WRITEDATA.columns:
+                if WRITEDATA is not None and COLUMN_NAMES[key] in WRITEDATA.columns:
                     dval = get_value(get_index(), COLUMN_NAMES[key])
                     if notempty(dval):
                         widget.value = dval

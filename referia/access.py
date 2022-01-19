@@ -199,12 +199,6 @@ if GSPREAD_AVAILABLE:
         return data
     
 
-def finalize_df(df, details):
-    """for field in dtypes:
-        if dtypes[field] is str_type:
-            data[field].fillna("", inplace=True)"""
-    df.set_index(df[details["index"]], inplace=True)
-    return df
 
 
 def write_excel(df, details):
@@ -290,44 +284,7 @@ def read_data(details):
             default_glob=globname,
         )
 
-    if "format" in details:
-        kwargbase = details["format"]
-    else:
-        kwargbase = {}
-
-    if "fields" in details:
-        for field in details["fields"]:
-            column = pd.Series(index=df.index, dtype="object")
-            if "name" in field:
-                if "value" in field:
-                    for index in df.index:
-                        kwarg = {}
-                        for key, item in kwargbase.items():
-                            kwarg[key] = df.at[index, item]
-                        column[index] = field["value"].format(**kwarg)
-
-                if "source" in field and "regexp" in field:
-                    regexp = field["regexp"]
-                    if field["source"] not in df.columns:
-                        log.warning(f"No column {source} in DataFrame.".format(source=field["source"]))
-                    for index in df.index:
-                        source = df.at[index, field["source"]]
-                        match = re.match(
-                            regexp,
-                            source,
-                        )
-                        if match:
-                            if len(match.groups())>1:
-                                log.warning(f"Multiple regular expression matches in {regexp}.")
-                            column[index] = match.group(1)
-                        else:
-                            log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
-                else:
-                    log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\" (for format derived fields) in fields.")
-                df[field["name"]] = column
-            else:
-                log.warning(f"No \"name\" associated with field entry.")
-    return finalize_df(df, details)
+    return df
 
 def allocation():
     """Load in the allocation spread sheet to data frames."""
