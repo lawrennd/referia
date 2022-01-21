@@ -308,18 +308,9 @@ def scores(index=None):
             )
 
 
-def additional():
+def additional(source):
     """Load in the additional spread sheet to data frames."""
-    if type(config["additional"]) is list:
-        for i, source in enumerate(config["additional"]):
-            if i == 0:
-                additional = read_data(source)
-            else:
-                additional = additional.join(read_data(source), rsuffix="_" + str(i))
-    else:
-        additional = read_data(config["additional"])
-
-    return additional
+    return read_data(source)
     
 def write_scores(df):
     """Load in the scoring spread sheet to data frames."""

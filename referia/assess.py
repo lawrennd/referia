@@ -96,8 +96,23 @@ def allocation():
 def additional():
     """Load in the allocation spread sheet to data frames."""
     global DATA
-    DATA = DATA.join(access.additional(), rsuffix="additional")
-    DATA = finalize_df(DATA, config["additional"])
+    global config
+
+    if type(config["additional"]) is not list:
+        configs = [config["additional"]]
+    else:
+        configs = config["additional"]
+
+    for i, conf in enumerate(configs):
+        if i == 0:
+            additional = finalize_df(access.additional(conf), conf)
+        else:
+            additional = additional.join(
+                finalize_df(access.additional(conf), conf),
+                rsuffix="_" + str(i)
+            )
+        
+    DATA = DATA.join(additional, rsuffix="additional")
 
 def scores(index=None):
     """Load in the allocation spread sheet to data frames."""
