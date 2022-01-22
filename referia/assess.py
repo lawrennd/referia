@@ -252,7 +252,11 @@ def edit_files():
         if type(val) is str:
             storedirectory = os.path.expandvars(display["storedirectory"])
             origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),val)
-            editfilename = str(get_value(get_index(), config["allocation"]["index"])) + "_" + to_camel_case(display["field"]) + ".pdf"
+            if "name" in display:
+                filestub = display["name"] + ".pdf"
+            else:
+                filestub = to_camel_case(display["field"]) + ".pdf"
+            editfilename = str(get_value(get_index(), config["allocation"]["index"])) + "_" + filestub
             destfile = os.path.join(storedirectory,editfilename)
             if not os.path.exists(storedirectory):
                 os.makedirs(storedirectory)
