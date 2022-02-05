@@ -30,6 +30,12 @@ TMPPDFFILES={}
 DATA = None
 WRITEDATA = None
 INDEX = None
+# The series data associated with the input.
+SERIES = None
+# The entry column value from the series to use
+SUBINDEX = None
+# Which entry column in the series to choose from.
+SELECTOR = None
 INTERACT_ARGS = {}
 COLUMN_NAMES = {}
 DEFAULT_WRITEDF_VALS = pd.Series()
@@ -220,8 +226,8 @@ def copy_file(origfile, destfile, display):
     if os.path.exists(origfile):
         if ext == ".pdf" and "pages" in display and "first" in display["pages"] and "last" in display["pages"]:
             # Extract pages from a PDF
-            firstpage = get_value(get_index(), display["pages"]["first"])
-            lastpage = get_value(get_index(), display["pages"]["last"])
+            firstpage = get_current_value(display["pages"]["first"])
+            lastpage = get_current_value(display["pages"]["last"])
             if notempty(firstpage) and notempty(lastpage) and notempty(display["field"]):
                 firstpage = int(firstpage)
                 lastpage = int(lastpage)
@@ -248,7 +254,7 @@ def edit_files():
         
     for display in displays:
         if "field" in display:
-            val = get_value(get_index(), display["field"])
+            val = get_current_value(display["field"])
         if type(val) is str:
             storedirectory = os.path.expandvars(display["storedirectory"])
             origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),val)
@@ -256,7 +262,7 @@ def edit_files():
                 filestub = display["name"] + ".pdf"
             else:
                 filestub = to_camel_case(display["field"]) + ".pdf"
-            editfilename = str(get_value(get_index(), config["allocation"]["index"])) + "_" + filestub
+            editfilename = str(get_current_value(config["allocation"]["index"])) + "_" + filestub
             destfile = os.path.join(storedirectory,editfilename)
             if not os.path.exists(storedirectory):
                 os.makedirs(storedirectory)
@@ -273,7 +279,7 @@ def view_file(display):
     """View a file containing relevant information to the assessment."""
     filename = ""
     tmpname = ""
-    val = get_value(get_index(), display["field"])
+    val = get_current_value(display["field"])
     if type(val) is str:
         filename = os.path.expandvars(os.path.join(display["directory"],val))
         tmpname = to_camel_case(display["field"])
@@ -283,7 +289,7 @@ def view_file(display):
         _, ext = os.path.splitext(filename)
         if len(tmpname)>0:
             tmpdirectory = tempfile.gettempdir()
-            destfile = str(get_value(get_index(), config["allocation"]["index"])) + "_" + tmpname + ext
+            destfile = str(get_current_value(config["allocation"]["index"])) + "_" + tmpname + ext
             destname = os.path.join(tmpdirectory, destfile)
             if not os.path.exists(destname):
                 log.debug(f"Copying \"{filename}\" to \"{destname}\".")
@@ -320,7 +326,7 @@ def view_urls():
     for display in displays:
         if "url" in display:
             if "field" in display:
-                val = get_value(get_index(), display["field"])
+                val = get_current_value(display["field"])
             else:
                 val = None
             if "field" in display and type(val) is str:
@@ -357,7 +363,7 @@ def mapping(mapping=None):
             
     format = {}
     for key, column in mapping.items():
-        format[key] = get_value(get_index(), column)
+        format[key] = get_current_value(column)
 
     return format
     
@@ -372,7 +378,7 @@ def conditions(entry):
                     return False
                     
             if "equal" in condition:
-                if not get_value(get_index(), condition["equal"]["field"]) == condition["equal"]["value"]:
+                if not get_current_value(condition["equal"]["field"]) == condition["equal"]["value"]:
                     return False
                     
     return True
@@ -578,7 +584,7 @@ def extract_scorer(orig_score):
         if "args" in score["source"]:
             for arg, field in score["source"]["args"]:
                 if arg not in score["args"]:
-                    score["args"][arg] = get_value(get_index(), field)
+                    score["args"][arg] = get_current_value(field)
         if "criterion" in score["source"]:
             criterion = score["source"]["criterion"]
             if "display" in criterion:
@@ -600,12 +606,24 @@ def clean_string(instring):
 def set_index(index):
     """Index setter"""
     global INDEX
+    global SUBINDEX
     if DATA is not None and index not in DATA.index:
         raise ValueError("Invalid index")
     else:
         INDEX = index
+        SUBINDEX = None
         log.info(f"Index {index} selected.")
+
+def set_subindex(index):
+    """Subindex setter"""
+    global SUBINDEX
+    if SERIES is not None and index not in get_subindices():
+        raise ValueError("Invalid subindex.")
+    else:
+        SUBINDEX=index
+        log.info(f"Subindex {index} selected.")
         
+
 def get_index():
     global INDEX
     if INDEX is None and DATA is not None:
@@ -613,26 +631,65 @@ def get_index():
         set_index(DATA.index[0])
     return INDEX
 
+def get_subseries():
+    global SERIES
+    global INDEX
+    global SELECTOR
+    return SERIES[df.index.isin([INDEX])]
 
-def set_value(value, index, column):
+def get_subselection(value):
+    return get_subindices() == value 
+
+def get_subindices():
+    return get_subseries()[SELECTOR]
+
+def get_subindex():
+    global SUBINDEX
+    global INDEX
+    global SELECTOR
+    if SUBINDEX is None and SERIES is not None:
+        log.info(f"No index set, using first index of data.")
+        set_subindex(get_subindices()[0])
+    return SUBINDEX
+
+def _update_type(df, column, value):
+    """Update the type of a given column according to a value passed."""
+    coltype = df.dtypes[column]
+    if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
+        log.info(f"Changing column \"{column}\" type to 'object' due to string input.")
+        df[column] = df[column].astype('object')
+
+
+def set_series_value(value, column):
+    """Set a value in the write series data frame"""
+    if column in DATA.columns:
+        log.warning(f"Warning attempting to write to {column} in DATA.")
+
+    if column not in SERIES.columns:
+        add_series_column(column)
+
+    _update_type(SERIES, column, value)
+    
+def set_current_value(value, column):
     """Set a value to the write data frame"""    
     # If trying to set a numeric valued column's entry to a string, set the type of column to object.
     if column in DATA.columns:
-        log.warning(f"Warning attempting to write to DATA.")
+        log.warning(f"Warning attempting to write to {column} in DATA.")
     
     if column not in WRITEDATA.columns:
         add_column(column)
 
-    coltype = WRITEDATA.dtypes[column]
-    if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
-        log.info(f"Changing column \"{column}\" type to 'object' due to string input.")
-        WRITEDATA[column] = WRITEDATA[column].astype('object')
-
+    _update_type(WRITEDATA, column, value)
     WRITEDATA.at[get_index(), column] = value
 
-def get_value(index, column):
+    
+def get_current_value(index, column):
     """Get a value from the data frame(s)"""
-    if WRITEDATA is not None and column in WRITEDATA.columns:
+
+    # Ordering here dictates the priority of selection, first series, then writedata, then data.
+    if SERIES is not None and column in SERIES.columns:
+        return get_subseries()[get_subselection()]
+    elif WRITEDATA is not None and column in WRITEDATA.columns:
         return WRITEDATA.at[index, column]
     elif DATA is not None and column in DATA.columns:
         return DATA.at[index, column]
@@ -646,6 +703,13 @@ def add_column(column):
         WRITEDATA[column] = None
     else:
         log.warning(f"\"{column}\" requested to be added to write data but already exists.")
+
+def add_series_column(column):
+    if column not in SERIES.columns:
+        log.info(f"\"{column}\" not in series columns ... adding.")
+        SERIES[column] = None
+    else:
+        log.warning(f"\"{column}\" requested to be added to series data but already exists.")
         
         
 def score(index=None, df=None, write_df=None):
@@ -671,33 +735,30 @@ def score(index=None, df=None, write_df=None):
             # fields starting with "_" are not transferred
             # (typically HTML widgets for prompting input)
             if key[0] != "_":
-                set_value(value, get_index(), COLUMN_NAMES[key])
+                set_current_value(value, COLUMN_NAMES[key])
 
         if "timestamp_field" in config:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        set_value(
+        set_current_value(
             pd.to_datetime("today"),
-            get_index(),
             timestamp_field
         )
         if "created_field" in config:
             created_field = config["created_field"]
         else:
             created_field = "Created"
-        if created_field not in WRITEDATA.columns or empty(get_value(get_index(), created_field)):
-            set_value(
+        if created_field not in WRITEDATA.columns or empty(get_current_value(created_field)):
+            set_current_value(
                 pd.to_datetime("today"),
-                get_index(),
                 created_field
             )
         if "combinator" in config:
             for view in config["combinator"]:
                 if "field" in view:
-                    set_value(
+                    set_current_value(
                         view_to_text(view),
-                        get_index(),
                         view["field"]
                     )                    
                 else:
@@ -726,12 +787,12 @@ def score(index=None, df=None, write_df=None):
                 widget.value = DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]]
                 # Take default from existing column in DATA
                 if COLUMN_NAMES[key] in DEFAULT_WRITEDF_SOURCE:
-                    dval = get_value(get_index(), DEFAULT_WRITEDF_SOURCE[COLUMN_NAMES[key]])
+                    dval = get_current_value(DEFAULT_WRITEDF_SOURCE[COLUMN_NAMES[key]])
                     if notempty(dval):
                         widget.value = dval
                 # Take default from existing column in WRITEDATA
                 if WRITEDATA is not None and COLUMN_NAMES[key] in WRITEDATA.columns:
-                    dval = get_value(get_index(), COLUMN_NAMES[key])
+                    dval = get_current_value(COLUMN_NAMES[key])
                     if notempty(dval):
                         widget.value = dval
                 else:
