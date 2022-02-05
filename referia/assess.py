@@ -27,15 +27,15 @@ from .util import to_camel_case
 from . import access
 
 TMPPDFFILES={}
-DATA = None
-WRITEDATA = None
-INDEX = None
+_DATA = None
+_WRITEDATA = None
+_INDEX = None
 # The series data associated with the input.
-SERIES = None
+_WRITESERIES = None
 # The entry column value from the series to use
-SUBINDEX = None
+_SUBINDEX = None
 # Which entry column in the series to choose from.
-SELECTOR = None
+_SELECTOR = None
 INTERACT_ARGS = {}
 COLUMN_NAMES = {}
 DEFAULT_WRITEDF_VALS = pd.Series()
@@ -95,13 +95,13 @@ def finalize_df(df, details):
 
 def allocation():
     """Load in the allocation spread sheet to data frames."""
-    global DATA
-    DATA = access.allocation()
-    DATA = finalize_df(DATA, config["allocation"])
+    global _DATA
+    _DATA = access.allocation()
+    _DATA = finalize_df(_DATA, config["allocation"])
 
 def additional():
     """Load in the allocation spread sheet to data frames."""
-    global DATA
+    global _DATA
     global config
 
     if type(config["additional"]) is not list:
@@ -118,39 +118,48 @@ def additional():
                 rsuffix="_" + str(i)
             )
         
-    DATA = DATA.join(additional, rsuffix="additional")
+    _DATA = _DATA.join(additional, rsuffix="additional")
 
 def scores(index=None):
-    """Load in the allocation spread sheet to data frames."""
-    global WRITEDATA
-    WRITEDATA = access.scores(index)
-    WRITEDATA = finalize_df(WRITEDATA, config["scores"])
+    """Load in the score data to data frames."""
+    global _WRITEDATA
+    _WRITEDATA = access.scores(index)
+    _WRITEDATA = finalize_df(_WRITEDATA, config["scores"])
 
 
+def series(index=None):
+    """Load in the series data to data frames."""
+    global _WRITESERIES
+    if "selector" in config["series"]:
+        _SELECTOR = config["series"]["selector"]
+    _WRITESERIES = access.series(index)
+    _WRITESERIES = finalize_df(_WRITESERIES, config['series'])
+    
 def load_data():
     """Joint the two data together, the allocation and additional information."""
-    global DATA
-    global WRITEDATA
+    global _DATA
+    global _WRITEDATA
     allocation()
     if "additional" in config:
         log.info("Joining allocation and additional information.")
         additional()
 
     # If sorting is requested do it here.
-    if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in DATA:
+    if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in _DATA:
         if "ascending" in config["sortby"]:
             ascending = config["sortby"]["ascending"]
         else:
             ascending=True
         field = field=config["sortby"]["field"]
         log.info(f"Sorting by \"{field}\"")
-        DATA.sort_values(by=field, ascending=ascending, inplace=True)
-    scores(DATA.index)
+        _DATA.sort_values(by=field, ascending=ascending, inplace=True)
+    series(_DATA.index)
+    scores(_DATA.index)
 
 def data():
-    global DATA
+    global _DATA
     load_data()
-    return DATA
+    return _DATA
 
     
 def clear_temp_files():
@@ -421,7 +430,7 @@ def view(data):
 
 def extract_scorer(orig_score):
     """Interpret a scoring element from the yaml file and create the relevant widgets to be past to the interact command"""
-    global WRITEDATA
+    global _WRITEDATA
     global COLUMN_NAMES
     interact_args = {}
     score = json.loads(json.dumps(orig_score))
@@ -559,10 +568,10 @@ def extract_scorer(orig_score):
         if "default" in score:
             if "source" in score["default"]:
                 source = score["default"]["source"]
-                if source in DATA.columns or source in WRITEDATA.columns:
+                if source in _DATA.columns or source in _WRITEDATA.columns:
                     DEFAULT_WRITEDF_SOURCE[score["field"]] = source
                 else:
-                    log.warning(f"Missing column \"{source}\" in DATA and WRITEDATA.")
+                    log.warning(f"Missing column \"{source}\" in _DATA and _WRITEDATA.")
             if "value" in score["default"]:
                 DEFAULT_WRITEDF_VALS[score["field"]] = score["default"]["value"]
                 
@@ -605,52 +614,80 @@ def clean_string(instring):
 
 def set_index(index):
     """Index setter"""
-    global INDEX
-    global SUBINDEX
-    if DATA is not None and index not in DATA.index:
+    global _INDEX
+    global _SUBINDEX
+    if _DATA is not None and index not in _DATA.index:
         raise ValueError("Invalid index")
     else:
-        INDEX = index
-        SUBINDEX = None
+        _INDEX = index
+        _SUBINDEX = None
         log.info(f"Index {index} selected.")
 
 def set_subindex(index):
     """Subindex setter"""
-    global SUBINDEX
-    if SERIES is not None and index not in get_subindices():
+    global _SUBINDEX
+    if index is None:
+        _SUBINDEX = None
+        log.info(f"Subindex set to None.")
+        return
+    
+    if _WRITESERIES is not None and index not in _WRITESERIES[get_selector()].values:
         raise ValueError("Invalid subindex.")
     else:
-        SUBINDEX=index
+        _SUBINDEX=index
         log.info(f"Subindex {index} selected.")
         
 
 def get_index():
-    global INDEX
-    if INDEX is None and DATA is not None:
+    global _INDEX
+    if _INDEX is None and _DATA is not None:
         log.info(f"No index set, using first index of data.")
-        set_index(DATA.index[0])
-    return INDEX
+        set_index(_DATA.index[0])
+    return _INDEX
 
-def get_subseries():
-    global SERIES
-    global INDEX
-    global SELECTOR
-    return SERIES[df.index.isin([INDEX])]
+def get_selector():
+    global _SELECTOR
+    return _SELECTOR
 
-def get_subselection(value):
-    return get_subindices() == value 
-
-def get_subindices():
-    return get_subseries()[SELECTOR]
+def set_selector(column):
+    """Set which column of the series is to be used for selection."""
+    global _SELECTOR
+    # Set to None to indicate that _WRITEDATA is correct place for recording.
+    if column is None:
+        _SELECTOR = None
+        return
+    
+    if _WRITESERIES is not None and column not in _WRITESERIES.columns:
+        raise ValueError("Invalid selector column.")
+    else:
+        _SELECTOR = column
+        if get_subindex() not in _WRITESERIES[column]:
+            set_subindex(None)
+        log.info(f"Column {column} of _WRITESERIES selected for selection.")
 
 def get_subindex():
-    global SUBINDEX
-    global INDEX
-    global SELECTOR
-    if SUBINDEX is None and SERIES is not None:
+    global _SUBINDEX
+    global _SELECTOR
+    if _SUBINDEX is None and _WRITESERIES is not None:
+        log.info(f"No subindex set, using first entry of _WRITESERIES.")
+        set_subindex(get_subseries().at[0, get_selector()])
+    return _INDEX
+
+def get_subseries():
+    global _WRITESERIES
+    return _WRITESERIES[_WRITESERIES.index.isin([get_index()])]
+
+def get_subindices():
+    return get_subseries()[_SELECTOR]
+
+def get_subindex():
+    global _SUBINDEX
+    global _INDEX
+    global _SELECTOR
+    if _SUBINDEX is None and _WRITESERIES is not None:
         log.info(f"No index set, using first index of data.")
         set_subindex(get_subindices()[0])
-    return SUBINDEX
+    return _SUBINDEX
 
 def _update_type(df, column, value):
     """Update the type of a given column according to a value passed."""
@@ -662,58 +699,75 @@ def _update_type(df, column, value):
 
 def set_series_value(value, column):
     """Set a value in the write series data frame"""
-    if column in DATA.columns:
-        log.warning(f"Warning attempting to write to {column} in DATA.")
+    if column in _DATA.columns:
+        log.warning(f"Warning attempting to write to {column} in _DATA.")
 
-    if column not in SERIES.columns:
+    if column not in _WRITESERIES.columns:
         add_series_column(column)
 
-    _update_type(SERIES, column, value)
+    _update_type(_WRITESERIES, column, value)
+    get_subseries().at[get]
     
 def set_current_value(value, column):
     """Set a value to the write data frame"""    
-    # If trying to set a numeric valued column's entry to a string, set the type of column to object.
-    if column in DATA.columns:
-        log.warning(f"Warning attempting to write to {column} in DATA.")
-    
-    if column not in WRITEDATA.columns:
-        add_column(column)
+    # If trying to set a numeric valued column's entry to a string, set the type of column to object.                       
+    if column in _DATA.columns:
+        log.warning(f"Warning attempting to write to {column} in _DATA.")
 
-    _update_type(WRITEDATA, column, value)
-    WRITEDATA.at[get_index(), column] = value
+    if get_selector() is not None:
+        if column not in _WRITESERIES.columns:
+            add_series_column(column)
+        _update_type(_WRITESERIES, column, value)
+        _WRITESERIES.loc[
+            _WRITESERIES.index.isin([get_index()])
+            & (_WRITESERIES[get_selector()]==get_subindex()).values,
+            column
+        ] = value
+        return
 
+    else:
+        if column not in _WRITEDATA.columns:
+            add_column(column)
+
+        _update_type(_WRITEDATA, column, value)
+        _WRITEDATA.at[get_index(), column] = value
+        return
     
-def get_current_value(index, column):
+def get_current_value(column):
     """Get a value from the data frame(s)"""
 
     # Ordering here dictates the priority of selection, first series, then writedata, then data.
-    if SERIES is not None and column in SERIES.columns:
-        return get_subseries()[get_subselection()]
-    elif WRITEDATA is not None and column in WRITEDATA.columns:
-        return WRITEDATA.at[index, column]
-    elif DATA is not None and column in DATA.columns:
-        return DATA.at[index, column]
+    if _SELECTOR is not None and _WRITESERIES is not None and column in _WRITESERIES.columns:
+        return _WRITESERIES.loc[
+            _WRITESERIES.index.isin([get_index()])
+            & (_WRITESERIES[get_selector()]==get_subindex()).values,
+            column
+            ][0]
+    elif _WRITEDATA is not None and column in _WRITEDATA.columns:
+        return _WRITEDATA.at[index, column]
+    elif _DATA is not None and column in _DATA.columns:
+        return _DATA.at[index, column]
     else:
-        log.warning(f"\"{column}\" not in WRITEDATA or DATA returning \"None\"")
+        log.warning(f"\"{column}\" not selected _WRITESERIES or in _WRITEDATA or _DATA returning \"None\"")
         return None
     
 def add_column(column):
-    if column not in WRITEDATA.columns:
+    if column not in _WRITEDATA.columns:
         log.info(f"\"{column}\" not in write columns ... adding.")
-        WRITEDATA[column] = None
+        _WRITEDATA[column] = None
     else:
         log.warning(f"\"{column}\" requested to be added to write data but already exists.")
 
 def add_series_column(column):
-    if column not in SERIES.columns:
+    if column not in _WRITESERIES.columns:
         log.info(f"\"{column}\" not in series columns ... adding.")
-        SERIES[column] = None
+        _WRITESERIES[column] = None
     else:
         log.warning(f"\"{column}\" requested to be added to series data but already exists.")
         
         
 def score(index=None, df=None, write_df=None):
-    global DATA
+    global _DATA
     global INTERACT_ARGS
     if df is not None or write_df is not None:
         log.warning("Passing of data frames to score is deprecated. These values are not used.")
@@ -729,7 +783,7 @@ def score(index=None, df=None, write_df=None):
 
     
     def update_df(progress_label, **kwargs):
-        global WRITEDATA
+        global _WRITEDATA
 
         for key, value in kwargs.items():
             # fields starting with "_" are not transferred
@@ -749,7 +803,7 @@ def score(index=None, df=None, write_df=None):
             created_field = config["created_field"]
         else:
             created_field = "Created"
-        if created_field not in WRITEDATA.columns or empty(get_current_value(created_field)):
+        if created_field not in _WRITEDATA.columns or empty(get_current_value(created_field)):
             set_current_value(
                 pd.to_datetime("today"),
                 created_field
@@ -764,14 +818,14 @@ def score(index=None, df=None, write_df=None):
                 else:
                     log.error("Missing key 'field' in combinator view.")
             
-        access.write_scores(WRITEDATA)
+        access.write_scores(_WRITEDATA)
 
         
 
 
     def update_score_row(index):
-        global DATA
-        global WRITEDATA
+        global _DATA
+        global _WRITEDATA
         global INTERACT_ARGS
         global COLUMN_NAMES
         
@@ -779,19 +833,19 @@ def score(index=None, df=None, write_df=None):
         view_series()
 
 
-        # Now update the widget entries with values from the WRITEDATA if they exist otherwise relevant column from DATA or otherwise set to default
+        # Now update the widget entries with values from the _WRITEDATA if they exist otherwise relevant column from _DATA or otherwise set to default
         for key, widget in INTERACT_ARGS.items():
             if COLUMN_NAMES[key][0] != "_":
                 if COLUMN_NAMES[key] not in DEFAULT_WRITEDF_VALS:
                     DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]] = None
                 widget.value = DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]]
-                # Take default from existing column in DATA
+                # Take default from existing column in _DATA
                 if COLUMN_NAMES[key] in DEFAULT_WRITEDF_SOURCE:
                     dval = get_current_value(DEFAULT_WRITEDF_SOURCE[COLUMN_NAMES[key]])
                     if notempty(dval):
                         widget.value = dval
-                # Take default from existing column in WRITEDATA
-                if WRITEDATA is not None and COLUMN_NAMES[key] in WRITEDATA.columns:
+                # Take default from existing column in _WRITEDATA
+                if _WRITEDATA is not None and COLUMN_NAMES[key] in _WRITEDATA.columns:
                     dval = get_current_value(COLUMN_NAMES[key])
                     if notempty(dval):
                         widget.value = dval
@@ -799,12 +853,12 @@ def score(index=None, df=None, write_df=None):
                     add_column(COLUMN_NAMES[key])
 
                     
-        total = len(WRITEDATA.index)
+        total = len(_WRITEDATA.index)
         remain = total
         progress_label = fixed("None")
         if "scored" in config:
-            if config["scored"]["field"] in WRITEDATA:
-                scored = WRITEDATA[config["scored"]["field"]].count()
+            if config["scored"]["field"] in _WRITEDATA:
+                scored = _WRITEDATA[config["scored"]["field"]].count()
                 remain -= scored
                 perc=scored/total*100
                 progress_label = Label(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
@@ -820,7 +874,7 @@ def score(index=None, df=None, write_df=None):
         )
 
             
-    index_select=Dropdown(options=DATA.index, value=get_index())
+    index_select=Dropdown(options=_DATA.index, value=get_index())
     interact(update_score_row, index=index_select)
     
 

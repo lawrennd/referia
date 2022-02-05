@@ -308,6 +308,22 @@ def scores(index=None):
             )
 
 
+def series(source):
+    """Load in a series to data frame"""
+    filename = extract_full_filename(config["series"])
+    if config["series"]["type"] == "gsheet":
+        return read_data(config["series"])
+    elif os.path.exists(filename):
+        return read_data(config["series"])
+    elif index is not None:
+        log.info(f"Creating new DataFrame for write data from index as {filename} is not found.")
+        return pd.DataFrame(index=index, data=index)
+    else:
+        raise FileNotFoundError(
+            errno.ENOENT,
+            os.strerror(errno.ENOENT), filename
+            )
+
 def additional(source):
     """Load in the additional spread sheet to data frames."""
     return read_data(source)
