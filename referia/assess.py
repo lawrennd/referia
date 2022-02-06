@@ -18,6 +18,12 @@ log = Logger(
 )
 
 
+def notempty(val):
+    return pd.notna(val) and val!=""
+
+def empty(val):
+    return pd.isna(val) or val==""
+
 def automapping():
     """Generate dictionary of mapping between variable names and column names."""
     mapping = {}
