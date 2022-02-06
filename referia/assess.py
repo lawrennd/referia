@@ -27,15 +27,6 @@ from .util import to_camel_case
 from . import access
 
 TMPPDFFILES={}
-_DATA = None
-_WRITEDATA = None
-_INDEX = None
-# The series data associated with the input.
-_WRITESERIES = None
-# The entry column value from the series to use
-_SUBINDEX = None
-# Which entry column in the series to choose from.
-_SELECTOR = None
 INTERACT_ARGS = {}
 COLUMN_NAMES = {}
 DEFAULT_WRITEDF_VALS = pd.Series()
@@ -49,117 +40,319 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
+class Data:
+    def __init__(self):
+        self._data = None
+        self._writedata = None
+        self._index = None
+        # The series data associated with the input.
+        self._writeseries = None
+        # The entry column value from the series to use
+        self._subindex = None
+        # Which entry column in the series to choose from.
+        self._selector = None
+        self._load_data()
 
-def finalize_df(df, details):
-    """for field in dtypes:
-        if dtypes[field] is str_type:
-            data[field].fillna("", inplace=True)"""
-
-
-
-    if "fields" in details:
-        for field in details["fields"]:
-            column = pd.Series(index=df.index, dtype="object")
-            if "name" in field:
-                if "value" in field:
-                    for index in df.index:
-                        set_index(index)
-                        format = mapping()
-                        column[get_index()] = field["value"].format(**format)
-
-                elif "source" in field and "regexp" in field:
-                    regexp = field["regexp"]
-                    if field["source"] not in df.columns:
-                        log.warning(f"No column {source} in DataFrame.".format(source=field["source"]))
-                    for index in df.index:
-                        source = df.at[index, field["source"]]
-                        match = re.match(
-                            regexp,
-                            source,
-                        )
-                        if match:
-                            if len(match.groups())>1:
-                                log.warning(f"Multiple regular expression matches in {regexp}.")
-                            column[index] = match.group(1)
-                        else:
-                            log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
-                else:
-                    log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\" (for format derived fields) in fields.")
-                df[field["name"]] = column
-            else:
-                log.warning(f"No \"name\" associated with field entry.")
-    
-    df.set_index(df[details["index"]], inplace=True)
-    return df
-
-
-def allocation():
-    """Load in the allocation spread sheet to data frames."""
-    global _DATA
-    _DATA = access.allocation()
-    _DATA = finalize_df(_DATA, config["allocation"])
-
-def additional():
-    """Load in the allocation spread sheet to data frames."""
-    global _DATA
-    global config
-
-    if type(config["additional"]) is not list:
-        configs = [config["additional"]]
-    else:
-        configs = config["additional"]
-
-    for i, conf in enumerate(configs):
-        if i == 0:
-            additional = finalize_df(access.additional(conf), conf)
+    @property
+    def index(self):
+        if self._data is not None:
+            return self._data.index
         else:
-            additional = additional.join(
-                finalize_df(access.additional(conf), conf),
-                rsuffix="_" + str(i)
-            )
+            return None
+
+    @property
+    def columns(self):
+        columns = []
+        if self._data is not None:
+            columns += list(self._data.columns)
+        if self._writedata is not None:
+            columns = list(self._writedata.columns)
+        if self._writeseries is not None:
+            columns = list(self._writeseries.columns)
+        # Should perhaps make this unique column list? As in practice it behaves that way.
+        return pd.Index(columns)
         
-    _DATA = _DATA.join(additional, rsuffix="additional")
+    def _allocation(self):
+        """Load in the allocation spread sheet to data frames."""
+        self._data = access.allocation()
+        self._data = self._finalize_df(self._data, config["allocation"])
 
-def scores(index=None):
-    """Load in the score data to data frames."""
-    global _WRITEDATA
-    _WRITEDATA = access.scores(index)
-    _WRITEDATA = finalize_df(_WRITEDATA, config["scores"])
+    def _additional(self):
+        """Load in the allocation spread sheet to data frames."""
 
-
-def series(index=None):
-    """Load in the series data to data frames."""
-    global _WRITESERIES
-    if "selector" in config["series"]:
-        _SELECTOR = config["series"]["selector"]
-    _WRITESERIES = access.series(index)
-    _WRITESERIES = finalize_df(_WRITESERIES, config['series'])
-    
-def load_data():
-    """Joint the two data together, the allocation and additional information."""
-    global _DATA
-    global _WRITEDATA
-    allocation()
-    if "additional" in config:
-        log.info("Joining allocation and additional information.")
-        additional()
-
-    # If sorting is requested do it here.
-    if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in _DATA:
-        if "ascending" in config["sortby"]:
-            ascending = config["sortby"]["ascending"]
+        if type(config["additional"]) is not list:
+            configs = [config["additional"]]
         else:
-            ascending=True
-        field = field=config["sortby"]["field"]
-        log.info(f"Sorting by \"{field}\"")
-        _DATA.sort_values(by=field, ascending=ascending, inplace=True)
-    series(_DATA.index)
-    scores(_DATA.index)
+            configs = config["additional"]
 
+        for i, conf in enumerate(configs):
+            if i == 0:
+                additional = self._finalize_df(access.additional(conf), conf)
+            else:
+                additional = additional.join(
+                    self._finalize_df(access.additional(conf), conf),
+                    rsuffix="_" + str(i)
+                )
+
+        self._data = self._data.join(additional, rsuffix="additional")
+
+    def _scores(self):
+        """Load in the score data to data frames."""
+        self._writedata = access.scores(self.index)
+        self._writedata = self._finalize_df(self._writedata, config["scores"])
+
+
+    def _series(self):
+        """Load in the series data to data frames."""
+        if "selector" in config["series"]:
+            self._selector = config["series"]["selector"]
+        self._writeseries = access.series(self.index)
+        self._writeseries = self._finalize_df(self._writeseries, config['series'])
+
+    def _load_data(self):
+        """Load te data specified in the _referia.yml file."""
+        self._allocation()
+        if "additional" in config:
+            log.info("Joining allocation and additional information.")
+            self._additional()
+
+        # If sorting is requested do it here.
+        if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in self._data:
+            if "ascending" in config["sortby"]:
+                ascending = config["sortby"]["ascending"]
+            else:
+                ascending=True
+            field=config["sortby"]["field"]
+            log.info(f"Sorting by \"{field}\"")
+            self._data.sort_values(by=field, ascending=ascending, inplace=True)
+        if "series" in config:
+            self._series()
+        if "scores" in config:
+            self._scores()
+
+    def set_index(self, index):
+        """Index setter"""
+        if self._data is not None and index not in self._data.index:
+            raise ValueError("Invalid index")
+        else:
+            self._index = index
+            self._subindex = None
+            log.info(f"Index {index} selected.")
+
+    def set_subindex(self, index):
+        """Subindex setter"""
+        if index is None:
+            self._subindex = None
+            log.info(f"Subindex set to None.")
+            return
+
+        if self._writeseries is not None and index not in self._writeseries[get_selector()].values:
+            raise ValueError("Invalid subindex.")
+        else:
+            self._subindex=index
+            log.info(f"Subindex {index} selected.")
+
+
+    def get_index(self):
+        if self._index is None and self._data is not None:
+            log.info(f"No index set, using first index of data.")
+            self.set_index(self._data.index[0])
+        return self._index
+
+    def get_selector(self):
+        return self._selector
+
+    def set_selector(self, column):
+        """Set which column of the series is to be used for selection."""
+        # Set to None to indicate that self._writedata is correct place for recording.
+        if column is None:
+            self._selector = None
+            return
+
+        if self._writeseries is not None and column not in self._writeseries.columns:
+            raise ValueError("Invalid selector column.")
+        else:
+            self._selector = column
+            if self.get_subindex() not in self._writeseries[column]:
+                self.set_subindex(None)
+            log.info(f"Column {column} of Data._writeseries selected for selection.")
+
+    def get_subindex(self):
+        if self._subindex is None and self._writeseries is not None:
+            log.info(f"No subindex set, using first entry of Data._writeseries.")
+            self.set_subindex(self.get_subseries().at[0, self.get_selector()])
+        return self._index
+
+    def get_subseries(self):
+        return self._writeseries[self._writeseries.index.isin([self.get_index()])]
+
+    def get_subindices(self):
+        return self.get_subseries()[self._selector]
+
+    def get_subindex(self):
+        if self._subindex is None and self._writeseries is not None:
+            log.info(f"No index set, using first index of data.")
+            self.set_subindex(self.get_subindices()[0])
+        return self._subindex
+
+    def set_series_value(self, value, column):
+        """Set a value in the write series data frame"""
+        if column in self._data.columns:
+            log.warning(f"Warning attempting to write to {column} in self._data.")
+
+        if column not in self._writeseries.columns:
+            self.add_series_column(column)
+
+        _update_type(self._writeseries, column, value)
+        self.get_subseries().at[get]
+
+    def set_current_value(self, value, column):
+        """Set a value to the write data frame"""    
+        # If trying to set a numeric valued column's entry to a string, set the type of column to object.                       
+        if column in self._data.columns:
+            log.warning(f"Warning attempting to write to {column} in self._data.")
+
+        if self.get_selector() is not None:
+            if column not in self._writeseries.columns:
+                self.add_series_column(column)
+            _update_type(self._writeseries, column, value)
+            self._writeseries.loc[
+                self._writeseries.index.isin([self.get_index()])
+                & (self._writeseries[self.get_selector()]==self.get_subindex()).values,
+                column
+            ] = value
+            return
+
+        else:
+            if column not in self._writedata.columns:
+                self.add_column(column)
+
+            _update_type(self._writedata, column, value)
+            self._writedata.at[self.get_index(), column] = value
+            return
+
+    def get_current_value(self, column):
+        """Get a value from the data frame(s)"""
+
+        # Ordering here dictates the priority of selection, first series, then writedata, then data.
+        if self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
+            return self._writeseries.loc[
+                self._writeseries.index.isin([self.get_index()])
+                & (self._writeseries[self.get_selector()]==self.get_subindex()).values,
+                column
+                ][0]
+        elif self._writedata is not None and column in self._writedata.columns:
+            return self._writedata.at[self.get_index(), column]
+        elif self._data is not None and column in self._data.columns:
+            return self._data.at[self.get_index(), column]
+        else:
+            log.warning(f"\"{column}\" not selected _WRITESERIES or in _WRITEDATA or _DATA returning \"None\"")
+            return None
+
+    def add_column(self, column):
+        if column not in self._writedata.columns:
+            log.info(f"\"{column}\" not in write columns ... adding.")
+            self._writedata[column] = None
+        else:
+            log.warning(f"\"{column}\" requested to be added to write data but already exists.")
+
+    def add_series_column(self, column):
+        if column not in self._writeseries.columns:
+            log.info(f"\"{column}\" not in series columns ... adding.")
+            self._writeseries[column] = None
+        else:
+            log.warning(f"\"{column}\" requested to be added to series data but already exists.")
+
+    def mapping(self, mapping=None):
+        """Generate dictionary of mapping between variable names and column values."""
+        if mapping is None:
+            if "mapping" in config:
+                mapping = config["mapping"]
+            else:
+                mapping = automapping()
+
+        format = {}
+        for key, column in mapping.items():
+            format[key] = self.get_current_value(column)
+
+        return format
+
+
+    def conditions(self, entry):
+
+        show_display = True
+        if "conditions" in entry:
+            for condition in entry["conditions"]:
+                if "present" in condition:
+                    if not condition["present"]["field"] in columns():
+                        return False
+
+                if "equal" in condition:
+                    if not self.get_current_value(condition["equal"]["field"]) == condition["equal"]["value"]:
+                        return False
+
+        return True
+            
+
+    def _finalize_df(self, df, details):
+        """for field in dtypes:
+            if dtypes[field] is str_type:
+                data[field].fillna("", inplace=True)"""
+
+        if "fields" in details:
+            for field in details["fields"]:
+                column = pd.Series(index=df.index, dtype="object")
+                if "name" in field:
+                    if "value" in field:
+                        for index in df.index:
+                            format = self.mapping()
+                            column[index] = field["value"].format(**format)
+
+                    elif "source" in field and "regexp" in field:
+                        regexp = field["regexp"]
+                        if field["source"] not in df.columns:
+                            log.warning(f"No column {source} in DataFrame.".format(source=field["source"]))
+                        for index in df.index:
+                            source = df.at[index, field["source"]]
+                            match = re.match(
+                                regexp,
+                                source,
+                            )
+                            if match:
+                                if len(match.groups())>1:
+                                    log.warning(f"Multiple regular expression matches in {regexp}.")
+                                column[index] = match.group(1)
+                            else:
+                                log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
+                    else:
+                        log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\" (for format derived fields) in fields.")
+                    df[field["name"]] = column
+                else:
+                    log.warning(f"No \"name\" associated with field entry.")
+
+        df.set_index(df[details["index"]], inplace=True)
+        return df
+    
+    def to_score(self):
+        if self._writedata is not None:
+            return len(self._writedata.index)
+        else:
+            return 0
+
+    def scored(self):
+        if "scored" in config:
+            if config["scored"]["field"] in self._writedata.columns:
+                return self._writedata[config["scored"]["field"]].count()
+            else:
+                return 0
+        
+
+        
 def data():
-    global _DATA
-    load_data()
-    return _DATA
+    return Data()
+        
+
+        
 
     
 def clear_temp_files():
@@ -254,7 +447,7 @@ def copy_file(origfile, destfile, display):
         log.warning(f"Warning edit file \"{origfile}\" does not exist.")
 
 
-def edit_files():
+def edit_files(data):
     """Use the system viewer to show a PDF containing relevant information to the assessment."""
 
     displays = []
@@ -263,7 +456,7 @@ def edit_files():
         
     for display in displays:
         if "field" in display:
-            val = get_current_value(display["field"])
+            val = data.get_current_value(display["field"])
         if type(val) is str:
             storedirectory = os.path.expandvars(display["storedirectory"])
             origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),val)
@@ -271,7 +464,7 @@ def edit_files():
                 filestub = display["name"] + ".pdf"
             else:
                 filestub = to_camel_case(display["field"]) + ".pdf"
-            editfilename = str(get_current_value(config["allocation"]["index"])) + "_" + filestub
+            editfilename = str(data.get_current_value(config["allocation"]["index"])) + "_" + filestub
             destfile = os.path.join(storedirectory,editfilename)
             if not os.path.exists(storedirectory):
                 os.makedirs(storedirectory)
@@ -284,11 +477,11 @@ def view_directory(display):
     """View a directory containing relevant information to the assessment."""
     pass
 
-def view_file(display):
+def view_file(display, data):
     """View a file containing relevant information to the assessment."""
     filename = ""
     tmpname = ""
-    val = get_current_value(display["field"])
+    val = data.get_current_value(display["field"])
     if type(val) is str:
         filename = os.path.expandvars(os.path.join(display["directory"],val))
         tmpname = to_camel_case(display["field"])
@@ -298,7 +491,7 @@ def view_file(display):
         _, ext = os.path.splitext(filename)
         if len(tmpname)>0:
             tmpdirectory = tempfile.gettempdir()
-            destfile = str(get_current_value(config["allocation"]["index"])) + "_" + tmpname + ext
+            destfile = str(data.get_current_value(config["allocation"]["index"])) + "_" + tmpname + ext
             destname = os.path.join(tmpdirectory, destfile)
             if not os.path.exists(destname):
                 log.debug(f"Copying \"{filename}\" to \"{destname}\".")
@@ -314,7 +507,7 @@ def view_file(display):
         log.warning(f"view_file \"{filename}\" does not exist.")
     
     
-def view_files():
+def view_files(data):
     """Use the system viewer to show a PDF containing relevant information to the assessment."""
     displays = []
     if "localpdf" in config:
@@ -323,10 +516,10 @@ def view_files():
         displays += config["localvideo"]
 
     for display in displays:
-        view_file(display)
+        view_file(display, data)
             
                 
-def view_urls():
+def view_urls(data):
     """View any urls that are provided."""
     displays = []
     if "urls" in config:
@@ -335,25 +528,25 @@ def view_urls():
     for display in displays:
         if "url" in display:
             if "field" in display:
-                val = get_current_value(display["field"])
+                val = data.get_current_value(display["field"])
             else:
                 val = None
             if "field" in display and type(val) is str:
                 urlterm = val
             elif "display" in display:
-                urlterm = view_to_text(display)
+                urlterm = view_to_text(display, data)
             else:
                 urlterm = ""
             urlname = unidecode(display["url"] + urlterm.replace(" ", "%20"))
             open_url(urlname)
 
 
-def view_series():
+def view_series(data):
     clear_temp_files()
-    view_files()
-    view_urls()
-    edit_files()
-    display(Markdown(view_text()))
+    view_files(data)
+    view_urls(data)
+    edit_files(data)
+    display(Markdown(view_text(data)))
 
 def automapping():
     """Generate dictionary of mapping between variable names and column names."""
@@ -362,62 +555,33 @@ def automapping():
         field = to_camel_case(column)
         mapping[field] = column
 
-def mapping(mapping=None):
-    """Generate dictionary of mapping between variable names and column values."""
-    if mapping is None:
-        if "mapping" in config:
-            mapping = config["mapping"]
-        else:
-            mapping = automapping()
-            
-    format = {}
-    for key, column in mapping.items():
-        format[key] = get_current_value(column)
 
-    return format
-    
-
-def conditions(entry):
-    
-    show_display = True
-    if "conditions" in entry:
-        for condition in entry["conditions"]:
-            if "present" in condition:
-                if not condition["present"]["field"] in columns():
-                    return False
-                    
-            if "equal" in condition:
-                if not get_current_value(condition["equal"]["field"]) == condition["equal"]["value"]:
-                    return False
-                    
-    return True
-
-def view_to_text(view):
+def view_to_text(view, data):
     """Create the text of the view."""
     if "format" in view:
-        format = mapping(view["format"])
+        format = data.mapping(view["format"])
     else:
-        format = mapping()
+        format = data.mapping()
 
-    if conditions(view):
+    if data.conditions(view):
         return view["display"].format(**format)
     else:
         return ""
     
-def viewer_to_text(key):
+def viewer_to_text(key, data):
     """Create a formatted text output from a yaml entry with base text and format keys."""
     text = ""
     if key in config:
         for view in config[key]:
-            text += view_to_text(view)
+            text += view_to_text(view, data)
     return text
 
 
 
-def view_text():
+def view_text(data):
     """Text that views a a single record."""
     if "viewer" in config:
-        return viewer_to_text("viewer")
+        return viewer_to_text("viewer", data)
     else:
         return ""
 
@@ -428,9 +592,8 @@ def view(data):
     ax.set_xticks(range(0,13))
 
 
-def extract_scorer(orig_score):
-    """Interpret a scoring element from the yaml file and create the relevant widgets to be past to the interact command"""
-    global _WRITEDATA
+def extract_scorer(orig_score, data):
+    """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
     global COLUMN_NAMES
     interact_args = {}
     score = json.loads(json.dumps(orig_score))
@@ -460,7 +623,7 @@ def extract_scorer(orig_score):
             }
         }
         for sub_score in [criterion, comment]:
-            interact_args = {**interact_args, **extract_scorer(sub_score)}
+            interact_args = {**interact_args, **extract_scorer(sub_score, data)}
         return interact_args
         
 
@@ -484,7 +647,7 @@ def extract_scorer(orig_score):
             }
         }
         for sub_score in [criterioncomment, expectation]:
-            interact_args = {**interact_args, **extract_scorer(sub_score)}
+            interact_args = {**interact_args, **extract_scorer(sub_score, data)}
         return interact_args
 
     if score["type"] == "CriterionCommentRaisesMeetsLowersFlag":
@@ -509,7 +672,7 @@ def extract_scorer(orig_score):
             }
         }
         for sub_score in [criterioncomment, expectation]:
-            interact_args = {**interact_args, **extract_scorer(sub_score)}
+            interact_args = {**interact_args, **extract_scorer(sub_score, data)}
         return interact_args
     
     if score["type"] == "CriterionCommentScore":
@@ -551,7 +714,7 @@ def extract_scorer(orig_score):
             }
         }
         for sub_score in [criterioncomment, score]:
-            interact_args = {**interact_args, **extract_scorer(sub_score)}
+            interact_args = {**interact_args, **extract_scorer(sub_score, data)}
         return interact_args
     
     global_variables = globals()
@@ -568,7 +731,7 @@ def extract_scorer(orig_score):
         if "default" in score:
             if "source" in score["default"]:
                 source = score["default"]["source"]
-                if source in _DATA.columns or source in _WRITEDATA.columns:
+                if source in data.columns:
                     DEFAULT_WRITEDF_SOURCE[score["field"]] = source
                 else:
                     log.warning(f"Missing column \"{source}\" in _DATA and _WRITEDATA.")
@@ -593,11 +756,11 @@ def extract_scorer(orig_score):
         if "args" in score["source"]:
             for arg, field in score["source"]["args"]:
                 if arg not in score["args"]:
-                    score["args"][arg] = get_current_value(field)
+                    score["args"][arg] = data.get_current_value(field)
         if "criterion" in score["source"]:
             criterion = score["source"]["criterion"]
             if "display" in criterion:
-                score["criterion"] = criterion["display"].format(**mapping())
+                score["criterion"] = criterion["display"].format(**data.mapping())
                                  
     # Set arguments of widget from data fields if appropriate.                
     global_variables = globals()
@@ -612,82 +775,6 @@ def extract_scorer(orig_score):
 def clean_string(instring):
     return re.sub("\W+|^(?=\d)","_", instring)
 
-def set_index(index):
-    """Index setter"""
-    global _INDEX
-    global _SUBINDEX
-    if _DATA is not None and index not in _DATA.index:
-        raise ValueError("Invalid index")
-    else:
-        _INDEX = index
-        _SUBINDEX = None
-        log.info(f"Index {index} selected.")
-
-def set_subindex(index):
-    """Subindex setter"""
-    global _SUBINDEX
-    if index is None:
-        _SUBINDEX = None
-        log.info(f"Subindex set to None.")
-        return
-    
-    if _WRITESERIES is not None and index not in _WRITESERIES[get_selector()].values:
-        raise ValueError("Invalid subindex.")
-    else:
-        _SUBINDEX=index
-        log.info(f"Subindex {index} selected.")
-        
-
-def get_index():
-    global _INDEX
-    if _INDEX is None and _DATA is not None:
-        log.info(f"No index set, using first index of data.")
-        set_index(_DATA.index[0])
-    return _INDEX
-
-def get_selector():
-    global _SELECTOR
-    return _SELECTOR
-
-def set_selector(column):
-    """Set which column of the series is to be used for selection."""
-    global _SELECTOR
-    # Set to None to indicate that _WRITEDATA is correct place for recording.
-    if column is None:
-        _SELECTOR = None
-        return
-    
-    if _WRITESERIES is not None and column not in _WRITESERIES.columns:
-        raise ValueError("Invalid selector column.")
-    else:
-        _SELECTOR = column
-        if get_subindex() not in _WRITESERIES[column]:
-            set_subindex(None)
-        log.info(f"Column {column} of _WRITESERIES selected for selection.")
-
-def get_subindex():
-    global _SUBINDEX
-    global _SELECTOR
-    if _SUBINDEX is None and _WRITESERIES is not None:
-        log.info(f"No subindex set, using first entry of _WRITESERIES.")
-        set_subindex(get_subseries().at[0, get_selector()])
-    return _INDEX
-
-def get_subseries():
-    global _WRITESERIES
-    return _WRITESERIES[_WRITESERIES.index.isin([get_index()])]
-
-def get_subindices():
-    return get_subseries()[_SELECTOR]
-
-def get_subindex():
-    global _SUBINDEX
-    global _INDEX
-    global _SELECTOR
-    if _SUBINDEX is None and _WRITESERIES is not None:
-        log.info(f"No index set, using first index of data.")
-        set_subindex(get_subindices()[0])
-    return _SUBINDEX
 
 def _update_type(df, column, value):
     """Update the type of a given column according to a value passed."""
@@ -697,105 +784,37 @@ def _update_type(df, column, value):
         df[column] = df[column].astype('object')
 
 
-def set_series_value(value, column):
-    """Set a value in the write series data frame"""
-    if column in _DATA.columns:
-        log.warning(f"Warning attempting to write to {column} in _DATA.")
-
-    if column not in _WRITESERIES.columns:
-        add_series_column(column)
-
-    _update_type(_WRITESERIES, column, value)
-    get_subseries().at[get]
-    
-def set_current_value(value, column):
-    """Set a value to the write data frame"""    
-    # If trying to set a numeric valued column's entry to a string, set the type of column to object.                       
-    if column in _DATA.columns:
-        log.warning(f"Warning attempting to write to {column} in _DATA.")
-
-    if get_selector() is not None:
-        if column not in _WRITESERIES.columns:
-            add_series_column(column)
-        _update_type(_WRITESERIES, column, value)
-        _WRITESERIES.loc[
-            _WRITESERIES.index.isin([get_index()])
-            & (_WRITESERIES[get_selector()]==get_subindex()).values,
-            column
-        ] = value
-        return
-
-    else:
-        if column not in _WRITEDATA.columns:
-            add_column(column)
-
-        _update_type(_WRITEDATA, column, value)
-        _WRITEDATA.at[get_index(), column] = value
-        return
-    
-def get_current_value(column):
-    """Get a value from the data frame(s)"""
-
-    # Ordering here dictates the priority of selection, first series, then writedata, then data.
-    if _SELECTOR is not None and _WRITESERIES is not None and column in _WRITESERIES.columns:
-        return _WRITESERIES.loc[
-            _WRITESERIES.index.isin([get_index()])
-            & (_WRITESERIES[get_selector()]==get_subindex()).values,
-            column
-            ][0]
-    elif _WRITEDATA is not None and column in _WRITEDATA.columns:
-        return _WRITEDATA.at[index, column]
-    elif _DATA is not None and column in _DATA.columns:
-        return _DATA.at[index, column]
-    else:
-        log.warning(f"\"{column}\" not selected _WRITESERIES or in _WRITEDATA or _DATA returning \"None\"")
-        return None
-    
-def add_column(column):
-    if column not in _WRITEDATA.columns:
-        log.info(f"\"{column}\" not in write columns ... adding.")
-        _WRITEDATA[column] = None
-    else:
-        log.warning(f"\"{column}\" requested to be added to write data but already exists.")
-
-def add_series_column(column):
-    if column not in _WRITESERIES.columns:
-        log.info(f"\"{column}\" not in series columns ... adding.")
-        _WRITESERIES[column] = None
-    else:
-        log.warning(f"\"{column}\" requested to be added to series data but already exists.")
         
         
-def score(index=None, df=None, write_df=None):
-    global _DATA
+def score(index=None, data=None):
     global INTERACT_ARGS
-    if df is not None or write_df is not None:
-        log.warning("Passing of data frames to score is deprecated. These values are not used.")
+
+    if data is None:
+        data = Data()
         
     if index is not None:
-        set_index(index)
+        data.set_index(index)
 
     INTERACT_ARGS = {}
     # Process the different scorers in from the _referia.yml file 
     if "scorer" in config:
         for score in config["scorer"]:
-            INTERACT_ARGS = {**INTERACT_ARGS, **extract_scorer(score)}
+            INTERACT_ARGS = {**INTERACT_ARGS, **extract_scorer(score, data)}
 
     
     def update_df(progress_label, **kwargs):
-        global _WRITEDATA
 
         for key, value in kwargs.items():
             # fields starting with "_" are not transferred
             # (typically HTML widgets for prompting input)
             if key[0] != "_":
-                set_current_value(value, COLUMN_NAMES[key])
+                data.set_current_value(value, COLUMN_NAMES[key])
 
         if "timestamp_field" in config:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        set_current_value(
+        data.set_current_value(
             pd.to_datetime("today"),
             timestamp_field
         )
@@ -803,65 +822,62 @@ def score(index=None, df=None, write_df=None):
             created_field = config["created_field"]
         else:
             created_field = "Created"
-        if created_field not in _WRITEDATA.columns or empty(get_current_value(created_field)):
-            set_current_value(
+        if created_field not in data._writedata.columns or empty(data.get_current_value(created_field)):
+            data.set_current_value(
                 pd.to_datetime("today"),
                 created_field
             )
         if "combinator" in config:
             for view in config["combinator"]:
                 if "field" in view:
-                    set_current_value(
-                        view_to_text(view),
+                    data.set_current_value(
+                        view_to_text(view, data),
                         view["field"]
                     )                    
                 else:
                     log.error("Missing key 'field' in combinator view.")
             
-        access.write_scores(_WRITEDATA)
+        access.write_scores(data._writedata)
 
         
 
 
-    def update_score_row(index):
-        global _DATA
-        global _WRITEDATA
+    def update_score_row(data, index):
         global INTERACT_ARGS
         global COLUMN_NAMES
         
-        set_index(index)
-        view_series()
+        data.set_index(index)
+        view_series(data)
 
 
-        # Now update the widget entries with values from the _WRITEDATA if they exist otherwise relevant column from _DATA or otherwise set to default
+        # Now update the widget entries with values from the data
         for key, widget in INTERACT_ARGS.items():
             if COLUMN_NAMES[key][0] != "_":
                 if COLUMN_NAMES[key] not in DEFAULT_WRITEDF_VALS:
                     DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]] = None
                 widget.value = DEFAULT_WRITEDF_VALS[COLUMN_NAMES[key]]
-                # Take default from existing column in _DATA
+                # Take default from existing column 
                 if COLUMN_NAMES[key] in DEFAULT_WRITEDF_SOURCE:
-                    dval = get_current_value(DEFAULT_WRITEDF_SOURCE[COLUMN_NAMES[key]])
+                    dval = data.get_current_value(DEFAULT_WRITEDF_SOURCE[COLUMN_NAMES[key]])
                     if notempty(dval):
                         widget.value = dval
                 # Take default from existing column in _WRITEDATA
-                if _WRITEDATA is not None and COLUMN_NAMES[key] in _WRITEDATA.columns:
-                    dval = get_current_value(COLUMN_NAMES[key])
+                if COLUMN_NAMES[key] in data.columns:
+                    dval = data.get_current_value(COLUMN_NAMES[key])
                     if notempty(dval):
                         widget.value = dval
                 else:
-                    add_column(COLUMN_NAMES[key])
+                    self.add_column(COLUMN_NAMES[key])
 
                     
-        total = len(_WRITEDATA.index)
+        total = data.to_score()
         remain = total
         progress_label = fixed("None")
         if "scored" in config:
-            if config["scored"]["field"] in _WRITEDATA:
-                scored = _WRITEDATA[config["scored"]["field"]].count()
-                remain -= scored
-                perc=scored/total*100
-                progress_label = Label(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
+            scored = data.scored()
+            remain -= scored
+            perc=scored/total*100
+            progress_label = Label(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
 
         interact_args = {
             "progress_label": progress_label,
@@ -874,7 +890,7 @@ def score(index=None, df=None, write_df=None):
         )
 
             
-    index_select=Dropdown(options=_DATA.index, value=get_index())
-    interact(update_score_row, index=index_select)
+    index_select=Dropdown(options=data.index, value=data.get_index())
+    interact(update_score_row, index=index_select, data=fixed(data))
     
 

@@ -327,10 +327,18 @@ def series(source):
 def additional(source):
     """Load in the additional spread sheet to data frames."""
     return read_data(source)
-    
+
+def write_data(df, details):
+    if details["type"] == "excel":
+        write_excel(df, details)
+    elif details["type"] == "gsheet":
+        write_gsheet(df, details)
+
+
 def write_scores(df):
-    """Load in the scoring spread sheet to data frames."""
-    if config["scores"]["type"] == "excel":
-        write_excel(df, config["scores"])
-    elif config["scores"]["type"] == "gsheet":
-        write_gsheet(df, config["scores"])
+    """Write the scoring spread sheet to data frames."""
+    write_data(df, config["scores"])
+
+def write_series(df):
+    """Load in the series spread sheet to data frames."""
+    write_data(df, config["series"])
