@@ -40,6 +40,25 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
+def clear_temp_files():
+    delete_keys = []
+    for filename, values in TMPPDFFILES.items():
+        destname = os.path.join(values["tmpdirectory"], filename)
+        delete_keys.append(filename)
+        if os.path.exists(destname):
+            log.info(f"Removing temporary file \"{filename}\".")
+            os.remove(destname)
+
+    for key in delete_keys:
+        del TMPPDFFILES[key]
+
+def automapping():
+    """Generate dictionary of mapping between variable names and column names."""
+    mapping = {}
+    for column in columns:
+        field = to_camel_case(column)
+        mapping[field] = column
+
 class Data:
     def __init__(self):
         self._data = None
@@ -203,7 +222,7 @@ class Data:
         if column not in self._writeseries.columns:
             self.add_series_column(column)
 
-        _update_type(self._writeseries, column, value)
+        self._update_type(self._writeseries, column, value)
         self.get_subseries().at[get]
 
     def set_current_value(self, value, column):
@@ -215,7 +234,7 @@ class Data:
         if self.get_selector() is not None:
             if column not in self._writeseries.columns:
                 self.add_series_column(column)
-            _update_type(self._writeseries, column, value)
+            self._update_type(self._writeseries, column, value)
             self._writeseries.loc[
                 self._writeseries.index.isin([self.get_index()])
                 & (self._writeseries[self.get_selector()]==self.get_subindex()).values,
@@ -227,7 +246,7 @@ class Data:
             if column not in self._writedata.columns:
                 self.add_column(column)
 
-            _update_type(self._writedata, column, value)
+            self._update_type(self._writedata, column, value)
             self._writedata.at[self.get_index(), column] = value
             return
 
@@ -347,26 +366,17 @@ class Data:
                 return 0
         
 
+    def _update_type(self, df, column, value):
+        """Update the type of a given column according to a value passed."""
+        coltype = df.dtypes[column]
+        if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
+            log.info(f"Changing column \"{column}\" type to 'object' due to string input.")
+            df[column] = df[column].astype('object')
+
         
 def data():
     return Data()
         
-
-        
-
-    
-def clear_temp_files():
-    delete_keys = []
-    for filename, values in TMPPDFFILES.items():
-        destname = os.path.join(values["tmpdirectory"], filename)
-        delete_keys.append(filename)
-        if os.path.exists(destname):
-            log.info(f"Removing temporary file \"{filename}\".")
-            os.remove(destname)
-
-    for key in delete_keys:
-        del TMPPDFFILES[key]
-
 def open_localfile(filename):
     """Open a local file."""
     _, ext = os.path.splitext(filename)
@@ -548,13 +558,6 @@ def view_series(data):
     view_urls(data)
     edit_files(data)
     display(Markdown(view_text(data)))
-
-def automapping():
-    """Generate dictionary of mapping between variable names and column names."""
-    mapping = {}
-    for column in columns:
-        field = to_camel_case(column)
-        mapping[field] = column
 
 
 def view_to_text(view, data):
@@ -777,12 +780,6 @@ def clean_string(instring):
     return re.sub("\W+|^(?=\d)","_", instring)
 
 
-def _update_type(df, column, value):
-    """Update the type of a given column according to a value passed."""
-    coltype = df.dtypes[column]
-    if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
-        log.info(f"Changing column \"{column}\" type to 'object' due to string input.")
-        df[column] = df[column].astype('object')
 
 
         
