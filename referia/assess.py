@@ -146,7 +146,7 @@ class Data:
             log.info(f"Subindex set to None.")
             return
 
-        if self._writeseries is not None and index not in self._writeseries[get_selector()].values:
+        if self._writeseries is not None and index not in self._writeseries[self.get_selector()].values:
             raise ValueError("Invalid subindex.")
         else:
             self._subindex=index
@@ -420,7 +420,7 @@ def notempty(val):
 def empty(val):
     return pd.isna(val) or val==""
 
-def copy_file(origfile, destfile, display):
+def copy_file(origfile, destfile, display, data):
     """Copy a file, or pages from it, for separate editing or viewing."""
     _, ext = os.path.splitext(origfile)
     ext = ext.lower()
@@ -428,8 +428,8 @@ def copy_file(origfile, destfile, display):
     if os.path.exists(origfile):
         if ext == ".pdf" and "pages" in display and "first" in display["pages"] and "last" in display["pages"]:
             # Extract pages from a PDF
-            firstpage = get_current_value(display["pages"]["first"])
-            lastpage = get_current_value(display["pages"]["last"])
+            firstpage = data.get_current_value(display["pages"]["first"])
+            lastpage = data.get_current_value(display["pages"]["last"])
             if notempty(firstpage) and notempty(lastpage) and notempty(display["field"]):
                 firstpage = int(firstpage)
                 lastpage = int(lastpage)
@@ -469,7 +469,7 @@ def edit_files(data):
             if not os.path.exists(storedirectory):
                 os.makedirs(storedirectory)
             if not os.path.exists(destfile):
-                copy_file(origfile, destfile, display)
+                copy_file(origfile, destfile, display, data)
             open_localfile(destfile)
 
 
@@ -481,10 +481,11 @@ def view_file(display, data):
     """View a file containing relevant information to the assessment."""
     filename = ""
     tmpname = ""
-    val = data.get_current_value(display["field"])
-    if type(val) is str:
-        filename = os.path.expandvars(os.path.join(display["directory"],val))
-        tmpname = to_camel_case(display["field"])
+    if "field" in display:
+        val = data.get_current_value(display["field"])
+        if type(val) is str:
+            filename = os.path.expandvars(os.path.join(display["directory"],val))
+            tmpname = to_camel_case(display["field"])
     elif "file" in display:
         filename = os.path.expandvars(os.path.join(display["directory"], display["file"]))
     if os.path.exists(filename):
@@ -867,7 +868,7 @@ def score(index=None, data=None):
                     if notempty(dval):
                         widget.value = dval
                 else:
-                    self.add_column(COLUMN_NAMES[key])
+                    data.add_column(COLUMN_NAMES[key])
 
                     
         total = data.to_score()
