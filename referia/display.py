@@ -129,19 +129,35 @@ class Scorer:
     def __init__(self, index=None, data=None):
         self._interact_args = {}
         self._column_names = {}
-
+        self._write_score = True
         if data is None:
             self._data = assess.Data()
         else:
             self._data = data
 
         if index is not None:
-            self._data.set_index(index)
-
+            self.set_index(index)
+                        
         # Process the different scorers in from the _referia.yml file 
         if "scorer" in config:
             for score in config["scorer"]:
                 self._interact_args = {**self._interact_args, **self.extract_scorer(score)}
+
+    def get_index(self):
+        return self._data.get_index()
+
+    def set_index(self, value):
+        self._data.set_index(value)
+        
+    def select_index(self):
+        index_select=Dropdown(options=self._data.index, value=self._data.get_index())
+        interact(self.update_score_row, index=index_select)
+
+    def run(self):
+        """Run the scorer to edit the data frame."""
+        self.select_index()
+        self.batch_entry_edit()
+
 
     def extract_scorer(self, orig_score):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
@@ -321,8 +337,19 @@ class Scorer:
         else:
             raise Exception("Have not loaded " + score["type"] + " interaction type.")
         return interact_args
+
+    def batch_entry_edit(self):
+        """Update the data frame with a batch entry (hit save score to save updates)"""
+        interact_manual(
+            self.update_entry, 
+            **self._interact_args
+        )
+
     
-    def update_df(self, progress_label, **kwargs):
+    def save_score(self):
+        access.write_scores(self._data._writedata)
+
+    def update_entry(self, **kwargs):
 
         for key, value in kwargs.items():
             # fields starting with "_" are not transferred
@@ -351,20 +378,21 @@ class Scorer:
             for view in config["combinator"]:
                 if "field" in view:
                     self._data.set_current_value(
-                        view_to_text(view, data),
+                        view_to_text(view, self._data),
                         view["field"]
                     )                    
                 else:
                     log.error("Missing key 'field' in combinator view.")
             
-        access.write_scores(self._data._writedata)
+        if self._write_score:
+            self.save_score()
 
         
 
 
-    def update_score_row(self, data, index):
+    def update_score_row(self, index):
         
-        self._data.set_index(index)
+        self.set_index(index)
         system.view_series(self._data)
         display(Markdown(view_text(self._data)))
     
@@ -389,28 +417,22 @@ class Scorer:
                 else:
                     self._data.add_column(self._column_names[key])
 
-                    
-        total = self._data.to_score()
-        remain = total
-        progress_label = fixed("None")
-        if "scored" in config:
-            scored = self._data.scored()
-            remain -= scored
-            perc=scored/total*100
-            progress_label = Label(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
+        # COmmenting because it feels out of place here, progress should be separtely handled.            
+        # total = self._data.to_score()
+        # remain = total
+        # progress_label = fixed("None")
+        # if "scored" in config:
+        #     scored = self._data.scored()
+        #     remain -= scored
+        #     perc=scored/total*100
+        #     progress_label = Label(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
 
-        self._interact_args = {
-            "progress_label": progress_label,
-            **self._interact_args
-        }
+        # self._interact_args = {
+        #     "progress_label": progress_label,
+        #     **self._interact_args
+        # }
 
-        interact_manual(
-            self.update_df, 
-            **self._interact_args
-        )
 
             
-    index_select=Dropdown(options=self._data.index, value=self._data.get_index())
-    interact(self.update_score_row, index=index_select, data=fixed(self._data))
     
 

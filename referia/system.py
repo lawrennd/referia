@@ -9,8 +9,10 @@ import tempfile
 
 from .config import *
 from .log import Logger
+from .util import to_camel_case
 from . import access
 from . import assess
+from . import display
 
 TMPPDFFILES={}
 
@@ -79,17 +81,17 @@ def open_url(urlname):
     log.info(f"Opening url \"{urlname}\".")
     os.system(f"open -a \"{browser}\" --background \"{urlname}\"")
 
-def copy_file(origfile, destfile, display, data):
+def copy_file(origfile, destfile, view, data):
     """Copy a file, or pages from it, for separate editing or viewing."""
     _, ext = os.path.splitext(origfile)
     ext = ext.lower()
 
     if os.path.exists(origfile):
-        if ext == ".pdf" and "pages" in display and "first" in display["pages"] and "last" in display["pages"]:
+        if ext == ".pdf" and "pages" in view and "first" in view["pages"] and "last" in view["pages"]:
             # Extract pages from a PDF
-            firstpage = data.get_current_value(display["pages"]["first"])
-            lastpage = data.get_current_value(display["pages"]["last"])
-            if assess.notempty(firstpage) and assess.notempty(lastpage) and assess.notempty(display["field"]):
+            firstpage = data.get_current_value(view["pages"]["first"])
+            lastpage = data.get_current_value(view["pages"]["last"])
+            if assess.notempty(firstpage) and assess.notempty(lastpage) and assess.notempty(view["field"]):
                 firstpage = int(firstpage)
                 lastpage = int(lastpage)
                 log.info(f"Extracting \"{destfile}\" from \"{origfile}\" pages {firstpage}-{lastpage}")
@@ -113,40 +115,40 @@ def edit_files(data):
     if "editpdf" in config:
         displays += config["editpdf"]
         
-    for display in displays:
-        if "field" in display:
-            val = data.get_current_value(display["field"])
+    for view in displays:
+        if "field" in view:
+            val = data.get_current_value(view["field"])
         if type(val) is str:
-            storedirectory = os.path.expandvars(display["storedirectory"])
-            origfile = os.path.join(os.path.expandvars(display["sourcedirectory"]),val)
-            if "name" in display:
-                filestub = display["name"] + ".pdf"
+            storedirectory = os.path.expandvars(view["storedirectory"])
+            origfile = os.path.join(os.path.expandvars(view["sourcedirectory"]),val)
+            if "name" in view:
+                filestub = view["name"] + ".pdf"
             else:
-                filestub = to_camel_case(display["field"]) + ".pdf"
+                filestub = to_camel_case(view["field"]) + ".pdf"
             editfilename = str(data.get_current_value(config["allocation"]["index"])) + "_" + filestub
             destfile = os.path.join(storedirectory,editfilename)
             if not os.path.exists(storedirectory):
                 os.makedirs(storedirectory)
             if not os.path.exists(destfile):
-                copy_file(origfile, destfile, display, data)
+                copy_file(origfile, destfile, view, data)
             open_localfile(destfile)
 
 
-def view_directory(display):
+def view_directory(view):
     """View a directory containing relevant information to the assessment."""
     pass
 
-def view_file(display, data):
+def view_file(view, data):
     """View a file containing relevant information to the assessment."""
     filename = ""
     tmpname = ""
-    if "field" in display:
-        val = data.get_current_value(display["field"])
+    if "field" in view:
+        val = data.get_current_value(view["field"])
         if type(val) is str:
-            filename = os.path.expandvars(os.path.join(display["directory"],val))
-            tmpname = to_camel_case(display["field"])
-    elif "file" in display:
-        filename = os.path.expandvars(os.path.join(display["directory"], display["file"]))
+            filename = os.path.expandvars(os.path.join(view["directory"],val))
+            tmpname = to_camel_case(view["field"])
+    elif "file" in view:
+        filename = os.path.expandvars(os.path.join(view["directory"], view["file"]))
     if os.path.exists(filename):
         _, ext = os.path.splitext(filename)
         if len(tmpname)>0:
@@ -175,8 +177,8 @@ def view_files(data):
     if "localvideo" in config:
         displays += config["localvideo"]
 
-    for display in displays:
-        view_file(display, data)
+    for view in displays:
+        view_file(view, data)
             
                 
 def view_urls(data):
@@ -185,19 +187,19 @@ def view_urls(data):
     if "urls" in config:
         displays += config["urls"]
         
-    for display in displays:
-        if "url" in display:
-            if "field" in display:
-                val = data.get_current_value(display["field"])
+    for view in displays:
+        if "url" in view:
+            if "field" in view:
+                val = data.get_current_value(view["field"])
             else:
                 val = None
-            if "field" in display and type(val) is str:
+            if "field" in view and type(val) is str:
                 urlterm = val
-            elif "display" in display:
-                urlterm = display.view_to_text(display, data)
+            elif "display" in view:
+                urlterm = display.view_to_text(view, data)
             else:
                 urlterm = ""
-            urlname = unidecode(display["url"] + urlterm.replace(" ", "%20"))
+            urlname = unidecode(view["url"] + urlterm.replace(" ", "%20"))
             open_url(urlname)
 
 
