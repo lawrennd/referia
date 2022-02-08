@@ -153,7 +153,7 @@ class Scorer:
 
     def set_index(self, value):
         self._data.set_index(value)
-        self.populate_widgets()
+        self.view_entity()
 
     def get_selectors(self):
         return self._data.get_selectors()
@@ -163,7 +163,7 @@ class Scorer:
 
     def set_selector(self, value):
         self._data.set_selector(value)
-        self.populate_widgets()
+        self.view_entity()
 
     def get_subindices(self):
         return self._data.get_subindices()
@@ -173,7 +173,7 @@ class Scorer:
     
     def set_subindex(self, value):
         self._data.set_subindex(value)
-        self.populate_widgets()
+        self.view_entity()
 
     def select_index(self):
         select=Dropdown(
@@ -197,7 +197,11 @@ class Scorer:
             value=self.get_selector(),
         )
         interact(self.set_selector, value=select)
-        
+
+    def view_entity(self):
+        self.populate_widgets()
+
+
     def run(self):
         """Run the scorer to edit the data frame."""
         self.select_index()
@@ -205,8 +209,8 @@ class Scorer:
             self.select_selector()
         if self._select_subindex:
             self.select_subindex()
-        system.view_series(self._data)
         display(Markdown(view_text(self._data)))
+        system.view_series(self._data)
         self.batch_entry_edit()
 
 
