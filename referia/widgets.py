@@ -1,16 +1,15 @@
-import ipywidgets
-from ipyfilechooser import FileChooser
 import os
 import glob
+import ipywidgets
 
 def MyCheckbox(**args):
-    # Deal with weird bug where value is passed as an np.bool_ by wrapping Checkbox
+    """Deal with behaviour where value is passed as an np.bool_ by wrapping Checkbox"""
     args["value"] = bool(args["value"])
     return ipywidgets.Checkbox(**args)
 
 
 def MyFileChooser(**args):
-
+    """Simple file chooser based on Dropdown"""
     if "directory" not in args:
         directory = "."
     else:
@@ -28,3 +27,4 @@ def MyFileChooser(**args):
     args["options"] = options
     
     return ipywidgets.Dropdown(**args)
+

@@ -11,7 +11,7 @@ import json
 from IPython.display import display, HTML
 import matplotlib.pyplot as plt
 from IPython.display import Markdown, display
-from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker
+from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, jslink, jsdlink
 from ipywidgets import interact, interactive, fixed, interact_manual
 
 import pypdftk as tk
@@ -26,10 +26,6 @@ from . import system
 
 interact_manual.opts["manual_name"] = "Save Score"
 
-INTERACT_ARGS = {}
-COLUMN_NAMES = {}
-DEFAULT_WRITEDF_VALS = pd.Series()
-DEFAULT_WRITEDF_SOURCE = pd.Series()
 
 log = Logger(
     name=__name__,
@@ -129,7 +125,12 @@ class Scorer:
     def __init__(self, index=None, data=None):
         self._interact_args = {}
         self._column_names = {}
+        self._default_field_vals = pd.Series()
+        self._default_field_source = pd.Series()
+
         self._write_score = True
+        self._select_subindex = False
+        self._select_selector = False
         if data is None:
             self._data = assess.Data()
         else:
@@ -143,19 +144,69 @@ class Scorer:
             for score in config["scorer"]:
                 self._interact_args = {**self._interact_args, **self.extract_scorer(score)}
 
+    @property
+    def index(self):
+        return self._data.index
+
     def get_index(self):
         return self._data.get_index()
 
     def set_index(self, value):
         self._data.set_index(value)
-        
-    def select_index(self):
-        index_select=Dropdown(options=self._data.index, value=self._data.get_index())
-        interact(self.update_score_row, index=index_select)
+        self.populate_widgets()
 
+    def get_selectors(self):
+        return self._data.get_selectors()
+
+    def get_selector(self):
+        return self._data.get_selector()
+
+    def set_selector(self, value):
+        self._data.set_selector(value)
+        self.populate_widgets()
+
+    def get_subindices(self):
+        return self._data.get_subindices()
+    
+    def get_subindex(self):
+        return self._data.get_subindex()
+    
+    def set_subindex(self, value):
+        self._data.set_subindex(value)
+        self.populate_widgets()
+
+    def select_index(self):
+        select=Dropdown(
+            options=self.index,
+            value=self.get_index(),
+        )
+        interact(self.set_index, value=select)
+
+    def select_subindex(self):
+        """Select a subindex from the data"""
+        select=Dropdown(
+            options=self.get_subindices(),
+            value=self.get_subindex(),
+        )
+        interact(self.set_subindex, value=select)
+
+    def select_selector(self):
+        """Select a selector from the data"""
+        select=Dropdown(
+            options=self.get_selectors(),
+            value=self.get_selector(),
+        )
+        interact(self.set_selector, value=select)
+        
     def run(self):
         """Run the scorer to edit the data frame."""
         self.select_index()
+        if self._select_selector:
+            self.select_selector()
+        if self._select_subindex:
+            self.select_subindex()
+        system.view_series(self._data)
+        display(Markdown(view_text(self._data)))
         self.batch_entry_edit()
 
 
@@ -289,20 +340,20 @@ class Scorer:
             self._column_names[name] = score["field"]
 
             # Create an instance of the object to extract default value.
-            DEFAULT_WRITEDF_VALS[score["field"]] = global_variables[score["type"]]().value
+            self._default_field_vals[score["field"]] = global_variables[score["type"]]().value
             if "value" in score:
-                DEFAULT_WRITEDF_VALS[score["field"]] = score["value"]               
+                self._default_field_vals[score["field"]] = score["value"]               
             if "args" in score and "value" in score["args"]:
-                DEFAULT_WRITEDF_VALS[score["field"]] = score["args"]["value"]
+                self._default_field_vals[score["field"]] = score["args"]["value"]
             if "default" in score:
                 if "source" in score["default"]:
                     source = score["default"]["source"]
                     if source in self._data.columns:
-                        DEFAULT_WRITEDF_SOURCE[score["field"]] = source
+                        self._default_field_source[score["field"]] = source
                     else:
-                        log.warning(f"Missing column \"{source}\" in _DATA and _WRITEDATA.")
+                        log.warning(f"Missing column \"{source}\" in data.columns")
                 if "value" in score["default"]:
-                    DEFAULT_WRITEDF_VALS[score["field"]] = score["default"]["value"]
+                    self._default_field_vals[score["field"]] = score["default"]["value"]
 
         else:
             # Field name is missing, generate a random one.
@@ -348,6 +399,8 @@ class Scorer:
     
     def save_score(self):
         access.write_scores(self._data._writedata)
+        if self._data._writeseries is not None:
+            access.write_series(self._data._writeseries)
 
     def update_entry(self, **kwargs):
 
@@ -388,28 +441,21 @@ class Scorer:
             self.save_score()
 
         
-
-
-    def update_score_row(self, index):
-        
-        self.set_index(index)
-        system.view_series(self._data)
-        display(Markdown(view_text(self._data)))
-    
-
-
-        # Now update the widget entries with values from the data
+    def populate_widgets(self):
+        """Update the widgets with defaults or values from the data"""
         for key, widget in self._interact_args.items():
-            if self._column_names[key][0] != "_":
-                if self._column_names[key] not in DEFAULT_WRITEDF_VALS:
-                    DEFAULT_WRITEDF_VALS[self._column_names[key]] = None
-                widget.value = DEFAULT_WRITEDF_VALS[self._column_names[key]]
-                # Take default from existing column 
-                if self._column_names[key] in DEFAULT_WRITEDF_SOURCE:
-                    dval = self._data.get_current_value(DEFAULT_WRITEDF_SOURCE[self._column_names[key]])
+            if self._column_names[key][0] != "_": # Ignore columns starting with _
+                if self._column_names[key] not in self._default_field_vals:
+                    self._default_field_vals[self._column_names[key]] = None
+                widget.value = self._default_field_vals[self._column_names[key]]
+
+                # Take a default value from default source specified in _referia.yml
+                if self._column_names[key] in self._default_field_source:
+                    dval = self._data.get_current_value(self._default_field_source[self._column_names[key]])
                     if assess.notempty(dval):
                         widget.value = dval
-                # Take default from existing column in _WRITEDATA
+
+                # Take value from the current value in _data
                 if self._column_names[key] in self._data.columns:
                     dval = self._data.get_current_value(self._column_names[key])
                     if assess.notempty(dval):
@@ -417,7 +463,7 @@ class Scorer:
                 else:
                     self._data.add_column(self._column_names[key])
 
-        # COmmenting because it feels out of place here, progress should be separtely handled.            
+        # Commenting because it feels out of place here, progress should be separtely handled.            
         # total = self._data.to_score()
         # remain = total
         # progress_label = fixed("None")

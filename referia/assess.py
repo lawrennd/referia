@@ -153,6 +153,12 @@ class Data:
     def get_selector(self):
         return self._selector
 
+    def get_selectors(self):
+        if self._writeseries is None:
+            return None
+        else:
+            return self._writeseries.columns
+    
     def set_selector(self, column):
         """Set which column of the series is to be used for selection."""
         # Set to None to indicate that self._writedata is correct place for recording.
@@ -160,7 +166,7 @@ class Data:
             self._selector = None
             return
 
-        if self._writeseries is not None and column not in self._writeseries.columns:
+        if column not in self.get_selectors():
             raise ValueError("Invalid selector column.")
         else:
             self._selector = column
