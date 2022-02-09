@@ -3,8 +3,15 @@ from ipyfilechooser import FileChooser
 import os
 import glob
 
-
+from .config import *
+from .log import Logger
 from . import display
+
+log = Logger(
+    name=__name__,
+    level=config["logging"]["level"],
+    filename=config["logging"]["filename"]
+)
 
 def MyCheckbox(**args):
     """Deal with behaviour where value is passed as an np.bool_ by wrapping Chec
@@ -13,16 +20,18 @@ kbox"""
         args["value"] = bool(args["value"])
     return ipywidgets.Checkbox(**args)
 
-def MyMarkdown(**args):
+def Markdown(**args):
     """Create a simple markdown widget based on the HTML widget."""
-    if "value" in args:
-        args["value"] = markdown2html(args["value"])
-    mymark = ipywidgets.HTMLMath(**args)
 
-    def on_value_change(mymark):
-        mymark.value = display.markdown2html(mymark.new)
+    def on_value_change(change):
+        change.owner.value = display.markdown2html(change.new)
+        
+    if "value" in args:
+        args["value"] = display.markdown2html(args["value"])
+
+    mymark = ipywidgets.HTMLMath(**args)
     mymark.observe(on_value_change, names='value')
-    
+        
     return mymark
 
 def MyFileChooser(**args):

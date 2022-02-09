@@ -11,15 +11,16 @@ import json
 
 import markdown
 
-from IPython.display import display, HTML
+from IPython import display
 import matplotlib.pyplot as plt
-from IPython.display import Markdown, display
+
+
 from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, jslink, jsdlink
 from ipywidgets import interact, interactive, fixed, interact_manual
 
 import pypdftk as tk
 
-from .widgets import MyCheckbox, MyFileChooser, MyMarkdown
+from .widgets import MyCheckbox, MyFileChooser, Markdown
 
 from .config import *
 from .log import Logger
@@ -44,7 +45,7 @@ def markdown2html(text):
 
 def expand_cell():
 
-    display(HTML(data="""
+    display.display(display.HTML(data="""
 <style>
 .container {
     width: 100% !important;
@@ -145,7 +146,8 @@ class Scorer:
             self.append_interact(progress_label=progress_label)
 
         if "viewer" in config:
-            viewer_label = MyMarkdown()
+            viewer_label = Markdown()
+            viewer_label.description = " "
             self.append_interact(viewer_label=viewer_label)
             
         if "scorer" in config:
@@ -238,9 +240,9 @@ class Scorer:
                 width = "800px"
             criterion = {
                 "field": "_" + prefix + " Criterion",
-                "type": "HTML",
+                "type": "Markdown",
+                "display": criterion,
                 "args": {
-                    "value": criterion,
                     "layout": {"width": width},
                 }
             }
@@ -375,12 +377,15 @@ class Scorer:
             self._column_names[name] = name
 
         # Deal with HTML descriptions (setting them to blank if not set)
-        if score["type"] in ["HTML", "HTMLMath"]:
+        if score["type"] in ["HTML", "HTMLMath", "Markdown"]:
             if "args" not in score:
                 score["args"] = {"description": " "}
             else:
                 if "description" not in score:
                     score["args"]["description"] = " "
+            if "display" in score:
+                score["args"]["value"] = score["display"].format(**self._data.mapping())
+            
 
         if "source" in score:
             # Set arguments of widget from data fields if source is given
