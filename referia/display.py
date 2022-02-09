@@ -232,8 +232,13 @@ class Scorer:
         score = json.loads(json.dumps(orig_score))
 
         if score['type'] == 'Criterion':
+            value = None
+            display = None
             prefix = score["prefix"]
-            criterion = score["criterion"]
+            if "display" in score:
+                display = score["display"]
+            elif "criterion" in score:
+                value = score["criterion"]
             if "width" in score:
                 width = score["width"]
             else:
@@ -241,11 +246,14 @@ class Scorer:
             criterion = {
                 "field": "_" + prefix + " Criterion",
                 "type": "Markdown",
-                "display": criterion,
                 "args": {
                     "layout": {"width": width},
                 }
             }
+            if value is not None:
+                criterion["args"]["value"] = value
+            elif display is not None:
+                criterion["display"] = display
             interact_args = {**interact_args, **self.extract_scorer(criterion)}
 
             return interact_args

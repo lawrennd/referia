@@ -21,6 +21,13 @@ def load_user_config(user_file="_referia.yml", directory="."):
             inherit = conf["inherit"]
             del conf["inherit"]
             parent = load_user_config(user_file, inherit["directory"])
+            if "viewer" in conf:
+                viewelem = {"display": 'Parent analysis available <a href="' + os.path.join(inherit["directory"], "assessment.ipynb") + '" target="_blank">here</a>.'}
+                if type(conf["viewer"]) is list:
+                    conf["viewer"] = [viewelem] + conf["viewer"]
+                else:
+                    conf["viewer"] = [viewwlem, conf["viewer"]]
+                    
         if "ignore" not in inherit:
             inherit["ignore"] = []
         if "append" not in inherit:
@@ -60,7 +67,6 @@ def load_user_config(user_file="_referia.yml", directory="."):
                     conf["additional"] = additional + [conf["additional"]]
             elif len(additional)>0:
                 conf["additional"] = additional
-            
     return conf
 
 def load_config():
