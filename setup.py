@@ -31,6 +31,7 @@ REQUIRED = [
     "numpy",
     "jupyter",
     "matplotlib",
+    "markdown",
     "unidecode",
     "frontmatter",
     "google-api-python-client",

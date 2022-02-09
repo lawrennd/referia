@@ -1,3 +1,4 @@
+"""This file creates displays that help visualize the data."""
 
 import string
 import random
@@ -8,6 +9,8 @@ import numpy as np
 import pandas as pd
 import json
 
+import markdown
+
 from IPython.display import display, HTML
 import matplotlib.pyplot as plt
 from IPython.display import Markdown, display
@@ -16,13 +19,15 @@ from ipywidgets import interact, interactive, fixed, interact_manual
 
 import pypdftk as tk
 
-from .widgets import MyCheckbox, MyFileChooser
+from .widgets import MyCheckbox, MyFileChooser, MyMarkdown
 
 from .config import *
 from .log import Logger
 from . import access
 from . import assess
 from . import system
+
+
 
 interact_manual.opts["manual_name"] = "Save Score"
 
@@ -33,7 +38,9 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
-"""This file creates displays that help visualize the data."""
+
+def markdown2html(text):
+    return markdown.markdown(text)
 
 def expand_cell():
 
@@ -138,7 +145,7 @@ class Scorer:
             self.append_interact(progress_label=progress_label)
 
         if "viewer" in config:
-            viewer_label = HTML()
+            viewer_label = MyMarkdown()
             self.append_interact(viewer_label=viewer_label)
             
         if "scorer" in config:

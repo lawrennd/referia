@@ -101,7 +101,7 @@ class Data:
         self._writeseries = self._finalize_df(self._writeseries, config['series'])
 
     def _load_data(self):
-        """Load te data specified in the _referia.yml file."""
+        """Load the data specified in the _referia.yml file."""
         self._allocation()
         if "additional" in config:
             log.info("Joining allocation and additional information.")
