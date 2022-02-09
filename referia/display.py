@@ -114,13 +114,6 @@ def view_to_text(view, data):
         return ""
 
 
-def view_text(data):
-    """Text that views a a single record."""
-    if "viewer" in config:
-        return viewer_to_text("viewer", data)
-    else:
-        return ""
-
 class Scorer:
     def __init__(self, index=None, data=None):
         self._interact_args = {}
@@ -139,11 +132,22 @@ class Scorer:
         if index is not None:
             self.set_index(index)
                         
-        # Process the different scorers in from the _referia.yml file 
+        # Process the different scorers in from the _referia.yml file
+        if "scored" in config:
+            progress_label = Label()
+            self.append_interact(progress_label=progress_label)
+
+        if "viewer" in config:
+            viewer_label = HTML()
+            self.append_interact(viewer_label=viewer_label)
+            
         if "scorer" in config:
             for score in config["scorer"]:
-                self._interact_args = {**self._interact_args, **self.extract_scorer(score)}
+                self.append_interact(**self.extract_scorer(score))
 
+    def append_interact(self, **kwargs):
+        self._interact_args = {**self._interact_args, **kwargs}
+        
     @property
     def index(self):
         return self._data.index
@@ -209,7 +213,6 @@ class Scorer:
             self.select_selector()
         if self._select_subindex:
             self.select_subindex()
-        display(Markdown(view_text(self._data)))
         system.view_series(self._data)
         self.batch_entry_edit()
 
@@ -444,10 +447,24 @@ class Scorer:
         if self._write_score:
             self.save_score()
 
-        
+
+
     def populate_widgets(self):
         """Update the widgets with defaults or values from the data"""
         for key, widget in self._interact_args.items():
+            if key == "viewer_label":
+                widget.value = viewer_to_text("viewer", self._data)
+                continue
+
+            if key == "progress_label":
+                total = self._data.to_score()
+                scored = self._data.scored()
+                remain = total - scored
+                perc=scored/total*100
+                if "progress_label" in self._interact_args:
+                    widget.value = f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%"
+                continue
+            
             if self._column_names[key][0] != "_": # Ignore columns starting with _
                 if self._column_names[key] not in self._default_field_vals:
                     self._default_field_vals[self._column_names[key]] = None
@@ -467,20 +484,6 @@ class Scorer:
                 else:
                     self._data.add_column(self._column_names[key])
 
-        # Commenting because it feels out of place here, progress should be separtely handled.            
-        # total = self._data.to_score()
-        # remain = total
-        # progress_label = fixed("None")
-        # if "scored" in config:
-        #     scored = self._data.scored()
-        #     remain -= scored
-        #     perc=scored/total*100
-        #     progress_label = Label(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
-
-        # self._interact_args = {
-        #     "progress_label": progress_label,
-        #     **self._interact_args
-        # }
 
 
             
