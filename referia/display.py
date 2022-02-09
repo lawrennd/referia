@@ -231,7 +231,7 @@ class Scorer:
         interact_args = {}
         score = json.loads(json.dumps(orig_score))
 
-        if score["type"] == "CriterionComment":
+        if score['type'] == 'Criterion':
             prefix = score["prefix"]
             criterion = score["criterion"]
             if "width" in score:
@@ -246,6 +246,14 @@ class Scorer:
                     "layout": {"width": width},
                 }
             }
+            interact_args = {**interact_args, **self.extract_scorer(criterion)}
+
+            return interact_args
+        
+        if score["type"] == "CriterionComment":
+            criterion = json.loads(json.dumps(score))
+            criterion["type"] = "Criterion"
+            prefix = score["prefix"]
             comment = {
                 "field": prefix + " Comment",
                 "type": "Textarea",
@@ -284,27 +292,19 @@ class Scorer:
             return interact_args
 
         if score["type"] == "CriterionCommentRaisesMeetsLowersFlag":
-            criterioncomment = json.loads(json.dumps(score))
-            criterioncomment["type"] = "CriterionComment"
+            criterioncommentraisesmeetslowers = json.loads(json.dumps(score))
+            criterioncommentraisesmeetslowers["type"] = "CriterionCommentRaisesMeetsLowers"
 
             prefix = score["prefix"]
             expectation = {
-                "field": prefix + " Expectation",
-                "type": "Dropdown",
+                "field": prefix + " Flag",
+                "type": "MyCheckbox",
                 "args": {
-                    "placeholder": "Against expectations",
-                    "options": [
-                        "",
-                        "Raises",
-                        "Meets",
-                        "Lowers",
-                        "Flag",
-                        ],
-                    "value": "",
-                    "description": "Expectation",
+                    "value": False,
+                    "description": "Flag",
                 }
             }
-            for sub_score in [criterioncomment, expectation]:
+            for sub_score in [criterioncommentraisesmeetslowers, flag]:
                 interact_args = {**interact_args, **self.extract_scorer(sub_score)}
             return interact_args
 
