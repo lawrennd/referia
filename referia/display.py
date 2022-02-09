@@ -254,6 +254,10 @@ class Scorer:
             criterion = json.loads(json.dumps(score))
             criterion["type"] = "Criterion"
             prefix = score["prefix"]
+            if "width" in score:
+                width = score["width"]
+            else:
+                width = "800px"
             comment = {
                 "field": prefix + " Comment",
                 "type": "Textarea",
@@ -296,7 +300,7 @@ class Scorer:
             criterioncommentraisesmeetslowers["type"] = "CriterionCommentRaisesMeetsLowers"
 
             prefix = score["prefix"]
-            expectation = {
+            flag = {
                 "field": prefix + " Flag",
                 "type": "MyCheckbox",
                 "args": {
