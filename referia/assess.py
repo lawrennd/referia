@@ -302,6 +302,7 @@ class Data:
                 if "name" in field:
                     if "value" in field:
                         for index in df.index:
+                            self.set_index(index)
                             format = self.mapping()
                             column[index] = field["value"].format(**format)
 

@@ -19,19 +19,25 @@ def load_user_config(user_file="_referia.yml", directory="."):
         inherit = {}
         if "inherit" in conf:
             inherit = conf["inherit"]
+            if "ignore" not in inherit:
+                inherit["ignore"] = []
+            if "append" not in inherit:
+                inherit["append"] = [] 
+
             del conf["inherit"]
             parent = load_user_config(user_file, inherit["directory"])
+            viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(inherit["directory"], "assessment.ipynb") + '" target="_blank">here</a>.'}
+
+            
             if "viewer" in conf:
-                viewelem = {"display": 'Parent analysis available <a href="' + os.path.join(inherit["directory"], "assessment.ipynb") + '" target="_blank">here</a>.'}
                 if type(conf["viewer"]) is list:
                     conf["viewer"] = [viewelem] + conf["viewer"]
                 else:
                     conf["viewer"] = [viewwlem, conf["viewer"]]
-                    
-        if "ignore" not in inherit:
-            inherit["ignore"] = []
-        if "append" not in inherit:
-            inherit["append"] = [] 
+            else:
+                conf["viewer"] = [viewelem]
+                inherit["append"].append("viewer")
+
         if parent is not None:
             additional = []
             for key, item in parent.items():

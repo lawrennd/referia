@@ -105,6 +105,7 @@ def viewer_to_text(key, data):
     if key in config:
         for view in config[key]:
             text += view_to_text(view, data)
+            text += "\n\n"
     return text
 
 
@@ -142,13 +143,13 @@ class Scorer:
                         
         # Process the different scorers in from the _referia.yml file
         if "scored" in config:
-            progress_label = Label()
-            self.append_interact(progress_label=progress_label)
+            _progress_label = Label()
+            self.append_interact(_progress_label=_progress_label)
 
         if "viewer" in config:
-            viewer_label = Markdown()
-            viewer_label.description = " "
-            self.append_interact(viewer_label=viewer_label)
+            _viewer_label = Markdown()
+            _viewer_label.description = " "
+            self.append_interact(_viewer_label=_viewer_label)
             
         if "scorer" in config:
             for score in config["scorer"]:
@@ -476,16 +477,16 @@ class Scorer:
     def populate_widgets(self):
         """Update the widgets with defaults or values from the data"""
         for key, widget in self._interact_args.items():
-            if key == "viewer_label":
+            if key == "_viewer_label":
                 widget.value = viewer_to_text("viewer", self._data)
                 continue
 
-            if key == "progress_label":
+            if key == "_progress_label":
                 total = self._data.to_score()
                 scored = self._data.scored()
                 remain = total - scored
                 perc=scored/total*100
-                if "progress_label" in self._interact_args:
+                if "_progress_label" in self._interact_args:
                     widget.value = f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%"
                 continue
             

@@ -16,10 +16,17 @@ log = Logger(
 def MyCheckbox(**args):
     """Deal with behaviour where value is passed as an np.bool_ by wrapping Chec
 kbox"""
+
+    def on_value_change(change):
+        change.owner.value = bool(change.new)
+    
     if "value" in args:
         args["value"] = bool(args["value"])
-    return ipywidgets.Checkbox(**args)
-
+    mycheck = ipywidgets.Checkbox(**args)
+    mycheck.observe(on_value_change, names='value')
+    
+    return mycheck
+    
 def Markdown(**args):
     """Create a simple markdown widget based on the HTML widget."""
 
