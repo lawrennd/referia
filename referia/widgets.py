@@ -13,7 +13,12 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
-def MyCheckbox(**args):
+class MyCheckbox(ipywidgets.Checkbox(**args)):
+    if "value" in args:
+        args["value"] = bool(args["value"])
+
+    
+def OldMyCheckbox(**args):
     """Deal with behaviour where value is passed as an np.bool_ by wrapping Chec
 kbox"""
 
