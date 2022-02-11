@@ -24,12 +24,13 @@ def notempty(val):
 def empty(val):
     return pd.isna(val) or val==""
 
-def automapping():
+def automapping(columns):
     """Generate dictionary of mapping between variable names and column names."""
     mapping = {}
     for column in columns:
         field = to_camel_case(column)
         mapping[field] = column
+    return mapping
 
 class Data:
     def __init__(self):
@@ -57,9 +58,9 @@ class Data:
         if self._data is not None:
             columns += list(self._data.columns)
         if self._writedata is not None:
-            columns = list(self._writedata.columns)
+            columns += list(self._writedata.columns)
         if self._writeseries is not None:
-            columns = list(self._writeseries.columns)
+            columns += list(self._writeseries.columns)
         # Should perhaps make this unique column list? As in practice it behaves that way.
         return pd.Index(columns)
         
@@ -266,7 +267,7 @@ class Data:
             if "mapping" in config:
                 mapping = config["mapping"]
             else:
-                mapping = automapping()
+                mapping = automapping(self.columns)
 
         format = {}
         for key, column in mapping.items():

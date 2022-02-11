@@ -246,7 +246,7 @@ class Scorer:
                 width = "800px"
             criterion = {
                 "field": "_" + prefix + " Criterion",
-                "type": "Markdown",
+                "type": "HTMLMath",
                 "args": {
                     "layout": {"width": width},
                 }
