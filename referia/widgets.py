@@ -5,6 +5,8 @@ import glob
 import ipywidgets as ipyw
 import markdown
 
+ipyw.interact_manual.opts["manual_name"] = "Save Score"
+
 from .config import *
 from .log import Logger
 from . import display
@@ -126,7 +128,7 @@ list_widgets = [
 class MyWidget(ipyw.ValueWidget):
     def __init__(self, function, conversion, **args):
         self._ipywidget = function(**args)
-        self._ipywidget.observe(self.on_value_change)
+        self._ipywidget.observe(self.on_value_change, names='value')
 
     def on_value_change(self, change):
         self.set_value(change.new)
@@ -195,19 +197,22 @@ def interact(function, **args):
     newargs = {}
     for key, widget in args.items():
         newargs[key] = widget.widget
-    return ipyw.interact(function, **newargs)
+    ipyw.interact(function, **newargs)
 
 def interact_manual(function, **args):
     newargs = {}
     for key, widget in args.items():
         newargs[key] = widget.widget
-    return ipyw.interact_manual(function, **newargs)
+    ipyw.interact_manual(function, **newargs)
 
 def interactive(function, **args):
     newargs = {}
     for key, widget in args.items():
         newargs[key] = widget.widget
-    return ipyw.interactive(function, **newargs)
+    ipyw.interactive(function, **newargs)
+
+
+fixed = ipyw.fixed
 
 populate_widgets(list_widgets)
 

@@ -28,9 +28,6 @@ from . import system
 
 
 
-interact_manual.opts["manual_name"] = "Save Score"
-
-
 log = Logger(
     name=__name__,
     level=config["logging"]["level"],
@@ -470,7 +467,7 @@ class Scorer:
 
     def populate_widgets(self):
         """Update the widgets with defaults or values from the data"""
-        for key, widget in self.widgets():
+        for key, widget in self.widgets().items():
             if key == "_viewer_label":
                 widget.value = viewer_to_text("viewer", self._data)
                 continue
