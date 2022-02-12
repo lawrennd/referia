@@ -469,7 +469,7 @@ class Scorer:
         """Update the widgets with defaults or values from the data"""
         for key, widget in self.widgets().items():
             if key == "_viewer_label":
-                widget.value = viewer_to_text("viewer", self._data)
+                widget.set_value(viewer_to_text("viewer", self._data))
                 continue
 
             if key == "_progress_label":
@@ -478,25 +478,25 @@ class Scorer:
                 remain = total - scored
                 perc=scored/total*100
                 if "_progress_label" in self.widgets():
-                    widget.value = f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%"
+                    widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
                 continue
             
             if self._column_names[key][0] != "_": # Ignore columns starting with _
                 if self._column_names[key] not in self._default_field_vals:
                     self._default_field_vals[self._column_names[key]] = None
-                widget.value = self._default_field_vals[self._column_names[key]]
+                widget.set_value(self._default_field_vals[self._column_names[key]])
 
                 # Take a default value from default source specified in _referia.yml
                 if self._column_names[key] in self._default_field_source:
                     dval = self._data.get_current_value(self._default_field_source[self._column_names[key]])
                     if assess.notempty(dval):
-                        widget.value = dval
+                        widget.set_value(val)
 
                 # Take value from the current value in _data
                 if self._column_names[key] in self._data.columns:
                     dval = self._data.get_current_value(self._column_names[key])
                     if assess.notempty(dval):
-                        widget.value = dval
+                        widget.set_value(dval)
                 else:
                     self._data.add_column(self._column_names[key])
 

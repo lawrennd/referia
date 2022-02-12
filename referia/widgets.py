@@ -125,7 +125,7 @@ list_widgets = [
 
 
 
-class MyWidget(ipyw.ValueWidget):
+class MyWidget():
     def __init__(self, function, conversion, **args):
         self._ipywidget = function(**args)
         self._ipywidget.observe(self.on_value_change, names='value')
