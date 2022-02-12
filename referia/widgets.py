@@ -96,16 +96,14 @@ class MyWidget:
     def __init__(self, widget_function, **args):
         self.ipywidget = widget_function(**args)
         
-    @property
-    def value(self):
+    def get_value(self):
         return self.ipywidget.value
     
-    @value.setter
-    def value(self, v):
+    def set_value(self, v):
         self.ipywidget.value = v
     
 def gwf_(name, function, default_args={}, docstr=None):
-    """Generate widget function"""
+    """This function wraps the widget function and calls it with any additional default arguments as specified."""
     def widget_function(**args):
         all_args = default_args.copy()
         all_args.update(args)
