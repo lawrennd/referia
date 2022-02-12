@@ -14,40 +14,120 @@ log = Logger(
 )
 
 
-class MyCheckbox(ipywidgets.Checkbox):
-    def __init__(self, **args):
-        ipywidgets.Checkbox.__init__(self, **args)
+list_widgets = [
+    {
+        "name" : "IntSlider",
+        "func" : ipywidgets.IntSlider,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "FloatSlider",
+        "func" : ipywidgets.FloatSlider,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "Checkbox",
+        "func" : ipywidgets.Checkbox,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "Text",
+        "func" : ipywidgets.Text,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "Textarea",
+        "func" : ipywidgets.Textarea,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "Combobox",
+        "func" : ipywidgets.Combobox,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "Dropdown",
+        "func" : ipywidgets.Dropdown,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "Label",
+        "func" : ipywidgets.Label,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "Layout",
+        "func" : ipywidgets.Layout,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "HTML",
+        "func" : ipywidgets.HTML,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "HTMLMath",
+        "func" : ipywidgets.HTMLMath,
+        "arg" : None,
+        "docstr" : None,
+    },
+    {
+        "name" : "DatePicker",
+        "func" : ipywidgets.DatePicker,
+        "arg" : None,
+        "docstr" : None,
+    },
+]
 
-    @property
-    def value(self):
-        return ipywidgets.Checkbox.value
-
-    @value.setter
-    def value(self, v):
-        ipywidgets.Checkbox.value = bool(v)
-
-class Markdown(ipywidgets.HTMLMath):
-    def __init__(self, **args):
-        if "value" in args:
-            self.value = args["value"]
-            args["value"] = self._html_value
-        else:
-            self.value = ""
-        ipywidgets.HTMLMath.__init__(self, **args)
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, v):
-        self._value = v
-        self._html_value = display.markdown2html(self._value)
-        ipywidgets.HTMLMath.value = self._html_value
+for name, func in widgets_dict.items():
+    dataset_test.append(
+        {
+            "dataset_name": name,
+            "dataset_function": func,
+            "arg": None,
+            "docstr": func.__doc__,
+        }
+    )
 
 
-def OldMyCheckbox(**args):
-    """Deal with behaviour where value is passed as an np.bool_ by wrapping Checkbox"""
+other = [jslink, jsdlink, MyCheckbox, MyFileChooser, Markdown]
+
+def gwf_(name, function, args=None, docstr=None):
+    """Generate widget function"""
+    def widget_function(self, **args):
+        return MyWidget(function)
+    return widget_function
+
+def populate_widgets(cls, dataset_test):
+    """populate_dataset: Auto create dataset test functions."""
+    for dataset in dataset_test:
+        base_funcname = "test_" + dataset["dataset_name"]
+        funcname = base_funcname
+        i = 1
+        while funcname in cls.__dict__.keys():
+            funcname = base_funcname + str(i)
+            i += 1
+        _method = gtf_(**dataset)
+        setattr(cls, _method.__name__, _method)
+
+
+class MyWidget:
+    def __init__(self):
+        
+
+def MyCheckbox(**args):
+    """Deal with behaviour where value is passed as an np.bool_ by wrapping Chec
+kbox"""
 
     def on_value_change(change):
         change.owner.value = bool(change.new)
@@ -58,9 +138,8 @@ def OldMyCheckbox(**args):
     mycheck.observe(on_value_change, names='value')
     
     return mycheck
-
     
-def OldMarkdown(**args):
+def Markdown(**args):
     """Create a simple markdown widget based on the HTML widget."""
 
     def on_value_change(change):
