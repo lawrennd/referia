@@ -1,11 +1,16 @@
-import ipywidgets as ipyw
-from ipyfilechooser import FileChooser
 import os
+import sys
 import glob
+
+import ipywidgets as ipyw
+import markdown
 
 from .config import *
 from .log import Logger
 from . import display
+
+def markdown2html(text):
+    return markdown.markdown(text)
 
 log = Logger(
     name=__name__,
@@ -13,7 +18,7 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
-other = [jslink, jsdlink, MyCheckbox, MyFileChooser]
+#other = [jslink, jsdlink, MyCheckbox, MyFileChooser]
 
 list_widgets = [
     {
@@ -105,7 +110,7 @@ list_widgets = [
         "function" : ipyw.HTMLMath,
         "default_args" : {},
         "docstr" : None,
-        "conversion" : display.markdown2html,
+        "conversion" : markdown2html,
     },
     {
         "name" : "DatePicker",
@@ -132,7 +137,7 @@ class MyWidget:
     def set_value(self, v):
         self.ipywidget.value = v
     
-def gwf_(name, function, conversion, default_args={}, docstr=None, conversion=None):
+def gwf_(name, function, conversion=None, default_args={}, docstr=None):
     """This function wraps the widget function and calls it with any additional default arguments as specified."""
     def widget_function(**args):
         all_args = default_args.copy()

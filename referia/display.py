@@ -21,7 +21,7 @@ import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, MyCheckbox, MyFileChooser, Markdown
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown # MyCheckbox, MyFileChooser,
 from . import access
 from . import assess
 from . import system
@@ -37,9 +37,6 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
-
-def markdown2html(text):
-    return markdown.markdown(text)
 
 def expand_cell():
 
@@ -151,7 +148,7 @@ class Scorer:
             
         if "scorer" in config:
             for score in config["scorer"]:
-                self.add_widgets(**self.extract_scorer(score))
+                self.extract_scorer(score)
 
     def add_widgets(self, **kwargs):
         self._interact_args = {**self._interact_args, **kwargs}
@@ -227,7 +224,6 @@ class Scorer:
 
     def extract_scorer(self, score):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
-        
         if score['type'] == 'Criterion':
             value = None
             display = None
@@ -240,20 +236,20 @@ class Scorer:
                 width = score["width"]
             else:
                 width = "800px"
-            criterion = {
-                "field": "_" + prefix + " Criterion",
-                "type": "HTMLMath",
-                "args": {
-                    "layout": {"width": width},
+                criterion = {
+                    "field": "_" + prefix + " Criterion",
+                    "type": "HTMLMath",
+                    "args": {
+                        "layout": {"width": width},
+                    }
                 }
-            }
             if value is not None:
                 criterion["args"]["value"] = value
             elif display is not None:
                 criterion["display"] = display
-            self.extract_scorer(criterion)
+                self.extract_scorer(criterion)
             return
-        
+
         if score["type"] == "CriterionComment":
             criterion = json.loads(json.dumps(score))
             criterion["type"] = "Criterion"
@@ -262,15 +258,15 @@ class Scorer:
                 width = score["width"]
             else:
                 width = "800px"
-            comment = {
-                "field": prefix + " Comment",
-                "type": "Textarea",
-                "args": {
-                    "value": "",
-                    "description": "Comment",
-                    "layout": {"width": width},
+                comment = {
+                    "field": prefix + " Comment",
+                    "type": "Textarea",
+                    "args": {
+                        "value": "",
+                        "description": "Comment",
+                        "layout": {"width": width},
+                    }
                 }
-            }
             for sub_score in [criterion, comment]:
                 self.extract_scorer(sub_score)
             return
@@ -291,7 +287,7 @@ class Scorer:
                         "Raises",
                         "Meets",
                         "Lowers",
-                        ],
+                    ],
                     "description": "Expectation",
                 }
             }
@@ -355,7 +351,7 @@ class Scorer:
                 }
             }
             for sub_score in [criterioncomment, slider]:
-                self.extract_score(sub_score)
+                self.extract_scorer(sub_score)
             return
 
         global_variables = globals()
@@ -386,7 +382,7 @@ class Scorer:
 
         # Deep copy of score so we don't change it globally.
         process_score = json.loads(json.dumps(score))
-            
+
         # Deal with HTML descriptions (setting them to blank if not set)
         if process_score["type"] in ["HTML", "HTMLMath", "Markdown"]:
             if "args" not in process_score:
@@ -396,7 +392,7 @@ class Scorer:
                     process_score["args"]["description"] = " "
             if "display" in process_score:
                 process_score["args"]["value"] = process_score["display"].format(**self._data.mapping())
-            
+
         if "source" in process_score:
             # Set arguments of widget from data fields if source is given
             if "args" in process_score["source"]:
@@ -413,11 +409,10 @@ class Scorer:
             process_score["args"]["layout"] = Layout(**process_score["layout"])
 
         if process_score["type"] in global_variables:
-            self.add_widgets({name: global_variables[process_score["type"]](**process_score["args"])})
+            self.add_widgets(**{name: global_variables[process_score["type"]](**process_score["args"])})
         else:
             raise Exception("Have not loaded " + process_score["type"] + " interaction type.")
-        return
-    
+        
     def batch_entry_edit(self):
         """Update the data frame with a batch entry (hit save score to save updates)"""
         interact_manual(
