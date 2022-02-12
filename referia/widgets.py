@@ -123,19 +123,23 @@ list_widgets = [
 
 
 
-class MyWidget:
+class MyWidget(ipyw.ValueWidget):
     def __init__(self, function, conversion, **args):
-        self.ipywidget = function(**args)
-        self.ipywidget.observe(self.on_value_change)
+        self._ipywidget = function(**args)
+        self._ipywidget.observe(self.on_value_change)
 
     def on_value_change(self, change):
         self.set_value(change.new)
         
     def get_value(self):
-        return self.ipywidget.value
+        return self._ipywidget.value
     
     def set_value(self, v):
-        self.ipywidget.value = v
+        self._ipywidget.value = v
+
+    @property
+    def widget(self):
+        return self._ipywidget
     
 def gwf_(name, function, conversion=None, default_args={}, docstr=None):
     """This function wraps the widget function and calls it with any additional default arguments as specified."""
@@ -185,6 +189,25 @@ def MyFileChooser(**args):
     
     return ipyw.Dropdown(**args)
 
+
+
+def interact(function, **args):
+    newargs = {}
+    for key, widget in args.items():
+        newargs[key] = widget.widget
+    return ipyw.interact(function, **newargs)
+
+def interact_manual(function, **args):
+    newargs = {}
+    for key, widget in args.items():
+        newargs[key] = widget.widget
+    return ipyw.interact_manual(function, **newargs)
+
+def interactive(function, **args):
+    newargs = {}
+    for key, widget in args.items():
+        newargs[key] = widget.widget
+    return ipyw.interactive(function, **newargs)
 
 populate_widgets(list_widgets)
 

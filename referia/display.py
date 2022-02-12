@@ -15,13 +15,13 @@ from IPython import display
 import matplotlib.pyplot as plt
 
 
-from ipywidgets import interact, interactive, fixed, interact_manual, jslink, jsdlink
+from ipywidgets import jslink, jsdlink
 
 import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown # MyCheckbox, MyFileChooser,
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
 from . import access
 from . import assess
 from . import system
