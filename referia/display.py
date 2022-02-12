@@ -15,15 +15,13 @@ from IPython import display
 import matplotlib.pyplot as plt
 
 
-from ipywidgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, jslink, jsdlink
-from ipywidgets import interact, interactive, fixed, interact_manual
+from ipywidgets import interact, interactive, fixed, interact_manual, jslink, jsdlink
 
 import pypdftk as tk
 
-from .widgets import MyCheckbox, MyFileChooser, Markdown
-
 from .config import *
 from .log import Logger
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, MyCheckbox, MyFileChooser, Markdown
 from . import access
 from . import assess
 from . import system
@@ -144,18 +142,18 @@ class Scorer:
         # Process the different scorers in from the _referia.yml file
         if "scored" in config:
             _progress_label = Label()
-            self.append_interact(_progress_label=_progress_label)
+            self.add_widgets(_progress_label=_progress_label)
 
         if "viewer" in config:
             _viewer_label = Markdown()
             _viewer_label.description = " "
-            self.append_interact(_viewer_label=_viewer_label)
+            self.add_widgets(_viewer_label=_viewer_label)
             
         if "scorer" in config:
             for score in config["scorer"]:
-                self.append_interact(**self.extract_scorer(score))
+                self.add_widgets(**self.extract_scorer(score))
 
-    def append_interact(self, **kwargs):
+    def add_widgets(self, **kwargs):
         self._interact_args = {**self._interact_args, **kwargs}
         
     @property
@@ -227,11 +225,9 @@ class Scorer:
         self.batch_entry_edit()
 
 
-    def extract_scorer(self, orig_score):
+    def extract_scorer(self, score):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
-        interact_args = {}
-        score = json.loads(json.dumps(orig_score))
-
+        
         if score['type'] == 'Criterion':
             value = None
             display = None
@@ -255,9 +251,8 @@ class Scorer:
                 criterion["args"]["value"] = value
             elif display is not None:
                 criterion["display"] = display
-            interact_args = {**interact_args, **self.extract_scorer(criterion)}
-
-            return interact_args
+            self.extract_scorer(criterion)
+            return
         
         if score["type"] == "CriterionComment":
             criterion = json.loads(json.dumps(score))
@@ -277,8 +272,8 @@ class Scorer:
                 }
             }
             for sub_score in [criterion, comment]:
-                interact_args = {**interact_args, **self.extract_scorer(sub_score)}
-            return interact_args
+                self.extract_scorer(sub_score)
+            return
 
 
         if score["type"] == "CriterionCommentRaisesMeetsLowers":
@@ -301,8 +296,8 @@ class Scorer:
                 }
             }
             for sub_score in [criterioncomment, expectation]:
-                interact_args = {**interact_args, **self.extract_scorer(sub_score)}
-            return interact_args
+                self.extract_scorer(sub_score)
+            return
 
         if score["type"] == "CriterionCommentRaisesMeetsLowersFlag":
             criterioncommentraisesmeetslowers = json.loads(json.dumps(score))
@@ -318,8 +313,8 @@ class Scorer:
                 }
             }
             for sub_score in [criterioncommentraisesmeetslowers, flag]:
-                interact_args = {**interact_args, **self.extract_scorer(sub_score)}
-            return interact_args
+                self.extract_scorer(sub_score)
+            return
 
         if score["type"] == "CriterionCommentScore":
             criterioncomment = json.loads(json.dumps(score))
@@ -347,7 +342,7 @@ class Scorer:
             else:
                 value = int(((maxval-minval)/2)/step)*step + minval
 
-            score = {
+            slider = {
                 "field": prefix + " Score",
                 "type": "FloatSlider",
                 "args": {
@@ -359,9 +354,9 @@ class Scorer:
                     "layout": {"width": width},
                 }
             }
-            for sub_score in [criterioncomment, score]:
-                interact_args = {**interact_args, **self.extract_scorer(sub_score)}
-            return interact_args
+            for sub_score in [criterioncomment, slider]:
+                self.extract_score(sub_score)
+            return
 
         global_variables = globals()
         if "field" in score:
@@ -369,7 +364,7 @@ class Scorer:
             self._column_names[name] = score["field"]
 
             # Create an instance of the object to extract default value.
-            self._default_field_vals[score["field"]] = global_variables[score["type"]]().value
+            self._default_field_vals[score["field"]] = global_variables[score["type"]]().get_value()
             if "value" in score:
                 self._default_field_vals[score["field"]] = score["value"]               
             if "args" in score and "value" in score["args"]:
@@ -389,43 +384,45 @@ class Scorer:
             name = "_" + "".join(random.choice(string.ascii_letters) for _ in range(39))
             self._column_names[name] = name
 
-        # Deal with HTML descriptions (setting them to blank if not set)
-        if score["type"] in ["HTML", "HTMLMath", "Markdown"]:
-            if "args" not in score:
-                score["args"] = {"description": " "}
-            else:
-                if "description" not in score:
-                    score["args"]["description"] = " "
-            if "display" in score:
-                score["args"]["value"] = score["display"].format(**self._data.mapping())
+        # Deep copy of score so we don't change it globally.
+        process_score = json.loads(json.dumps(score))
             
-
-        if "source" in score:
+        # Deal with HTML descriptions (setting them to blank if not set)
+        if process_score["type"] in ["HTML", "HTMLMath", "Markdown"]:
+            if "args" not in process_score:
+                process_score["args"] = {"description": " "}
+            else:
+                if "description" not in process_score:
+                    process_score["args"]["description"] = " "
+            if "display" in process_score:
+                process_score["args"]["value"] = process_score["display"].format(**self._data.mapping())
+            
+        if "source" in process_score:
             # Set arguments of widget from data fields if source is given
-            if "args" in score["source"]:
-                for arg, field in score["source"]["args"]:
-                    if arg not in score["args"]:
-                        score["args"][arg] = self._data.get_current_value(field)
-            if "criterion" in score["source"]:
-                criterion = score["source"]["criterion"]
+            if "args" in process_score["source"]:
+                for arg, field in process_score["source"]["args"]:
+                    if arg not in process_score["args"]:
+                        process_score["args"][arg] = self._data.get_current_value(field)
+            if "criterion" in process_score["source"]:
+                criterion = process_score["source"]["criterion"]
                 if "display" in criterion:
-                    score["criterion"] = criterion["display"].format(**self._data.mapping())
+                    process_score["criterion"] = criterion["display"].format(**self._data.mapping())
 
         # Set arguments of widget from data fields if appropriate.                
-        global_variables = globals()
-        if "layout" in score:
-            score["args"]["layout"] = Layout(**score["layout"])
-        elif score["type"] in global_variables:
-            interact_args[name] = global_variables[score["type"]](**score["args"])
-        else:
-            raise Exception("Have not loaded " + score["type"] + " interaction type.")
-        return interact_args
+        if "layout" in process_score:
+            process_score["args"]["layout"] = Layout(**process_score["layout"])
 
+        if process_score["type"] in global_variables:
+            self.add_widgets({name: global_variables[process_score["type"]](**process_score["args"])})
+        else:
+            raise Exception("Have not loaded " + process_score["type"] + " interaction type.")
+        return
+    
     def batch_entry_edit(self):
         """Update the data frame with a batch entry (hit save score to save updates)"""
         interact_manual(
             self.update_entry, 
-            **self._interact_args
+            **self.widgets()
         )
 
     
@@ -472,11 +469,13 @@ class Scorer:
         if self._write_score:
             self.save_score()
 
-
+    def widgets(self):
+        """Return the widgets associated with the display"""
+        return self._interact_args
 
     def populate_widgets(self):
         """Update the widgets with defaults or values from the data"""
-        for key, widget in self._interact_args.items():
+        for key, widget in self.widgets():
             if key == "_viewer_label":
                 widget.value = viewer_to_text("viewer", self._data)
                 continue
@@ -486,7 +485,7 @@ class Scorer:
                 scored = self._data.scored()
                 remain = total - scored
                 perc=scored/total*100
-                if "_progress_label" in self._interact_args:
+                if "_progress_label" in self.widgets():
                     widget.value = f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%"
                 continue
             

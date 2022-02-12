@@ -13,7 +13,7 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
-other = [jslink, jsdlink, MyCheckbox, MyFileChooser, Markdown]
+other = [jslink, jsdlink, MyCheckbox, MyFileChooser]
 
 list_widgets = [
     {
@@ -21,80 +21,110 @@ list_widgets = [
         "function" : ipyw.IntSlider,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
     {
         "name" : "FloatSlider",
         "function" : ipyw.FloatSlider,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
     {
         "name" : "Checkbox",
         "function" : ipyw.Checkbox,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
+    },
+    {
+        "name" : "Flag",
+        "function" : ipyw.Checkbox,
+        "default_args" : {},
+        "docstr" : None,
+        "conversion" : bool,
     },
     {
         "name" : "Text",
         "function" : ipyw.Text,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
     {
         "name" : "Textarea",
         "function" : ipyw.Textarea,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
     {
         "name" : "Combobox",
         "function" : ipyw.Combobox,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
     {
         "name" : "Dropdown",
         "function" : ipyw.Dropdown,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
     {
         "name" : "Label",
         "function" : ipyw.Label,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
     {
         "name" : "Layout",
         "function" : ipyw.Layout,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
     {
         "name" : "HTML",
         "function" : ipyw.HTML,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
     {
         "name" : "HTMLMath",
         "function" : ipyw.HTMLMath,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
+    },
+    {
+        "name" : "Markdown",
+        "function" : ipyw.HTMLMath,
+        "default_args" : {},
+        "docstr" : None,
+        "conversion" : display.markdown2html,
     },
     {
         "name" : "DatePicker",
         "function" : ipyw.DatePicker,
         "default_args" : {},
         "docstr" : None,
+        "conversion" : None,
     },
 ]
 
 
 
 class MyWidget:
-    def __init__(self, widget_function, **args):
-        self.ipywidget = widget_function(**args)
+    def __init__(self, function, conversion, **args):
+        self.ipywidget = function(**args)
+        self.ipywidget.observe(self.on_value_change)
+
+    def on_value_change(self, change):
+        self.set_value(change.new)
         
     def get_value(self):
         return self.ipywidget.value
@@ -102,12 +132,16 @@ class MyWidget:
     def set_value(self, v):
         self.ipywidget.value = v
     
-def gwf_(name, function, default_args={}, docstr=None):
+def gwf_(name, function, conversion, default_args={}, docstr=None, conversion=None):
     """This function wraps the widget function and calls it with any additional default arguments as specified."""
     def widget_function(**args):
         all_args = default_args.copy()
         all_args.update(args)
-        return MyWidget(function, **all_args)
+        return MyWidget(
+            function=function,
+            conversion=conversion,
+            **all_args,
+        )
     widget_function.__name__ = name
     widget_function.__docstr__ = docstr
     return widget_function
@@ -122,38 +156,6 @@ def populate_widgets(list_widgets):
             gwf_(**widget),
         )
 
-
-
-
-    
-        
-def MyCheckbox(**args):
-    """Deal with behaviour where value is passed as an np.bool_ by wrapping Chec
-kbox"""
-
-    def on_value_change(change):
-        change.owner.value = bool(change.new)
-    
-    if "value" in args:
-        args["value"] = bool(args["value"])
-    mycheck = ipyw.Checkbox(**args)
-    mycheck.observe(on_value_change, names='value')
-    
-    return mycheck
-    
-def Markdown(**args):
-    """Create a simple markdown widget based on the HTML widget."""
-
-    def on_value_change(change):
-        change.owner.value = display.markdown2html(change.new)
-        
-    if "value" in args:
-        args["value"] = display.markdown2html(args["value"])
-
-    mymark = ipyw.HTMLMath(**args)
-    mymark.observe(on_value_change, names='value')
-        
-    return mymark
 
 def MyFileChooser(**args):
     """Create a simple Dropdown box to allow file selection from a given path."""
