@@ -127,17 +127,23 @@ list_widgets = [
 
 class MyWidget():
     def __init__(self, function, conversion, **args):
+        if conversion is not None and "value" in args:
+            args["value"] = conversion(args["value"])
         self._ipywidget = function(**args)
         self._ipywidget.observe(self.on_value_change, names='value')
-
+        self._conversion = conversion
+        
     def on_value_change(self, change):
         self.set_value(change.new)
         
     def get_value(self):
         return self._ipywidget.value
     
-    def set_value(self, v):
-        self._ipywidget.value = v
+    def set_value(self, value):
+        if self._conversion is None:
+            self._ipywidget.value = value
+        else:
+            self._ipywidget.value = self._conversion(value)
 
     @property
     def widget(self):

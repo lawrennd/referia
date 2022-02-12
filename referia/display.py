@@ -21,7 +21,7 @@ import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
 from . import access
 from . import assess
 from . import system
@@ -139,8 +139,7 @@ class Scorer:
             self.add_widgets(_progress_label=_progress_label)
 
         if "viewer" in config:
-            _viewer_label = Markdown()
-            _viewer_label.description = " "
+            _viewer_label = Markdown(description=" ")
             self.add_widgets(_viewer_label=_viewer_label)
             
         if "scorer" in config:
@@ -235,7 +234,7 @@ class Scorer:
                 width = "800px"
                 criterion = {
                     "field": "_" + prefix + " Criterion",
-                    "type": "HTMLMath",
+                    "type": "Markdown",
                     "args": {
                         "layout": {"width": width},
                     }
@@ -244,7 +243,7 @@ class Scorer:
                 criterion["args"]["value"] = value
             elif display is not None:
                 criterion["display"] = display
-                self.extract_scorer(criterion)
+            self.extract_scorer(criterion)
             return
 
         if score["type"] == "CriterionComment":
@@ -299,7 +298,7 @@ class Scorer:
             prefix = score["prefix"]
             flag = {
                 "field": prefix + " Flag",
-                "type": "MyCheckbox",
+                "type": "Flag",
                 "args": {
                     "value": False,
                     "description": "Flag",

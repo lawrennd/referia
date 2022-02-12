@@ -58,15 +58,17 @@ urls:
 
 scorer:
 - type: CriterionCommentRaisesMeetsLowers
-  criterion: "<h4>Gift Thoughtfulness</h4>
-<p>How thoughtful was the gift, does it match who you are?</p>"
+  criterion: "#### Gift Thoughtfulness
+
+How thoughtful was the gift, does it match who you are?"
   prefix: Thoughtfulness
 - type: CriterionCommentRaisesMeetsLowers
-  criterion: "<h4>Gift Expense</h4>
-<p>How expensive was the gift?</p>"
+  criterion: "#### Gift Expense
+  
+  How expensive was the gift?"
   prefix: Expense
 - type: CriterionCommentScore
-  criterion: '<h4>Overall</h4>'
+  criterion: '#### Overall'
   prefix: Overall
   value: 5
   min: 0
