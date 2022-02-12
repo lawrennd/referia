@@ -4,7 +4,7 @@ import re
 
 import pandas as pd
 
-from pandas.api.types import is_string_dtype, is_numeric_dtype
+from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .config import *
 from .log import Logger
@@ -351,7 +351,10 @@ class Data:
         coltype = df.dtypes[column]
         if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
             log.info(f"Changing column \"{column}\" type to 'object' due to string input.")
-            df[column] = df[column].astype('object')
+            df[column] = df[column].astype("object")
+        if is_numeric_dtype(coltype) and is_bool_dtype(type(value)):
+            log.info(f"Changing column \"{column}\" type to 'object' due to bool input.")
+            df[column] = df[column].astype("boolean")
 
         
 def data():
