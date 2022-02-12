@@ -1,4 +1,4 @@
-import ipywidgets
+import ipywidgets as ipyw
 from ipyfilechooser import FileChooser
 import os
 import glob
@@ -13,118 +13,122 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
+other = [jslink, jsdlink, MyCheckbox, MyFileChooser, Markdown]
 
 list_widgets = [
     {
         "name" : "IntSlider",
-        "func" : ipywidgets.IntSlider,
-        "arg" : None,
+        "function" : ipyw.IntSlider,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "FloatSlider",
-        "func" : ipywidgets.FloatSlider,
-        "arg" : None,
+        "function" : ipyw.FloatSlider,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "Checkbox",
-        "func" : ipywidgets.Checkbox,
-        "arg" : None,
+        "function" : ipyw.Checkbox,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "Text",
-        "func" : ipywidgets.Text,
-        "arg" : None,
+        "function" : ipyw.Text,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "Textarea",
-        "func" : ipywidgets.Textarea,
-        "arg" : None,
+        "function" : ipyw.Textarea,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "Combobox",
-        "func" : ipywidgets.Combobox,
-        "arg" : None,
+        "function" : ipyw.Combobox,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "Dropdown",
-        "func" : ipywidgets.Dropdown,
-        "arg" : None,
+        "function" : ipyw.Dropdown,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "Label",
-        "func" : ipywidgets.Label,
-        "arg" : None,
+        "function" : ipyw.Label,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "Layout",
-        "func" : ipywidgets.Layout,
-        "arg" : None,
+        "function" : ipyw.Layout,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "HTML",
-        "func" : ipywidgets.HTML,
-        "arg" : None,
+        "function" : ipyw.HTML,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "HTMLMath",
-        "func" : ipywidgets.HTMLMath,
-        "arg" : None,
+        "function" : ipyw.HTMLMath,
+        "default_args" : {},
         "docstr" : None,
     },
     {
         "name" : "DatePicker",
-        "func" : ipywidgets.DatePicker,
-        "arg" : None,
+        "function" : ipyw.DatePicker,
+        "default_args" : {},
         "docstr" : None,
     },
 ]
 
-for name, func in widgets_dict.items():
-    dataset_test.append(
-        {
-            "dataset_name": name,
-            "dataset_function": func,
-            "arg": None,
-            "docstr": func.__doc__,
-        }
-    )
-
-
-other = [jslink, jsdlink, MyCheckbox, MyFileChooser, Markdown]
-
-def gwf_(name, function, args=None, docstr=None):
-    """Generate widget function"""
-    def widget_function(self, **args):
-        return MyWidget(function)
-    return widget_function
-
-def populate_widgets(cls, dataset_test):
-    """populate_dataset: Auto create dataset test functions."""
-    for dataset in dataset_test:
-        base_funcname = "test_" + dataset["dataset_name"]
-        funcname = base_funcname
-        i = 1
-        while funcname in cls.__dict__.keys():
-            funcname = base_funcname + str(i)
-            i += 1
-        _method = gtf_(**dataset)
-        setattr(cls, _method.__name__, _method)
 
 
 class MyWidget:
-    def __init__(self):
+    def __init__(self, widget_function, **args):
+        self.ipywidget = widget_function(**args)
         
+    @property
+    def value(self):
+        return self.ipywidget.value
+    
+    @value.setter
+    def value(self, v):
+        self.ipywidget.value = v
+    
+def gwf_(name, function, default_args={}, docstr=None):
+    """Generate widget function"""
+    def widget_function(**args):
+        all_args = default_args.copy()
+        all_args.update(args)
+        return MyWidget(function, **all_args)
+    widget_function.__name__ = name
+    widget_function.__docstr__ = docstr
+    return widget_function
 
+def populate_widgets(list_widgets):
+    """populate_widgets: Automatically creates widget wrapper objects and adds them to the module."""
+    this_module = sys.modules[__name__]
+    for widget in list_widgets:
+        setattr(
+            this_module,
+            widget["name"],
+            gwf_(**widget),
+        )
+
+
+
+
+    
+        
 def MyCheckbox(**args):
     """Deal with behaviour where value is passed as an np.bool_ by wrapping Chec
 kbox"""
@@ -134,7 +138,7 @@ kbox"""
     
     if "value" in args:
         args["value"] = bool(args["value"])
-    mycheck = ipywidgets.Checkbox(**args)
+    mycheck = ipyw.Checkbox(**args)
     mycheck.observe(on_value_change, names='value')
     
     return mycheck
@@ -148,7 +152,7 @@ def Markdown(**args):
     if "value" in args:
         args["value"] = display.markdown2html(args["value"])
 
-    mymark = ipywidgets.HTMLMath(**args)
+    mymark = ipyw.HTMLMath(**args)
     mymark.observe(on_value_change, names='value')
         
     return mymark
@@ -174,4 +178,8 @@ def MyFileChooser(**args):
         options.append(os.path.basename(option))
     args["options"] = options
     
-    return ipywidgets.Dropdown(**args)
+    return ipyw.Dropdown(**args)
+
+
+populate_widgets(list_widgets)
+
