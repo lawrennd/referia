@@ -15,6 +15,7 @@ from IPython import display
 import matplotlib.pyplot as plt
 
 
+
 from ipywidgets import jslink, jsdlink
 
 import pypdftk as tk
@@ -139,11 +140,11 @@ class Scorer:
                         
         # Process the different scorers in from the _referia.yml file
         if "scored" in config:
-            _progress_label = Label()
+            _progress_label = Label(field_name="_progress_label")
             self.add_widgets(_progress_label=_progress_label)
 
         if "viewer" in config:
-            _viewer_label = Markdown(description=" ")
+            _viewer_label = Markdown(description=" ", field_name = "_viewer_label")
             self.add_widgets(_viewer_label=_viewer_label)
             
         if "scorer" in config:
@@ -162,7 +163,7 @@ class Scorer:
 
     def set_index(self, value):
         self._data.set_index(value)
-        self.view_entity()
+        self.populate_widgets()
 
     def get_selectors(self):
         return self._data.get_selectors()
@@ -172,7 +173,6 @@ class Scorer:
 
     def set_selector(self, value):
         self._data.set_selector(value)
-        self.view_entity()
 
     def get_subindices(self):
         return self._data.get_subindices()
@@ -182,7 +182,7 @@ class Scorer:
     
     def set_subindex(self, value):
         self._data.set_subindex(value)
-        self.view_entity()
+        self.populate_widgets()
 
     def select_index(self):
         select=Dropdown(
@@ -191,6 +191,7 @@ class Scorer:
         )
         interact(self.set_index, value=select)
 
+        
     def select_subindex(self):
         """Select a subindex from the data"""
         select=Dropdown(
@@ -364,7 +365,7 @@ class Scorer:
                 self._column_names_dict[field_name] = score["field"]
 
                 # Create an instance of the object to extract default value.
-                self._default_field_vals[score["field"]] = widget_type().get_value()
+                self._default_field_vals[score["field"]] = widget_type(parent=self, field_name=score["field"]).get_value()
                 if "value" in score:
                     self._default_field_vals[score["field"]] = score["value"]               
                 if "args" in score and "value" in score["args"]:
@@ -402,7 +403,7 @@ class Scorer:
                 if "args" in process_score["source"]:
                     for arg, field in process_score["source"]["args"]:
                         if arg not in process_score["args"]:
-                            process_score["args"][arg] = self._data.get_current_value(field)
+                            process_score["args"][arg] = self._data.get_value_column(field)
                 # Removed as now redundant? NDL 2022-02-13
                 # if "criterion" in process_score["source"]:
                 #     criterion = process_score["source"]["criterion"]
@@ -412,16 +413,15 @@ class Scorer:
             # Set up arguments for the widget
             args = process_score["args"]
             args["field_name"] = field_name
-            args["column_name"] = self._column_names_dict["field_name"]
-            if display in process_score and display not in args::
+            args["column_name"] = self._column_names_dict[field_name]
+            if "display" in process_score and "display" not in args:
                 args["display"] = process_score["display"]
             if "layout" in process_score and "layout" not in args:
                 args["layout"] =  Layout(**process_score["layout"])
-            args["field"] = process_score["field"]
-            args["data"] = self._data
+            args["parent"] = self
 
             # Add the widget
-            self.add_widgets(**{field_name: widget_type(**process_score["args"])})
+            self.add_widgets(**{field_name: widget_type(**args)})
         else:
             raise Exception("Cannot find " + score["type"] + " interaction type.")
         
@@ -444,13 +444,13 @@ class Scorer:
             # fields starting with "_" are not transferred
             # (typically HTML widgets for prompting input)
             if key[0] != "_":
-                self._data.set_current_value(value, self._column_names_dict[key])
+                self._data.set_value_column(value, self._column_names_dict[key])
 
         if "timestamp_field" in config:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        self._data.set_current_value(
+        self._data.set_value_column(
             pd.to_datetime("today"),
             timestamp_field
         )
@@ -458,15 +458,15 @@ class Scorer:
             created_field = config["created_field"]
         else:
             created_field = "Created"
-        if created_field not in self._data._writedata.columns or assess.empty(self._data.get_current_value(created_field)):
-            self._data.set_current_value(
+        if created_field not in self._data._writedata.columns or assess.empty(self._data.get_value_column(created_field)):
+            self._data.set_value_column(
                 pd.to_datetime("today"),
                 created_field
             )
         if "combinator" in config:
             for view in config["combinator"]:
                 if "field" in view:
-                    self._data.set_current_value(
+                    self._data.set_value_column(
                         view_to_text(view, self._data),
                         view["field"]
                     )                    
@@ -484,9 +484,6 @@ class Scorer:
         """Update the widgets with defaults or values from the data"""
         for key, widget in self.widgets().items():
             widget.refresh()
-            if key == "_viewer_label":
-                widget.set_value(viewer_to_text("viewer", self._data))
-                continue
 
             if key == "_progress_label":
                 total = self._data.to_score()
@@ -497,24 +494,30 @@ class Scorer:
                     widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
                 continue
             
-            if self._column_names_dict[key][0] != "_": # Ignore columns starting with _
-                if self._column_names_dict[key] not in self._default_field_vals:
-                    self._default_field_vals[self._column_names_dict[key]] = None
-                widget.set_value(self._default_field_vals[self._column_names_dict[key]])
+            if key == "_viewer_label":
+                widget.set_value(viewer_to_text("viewer", self._data))
+                continue
 
-                # Take a default value from default source specified in _referia.yml
-                if self._column_names_dict[key] in self._default_field_source:
-                    dval = self._data.get_current_value(self._default_field_source[self._column_names_dict[key]])
-                    if assess.notempty(dval):
-                        widget.set_value(val)
+            # Take value from the current value in _data
+            widget.refresh()
+            
+            # if self._column_names_dict[key][0] != "_": # Ignore columns starting with _
+            #     if self._column_names_dict[key] not in self._default_field_vals:
+            #         self._default_field_vals[self._column_names_dict[key]] = None
+            #     widget.set_value(self._default_field_vals[self._column_names_dict[key]])
 
-                # Take value from the current value in _data
-                if self._column_names_dict[key] in self._data.columns:
-                    dval = self._data.get_current_value(self._column_names_dict[key])
-                    if assess.notempty(dval):
-                        widget.set_value(dval)
-                else:
-                    self._data.add_column(self._column_names_dict[key])
+            #     # Take a default value from default source specified in _referia.yml
+            #     if self._column_names_dict[key] in self._default_field_source:
+            #         dval = self._data.get_value_column(self._default_field_source[self._column_names_dict[key]])
+            #         widget.set_value(val)
+
+
+                # Widget refresh should do this automatically.
+                # if self._column_names_dict[key] in self._data.columns:
+                #     dval = self._data.get_value_column(self._column_names_dict[key])
+                #     widget.set_value(dval)
+                # else:
+                #     self._data.add_column(self._column_names_dict[key])
 
 
 

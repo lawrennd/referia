@@ -89,8 +89,8 @@ def copy_file(origfile, destfile, view, data):
     if os.path.exists(origfile):
         if ext == ".pdf" and "pages" in view and "first" in view["pages"] and "last" in view["pages"]:
             # Extract pages from a PDF
-            firstpage = data.get_current_value(view["pages"]["first"])
-            lastpage = data.get_current_value(view["pages"]["last"])
+            firstpage = data.get_value_column(view["pages"]["first"])
+            lastpage = data.get_value_column(view["pages"]["last"])
             if assess.notempty(firstpage) and assess.notempty(lastpage) and assess.notempty(view["field"]):
                 firstpage = int(firstpage)
                 lastpage = int(lastpage)
@@ -117,7 +117,7 @@ def edit_files(data):
         
     for view in displays:
         if "field" in view:
-            val = data.get_current_value(view["field"])
+            val = data.get_value_column(view["field"])
         if type(val) is str:
             storedirectory = os.path.expandvars(view["storedirectory"])
             origfile = os.path.join(os.path.expandvars(view["sourcedirectory"]),val)
@@ -125,7 +125,7 @@ def edit_files(data):
                 filestub = view["name"] + ".pdf"
             else:
                 filestub = to_camel_case(view["field"]) + ".pdf"
-            editfilename = str(data.get_current_value(config["allocation"]["index"])) + "_" + filestub
+            editfilename = str(data.get_value_column(config["allocation"]["index"])) + "_" + filestub
             destfile = os.path.join(storedirectory,editfilename)
             if not os.path.exists(storedirectory):
                 os.makedirs(storedirectory)
@@ -143,7 +143,7 @@ def view_file(view, data):
     filename = ""
     tmpname = ""
     if "field" in view:
-        val = data.get_current_value(view["field"])
+        val = data.get_value_column(view["field"])
         if type(val) is str:
             filename = os.path.expandvars(os.path.join(view["directory"],val))
             tmpname = to_camel_case(view["field"])
@@ -153,7 +153,7 @@ def view_file(view, data):
         _, ext = os.path.splitext(filename)
         if len(tmpname)>0:
             tmpdirectory = tempfile.gettempdir()
-            destfile = str(data.get_current_value(config["allocation"]["index"])) + "_" + tmpname + ext
+            destfile = str(data.get_value_column(config["allocation"]["index"])) + "_" + tmpname + ext
             destname = os.path.join(tmpdirectory, destfile)
             if not os.path.exists(destname):
                 log.debug(f"Copying \"{filename}\" to \"{destname}\".")
@@ -190,7 +190,7 @@ def view_urls(data):
     for view in displays:
         if "url" in view:
             if "field" in view:
-                val = data.get_current_value(view["field"])
+                val = data.get_value_column(view["field"])
             else:
                 val = None
             if "field" in view and type(val) is str:

@@ -5,9 +5,13 @@ import glob
 import ipywidgets as ipyw
 import markdown
 
+from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
+
+
 ipyw.interact_manual.opts["manual_name"] = "Save Score"
 
 from .config import *
+from .util import notempty
 from .log import Logger
 from . import display
 
@@ -129,34 +133,91 @@ class MyWidget():
     def __init__(self, function, conversion, **args):
         if conversion is not None and "value" in args:
             args["value"] = conversion(args["value"])
-        self._ipywidget = function(**args)
-        self._ipywidget.observe(self.on_value_change, names='value')
+        self._ipywidget_function = function
+        if "parent" in args:
+            self._parent = args["parent"]
+        else:
+            self._parent = None
+        if "display" in args:
+            self._display = args["display"]
+        else:
+            self._display = None
+
         self._conversion = conversion
-        self._column_name = column_name
+        if "column_name" in args:
+            self._column_name = args["column_name"]
+        else:
+            self._column_name = None
+            
+        if "field_name" in args:
+            self._field_name = args["field_name"]
+        else:
+            self._field_name = None
+            
+        # Is this a private field (one that doesn't update the parent data)
+        if self._field_name is not None and self._field_name[0] == "_": 
+            self.private = True
+        else:
+            self.private = False
+            
+        if self.private and "description" not in args: 
+            args["descripton"] = " "
+
+        self._ipywidget = self._ipywidget_function(**args)
+        self._ipywidget.observe(self.on_value_change, names='value')
+
+
+    @property
+    def private(self):
+        return self._private
+
+    @private.setter
+    def private(self, value):
+        #if not is_bool_dtype(value):
+        #    raise ValueError("Private must be set as bool (True/False)")
+        self._private = value
         
     def on_value_change(self, change):
         self.set_value(change.new)
-        self._data.set_current_value(self._column_name, self.get_value())
-        
+        if not self.private and self._parent is not None:
+            self._parent._data.set_column(self.get_column())
+            self._parent._data.set_value(self.get_value())
+
+    def null(self, void):
+        pass
+    
     def refresh(self):
+        self._ipywidget.observe(self.null, names='value')
         if self._display is not None:
-            self.set_value(self._display.format(**self._data.mapping()))
+            self.set_value(self._display.format(**self._parent._data.mapping()))
         else:
-            self.set_value(self._data.get_current_value(self._column_name)            
+            column = self.get_column()
+            if not self.private and column is not None and self._parent is not None:
+                self._parent._data.set_column(column)
+                self.set_value(self._parent._data.get_value())
+
+        self._ipywidget.observe(self.on_value_change, names="value")
             
     def get_value(self):
         return self._ipywidget.value
     
     def set_value(self, value):
-        if self._conversion is None:
-            self._ipywidget.value = value
+        if notempty(value):
+            if self._conversion is None:
+                self._ipywidget.value = value
+            else:
+                self._ipywidget.value = self._conversion(value)
         else:
-            self._ipywidget.value = self._conversion(value)
-
+            self._ipywidget.value = self._ipywidget_function().value
+            
+    def get_column(self):
+        return self._column_name
+                           
     @property
     def widget(self):
         return self._ipywidget
-    
+
+
 def gwf_(name, function, conversion=None, default_args={}, docstr=None):
     """This function wraps the widget function and calls it with any additional default arguments as specified."""
     def widget_function(**args):

@@ -34,15 +34,20 @@ def automapping(columns):
 
 class Data:
     def __init__(self):
+        # Data that is input (not for writing to)
         self._data = None
-        self._writedata = None
+        # Which index is the current focus in the data.
         self._index = None
-        # The series data associated with the input.
+        # Data for writing outputs to.
+        self._writedata = None
+        # Which column is the current focus in the data.
+        self._column = None
+        # The series data for writing to (where there may be multiple entries associated with one index)
         self._writeseries = None
-        # The entry column value from the series to use
-        self._subindex = None
-        # Which entry column in the series to choose from.
+        # Which entry column in the series to disambiguate the selection of the focus.
         self._selector = None
+        # The value in the selected entry column entry column value from the series to use
+        self._subindex = None
         self._load_data()
 
     @property
@@ -151,6 +156,21 @@ class Data:
             self.set_index(self._data.index[0])
         return self._index
 
+    def set_column(self, column):
+        """Set the current column focus."""
+        if column not in self.columns:
+            if self._writedata is not None or self._writeseries is not None:
+                self.add_column(column)
+
+        if column not in self.columns:
+            self._column = None
+        else:
+            self._column = column
+
+    def get_column(self):
+        """Get the current column focus."""
+        return self._column
+    
     def get_selector(self):
         return self._selector
 
@@ -176,22 +196,18 @@ class Data:
             log.info(f"Column {column} of Data._writeseries selected for selection.")
 
     def get_subindex(self):
-        if self._subindex is None and self._writeseries is not None:
+        if self._subindex is None and self._writeseries is not None and self._selector is not None:
             log.info(f"No subindex set, using first entry of Data._writeseries.")
             self.set_subindex(self.get_subseries().at[0, self.get_selector()])
-        return self._index
+        return self._subindex
 
     def get_subseries(self):
         return self._writeseries[self._writeseries.index.isin([self.get_index()])]
 
     def get_subindices(self):
+        if self._selector is None:
+            return []
         return self.get_subseries()[self._selector]
-
-    def get_subindex(self):
-        if self._subindex is None and self._writeseries is not None:
-            log.info(f"No index set, using first index of data.")
-            self.set_subindex(self.get_subindices()[0])
-        return self._subindex
 
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
@@ -204,47 +220,66 @@ class Data:
         self._update_type(self._writeseries, column, value)
         self.get_subseries().at[get]
 
-    def set_current_value(self, value, column):
-        """Set a value to the write data frame"""    
-        # If trying to set a numeric valued column's entry to a string, set the type of column to object.                       
+    def set_value_column(self, value, column):
+        """Set a value to the write data frame"""
+        self.set_column(column)
+        self.set_value(value)
+        
+    def get_value_column(self, column):
+        """Get a value from the data frame(s)"""
+        self.set_column(column)
+        return self.get_value()
+
+    def set_value(self, value):
+        """Set the value of the current cell under focus."""
+        column = self.get_column()
+        index = self.get_index()
+        selector = self.get_selector()
+        subindex = self.get_subindex()
+        # If trying to set a numeric valued column's entry to a string, set the type of column to object.      
         if column in self._data.columns:
             log.warning(f"Warning attempting to write to {column} in self._data.")
 
-        if self.get_selector() is not None:
+        if selector is not None:
             if column not in self._writeseries.columns:
                 self.add_series_column(column)
             self._update_type(self._writeseries, column, value)
             self._writeseries.loc[
-                self._writeseries.index.isin([self.get_index()])
-                & (self._writeseries[self.get_selector()]==self.get_subindex()).values,
+                self._writeseries.index.isin([index])
+                & (self._writeseries[selector]==subindex).values,
                 column
             ] = value
             return
-
         else:
             if column not in self._writedata.columns:
                 self.add_column(column)
 
             self._update_type(self._writedata, column, value)
-            self._writedata.at[self.get_index(), column] = value
+            self._writedata.at[index, column] = value
             return
 
-    def get_current_value(self, column):
-        """Get a value from the data frame(s)"""
 
+    def get_value(self):
+        """Return the value of the current cell under focus."""
         # Ordering here dictates the priority of selection, first series, then writedata, then data.
+        column = self.get_column()
+        index = self.get_index()
+        if index == None or column == None:
+            return None
+        selector = self.get_selector()
+        subindex = self.get_subindex()
         if self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
             return self._writeseries.loc[
-                self._writeseries.index.isin([self.get_index()])
-                & (self._writeseries[self.get_selector()]==self.get_subindex()).values,
-                column
-                ][0]
+                self._writeseries.index.isin([index])
+                & (self._writeseries[selector]==subindex).values,
+                column,
+            ][0]
         elif self._writedata is not None and column in self._writedata.columns:
-            return self._writedata.at[self.get_index(), column]
+            return self._writedata.at[index, column]
         elif self._data is not None and column in self._data.columns:
-            return self._data.at[self.get_index(), column]
+            return self._data.at[index, column]
         else:
-            log.warning(f"\"{column}\" not selected _WRITESERIES or in _WRITEDATA or _DATA returning \"None\"")
+            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
 
     def add_column(self, column):
@@ -271,7 +306,7 @@ class Data:
 
         format = {}
         for key, column in mapping.items():
-            format[key] = self.get_current_value(column)
+            format[key] = self.get_value_column(column)
 
         return format
 
@@ -286,7 +321,7 @@ class Data:
                         return False
 
                 if "equal" in condition:
-                    if not self.get_current_value(condition["equal"]["field"]) == condition["equal"]["value"]:
+                    if not self.get_value_column(condition["equal"]["field"]) == condition["equal"]["value"]:
                         return False
 
         return True

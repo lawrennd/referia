@@ -1,5 +1,7 @@
 from pandas.api.types import is_bool_dtype, is_integer_dtype, is_float_dtype, is_string_dtype
 
+import pandas as pd
+
 """Utility functions for helping, e.g. to create the relevant yaml files quickly."""
 
 def camel_capitalize(text):
@@ -8,6 +10,8 @@ def camel_capitalize(text):
     else:
         return text.capitalize()
     
+def notempty(val):
+    return pd.notna(val) and val!=""
 
 def to_camel_case(text):
     """Remove non alpha-numeric characters and camelize capitalisation"""
