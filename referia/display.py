@@ -117,8 +117,12 @@ def view_to_text(view, data):
 
 class Scorer:
     def __init__(self, index=None, data=None):
-        self._interact_args = {}
-        self._column_names = {}
+        
+        # Store the map between valid python variable names and data column names
+        self._column_names_dict = {}
+        # Store the map between valid python varliable names and their boxed widgets.
+        self._widget_dict = {}
+                
         self._default_field_vals = pd.Series()
         self._default_field_source = pd.Series()
 
@@ -147,7 +151,7 @@ class Scorer:
                 self.extract_scorer(score)
 
     def add_widgets(self, **kwargs):
-        self._interact_args = {**self._interact_args, **kwargs}
+        self._widget_dict = {**self._widget_dict, **kwargs}
         
     @property
     def index(self):
@@ -350,64 +354,76 @@ class Scorer:
                 self.extract_scorer(sub_score)
             return
 
+        # Get the widget type from the global variables list
         global_variables = globals()
-        if "field" in score:
-            name = clean_string(score["field"])
-            self._column_names[name] = score["field"]
+        if score["type"] in global_variables:
+            widget_type = global_variables[score["type"]]
 
-            # Create an instance of the object to extract default value.
-            self._default_field_vals[score["field"]] = global_variables[score["type"]]().get_value()
-            if "value" in score:
-                self._default_field_vals[score["field"]] = score["value"]               
-            if "args" in score and "value" in score["args"]:
-                self._default_field_vals[score["field"]] = score["args"]["value"]
-            if "default" in score:
-                if "source" in score["default"]:
-                    source = score["default"]["source"]
-                    if source in self._data.columns:
-                        self._default_field_source[score["field"]] = source
-                    else:
-                        log.warning(f"Missing column \"{source}\" in data.columns")
-                if "value" in score["default"]:
-                    self._default_field_vals[score["field"]] = score["default"]["value"]
+            if "field" in score:
+                field_name = clean_string(score["field"])
+                self._column_names_dict[field_name] = score["field"]
 
-        else:
-            # Field name is missing, generate a random one.
-            name = "_" + "".join(random.choice(string.ascii_letters) for _ in range(39))
-            self._column_names[name] = name
+                # Create an instance of the object to extract default value.
+                self._default_field_vals[score["field"]] = widget_type().get_value()
+                if "value" in score:
+                    self._default_field_vals[score["field"]] = score["value"]               
+                if "args" in score and "value" in score["args"]:
+                    self._default_field_vals[score["field"]] = score["args"]["value"]
+                if "default" in score:
+                    if "source" in score["default"]:
+                        source = score["default"]["source"]
+                        if source in self._data.columns:
+                            self._default_field_source[score["field"]] = source
+                        else:
+                            log.warning(f"Missing column \"{source}\" in data.columns")
+                    if "value" in score["default"]:
+                        self._default_field_vals[score["field"]] = score["default"]["value"]
 
-        # Deep copy of score so we don't change it globally.
-        process_score = json.loads(json.dumps(score))
-
-        # Deal with HTML descriptions (setting them to blank if not set)
-        if process_score["type"] in ["HTML", "HTMLMath", "Markdown"]:
-            if "args" not in process_score:
-                process_score["args"] = {"description": " "}
             else:
-                if "description" not in process_score:
-                    process_score["args"]["description"] = " "
-            if "display" in process_score:
-                process_score["args"]["value"] = process_score["display"].format(**self._data.mapping())
+                # Field field_name is missing, generate a random one.
+                field_name = "_" + "".join(random.choice(string.ascii_letters) for _ in range(39))
+                self._column_names_dict[field_name] = field_name
 
-        if "source" in process_score:
-            # Set arguments of widget from data fields if source is given
-            if "args" in process_score["source"]:
-                for arg, field in process_score["source"]["args"]:
-                    if arg not in process_score["args"]:
-                        process_score["args"][arg] = self._data.get_current_value(field)
-            if "criterion" in process_score["source"]:
-                criterion = process_score["source"]["criterion"]
-                if "display" in criterion:
-                    process_score["criterion"] = criterion["display"].format(**self._data.mapping())
+            # Deep copy of score so we don't change it globally.
+            process_score = json.loads(json.dumps(score))
 
-        # Set arguments of widget from data fields if appropriate.                
-        if "layout" in process_score:
-            process_score["args"]["layout"] = Layout(**process_score["layout"])
+            # Deal with HTML descriptions (setting them to blank if not set)
+            if process_score["type"] in ["HTML", "HTMLMath", "Markdown"]:
+                if "args" not in process_score:
+                    process_score["args"] = {"description": " "}
+                else:
+                    if "description" not in process_score:
+                        process_score["args"]["description"] = " "
+                if "display" in process_score:
+                    process_score["args"]["value"] = process_score["display"].format(**self._data.mapping())
 
-        if process_score["type"] in global_variables:
-            self.add_widgets(**{name: global_variables[process_score["type"]](**process_score["args"])})
+            if "source" in process_score:
+                # Set arguments of widget from data fields if source is given
+                if "args" in process_score["source"]:
+                    for arg, field in process_score["source"]["args"]:
+                        if arg not in process_score["args"]:
+                            process_score["args"][arg] = self._data.get_current_value(field)
+                # Removed as now redundant? NDL 2022-02-13
+                # if "criterion" in process_score["source"]:
+                #     criterion = process_score["source"]["criterion"]
+                #     if "display" in criterion:
+                #         process_score["criterion"] = criterion["display"].format(**self._data.mapping())
+
+            # Set up arguments for the widget
+            args = process_score["args"]
+            args["field_name"] = field_name
+            args["column_name"] = self._column_names_dict["field_name"]
+            if display in process_score and display not in args::
+                args["display"] = process_score["display"]
+            if "layout" in process_score and "layout" not in args:
+                args["layout"] =  Layout(**process_score["layout"])
+            args["field"] = process_score["field"]
+            args["data"] = self._data
+
+            # Add the widget
+            self.add_widgets(**{field_name: widget_type(**process_score["args"])})
         else:
-            raise Exception("Have not loaded " + process_score["type"] + " interaction type.")
+            raise Exception("Cannot find " + score["type"] + " interaction type.")
         
     def batch_entry_edit(self):
         """Update the data frame with a batch entry (hit save score to save updates)"""
@@ -428,7 +444,7 @@ class Scorer:
             # fields starting with "_" are not transferred
             # (typically HTML widgets for prompting input)
             if key[0] != "_":
-                self._data.set_current_value(value, self._column_names[key])
+                self._data.set_current_value(value, self._column_names_dict[key])
 
         if "timestamp_field" in config:
             timestamp_field = config["timestamp_field"]
@@ -462,11 +478,12 @@ class Scorer:
 
     def widgets(self):
         """Return the widgets associated with the display"""
-        return self._interact_args
+        return self._widget_dict
 
     def populate_widgets(self):
         """Update the widgets with defaults or values from the data"""
         for key, widget in self.widgets().items():
+            widget.refresh()
             if key == "_viewer_label":
                 widget.set_value(viewer_to_text("viewer", self._data))
                 continue
@@ -480,24 +497,24 @@ class Scorer:
                     widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
                 continue
             
-            if self._column_names[key][0] != "_": # Ignore columns starting with _
-                if self._column_names[key] not in self._default_field_vals:
-                    self._default_field_vals[self._column_names[key]] = None
-                widget.set_value(self._default_field_vals[self._column_names[key]])
+            if self._column_names_dict[key][0] != "_": # Ignore columns starting with _
+                if self._column_names_dict[key] not in self._default_field_vals:
+                    self._default_field_vals[self._column_names_dict[key]] = None
+                widget.set_value(self._default_field_vals[self._column_names_dict[key]])
 
                 # Take a default value from default source specified in _referia.yml
-                if self._column_names[key] in self._default_field_source:
-                    dval = self._data.get_current_value(self._default_field_source[self._column_names[key]])
+                if self._column_names_dict[key] in self._default_field_source:
+                    dval = self._data.get_current_value(self._default_field_source[self._column_names_dict[key]])
                     if assess.notempty(dval):
                         widget.set_value(val)
 
                 # Take value from the current value in _data
-                if self._column_names[key] in self._data.columns:
-                    dval = self._data.get_current_value(self._column_names[key])
+                if self._column_names_dict[key] in self._data.columns:
+                    dval = self._data.get_current_value(self._column_names_dict[key])
                     if assess.notempty(dval):
                         widget.set_value(dval)
                 else:
-                    self._data.add_column(self._column_names[key])
+                    self._data.add_column(self._column_names_dict[key])
 
 
 

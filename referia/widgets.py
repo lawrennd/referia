@@ -132,10 +132,18 @@ class MyWidget():
         self._ipywidget = function(**args)
         self._ipywidget.observe(self.on_value_change, names='value')
         self._conversion = conversion
+        self._column_name = column_name
         
     def on_value_change(self, change):
         self.set_value(change.new)
+        self._data.set_current_value(self._column_name, self.get_value())
         
+    def refresh(self):
+        if self._display is not None:
+            self.set_value(self._display.format(**self._data.mapping()))
+        else:
+            self.set_value(self._data.get_current_value(self._column_name)            
+            
     def get_value(self):
         return self._ipywidget.value
     
