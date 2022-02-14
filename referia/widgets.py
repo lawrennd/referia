@@ -217,6 +217,27 @@ class MyWidget():
     def widget(self):
         return self._ipywidget
 
+# class FullSelector(MyWidgets):
+#     def __init__(self):
+#         self._select_index=ipyw.Dropdown(
+#             options=self._parent.index,
+#             value=self._parent.get_index(),
+#         )
+#         if self._parent._select_selector:
+#             self._select_selector=ipyw.Dropdown(
+#                 options=self._parent.get_selectors(),
+#                 value=self._parent.get_selector(),
+#             )
+#         else:
+#             self._select_selector = None
+            
+#         if self._parent._select_subindex:
+#             self._select_subindex=ipyw.Dropdown(
+#                 options=self._parent.get_subindices(),
+#                 value=self._parent.get_subindex(),
+#             )
+#         else:
+#             self._select_subindex = None
 
 def gwf_(name, function, conversion=None, default_args={}, docstr=None):
     """This function wraps the widget function and calls it with any additional default arguments as specified."""
