@@ -14,6 +14,7 @@ from .config import *
 from .util import notempty
 from .log import Logger
 from . import display
+from . import system
 
 def markdown2html(text):
     return markdown.markdown(text)
@@ -128,37 +129,33 @@ list_widgets = [
 ]
 
 
-
-class MyWidget():
-    def __init__(self, function, conversion, **args):
-        if conversion is not None and "value" in args:
-            args["value"] = conversion(args["value"])
-        self._ipywidget_function = function
+class ReferiaWidget():
+    def __init__(self, **args):
+        self._conversion = None
+        self._parent = None
+        self._ipywidget_function = ipyw.Textarea
+        self._display = None
+        self._column_name = None
+        self._field_name = None
+        self.private = False
+        if "conversion" in args:
+            self._conversion = args["conversion"]
+        if self._conversion is not None and "value" in args:
+            args["value"] = self._conversion(args["value"])
+        if "function" in args:
+            self._ipywidget_function = args["function"]
         if "parent" in args:
             self._parent = args["parent"]
-        else:
-            self._parent = None
         if "display" in args:
             self._display = args["display"]
-        else:
-            self._display = None
-
-        self._conversion = conversion
         if "column_name" in args:
             self._column_name = args["column_name"]
-        else:
-            self._column_name = None
-            
         if "field_name" in args:
             self._field_name = args["field_name"]
-        else:
-            self._field_name = None
             
         # Is this a private field (one that doesn't update the parent data)
         if self._field_name is not None and self._field_name[0] == "_": 
             self.private = True
-        else:
-            self.private = False
             
         if self.private and "description" not in args: 
             args["descripton"] = " "
@@ -167,37 +164,12 @@ class MyWidget():
         self._ipywidget.observe(self.on_value_change, names='value')
 
 
-    @property
-    def private(self):
-        return self._private
-
-    @private.setter
-    def private(self, value):
-        #if not is_bool_dtype(value):
-        #    raise ValueError("Private must be set as bool (True/False)")
-        self._private = value
-        
-    def on_value_change(self, change):
-        self.set_value(change.new)
-        if not self.private and self._parent is not None:
-            self._parent._data.set_column(self.get_column())
-            self._parent._data.set_value(self.get_value())
+    def on_value_change(self, value):
+        pass
 
     def null(self, void):
         pass
-    
-    def refresh(self):
-        self._ipywidget.observe(self.null, names='value')
-        if self._display is not None:
-            self.set_value(self._display.format(**self._parent._data.mapping()))
-        else:
-            column = self.get_column()
-            if not self.private and column is not None and self._parent is not None:
-                self._parent._data.set_column(column)
-                self.set_value(self._parent._data.get_value())
 
-        self._ipywidget.observe(self.on_value_change, names="value")
-            
     def get_value(self):
         return self._ipywidget.value
     
@@ -216,13 +188,78 @@ class MyWidget():
     @property
     def widget(self):
         return self._ipywidget
+    
+    @property
+    def private(self):
+        return self._private
 
-# class FullSelector(MyWidgets):
-#     def __init__(self):
-#         self._select_index=ipyw.Dropdown(
-#             options=self._parent.index,
-#             value=self._parent.get_index(),
-#         )
+    @private.setter
+    def private(self, value):
+        #if not is_bool_dtype(value):
+        #    raise ValueError("Private must be set as bool (True/False)")
+        self._private = value
+    
+class FieldWidget(ReferiaWidget):
+    """Widget for editing field values in parent data."""
+    def __init__(self, function=None, conversion=None, **args):
+        args["function"] = function
+        args["conversion"] = conversion
+        super().__init__(**args)
+        
+    def on_value_change(self, change):
+        self.set_value(change.new)
+        if not self.private and self._parent is not None:
+            self._parent._data.set_column(self.get_column())
+            self._parent._data.set_value(self.get_value())
+
+    def refresh(self):
+        self._ipywidget.observe(self.null, names='value')
+        if self._display is not None:
+            self.set_value(self._display.format(**self._parent._data.mapping()))
+        else:
+            column = self.get_column()
+            if not self.private and column is not None and self._parent is not None:
+                self._parent._data.set_column(column)
+                self.set_value(self._parent._data.get_value())
+
+        self._ipywidget.observe(self.on_value_change, names="value")
+            
+
+class IndexSelector(ReferiaWidget):
+    def __init__(self, parent):
+        args = {
+            "options": parent.index,
+            "value": parent.get_index(),
+            "parent" : parent,
+            "function" : ipyw.Dropdown,
+        }
+        super().__init__(**args)
+
+    def on_value_change(self, change):
+        self.set_value(change.new)
+        if not self.private and self._parent is not None:
+            self._parent._data.set_index(self.get_value())
+            system.view_series(self._parent._data)
+
+    def refresh(self):
+        pass
+    
+class FullSelector(ReferiaWidget):
+    def __init__(self):
+        super().__init__()
+#        select=Dropdown(
+#            options=self.get_subindices(),
+#            value=self.get_subindex(),
+#        )
+#        select=Dropdown(
+#            options=self.get_selectors(),
+#            value=self.get_selector(),
+#        )
+#        function = ipyw.Dropdown
+#         args = {
+#             "options": self._parent.index,
+#             "value": self._parent.get_index(),
+#         }
 #         if self._parent._select_selector:
 #             self._select_selector=ipyw.Dropdown(
 #                 options=self._parent.get_selectors(),
@@ -244,7 +281,7 @@ def gwf_(name, function, conversion=None, default_args={}, docstr=None):
     def widget_function(**args):
         all_args = default_args.copy()
         all_args.update(args)
-        return MyWidget(
+        return FieldWidget(
             function=function,
             conversion=conversion,
             **all_args,

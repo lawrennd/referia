@@ -22,7 +22,7 @@ import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, FullSelector, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
 from . import access
 from . import assess
 from . import system
@@ -140,7 +140,7 @@ class Scorer:
                         
         # Process the different scorers in from the _referia.yml file
         if "scored" in config:
-            _progress_label = Label(field_name="_progress_label")
+            _progress_label = Markdown(description=" ", field_name="_progress_label")
             self.add_widgets(_progress_label=_progress_label)
 
         if "viewer" in config:
@@ -185,27 +185,18 @@ class Scorer:
         self.populate_widgets()
 
     def select_index(self):
-        select=Dropdown(
-            options=self.index,
-            value=self.get_index(),
-        )
+        select=IndexSelector(parent=self)
         interact(self.set_index, value=select)
 
         
     def select_subindex(self):
         """Select a subindex from the data"""
-        select=Dropdown(
-            options=self.get_subindices(),
-            value=self.get_subindex(),
-        )
+        select=FullSelector(parent=self)
         interact(self.set_subindex, value=select)
 
     def select_selector(self):
         """Select a selector from the data"""
-        select=Dropdown(
-            options=self.get_selectors(),
-            value=self.get_selector(),
-        )
+        select=FullSelector(parent=self)
         interact(self.set_selector, value=select)
 
     def view_entity(self):
