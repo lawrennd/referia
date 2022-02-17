@@ -18,8 +18,6 @@ log = Logger(
 )
 
 
-def notempty(val):
-    return pd.notna(val) and val!=""
 
 def empty(val):
     return pd.isna(val) or val==""
@@ -130,24 +128,25 @@ class Data:
     def set_index(self, index):
         """Index setter"""
         if self._data is not None and index not in self._data.index:
-            raise ValueError("Invalid index")
+            self.add_row(index=index)
+            self.set_index(index)
         else:
             self._index = index
             self._subindex = None
             log.info(f"Index {index} selected.")
 
-    def set_subindex(self, index):
+    def set_subindex(self, subindex):
         """Subindex setter"""
-        if index is None:
+        if subindex is None:
             self._subindex = None
             log.info(f"Subindex set to None.")
             return
 
-        if self._writeseries is not None and index not in self._writeseries[self.get_selector()].values:
-            raise ValueError("Invalid subindex.")
+        if self._writeseries is not None and subindex not in self.get_subindices():
+            self.add_row(subindex=subindex)
         else:
-            self._subindex=index
-            log.info(f"Subindex {index} selected.")
+            self._subindex=subindex
+            log.info(f"Subindex {subindex} selected.")
 
 
     def get_index(self):
@@ -188,7 +187,8 @@ class Data:
             return
 
         if column not in self.get_selectors():
-            raise ValueError("Invalid selector column.")
+            self.add_column(column)
+            self.set_selector(column)
         else:
             self._selector = column
             if self.get_subindex() not in self._writeseries[column]:
@@ -289,7 +289,34 @@ class Data:
         else:
             log.warning(f"\"{column}\" requested to be added to write data but already exists.")
 
+    def add_row(self, index=None, subindex=None):
+        """Add a row with a given index (and optionally subindex) to the data structure."""
+        def append_row(df, index, subindex=None, selector=None):
+            """Add an empty row with a given index to a data frame."""
+            row = pd.Series(index=df.columns)
+            row.name = index
+            if selector is not None and subindex is not None:
+                row[selector] = subindex
+            return df.append(row)            
+        if index is None:
+            index = self.get_index()
+        if subindex is None and self._writeseries is not None:
+            subindex = self.get_subindex()
+
+        selector = self.get_selector()
+        if self._data is not None and index not in self._data.index:
+            self._data = append_row(self._data, index):
+            log.info(f"\"{index}\" added as row in _data.")
+        if self._writedata is not None and index not in self._writedata.index:
+            log.info(f"\"{index}\" added as row in _writedata.")
+            self._writedata = append_row(self._writedata, index)
+        if self._writeseries is not None and subindex not in self.get_subindices():
+            log.info(f"\"{index}\" with selector \"{subindex}\"added as row in _writedata.")
+            self._writeseries = append_row(self._writeseries, index, subindex, selector)
+            
+        
     def add_series_column(self, column):
+        """Add a column to the data series"""
         if column not in self._writeseries.columns:
             log.info(f"\"{column}\" not in series columns ... adding.")
             self._writeseries[column] = None

@@ -243,27 +243,34 @@ class IndexSelector(ReferiaWidget):
 
     def refresh(self):
         pass
+
+class ReferiaMultiWidget(ReferiaWidget):
+    """Class for forming a collection of widgets that interact."""
+    def __init__(self, **args):
+        pass
     
-class FullSelector(ReferiaWidget):
+class FullSelector(ReferiaMultiWidget):
     def __init__(self):
-        args = {
+        args = {}
+        args["subindex_select"] = {
             "options": parent.subindex,
             "value": parent.get_subindex(),
-            "parent" : parent,
             "function" : ipyw.Dropdown,
         }
-        super().__init__(**args)
+        super().__init__(**args["subindex_select"])
 
-        index_args = {
+        args{"subindex_select"} = {
             "options": parent.index,
             "value": parent.get_index(),
-            "parent" : parent,
+            "function": ipyw.Dropdown,
+        }
+        args[2] =  {
+            "options": parent.columns,
+            "value": parent.get_column(),
             "function": ipyw.Dropdown,
         }
         self._ipywidget_index_selector_function = index_args["function"]
         self._ipywidget_index_selector = self._ipywidget_index_selector_function(**index_args)
-
-    
 #        select=Dropdown(
 #            options=self.get_subindices(),
 #            value=self.get_subindex(),
