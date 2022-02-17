@@ -246,7 +246,24 @@ class IndexSelector(ReferiaWidget):
     
 class FullSelector(ReferiaWidget):
     def __init__(self):
-        super().__init__()
+        args = {
+            "options": parent.subindex,
+            "value": parent.get_subindex(),
+            "parent" : parent,
+            "function" : ipyw.Dropdown,
+        }
+        super().__init__(**args)
+
+        index_args = {
+            "options": parent.index,
+            "value": parent.get_index(),
+            "parent" : parent,
+            "function": ipyw.Dropdown,
+        }
+        self._ipywidget_index_selector_function = index_args["function"]
+        self._ipywidget_index_selector = self._ipywidget_index_selector_function(**index_args)
+
+    
 #        select=Dropdown(
 #            options=self.get_subindices(),
 #            value=self.get_subindex(),
