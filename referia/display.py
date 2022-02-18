@@ -153,6 +153,10 @@ class Scorer:
 
     def add_widgets(self, **kwargs):
         self._widget_dict = {**self._widget_dict, **kwargs}
+
+
+
+
         
     @property
     def index(self):
@@ -174,6 +178,9 @@ class Scorer:
     def set_selector(self, value):
         self._data.set_selector(value)
 
+    def get_indices(self):
+        return self._data.index
+
     def get_subindices(self):
         return self._data.get_subindices()
     
@@ -188,16 +195,17 @@ class Scorer:
         select=IndexSelector(parent=self)
         interact(self.set_index, value=select)
 
+    def select_selector(self):
+        """Select a selector from the data"""
+        select=IndexSubIndexSelectorSelect(parent=self)
+        interact(self.set_selector, value=select)
+
         
     def select_subindex(self):
         """Select a subindex from the data"""
-        select=FullSelector(parent=self)
+        select=IndexSubIndexSelectorSelect(parent=self)
         interact(self.set_subindex, value=select)
 
-    def select_selector(self):
-        """Select a selector from the data"""
-        select=FullSelector(parent=self)
-        interact(self.set_selector, value=select)
 
     def view_entity(self):
         self.populate_widgets()
@@ -205,11 +213,12 @@ class Scorer:
 
     def run(self):
         """Run the scorer to edit the data frame."""
-        self.select_index()
         if self._select_selector:
             self.select_selector()
-        if self._select_subindex:
+        elif self._select_subindex:
             self.select_subindex()
+        else:
+            self.select_index()
         system.view_series(self._data)
         self.batch_entry_edit()
 
