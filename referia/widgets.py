@@ -251,54 +251,66 @@ class ReferiaMultiWidget(ReferiaWidget):
     
 class FullSelector(ReferiaMultiWidget):
     def __init__(self):
+
+        # Define the widgets to create
         args = {}
         args["subindex_select"] = {
-            "options": parent.subindex,
-            "value": parent.get_subindex(),
+            "options": self._parent.subindex,
+            "value": self._parent.get_subindex(),
             "function" : ipyw.Dropdown,
+            "result" : self._parent.set_subindex,
         }
         super().__init__(**args["subindex_select"])
 
-        args{"subindex_select"} = {
-            "options": parent.index,
-            "value": parent.get_index(),
+        args["index_select"] = {
+            "options": self._parent.index,
+            "value": self._parent.get_index(),
             "function": ipyw.Dropdown,
+            "result" : self._parent.set_index,
         }
-        args[2] =  {
-            "options": parent.columns,
-            "value": parent.get_column(),
+        args["selector_select"] =  {
+            "options": self._parent.columns,
+            "value": self._parent.get_column(),
             "function": ipyw.Dropdown,
+            "result", self._parent.set_selector,
         }
-        self._ipywidget_index_selector_function = index_args["function"]
-        self._ipywidget_index_selector = self._ipywidget_index_selector_function(**index_args)
-#        select=Dropdown(
-#            options=self.get_subindices(),
-#            value=self.get_subindex(),
-#        )
-#        select=Dropdown(
-#            options=self.get_selectors(),
-#            value=self.get_selector(),
-#        )
-#        function = ipyw.Dropdown
-#         args = {
-#             "options": self._parent.index,
-#             "value": self._parent.get_index(),
-#         }
-#         if self._parent._select_selector:
-#             self._select_selector=ipyw.Dropdown(
-#                 options=self._parent.get_selectors(),
-#                 value=self._parent.get_selector(),
-#             )
-#         else:
-#             self._select_selector = None
+        self._widget_attributes = {}
+        for key, item in args.items():
+            attr_name = "_ipywidget_" + key
+            attr_function_name = "_ipywidget_" + key + "_function"
+            attr_update_name = "_ipywidget_" + key + "_update"
+            attr_result_name = "_ipywidget_" + key + "_result"
+            setattr(self, attr_function_name, item["function"])
+            setattr(self, attr_function_name, item["result"])
+            del item["function"]
+            del item["result"]
+            setattr(self, attr_name, getattr(self, attr_function_name)(**item))
+            self._widget_list.append(attr_name)
+            # Create a function to use when other widgets values change.
+
+            setattr(self, attr_update_name, gwu_(self, item, attr_name))
+)
+            self._widget_attributes[key] = {
+                "name": attr_name,
+                "function": attr_function_name,
+                "update": attr_update_name,
+                "result": attr_result_name,
+            }
+
+        for key, item in args.items():
+            getattr(self, self._ipywidget.observe(self.on_value_change, names="value"))
             
-#         if self._parent._select_subindex:
-#             self._select_subindex=ipyw.Dropdown(
-#                 options=self._parent.get_subindices(),
-#                 value=self._parent.get_subindex(),
-#             )
-#         else:
-#             self._select_subindex = None
+                    
+def gwu_(obj, item, name, docstr=None):
+    """Generator function for making update calls for a given widget."""
+    def on_other_widgets_change():
+        if "value" in item:
+            getattr(obj, name).value = item["value"]
+        if "options" in item:
+            getattr(obj, name).options = item["options"]
+        on_other_widgets_change.__name__ = name
+        on_other_widgets_change.__docstr__ = docstr
+    return on_other_widgets_change
 
 def gwf_(name, function, conversion=None, default_args={}, docstr=None):
     """This function wraps the widget function and calls it with any additional default arguments as specified."""
