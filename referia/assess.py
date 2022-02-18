@@ -197,8 +197,8 @@ class Data:
 
     def get_subindex(self):
         if self._subindex is None and self._writeseries is not None and self._selector is not None:
-            log.info(f"No subindex set, using first entry of Data._writeseries.")
-            self.set_subindex(self.get_subseries().at[0, self.get_selector()])
+            log.info(f"No subindex set, using last entry of Data._writeseries.")
+            self.set_subindex(self.get_subindices()[-1])
         return self._subindex
 
     def get_subseries(self):
@@ -305,7 +305,7 @@ class Data:
 
         selector = self.get_selector()
         if self._data is not None and index not in self._data.index:
-            self._data = append_row(self._data, index):
+            self._data = append_row(self._data, index)
             log.info(f"\"{index}\" added as row in _data.")
         if self._writedata is not None and index not in self._writedata.index:
             log.info(f"\"{index}\" added as row in _writedata.")

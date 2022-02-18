@@ -22,7 +22,7 @@ import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, FullSelector, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
 from . import access
 from . import assess
 from . import system
@@ -193,18 +193,18 @@ class Scorer:
 
     def select_index(self):
         select=IndexSelector(parent=self)
-        interact(self.set_index, value=select)
+        select.display()
 
     def select_selector(self):
         """Select a selector from the data"""
         select=IndexSubIndexSelectorSelect(parent=self)
-        interact(self.set_selector, value=select)
+        select.display()
 
         
     def select_subindex(self):
         """Select a subindex from the data"""
         select=IndexSubIndexSelectorSelect(parent=self)
-        interact(self.set_subindex, value=select)
+        select.display()
 
 
     def view_entity(self):

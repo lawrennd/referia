@@ -2,6 +2,7 @@ import os
 import sys
 import glob
 
+import IPython
 import ipywidgets as ipyw
 import markdown
 
@@ -198,7 +199,10 @@ class ReferiaWidget():
         #if not is_bool_dtype(value):
         #    raise ValueError("Private must be set as bool (True/False)")
         self._private = value
-    
+
+    def display(self):
+        IPython.display.display(self._ipywidget)
+
 class FieldWidget(ReferiaWidget):
     """Widget for editing field values in parent data."""
     def __init__(self, function=None, conversion=None, **args):
@@ -265,64 +269,71 @@ class FullSelector(ReferiaMultiWidget):
                 }
             del item["function"]
             del item["result"]
-            del item["conversion"]
-            self._ipywidgets[key]["set_value"] = gsv_(key, item)
+            self._ipywidgets[key]["set_value"] = gsv_(key, item, self)
             
-            self._ipywidgets[key]["widget"] = self.ipywidgets[key]["function"](**item)
+            self._ipywidgets[key]["widget"] = self._ipywidgets[key]["function"](**item)
             self._ipywidgets[key]["update"] = gwu_(key, item)
 
         for key, item in self._ipywidgets.items():
-            self._ipywidgets[key]["on_change"] = gwc_(key, name="on_" + key + "_change")            
-            self._ipywidgets[key]["widget"].observe(self._ipywidgets[key]["on_change"], names="value"))
+            self._ipywidgets[key]["on_change"] = gwc_(key, item, self)            
+            self._ipywidgets[key]["widget"].observe(self._ipywidgets[key]["on_change"], names="value")
 
+
+    def display(self):
+        objects = []
+        for key, item in self._ipywidgets.items():
+            objects.append(item["widget"])
+        IPython.display.display(ipyw.VBox(objects))
 
 class IndexSubIndexSelectorSelect(FullSelector):
     def __init__(self, parent):
         # Define the widgets to create
         args = {}
         args["subindex_select"] = {
-            "options_function": self._parent.get_subindices,
-            "value_function": self._parent.get_subindex,
+            "options_function": parent.get_subindices,
+            "value_function": parent.get_subindex,
             "function" : ipyw.Dropdown,
-            "result" : self._parent.set_subindex,
+            "result" : parent.set_subindex,
             "conversion": None,
         }
         args["index_select"] = {
-            "options_function": self._parent.get_indices,
-            "value_function": self._parent.get_index,
+            "options_function": parent.get_indices,
+            "value_function": parent.get_index,
             "function": ipyw.Dropdown,
-            "result" : self._parent.set_index,
+            "result" : parent.set_index,
             "conversion": None,
         }
         args["selector_select"] =  {
-            "options_function": self._parent.get_selectors,
-            "value_function": self._parent.get_selector,
+            "options_function": parent.get_selectors,
+            "value_function": parent.get_selector,
             "function": ipyw.Dropdown,
-            "result", self._parent.set_selector,
+            "result": parent.set_selector,
             "conversion": None,
         }
         super().__init__(parent, args)
+
             
-def gsv_(key, item, docstr=None):
+def gsv_(key, item, obj, docstr=None):
     """Generator function for a set value function for the multiwidget class"""
     def set_value(value):
         if notempty(value):
-            if item["conversion"] is None:
-                item["widget"].value = value
+            if obj._ipywidgets[key]["conversion"] is None:
+                obj._ipywidgets[key]["widget"].value = value
             else:
-                item["widget"].value = item["conversion"](value)
+                obj._ipywidgets[key]["widget"].value = obj._ipywidgets[key]["conversion"](value)
         else:
-            item["widget"].value = self._ipywidgets[key]["function"]().value
+            obj._ipywidgets[key]["widget"].value = self._ipywidgets[key]["function"]().value
         # Perform callback to set the result.
-        item["result"](item["widget"].value)
+        obj._ipywidgets[key]["result"](obj._ipywidgets[key]["widget"].value)
     set_value.__docstr__ = docstr
     return set_value
 
-def gwc_(key, name, docstr=None):
+def gwc_(key, item, obj, docstr=None):
     """Generator functions for propagating changes to other widgets on this change."""
+    name = "on_" + key + "_change"
     def on_change(change):
-        item["set_value"](change.new)
-        for other_key, item in self._ipywidgets.items():
+        obj._ipywidgets[key]["set_value"](change.new)
+        for other_key, item in obj._ipywidgets.items():
             if other_key == key:
                 pass
             else:
