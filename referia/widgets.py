@@ -272,7 +272,7 @@ class FullSelector(ReferiaMultiWidget):
             self._ipywidgets[key]["set_value"] = gsv_(key, item, self)
             
             self._ipywidgets[key]["widget"] = self._ipywidgets[key]["function"](**item)
-            self._ipywidgets[key]["update"] = gwu_(key, item)
+            self._ipywidgets[key]["update"] = gwu_(key, item, self)
 
         for key, item in self._ipywidgets.items():
             self._ipywidgets[key]["on_change"] = gwc_(key, item, self)            
@@ -342,13 +342,13 @@ def gwc_(key, item, obj, docstr=None):
     on_change.__docstr__ = docstr
     return on_change
                     
-def gwu_(key, item, docstr=None):
+def gwu_(key, item, obj, docstr=None):
     """Generator function for making update calls for a given widget."""
     def on_other_widgets_change():
-        if "value_function" in item:
-            item["widget"].value = item["value_function"]()
-        if "option_function" in item:
-            item["widget"].options = item["options_funtion"]()
+        if "value_function" in obj._ipywidgets[key]:
+            obj._ipywidgets[key]["widget"].value = obj._ipywidgets[key]["value_function"]()
+        if "option_function" in obj._ipywidgets[key]:
+            obj._ipywidgets[key]["widget"].options = obj._ipywidgets[key]["options_funtion"]()
         on_other_widgets_change.__name__ = key
         on_other_widgets_change.__docstr__ = docstr
     return on_other_widgets_change
