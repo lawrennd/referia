@@ -177,9 +177,8 @@ class Scorer:
         """Update a value in one of the output flows."""
         old_value = self.get_value()
         column = self.get_column()
-        log.info(f"Column is \"{column}\".")
-        log.info(f"Old value is \"{old_value}\" and new value is \"{value}\".")
         if value != old_value:
+            log.debug(f"Column is \"{column}\". Old value is \"{old_value}\" and new value is \"{value}\".")
             self._data.set_value(value)
             if trigger_update:
                 self.value_updated()
@@ -188,7 +187,6 @@ class Scorer:
         return self._data.get_column()
     
     def set_column(self, column):
-        log.info(f"Switching to column \"{column}\".")
         self._data.set_column(column)
         
     def get_selectors(self):
