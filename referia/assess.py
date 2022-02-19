@@ -225,7 +225,7 @@ class Data:
     def get_subindices(self):
         if self._selector is None:
             return []
-        return self.get_subseries()[self._selector]
+        return self.get_subseries()[self._selector].values
 
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
