@@ -208,12 +208,14 @@ class Data:
         return self._subindex
 
     def reset_subindex(self):
-        log.info(f"No subindex set, using last entry of Data._writeseries.")
         subindices = self.get_subindices()
         if len(subindices)>0:
+            log.info(f"No subindex set, using last entry of Data._writeseries.")
             self.set_subindex(subindices[-1])
         else:
-            self.add_row(index=self.get_index(), subindex=self.generate_subindex())
+            subindex = self.generate_subindex()
+            log.info(f"No subindex available, using generated subindex \"{subindex}\" to add row to Data._writeseries.")
+            self.add_row(index=self.get_index(), subindex=subindex)
 
     def generate_subindex(self):
         return pd.to_datetime("today").strftime('%Y-%m-%d')
@@ -316,6 +318,9 @@ class Data:
             row.name = index
             if selector is not None and subindex is not None:
                 row[selector] = subindex
+            # Handle the fact that the index is stored as a column also
+            if df.index.name in row:
+                row[df.index.name] = index
             return df.append(row)            
         if index is None:
             index = self.get_index()
@@ -325,14 +330,17 @@ class Data:
         selector = self.get_selector()
         if self._data is not None and index not in self._data.index:
             self._data = append_row(self._data, index)
+            self._data.set_index(index)
             log.info(f"\"{index}\" added as row in _data.")
         if self._writedata is not None and index not in self._writedata.index:
             log.info(f"\"{index}\" added as row in _writedata.")
             self._writedata = append_row(self._writedata, index)
+            self._data.set_index(index)
         if self._writeseries is not None and subindex not in self.get_subindices():
             log.info(f"\"{index}\" with selector \"{subindex}\"added as row in _writedata.")
             self._writeseries = append_row(self._writeseries, index, subindex, selector)
-            
+            self._data.set_index(index)
+            self._data.set_subindex(subindex)
         
     def add_series_column(self, column):
         """Add a column to the data series"""

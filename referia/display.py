@@ -445,7 +445,7 @@ class Scorer:
             widget.display()
             
     def load_flows(self):
-        self._data.load_data()
+        self._data.load_flows()
 
     def save_flows(self):
         access.write_scores(self._data._writedata)

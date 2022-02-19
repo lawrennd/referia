@@ -155,6 +155,9 @@ class ReferiaWidget():
     def on_click(self, b):
         pass
 
+    def refresh(self):
+        pass
+
     @property
     def widget(self):
         return self._ipywidget
@@ -212,6 +215,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
     def on_value_change(self, value):
         pass
 
+    
     def get_value(self):
         return self._ipywidget.value
     
