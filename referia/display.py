@@ -176,11 +176,19 @@ class Scorer:
     def set_value(self, value, trigger_update=True):
         """Update a value in one of the output flows."""
         old_value = self.get_value()
-        if value != old_value and trigger_update:
+        column = self.get_column()
+        log.info(f"Column is \"{column}\".")
+        log.info(f"Old value is \"{old_value}\" and new value is \"{value}\".")
+        if value != old_value:
             self._data.set_value(value)
-            self.value_updated()
+            if trigger_update:
+                self.value_updated()
 
+    def get_column(self):
+        return self._data.get_column()
+    
     def set_column(self, column):
+        log.info(f"Switching to column \"{column}\".")
         self._data.set_column(column)
         
     def get_selectors(self):
@@ -477,8 +485,9 @@ class Scorer:
         if "combinator" in config:
             for view in config["combinator"]:
                 if "field" in view:
+                    combinator = view_to_text(view, self._data)
                     self.set_column(view["field"])
-                    self.set_value(view_to_text(view, self._data),
+                    self.set_value(combinator,
                                    trigger_update=False)
                 else:
                     log.error("Missing key 'field' in combinator view.")

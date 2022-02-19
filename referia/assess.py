@@ -288,11 +288,16 @@ class Data:
         subindex = self.get_subindex()
         if self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
             if subindex is not None:
-                return self._writeseries.loc[
-                    self._writeseries.index.isin([index])
-                    & (self._writeseries[selector]==subindex).values,
-                    column,
-                ][0]
+                indexer = (self._writeseries.index.isin([index])
+                    & (self._writeseries[selector]==subindex).values)
+                if indexer.sum()>0:
+                    return self._writeseries.loc[
+                        self._writeseries.index.isin([index])
+                        & (self._writeseries[selector]==subindex).values,
+                        column,
+                    ][0]
+                else:
+                    log.warning(f"No data available with this subindex and index , returning None.")
             else:
                 log.warning(f"No subindex selected, returning None.")
         elif self._writedata is not None and column in self._writedata.columns:

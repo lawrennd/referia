@@ -293,11 +293,11 @@ class FullSelector(ReferiaMultiWidget):
         for key, item in args.items():
             self._ipywidgets[key] = {
                 "function": item["function"],
-                "result": item["result"],
+                "result_function": item["result_function"],
                 "conversion": item["conversion"],
                 }
             del item["function"]
-            del item["result"]
+            del item["result_function"]
             self._ipywidgets[key]["set_value"] = gsv_(key, item, self)
             
             self._ipywidgets[key]["widget"] = self._ipywidgets[key]["function"](**item)
