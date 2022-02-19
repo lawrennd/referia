@@ -28,7 +28,7 @@ log = Logger(
 
 #other = [jslink, jsdlink, MyCheckbox, MyFileChooser]
 
-list_widgets = [
+list_stateful_widgets = [
     {
         "name" : "IntSlider",
         "function" : ipyw.IntSlider,
@@ -129,63 +129,32 @@ list_widgets = [
     },
 ]
 
-
 class ReferiaWidget():
     def __init__(self, **args):
-        self._conversion = None
         self._parent = None
-        self._ipywidget_function = ipyw.Textarea
-        self._display = None
-        self._column_name = None
-        self._field_name = None
-        self.private = False
-        if "conversion" in args:
-            self._conversion = args["conversion"]
-        if self._conversion is not None and "value" in args:
-            args["value"] = self._conversion(args["value"])
+        self.private = True
         if "function" in args:
             self._ipywidget_function = args["function"]
+        else:
+            self._ipywidget_function = self._default_widget()
+
         if "parent" in args:
             self._parent = args["parent"]
-        if "display" in args:
-            self._display = args["display"]
-        if "column_name" in args:
-            self._column_name = args["column_name"]
-        if "field_name" in args:
-            self._field_name = args["field_name"]
-            
-        # Is this a private field (one that doesn't update the parent data)
-        if self._field_name is not None and self._field_name[0] == "_": 
-            self.private = True
-            
-        if self.private and "description" not in args: 
-            args["descripton"] = " "
+        self._create_widget(args)
 
+    def _default_widget(self):
+        return ipyw.Button
+
+    def _create_widget(self, args):
         self._ipywidget = self._ipywidget_function(**args)
-        self._ipywidget.observe(self.on_value_change, names='value')
+        self._widget_events()
 
+    def _widget_events(self):
+        self._ipywidget.on_click(self.on_click)
 
-    def on_value_change(self, value):
+    def on_click(self, b):
         pass
 
-    def null(self, void):
-        pass
-
-    def get_value(self):
-        return self._ipywidget.value
-    
-    def set_value(self, value):
-        if notempty(value):
-            if self._conversion is None:
-                self._ipywidget.value = value
-            else:
-                self._ipywidget.value = self._conversion(value)
-        else:
-            self._ipywidget.value = self._ipywidget_function().value
-            
-    def get_column(self):
-        return self._column_name
-                           
     @property
     def widget(self):
         return self._ipywidget
@@ -203,7 +172,63 @@ class ReferiaWidget():
     def display(self):
         IPython.display.display(self._ipywidget)
 
-class FieldWidget(ReferiaWidget):
+    def null(self, void):
+        pass
+
+        
+class ReferiaStatefulWidget(ReferiaWidget):
+    def __init__(self, **args):
+        super().__init__(**args)
+        self._conversion = None
+        self._display = None
+        self._column_name = None
+        self._field_name = None
+        if "conversion" in args:
+            self._conversion = args["conversion"]
+        if self._conversion is not None and "value" in args:
+            args["value"] = self._conversion(args["value"])
+        if "display" in args:
+            self._display = args["display"]
+        if "column_name" in args:
+            self._column_name = args["column_name"]
+        if "field_name" in args:
+            self._field_name = args["field_name"]
+            
+        # Is this a private field (one that doesn't update the parent data)
+        if self._field_name is not None and self._field_name[0] == "_": 
+            self.private = True
+        else:
+            self.private = False
+
+        if self.private and "description" not in args: 
+            args["descripton"] = " "
+
+    def _default_widget(self):
+        return ipyw.Textarea
+
+    def _widget_events(self):
+        self._ipywidget.observe(self.on_value_change, names="value")
+
+    def on_value_change(self, value):
+        pass
+
+    def get_value(self):
+        return self._ipywidget.value
+    
+    def set_value(self, value):
+        if notempty(value):
+            if self._conversion is None:
+                self._ipywidget.value = value
+            else:
+                self._ipywidget.value = self._conversion(value)
+        else:
+            self._ipywidget.value = self._ipywidget_function().value
+            
+    def get_column(self):
+        return self._column_name
+                           
+
+class FieldWidget(ReferiaStatefulWidget):
     """Widget for editing field values in parent data."""
     def __init__(self, function=None, conversion=None, **args):
         args["function"] = function
@@ -213,8 +238,8 @@ class FieldWidget(ReferiaWidget):
     def on_value_change(self, change):
         self.set_value(change.new)
         if not self.private and self._parent is not None:
-            self._parent._data.set_column(self.get_column())
-            self._parent._data.set_value(self.get_value())
+            self._parent.set_column(self.get_column())
+            self._parent.set_value(self.get_value())
 
     def refresh(self):
         self._ipywidget.observe(self.null, names='value')
@@ -223,13 +248,13 @@ class FieldWidget(ReferiaWidget):
         else:
             column = self.get_column()
             if not self.private and column is not None and self._parent is not None:
-                self._parent._data.set_column(column)
-                self.set_value(self._parent._data.get_value())
+                self._parent.set_column(column)
+                self.set_value(self._parent.get_value())
 
         self._ipywidget.observe(self.on_value_change, names="value")
             
 
-class IndexSelector(ReferiaWidget):
+class IndexSelector(ReferiaStatefulWidget):
     def __init__(self, parent):
         args = {
             "options": parent.index,
@@ -242,13 +267,13 @@ class IndexSelector(ReferiaWidget):
     def on_value_change(self, change):
         self.set_value(change.new)
         if not self.private and self._parent is not None:
-            self._parent._data.set_index(self.get_value())
+            self._parent.set_index(self.get_value())
             system.view_series(self._parent._data)
 
     def refresh(self):
         pass
 
-class ReferiaMultiWidget(ReferiaWidget):
+class ReferiaMultiWidget(ReferiaStatefulWidget):
     """Class for forming a collection of widgets that interact."""
     def __init__(self, **args):
         pass
@@ -367,16 +392,15 @@ def gwf_(name, function, conversion=None, default_args={}, docstr=None):
     widget_function.__docstr__ = docstr
     return widget_function
 
-def populate_widgets(list_widgets):
+def populate_widgets(list_stateful_widgets):
     """populate_widgets: Automatically creates widget wrapper objects and adds them to the module."""
     this_module = sys.modules[__name__]
-    for widget in list_widgets:
+    for widget in list_stateful_widgets:
         setattr(
             this_module,
             widget["name"],
             gwf_(**widget),
         )
-
 
 def MyFileChooser(**args):
     """Create a simple Dropdown box to allow file selection from a given path."""
@@ -424,5 +448,22 @@ def interactive(function, **args):
 
 fixed = ipyw.fixed
 
-populate_widgets(list_widgets)
+class SaveButton(ReferiaWidget):
+    def __init__(self, **args):
+        args["description"] = "Save Flows"
+        super().__init__(**args)
+
+    def on_click(self, b):
+        self._parent.save_flows()
+
+class ReloadButton(ReferiaWidget):
+    def __init__(self, **args):
+        args["description"] = "Reload Flows"
+        super().__init__(**args)
+
+    def on_click(self, b):
+        self._parent.load_flows()
+
+    
+populate_widgets(list_stateful_widgets)
 

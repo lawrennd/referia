@@ -46,7 +46,7 @@ class Data:
         self._selector = None
         # The value in the selected entry column entry column value from the series to use
         self._subindex = None
-        self._load_data()
+        self.load_flows()
 
     @property
     def index(self):
@@ -104,8 +104,8 @@ class Data:
         self._writeseries = access.series(self.index)
         self._writeseries = self._finalize_df(self._writeseries, config['series'])
 
-    def _load_data(self):
-        """Load the data specified in the _referia.yml file."""
+    def load_input_flows(self):
+        """Load the input flows specified in the _referia.yml file."""
         self._allocation()
         if "additional" in config:
             log.info("Joining allocation and additional information.")
@@ -120,11 +120,18 @@ class Data:
             field=config["sortby"]["field"]
             log.info(f"Sorting by \"{field}\"")
             self._data.sort_values(by=field, ascending=ascending, inplace=True)
+
+    def load_output_flows(self):
+        """Load the output flows data specified in the _referia.yml file."""
         if "series" in config:
             self._series()
         if "scores" in config:
             self._scores()
 
+    def load_flows(self):
+        self.load_input_flows()
+        self.load_output_flows()
+        
     def set_index(self, index):
         """Index setter"""
         if self._data is not None and index not in self._data.index:
@@ -197,10 +204,19 @@ class Data:
 
     def get_subindex(self):
         if self._subindex is None and self._writeseries is not None and self._selector is not None:
-            log.info(f"No subindex set, using last entry of Data._writeseries.")
-            self.set_subindex(self.get_subindices()[-1])
+            self.reset_subindex()
         return self._subindex
 
+    def reset_subindex(self):
+        log.info(f"No subindex set, using last entry of Data._writeseries.")
+        subindices = self.get_subindices()
+        if len(subindices)>0:
+            self.set_subindex(subindices[-1])
+        else:
+            self.add_row(index=self.get_index(), subindex=self.generate_subindex())
+
+    def generate_subindex(self):
+        return pd.to_datetime("today").strftime('%Y-%m-%d')
     def get_subseries(self):
         return self._writeseries[self._writeseries.index.isin([self.get_index()])]
 
@@ -269,11 +285,14 @@ class Data:
         selector = self.get_selector()
         subindex = self.get_subindex()
         if self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
-            return self._writeseries.loc[
-                self._writeseries.index.isin([index])
-                & (self._writeseries[selector]==subindex).values,
-                column,
-            ][0]
+            if subindex is not None:
+                return self._writeseries.loc[
+                    self._writeseries.index.isin([index])
+                    & (self._writeseries[selector]==subindex).values,
+                    column,
+                ][0]
+            else:
+                log.warning(f"No subindex selected, returning None.")
         elif self._writedata is not None and column in self._writedata.columns:
             return self._writedata.at[index, column]
         elif self._data is not None and column in self._data.columns:

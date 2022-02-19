@@ -22,7 +22,7 @@ import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
 from . import access
 from . import assess
 from . import system
@@ -151,13 +151,14 @@ class Scorer:
             for score in config["scorer"]:
                 self.extract_scorer(score)
 
+        _save_button = SaveButton(parent=self)
+        self.add_widgets(_save_button=_save_button)
+        _reload_button = ReloadButton(parent=self)
+        self.add_widgets(_reload_button=_reload_button)
+
     def add_widgets(self, **kwargs):
         self._widget_dict = {**self._widget_dict, **kwargs}
 
-
-
-
-        
     @property
     def index(self):
         return self._data.index
@@ -169,6 +170,19 @@ class Scorer:
         self._data.set_index(value)
         self.populate_widgets()
 
+    def get_value(self):
+        return self._data.get_value()
+    
+    def set_value(self, value, trigger_update=True):
+        """Update a value in one of the output flows."""
+        old_value = self.get_value()
+        if value != old_value and trigger_update:
+            self._data.set_value(value)
+            self.value_updated()
+
+    def set_column(self, column):
+        self._data.set_column(column)
+        
     def get_selectors(self):
         return self._data.get_selectors()
 
@@ -220,7 +234,7 @@ class Scorer:
         else:
             self.select_index()
         system.view_series(self._data)
-        self.batch_entry_edit()
+        self.display_widgets()
 
 
     def extract_scorer(self, score):
@@ -425,56 +439,49 @@ class Scorer:
         else:
             raise Exception("Cannot find " + score["type"] + " interaction type.")
         
-    def batch_entry_edit(self):
-        """Update the data frame with a batch entry (hit save score to save updates)"""
-        interact_manual(
-            self.update_entry, 
-            **self.widgets()
-        )
+    def display_widgets(self):
+        """Display the field entry widgets"""
+        for key, widget in self.widgets().items():
+            widget.display()
+            
+    def load_flows(self):
+        self._data.load_data()
 
-    
-    def save_score(self):
+    def save_flows(self):
         access.write_scores(self._data._writedata)
         if self._data._writeseries is not None:
             access.write_series(self._data._writeseries)
 
-    def update_entry(self, **kwargs):
-
-        for key, value in kwargs.items():
-            # fields starting with "_" are not transferred
-            # (typically HTML widgets for prompting input)
-            if key[0] != "_":
-                self._data.set_value_column(value, self._column_names_dict[key])
-
+    def value_updated(self):
+        """If a value in a row has been updated, modify other values"""
+        # Need to determine if these should update series or data.
+        # Update timestamp fields.
         if "timestamp_field" in config:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        self._data.set_value_column(
-            pd.to_datetime("today"),
-            timestamp_field
-        )
+        self.set_column(timestamp_field)
+        self.set_value(pd.to_datetime("today"),
+                       trigger_update=False)
         if "created_field" in config:
             created_field = config["created_field"]
         else:
             created_field = "Created"
         if created_field not in self._data._writedata.columns or assess.empty(self._data.get_value_column(created_field)):
-            self._data.set_value_column(
-                pd.to_datetime("today"),
-                created_field
-            )
+            self.set_column(created_field)
+            self.set_value(pd.to_datetime("today"),
+                           trigger_update=False)
+
+        # Combinator is a combined field based on others
         if "combinator" in config:
             for view in config["combinator"]:
                 if "field" in view:
-                    self._data.set_value_column(
-                        view_to_text(view, self._data),
-                        view["field"]
-                    )                    
+                    self.set_column(view["field"])
+                    self.set_value(view_to_text(view, self._data),
+                                   trigger_update=False)
                 else:
                     log.error("Missing key 'field' in combinator view.")
             
-        if self._write_score:
-            self.save_score()
 
     def widgets(self):
         """Return the widgets associated with the display"""
