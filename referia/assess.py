@@ -134,7 +134,7 @@ class Data:
         
     def set_index(self, index):
         """Index setter"""
-        if self._data is not None and index not in self._data.index:
+        if self._data is not None and index not in self.index:
             self.add_row(index=index)
             self.set_index(index)
         else:
@@ -225,7 +225,7 @@ class Data:
     def get_subindices(self):
         if self._selector is None:
             return []
-        return self.get_subseries()[self._selector].values
+        return pd.Index(self.get_subseries()[self._selector].values, name=self._selector)
 
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
@@ -328,19 +328,19 @@ class Data:
             subindex = self.get_subindex()
 
         selector = self.get_selector()
-        if self._data is not None and index not in self._data.index:
+        if self._data is not None and index not in self.index:
             self._data = append_row(self._data, index)
-            self._data.set_index(index)
+            self.set_index(index)
             log.info(f"\"{index}\" added as row in _data.")
         if self._writedata is not None and index not in self._writedata.index:
             log.info(f"\"{index}\" added as row in _writedata.")
             self._writedata = append_row(self._writedata, index)
-            self._data.set_index(index)
+            self.set_index(index)
         if self._writeseries is not None and subindex not in self.get_subindices():
             log.info(f"\"{index}\" with selector \"{subindex}\"added as row in _writedata.")
             self._writeseries = append_row(self._writeseries, index, subindex, selector)
-            self._data.set_index(index)
-            self._data.set_subindex(subindex)
+            self.set_index(index)
+            self.set_subindex(subindex)
         
     def add_series_column(self, column):
         """Add a column to the data series"""

@@ -206,19 +206,19 @@ class Scorer:
         self.populate_widgets()
 
     def select_index(self):
-        select=IndexSelector(parent=self)
-        select.display()
+        self._selector_widget=IndexSelector(parent=self)
+        self._selector_widget.display()
 
     def select_selector(self):
         """Select a selector from the data"""
-        select=IndexSubIndexSelectorSelect(parent=self)
-        select.display()
+        self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
+        self._selector_widget.display()
 
         
     def select_subindex(self):
         """Select a subindex from the data"""
-        select=IndexSubIndexSelectorSelect(parent=self)
-        select.display()
+        self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
+        self._selector_widget.display()
 
 
     def view_entity(self):
@@ -456,12 +456,13 @@ class Scorer:
         """If a value in a row has been updated, modify other values"""
         # Need to determine if these should update series or data.
         # Update timestamp fields.
+        today_val = pd.to_datetime("today")
         if "timestamp_field" in config:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
         self.set_column(timestamp_field)
-        self.set_value(pd.to_datetime("today"),
+        self.set_value(today_val,
                        trigger_update=False)
         if "created_field" in config:
             created_field = config["created_field"]
@@ -469,7 +470,7 @@ class Scorer:
             created_field = "Created"
         if created_field not in self._data._writedata.columns or assess.empty(self._data.get_value_column(created_field)):
             self.set_column(created_field)
-            self.set_value(pd.to_datetime("today"),
+            self.set_value(today_val,
                            trigger_update=False)
 
         # Combinator is a combined field based on others

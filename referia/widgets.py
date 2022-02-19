@@ -314,29 +314,31 @@ class FullSelector(ReferiaMultiWidget):
             objects.append(item["widget"])
         IPython.display.display(ipyw.VBox(objects))
 
+    
+
 class IndexSubIndexSelectorSelect(FullSelector):
     def __init__(self, parent):
         # Define the widgets to create
         args = {}
-        args["subindex_select"] = {
-            "options_function": parent.get_subindices,
-            "value_function": parent.get_subindex,
-            "function" : ipyw.Dropdown,
-            "result" : parent.set_subindex,
-            "conversion": None,
-        }
         args["index_select"] = {
             "options_function": parent.get_indices,
             "value_function": parent.get_index,
             "function": ipyw.Dropdown,
-            "result" : parent.set_index,
+            "result_function" : parent.set_index,
             "conversion": None,
         }
         args["selector_select"] =  {
             "options_function": parent.get_selectors,
             "value_function": parent.get_selector,
             "function": ipyw.Dropdown,
-            "result": parent.set_selector,
+            "result_function": parent.set_selector,
+            "conversion": None,
+        }
+        args["subindex_select"] = {
+            "options_function": parent.get_subindices,
+            "value_function": parent.get_subindex,
+            "function" : ipyw.Dropdown,
+            "result_function" : parent.set_subindex,
             "conversion": None,
         }
         super().__init__(parent, args)
@@ -353,7 +355,7 @@ def gsv_(key, item, obj, docstr=None):
         else:
             obj._ipywidgets[key]["widget"].value = self._ipywidgets[key]["function"]().value
         # Perform callback to set the result.
-        obj._ipywidgets[key]["result"](obj._ipywidgets[key]["widget"].value)
+        obj._ipywidgets[key]["result_function"](obj._ipywidgets[key]["widget"].value)
     set_value.__docstr__ = docstr
     return set_value
 
@@ -374,10 +376,12 @@ def gwc_(key, item, obj, docstr=None):
 def gwu_(key, item, obj, docstr=None):
     """Generator function for making update calls for a given widget."""
     def on_other_widgets_change():
-        if "value_function" in obj._ipywidgets[key]:
-            obj._ipywidgets[key]["widget"].value = obj._ipywidgets[key]["value_function"]()
-        if "option_function" in obj._ipywidgets[key]:
-            obj._ipywidgets[key]["widget"].options = obj._ipywidgets[key]["options_funtion"]()
+        if "options_function" in item:
+            log.debug(f"Updating widget \"{key}\" options.")
+            obj._ipywidgets[key]["widget"].options = item["options_function"]()
+        if "value_function" in item:
+            log.debug(f"Updating widget \"{key}\" value.")
+            obj._ipywidgets[key]["widget"].value = item["value_function"]()
         on_other_widgets_change.__name__ = key
         on_other_widgets_change.__docstr__ = docstr
     return on_other_widgets_change
