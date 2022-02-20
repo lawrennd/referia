@@ -283,10 +283,10 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
         pass
     
 class FullSelector(ReferiaMultiWidget):
-    def __init__(self, parent, args):
+    def __init__(self, parent, stateful_args, stateless_args):
         self._parent = parent
         self._ipywidgets = {}
-        for key, item in args.items():
+        for key, item in stateful_args.items():
             item["value"] = item["value_function"]()
             if "options_function" in item:
                 item["options"] = item["options_function"]()
@@ -297,7 +297,7 @@ class FullSelector(ReferiaMultiWidget):
                     item["layout"]["display"] = "block"
                 else:
                     item["layout"]["display"] = "none"
-        for key, item in args.items():
+        for key, item in stateful_args.items():
             self._ipywidgets[key] = {
                 "function": item["function"],
                 "result_function": item["result_function"],
@@ -315,7 +315,15 @@ class FullSelector(ReferiaMultiWidget):
             self._ipywidgets[key]["widget"].observe(self._ipywidgets[key]["on_change"], names="value")
 
 
-
+        for key, item in stateless_args.items():
+            self._ipywidgets[key] = {
+                "function": item["function"],
+                "on_click_function": item["on_click_function"],
+            }
+            del item["function"]
+            del item["on_click_function"]
+            self._ipywidgets[key]['widget'] = self._ipywidgets[key]["function"](**item)
+            self._ipywidgets[key]["widget"].on_click(gocf_(key, item, self))
 
     def display(self):
         objects = []
@@ -328,46 +336,64 @@ class FullSelector(ReferiaMultiWidget):
 class IndexSubIndexSelectorSelect(FullSelector):
     def __init__(self, parent):
         # Define the widgets to create
-        args = {}
-        args["index_select"] = {
-            "options_function": parent.get_indices,
-            "value_function": parent.get_index,
-            "function": ipyw.Dropdown,
-            "result_function" : parent.set_index,
-            "conversion": None,
+        stateful_args = {
+            "index_select":  {
+                "options_function": parent.get_indices,
+                "value_function": parent.get_index,
+                "function": ipyw.Dropdown,
+                "result_function" : parent.set_index,
+                "conversion": None,
+            },
+            "selector_select":  {
+                "function": ipyw.Dropdown,
+                "options_function": parent.get_selectors,
+                "value_function": parent.get_selector,
+                "result_function": parent.set_selector,
+                "display_when_function": parent.get_select_selector,
+                "conversion": None,
+            },
+            "subindex_select": {
+                "function" : ipyw.Dropdown,
+                "options_function": parent.get_subindices,
+                "value_function": parent.get_subindex,
+                "result_function" : parent.set_subindex,
+                "display_when_function": parent.get_select_subindex,
+                "conversion": None,
+            },
+            "select_subindex_checkbox": {
+                "function" : ipyw.Checkbox,
+                "value_function": parent.get_select_subindex,
+                "result_function": parent.set_select_subindex,
+                "conversion": bool,
+                "description": "Select Subindex",
+            },
+            "select_selector_checkbox": {
+                "function" : ipyw.Checkbox,
+                "value_function": parent.get_select_selector,
+                "result_function": parent.set_select_selector,
+                "conversion": bool,
+                "description": "Select Selector",
+            }
         }
-        args["selector_select"] =  {
-            "function": ipyw.Dropdown,
-            "options_function": parent.get_selectors,
-            "value_function": parent.get_selector,
-            "result_function": parent.set_selector,
-            "display_when_function": parent.get_select_selector,
-            "conversion": None,
+        stateless_args = {
+            "generate_button" : {
+                "function": ipyw.Button,
+                "on_click_function": parent.add_new_row_to_series,
+                "description": "Add Row",
+            }
         }
-        args["subindex_select"] = {
-            "function" : ipyw.Dropdown,
-            "options_function": parent.get_subindices,
-            "value_function": parent.get_subindex,
-            "result_function" : parent.set_subindex,
-            "display_when_function": parent.get_select_subindex,
-            "conversion": None,
-        }
-        args["select_subindex_checkbox"] = {
-            "function" : ipyw.Checkbox,
-            "value_function": parent.get_select_subindex,
-            "result_function": parent.set_select_subindex,
-            "conversion": bool,
-            "description": "Select Subindex",
-        }
-        args["select_selector_checkbox"] = {
-            "function" : ipyw.Checkbox,
-            "value_function": parent.get_select_selector,
-            "result_function": parent.set_select_selector,
-            "conversion": bool,
-            "description": "Select Selector",
-        }
-        super().__init__(parent, args)
+        super().__init__(parent, stateful_args, stateless_args)
 
+def gocf_(key, item, obj, docstr=None):
+    """Generator function for on_click function for the button class."""
+    def on_click(b):
+        obj._ipywidgets[key]["on_click_function"]()
+        for other_key, widget in obj._ipywidgets.items():
+            if other_key == key:
+                pass
+            elif "update" in widget:
+                    widget["update"]()
+    return on_click
             
 def gsv_(key, item, obj, docstr=None):
     """Generator function for a set value function for the multiwidget class"""
@@ -389,11 +415,11 @@ def gwc_(key, item, obj, docstr=None):
     name = "on_" + key + "_change"
     def on_change(change):
         obj._ipywidgets[key]["set_value"](change.new)
-        for other_key, item in obj._ipywidgets.items():
+        for other_key, widget in obj._ipywidgets.items():
             if other_key == key:
                 pass
-            else:
-                item["update"]()
+            elif "update" in widget:
+                widget["update"]()
     on_change.__name__ = name
     on_change.__docstr__ = docstr
     return on_change

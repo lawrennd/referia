@@ -202,6 +202,8 @@ class Scorer:
     def get_indices(self):
         return self._data.index
 
+    
+    
     def get_subindices(self):
         return self._data.get_subindices()
     
@@ -212,6 +214,10 @@ class Scorer:
         self._data.set_subindex(value)
         self.populate_widgets()
 
+    def add_new_row_to_series(self):
+        """Add a row with a generated subindex to the series."""
+        self._data.add_new_row_to_series()
+        
     def full_selector(self):
         """Select a selector and subindex from the data"""
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)

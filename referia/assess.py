@@ -99,10 +99,27 @@ class Data:
 
     def _series(self):
         """Load in the series data to data frames."""
-        if "selector" in config["series"]:
-            self._selector = config["series"]["selector"]
+        series = config["series"]
+        if "selector" in series:
+            self._selector = series["selector"]
         self._writeseries = access.series(self.index)
         self._writeseries = self._finalize_df(self._writeseries, config['series'])
+        self.sort_series()
+        
+    def sort_series(self):
+        """Sort the series by the column specified."""
+        if "series" in config:
+            series = config["series"]
+        else:
+            return
+        if "sortby" in series and "field" in series["sortby"] and series["sortby"]["field"] in self._writeseries:
+            if "ascending" in series["sortby"]:
+                ascending = series["sortby"]["ascending"]
+            else:
+                ascending=True
+            field=series["sortby"]["field"]
+            log.info(f"Sorting series by \"{field}\"")
+            self._writeseries.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_input_flows(self):
         """Load the input flows specified in the _referia.yml file."""
@@ -112,6 +129,9 @@ class Data:
             self._additional()
 
         # If sorting is requested do it here.
+        self.sort_data()
+
+    def sort_data(self):
         if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in self._data:
             if "ascending" in config["sortby"]:
                 ascending = config["sortby"]["ascending"]
@@ -123,10 +143,10 @@ class Data:
 
     def load_output_flows(self):
         """Load the output flows data specified in the _referia.yml file."""
-        if "series" in config:
-            self._series()
         if "scores" in config:
             self._scores()
+        if "series" in config:
+            self._series()
 
     def load_flows(self):
         self.load_input_flows()
@@ -153,7 +173,7 @@ class Data:
             self.add_row(subindex=subindex)
         else:
             self._subindex=subindex
-            log.info(f"Subindex {subindex} selected.")
+            log.info(f"Subindex \"{subindex}\" selected.")
 
 
     def get_index(self):
@@ -210,15 +230,32 @@ class Data:
     def reset_subindex(self):
         subindices = self.get_subindices()
         if len(subindices)>0:
-            log.info(f"No subindex set, using last entry of Data._writeseries.")
-            self.set_subindex(subindices[-1])
+            index = self.get_index()
+            log.info(f"No subindex set, using first entry of portion of Data._writeseries indexed by \"{index}\".")
+            self.set_subindex(subindices[0])
         else:
-            subindex = self.generate_subindex()
-            log.info(f"No subindex available, using generated subindex \"{subindex}\" to add row to Data._writeseries.")
-            self.add_row(index=self.get_index(), subindex=subindex)
+            log.info(f"No subindex available.")
+            self.add_new_row_to_series()
 
+    def add_new_row_to_series(self):
+        """Add a row with a generated subindex to the series."""
+        subindex = self.generate_subindex()
+        log.info(f"Generated new subindex \"{subindex}\".")
+        self.add_row(index=self.get_index(), subindex=subindex)
+
+    
     def generate_subindex(self):
-        return pd.to_datetime("today").strftime('%Y-%m-%d')
+        """Generate a new subindex for use."""
+        if "subindex_generator" in config["series"]:
+            generator = config["series"]["subindex_generator"]
+        else:
+            generator = "today"
+
+        if generator == "today":
+            return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d'))
+        elif generator == "hour":
+            return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d %H:00'))
+
     def get_subseries(self):
         return self._writeseries[self._writeseries.index.isin([self.get_index()])]
 
@@ -267,14 +304,12 @@ class Data:
                 & (self._writeseries[selector]==subindex).values,
                 column
             ] = value
-            return
         else:
             if column not in self._writedata.columns:
                 self.add_column(column)
 
             self._update_type(self._writedata, column, value)
             self._writedata.at[index, column] = value
-            return
 
 
     def get_value(self):
@@ -333,16 +368,19 @@ class Data:
             self._data = append_row(self._data, index)
             self.set_index(index)
             log.info(f"\"{index}\" added as row in _data.")
+
         if self._writedata is not None and index not in self._writedata.index:
             log.info(f"\"{index}\" added as row in _writedata.")
             self._writedata = append_row(self._writedata, index)
             self.set_index(index)
+
         if self._writeseries is not None and subindex not in self.get_subindices():
-            log.info(f"\"{index}\" with selector \"{subindex}\"added as row in _writedata.")
             self._writeseries = append_row(self._writeseries, index, subindex, selector)
+            log.info(f"\"{index}\" with subindex \"{subindex}\" added as row in Data._writeseries.")
             self.set_index(index)
             self.set_subindex(subindex)
-        
+            self.sort_series()
+            
     def add_series_column(self, column):
         """Add a column to the data series"""
         if column not in self._writeseries.columns:
