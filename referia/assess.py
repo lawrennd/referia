@@ -291,11 +291,7 @@ class Data:
                 indexer = (self._writeseries.index.isin([index])
                     & (self._writeseries[selector]==subindex).values)
                 if indexer.sum()>0:
-                    return self._writeseries.loc[
-                        self._writeseries.index.isin([index])
-                        & (self._writeseries[selector]==subindex).values,
-                        column,
-                    ].iloc[0]
+                    return self._writeseries.loc[indexer, column].iloc[0]
                 else:
                     log.warning(f"No data available with this subindex and index , returning None.")
             else:
