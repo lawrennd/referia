@@ -1,50 +1,8 @@
-browser: "Google Chrome.app"
-google_oauth:
-  keyfile: google_secret.json
-  directory: $HOME/.config/gspread_pandas/
-
-sortby:
-  field: index
-  ascending: True
-timestamp_field: Timestamp
-created_field: Created
-logging:
-  level: 20
-
-mapping:
-  keyname: keyname
-  description: Description
-  thoughtfulnessComment: Thoughtfulness Comment
-  thoughtfulnessExpectation: Thoughtfulness Expectation
-  expenseComment: Expense Comment
-  expenseExpectation: Expense Expectation
-  overallComment: Overall Comment
-  overallScore: Overall Score
-
-allocation:
-  index: keyname
-  type: excel
-  filename: gifts.xlsx
-  sheet: Sheet1
-  directory: 
-  header: 0
-  
-additional:
-  index: keyname
-  type: excel
-  filename: details.xlsx
-  sheet: Sheet1
-  directory: 
-  header: 0
-
-
-scores:
-  index: keyname
-  type: excel
-  sheet: Sheet1
-  directory: 
-  filename: scores.xlsx
-  header: 0
+inherit: 
+  directory: ../excel_gift_example/
+  writable: True
+  append:
+  - mapping
 
 series:
   index: keyname
