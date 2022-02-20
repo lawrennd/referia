@@ -137,6 +137,9 @@ class Scorer:
 
         if index is not None:
             self.set_index(index)
+
+        _reload_button = ReloadButton(parent=self)
+        self.add_widgets(_reload_button=_reload_button)
                         
         # Process the different scorers in from the _referia.yml file
         if "scored" in config:
@@ -153,8 +156,6 @@ class Scorer:
 
         _save_button = SaveButton(parent=self)
         self.add_widgets(_save_button=_save_button)
-        _reload_button = ReloadButton(parent=self)
-        self.add_widgets(_reload_button=_reload_button)
 
     def add_widgets(self, **kwargs):
         self._widget_dict = {**self._widget_dict, **kwargs}
@@ -211,6 +212,11 @@ class Scorer:
         self._data.set_subindex(value)
         self.populate_widgets()
 
+    def full_selector(self):
+        """Select a selector and subindex from the data"""
+        self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
+        self._selector_widget.display()
+
     def select_index(self):
         self._selector_widget=IndexSelector(parent=self)
         self._selector_widget.display()
@@ -226,19 +232,25 @@ class Scorer:
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
         self._selector_widget.display()
 
+    def get_select_selector(self):
+        """Get state of selector selection."""
+        return self._select_selector
 
-    def view_entity(self):
-        self.populate_widgets()
+    def set_select_selector(self, value):
+        """Set state of selector selection."""
+        self._select_selector = value
 
+    def get_select_subindex(self):
+        """Get state of subindex selection."""
+        return self._select_subindex
 
+    def set_select_subindex(self, value):
+        """Set state of subindex selection."""
+        self._select_subindex = value
+        
     def run(self):
         """Run the scorer to edit the data frame."""
-        if self._select_selector:
-            self.select_selector()
-        elif self._select_subindex:
-            self.select_subindex()
-        else:
-            self.select_index()
+        self.full_selector()
         system.view_series(self._data)
         self.display_widgets()
 

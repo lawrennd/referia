@@ -295,7 +295,7 @@ class Data:
                         self._writeseries.index.isin([index])
                         & (self._writeseries[selector]==subindex).values,
                         column,
-                    ][0]
+                    ].iloc[0]
                 else:
                     log.warning(f"No data available with this subindex and index , returning None.")
             else:
@@ -365,7 +365,8 @@ class Data:
 
         format = {}
         for key, column in mapping.items():
-            format[key] = self.get_value_column(column)
+            self.set_column(column)
+            format[key] = self.get_value()
 
         return format
 

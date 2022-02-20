@@ -290,6 +290,13 @@ class FullSelector(ReferiaMultiWidget):
             item["value"] = item["value_function"]()
             if "options_function" in item:
                 item["options"] = item["options_function"]()
+            if "display_when_function" in item:
+                if "layout" not in item:
+                    item["layout"] = {}
+                if item["display_when_function"]():
+                    item["layout"]["display"] = "block"
+                else:
+                    item["layout"]["display"] = "none"
         for key, item in args.items():
             self._ipywidgets[key] = {
                 "function": item["function"],
@@ -306,6 +313,8 @@ class FullSelector(ReferiaMultiWidget):
         for key, item in self._ipywidgets.items():
             self._ipywidgets[key]["on_change"] = gwc_(key, item, self)            
             self._ipywidgets[key]["widget"].observe(self._ipywidgets[key]["on_change"], names="value")
+
+
 
 
     def display(self):
@@ -328,18 +337,34 @@ class IndexSubIndexSelectorSelect(FullSelector):
             "conversion": None,
         }
         args["selector_select"] =  {
+            "function": ipyw.Dropdown,
             "options_function": parent.get_selectors,
             "value_function": parent.get_selector,
-            "function": ipyw.Dropdown,
             "result_function": parent.set_selector,
+            "display_when_function": parent.get_select_selector,
             "conversion": None,
         }
         args["subindex_select"] = {
+            "function" : ipyw.Dropdown,
             "options_function": parent.get_subindices,
             "value_function": parent.get_subindex,
-            "function" : ipyw.Dropdown,
             "result_function" : parent.set_subindex,
+            "display_when_function": parent.get_select_subindex,
             "conversion": None,
+        }
+        args["select_subindex_checkbox"] = {
+            "function" : ipyw.Checkbox,
+            "value_function": parent.get_select_subindex,
+            "result_function": parent.set_select_subindex,
+            "conversion": bool,
+            "description": "Select Subindex",
+        }
+        args["select_selector_checkbox"] = {
+            "function" : ipyw.Checkbox,
+            "value_function": parent.get_select_selector,
+            "result_function": parent.set_select_selector,
+            "conversion": bool,
+            "description": "Select Selector",
         }
         super().__init__(parent, args)
 
@@ -376,12 +401,18 @@ def gwc_(key, item, obj, docstr=None):
 def gwu_(key, item, obj, docstr=None):
     """Generator function for making update calls for a given widget."""
     def on_other_widgets_change():
+        widg = obj._ipywidgets[key]["widget"]
         if "options_function" in item:
             log.debug(f"Updating widget \"{key}\" options.")
-            obj._ipywidgets[key]["widget"].options = item["options_function"]()
+            widg.options = item["options_function"]()
         if "value_function" in item:
             log.debug(f"Updating widget \"{key}\" value.")
-            obj._ipywidgets[key]["widget"].value = item["value_function"]()
+            widg.value = item["value_function"]()
+        if "display_when_function" in item:
+            if item["display_when_function"]():
+                widg.layout.display = "block"
+            else:
+                widg.layout.display = "none"
         on_other_widgets_change.__name__ = key
         on_other_widgets_change.__docstr__ = docstr
     return on_other_widgets_change
