@@ -22,7 +22,7 @@ import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, interact, interactive, interact_manual, fixed# MyCheckbox, MyFileChooser,
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton
 from . import access
 from . import assess
 from . import system
@@ -469,7 +469,16 @@ class Scorer:
             
     def load_flows(self):
         """Reload flows from data stores."""
+        log.info(f"Reload of flows requested.")
+        index = self.get_index()
+        selector = self.get_selector()
+        subindex = self.get_subindex()
+        log.debug(f"Storing index: \"{index}\" selector: \"{selector}\" subindex: \"{subindex}\"")
         self._data.load_flows()
+        log.debug(f"Resetting index.")
+        self.set_index(index)
+        self.set_selector(selector)
+        self.set_subindex(subindex)
         self.populate_widgets()
         
     def save_flows(self):
@@ -500,9 +509,9 @@ class Scorer:
 
         # Combinator is a combined field based on others
         if "combinator" in config:
-            for viewer in config["combinator"]:
+            for view in config["combinator"]:
                 if "field" in view:
-                    combinator = self._data.viewer_to_value(viewer)
+                    combinator = self._data.viewer_to_value(view)
                     self.set_column(view["field"])
                     self.set_value(combinator,
                                    trigger_update=False)

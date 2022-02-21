@@ -149,6 +149,9 @@ class Data:
             self._series()
 
     def load_flows(self):
+        self._data = None
+        self._writedata = None
+        self._writeseries = None
         self.load_input_flows()
         self.load_output_flows()
         
@@ -367,10 +370,10 @@ class Data:
         if self._data is not None and index not in self.index:
             self._data = append_row(self._data, index)
             self.set_index(index)
-            log.info(f"\"{index}\" added as row in _data.")
+            log.info(f"\"{index}\" added as row in Data._data.")
 
         if self._writedata is not None and index not in self._writedata.index:
-            log.info(f"\"{index}\" added as row in _writedata.")
+            log.info(f"\"{index}\" added as row in Data._writedata.")
             self._writedata = append_row(self._writedata, index)
             self.set_index(index)
 
@@ -523,6 +526,8 @@ class Data:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
 
+        df.set_index(df[details["index"]], inplace=True)
+
         if "fields" in details:
             for field in details["fields"]:
                 column = pd.Series(index=df.index, dtype="object")
@@ -555,7 +560,6 @@ class Data:
                 else:
                     log.warning(f"No \"name\" associated with field entry.")
 
-        df.set_index(df[details["index"]], inplace=True)
         return df
     
     def to_score(self):

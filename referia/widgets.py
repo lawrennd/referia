@@ -9,8 +9,6 @@ import markdown
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 
-ipyw.interact_manual.opts["manual_name"] = "Save Score"
-
 from .config import *
 from .util import notempty
 from .log import Logger

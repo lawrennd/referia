@@ -4,6 +4,12 @@ inherit:
   append:
   - mapping
 
+timestamp_field: Gift Series Timestamp
+created_field: Gift Series Created
+
+mapping:
+  Date: Date
+
 series:
   index: keyname
   type: excel
@@ -11,6 +17,7 @@ series:
   directory:
   filename: series.xlsx
   subindex_generator: hour
+  selector: Date
   sortby:
     field: Date
     ascending: False
@@ -28,22 +35,42 @@ urls:
 
 scorer:
 - type: CriterionCommentRaisesMeetsLowers
-  criterion: "<h4>Gift Thoughtfulness</h4>
-<p>How thoughtful was the gift, does it match who you are?</p>"
+  tally:
+    begin: "#### Gift Thoughtfulness
+
+How thoughtful was the gift, does it match who you are?
+
+List of previous comments:"
+    display: "* **{Date}**: {thoughtfulnessComment} *{thoughtfulnessExpectation}*"
+    end: "That's all the thoughts!"
+    which: others
   prefix: Thoughtfulness
 - type: CriterionCommentRaisesMeetsLowers
-  criterion: "<h4>Gift Expense</h4>
-<p>How expensive was the gift?</p>"
+  tally:
+    begin: "#### Gift Expense
+
+How expensive was the gift?
+
+List of previous comments:"
+    display: "* **{Date}**: {expenseComment} *{expenseExpectation}*"
+    end: "That's all the comments!"
+    which: others
   prefix: Expense
 - type: CriterionCommentScore
-  criterion: '<h4>Overall</h4>'
+  tally:
+    begin: '#### Overall
+
+List of previous scores:'
+    display: "* **{Date}**: {overallComment} *{overallScore}*"
+    end: "That's all the scores!"
+    which: others
   prefix: Overall
   value: 5
   min: 0
   max: 10
   step: 1
 - type: CriterionComment
-  criterion: '<h4>Other Comments</h4>'
+  criterion: '#### Other Comments'
   prefix: Other
 
 combinator:
