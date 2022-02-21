@@ -183,7 +183,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
     def __init__(self, **args):
         super().__init__(**args)
         self._conversion = None
-        self._display = None
+        self._viewer = {}
         self._column_name = None
         self._field_name = None
         if "conversion" in args:
@@ -191,7 +191,11 @@ class ReferiaStatefulWidget(ReferiaWidget):
         if self._conversion is not None and "value" in args:
             args["value"] = self._conversion(args["value"])
         if "display" in args:
-            self._display = args["display"]
+            self._viewer["display"] = args["display"]
+        if "tally" in args:
+            self._viewer["tally"] = args["tally"]
+        if "conditions" in args:
+            self._viewer["conditions"] = args["conditions"]
         if "column_name" in args:
             self._column_name = args["column_name"]
         if "field_name" in args:
@@ -217,17 +221,23 @@ class ReferiaStatefulWidget(ReferiaWidget):
 
     
     def get_value(self):
+        """Get the value of the widget."""
         return self._ipywidget.value
     
     def set_value(self, value):
+        """Set the value of the widget."""
         if notempty(value):
             if self._conversion is None:
                 self._ipywidget.value = value
             else:
                 self._ipywidget.value = self._conversion(value)
         else:
-            self._ipywidget.value = self._ipywidget_function().value
-            
+            self.reset_value()
+
+    def reset_value(self):
+        """Reset value to default for widget."""
+        self._ipywidget.value = self._ipywidget_function().value
+        
     def get_column(self):
         return self._column_name
                            
@@ -245,16 +255,21 @@ class FieldWidget(ReferiaStatefulWidget):
             self._parent.set_column(self.get_column())
             self._parent.set_value(self.get_value())
 
+    def has_viewer(self):
+        return len(self._viewer)>0
+    
     def refresh(self):
         self._ipywidget.observe(self.null, names='value')
-        if self._display is not None:
-            self.set_value(self._display.format(**self._parent._data.mapping()))
-        else:
-            column = self.get_column()
-            if not self.private and column is not None and self._parent is not None:
-                self._parent.set_column(column)
+        column = self.get_column()
+        if column is not None and self._parent is not None:
+            self._parent.set_column(column)
+            if self.has_viewer():
+                value = self._parent._data.viewer_to_value(self._viewer)
+                self.set_value(value)
+            else:
                 self.set_value(self._parent.get_value())
-
+        else:
+            self.reset_value()
         self._ipywidget.observe(self.on_value_change, names="value")
             
 

@@ -404,22 +404,119 @@ class Data:
 
         return format
 
+    def viewer_to_value(self, viewer):
+        column = self.get_column()
+        index = self.get_index()
+        subindex = self.get_subindex()
+        value = ""
+        if type(viewer) is not list:
+            viewer = [viewer]
+        for view in viewer:
+            value += self.view_to_value(view)
+            if value != "":
+                value += "\n\n"
+        return value
 
-    def conditions(self, entry):
+    def view_to_value(self, view):
+        """Create the text of the view."""
+        value = ""
+        if self.conditions(view):
+            if "display" in view:
+                value += self.display_to_value(view["display"])
+            if "tally" in view:
+                value += self.tally_to_value(view["tally"])
+            return value
+        else:
+            return ""
 
-        show_display = True
-        if "conditions" in entry:
-            for condition in entry["conditions"]:
+    def conditions(self, view):
+        """Check if the viewer should be displayed."""
+        if "conditions" not in view:
+            return True
+        else:
+            for condition in view["conditions"]:
                 if "present" in condition:
-                    if not condition["present"]["field"] in columns():
+                    if not condition["present"]["field"] in self._parent._parent.columns():
                         return False
 
                 if "equal" in condition:
-                    if not self.get_value_column(condition["equal"]["field"]) == condition["equal"]["value"]:
+                    self._parent.set_column(condition["equal"]["field"])
+                    if not self._parent.get_value() == condition["equal"]["value"]:
                         return False
-
         return True
+
+    def display_to_value(self, display):
+        format = self.mapping()
+        return display.format(**format)    
+
+    def tally_to_value(self, tally):
+        format = self.mapping()
+        orig_subindex = self.get_subindex()
+        value = ""
+        if "begin" in tally:
+            value += self.display_to_value(tally["begin"])
+            if value != "":
+                value += "\n\n"
+        subindices = self.tally_series(tally)
+        # Reverse series so it's most distant event first.
+        for subindex in subindices[::-1]:
+            self.set_subindex(subindex)
+            value += self.display_to_value(tally["display"])
+            if value != "":
+                value += "\n\n"
+        self.set_subindex(orig_subindex)
+        if "end" in tally:
+            value += self.display_to_value(tally["end"])
+            if value != "":
+                value += "\n\n"
+        return value    
+
+    def tally_series(self, tally):
+        orig_subindex = self.get_subindex()
+        subindices = self.get_subindices()
+        cur_loc = subindices.get_loc(orig_subindex)
+        def subind_val(ind):
+            try:
+                return pd.Index([subindices[ind]])
+            except IndexError as e:
+                log.info(f"Requested invalid index in Data.tally_series()")
+                return pd.Index([subindices[cur_loc]])
+
+        def subind_series(ind, starter=True):
+            try:
+                if starter:
+                    return pd.Index(subindices[ind:])
+                else:
+                    return pd.Index(subindices[:ind])
+                
+            except IndexError as e:
+                log.info(f"Requested invalid index in Data.tally_series()")
+                if starter:
+                    return pd.Index(subindices[cur_loc:])
+                else:
+                    return pd.Index(subindices[:cur_loc])
             
+        if "which" not in tally:
+            return subindices
+        elif tally["which"] == "pop":
+            return subind_val(0)
+        elif tally["which"] == "bottom":
+            return subind_val(-1)
+        elif tally["which"] == "previous":
+            return subind_val(cur_loc+1)
+        elif tally["which"] == "next":
+            return subind_val(cur_loc-1)
+        elif tally["which"] == "earlier":
+            return subind_series(cur_loc+1)
+        elif tally["which"] == "later":
+            return subind_series(cur_loc, starter=False)
+        elif tally["which"] == "others":
+            return subind_series(cur_loc, starter=False).append(subind_series(cur_loc+1))
+        elif tally["which"] == "all":
+            return subindices
+        else:
+            raise ValueError("Unrecognised subindices specifier in tally.")
+        
 
     def _finalize_df(self, df, details):
         """for field in dtypes:

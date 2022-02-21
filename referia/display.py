@@ -92,29 +92,6 @@ def clean_string(instring):
     return re.sub("\W+|^(?=\d)","_", instring)
 
 
-def viewer_to_text(key, data):
-    """Create a formatted text output from a yaml entry with base text and format keys."""
-    text = ""
-    if key in config:
-        for view in config[key]:
-            text += view_to_text(view, data)
-            text += "\n\n"
-    return text
-
-
-
-def view_to_text(view, data):
-    """Create the text of the view."""
-    if "format" in view:
-        format = data.mapping(view["format"])
-    else:
-        format = data.mapping()
-
-    if data.conditions(view):
-        return view["display"].format(**format)
-    else:
-        return ""
-
 
 class Scorer:
     def __init__(self, index=None, data=None):
@@ -138,6 +115,10 @@ class Scorer:
         if index is not None:
             self.set_index(index)
 
+        self._create_widgets()
+
+    def _create_widgets(self):
+        """Create the widgets to be used for display."""
         _reload_button = ReloadButton(parent=self)
         self.add_widgets(_reload_button=_reload_button)
                         
@@ -147,8 +128,19 @@ class Scorer:
             self.add_widgets(_progress_label=_progress_label)
 
         if "viewer" in config:
-            _viewer_label = Markdown(description=" ", field_name = "_viewer_label")
-            self.add_widgets(_viewer_label=_viewer_label)
+            # TK need to add in viewer arguments for display etc here.
+            views = config["viewer"]
+            if type(views) is not list:
+                views = [views]
+            
+            for count, view in enumerate(views):
+                label = "_viewer_label" + str(count)
+                args = {
+                    "description": " ",
+                    "field_name": label,
+                    **view,
+                }
+                self.add_widgets(**{label: Markdown(**args)})
             
         if "scorer" in config:
             for score in config["scorer"]:
@@ -156,7 +148,7 @@ class Scorer:
 
         _save_button = SaveButton(parent=self)
         self.add_widgets(_save_button=_save_button)
-
+                    
     def add_widgets(self, **kwargs):
         self._widget_dict = {**self._widget_dict, **kwargs}
 
@@ -266,11 +258,14 @@ class Scorer:
         if score['type'] == 'Criterion':
             value = None
             display = None
+            tally = None
             prefix = score["prefix"]
             if "display" in score:
                 display = score["display"]
             elif "criterion" in score:
                 value = score["criterion"]
+            if "tally" in score:
+                tally = score["tally"]
             if "width" in score:
                 width = score["width"]
             else:
@@ -285,7 +280,9 @@ class Scorer:
             if value is not None:
                 criterion["args"]["value"] = value
             elif display is not None:
-                criterion["display"] = display
+                criterion["args"]["display"] = display
+            if tally is not None:
+                criterion["args"]["tally"] = tally
             self.extract_scorer(criterion)
             return
 
@@ -433,20 +430,19 @@ class Scorer:
                 else:
                     if "description" not in process_score:
                         process_score["args"]["description"] = " "
-                if "display" in process_score:
-                    process_score["args"]["value"] = process_score["display"].format(**self._data.mapping())
+                # Taken out as should be done via widget. NL 2021-02-21
+                # if "display" in process_score:
+                #     process_score["args"]["value"] = self.display_to_value(process_score["display"])
+                # if "tally" in process_score:
+                #     process_score["args"]["value"] = self.tally_to_value(process_score["tally"])
 
             if "source" in process_score:
                 # Set arguments of widget from data fields if source is given
                 if "args" in process_score["source"]:
                     for arg, field in process_score["source"]["args"]:
                         if arg not in process_score["args"]:
-                            process_score["args"][arg] = self._data.get_value_column(field)
-                # Removed as now redundant? NDL 2022-02-13
-                # if "criterion" in process_score["source"]:
-                #     criterion = process_score["source"]["criterion"]
-                #     if "display" in criterion:
-                #         process_score["criterion"] = criterion["display"].format(**self._data.mapping())
+                            self.set_column(field)
+                            process_score["args"][arg] = self.get_value()
 
             # Set up arguments for the widget
             args = process_score["args"]
@@ -454,6 +450,8 @@ class Scorer:
             args["column_name"] = self._column_names_dict[field_name]
             if "display" in process_score and "display" not in args:
                 args["display"] = process_score["display"]
+            if "tally" in process_score and "tally" not in args:
+                args["tally"] = process_score["tally"]
             if "layout" in process_score and "layout" not in args:
                 args["layout"] =  Layout(**process_score["layout"])
             args["parent"] = self
@@ -462,6 +460,7 @@ class Scorer:
             self.add_widgets(**{field_name: widget_type(**args)})
         else:
             raise Exception("Cannot find " + score["type"] + " interaction type.")
+
         
     def display_widgets(self):
         """Display the field entry widgets"""
@@ -499,9 +498,9 @@ class Scorer:
 
         # Combinator is a combined field based on others
         if "combinator" in config:
-            for view in config["combinator"]:
+            for viewer in config["combinator"]:
                 if "field" in view:
-                    combinator = view_to_text(view, self._data)
+                    combinator = self._data.viewer_to_value(viewer)
                     self.set_column(view["field"])
                     self.set_value(combinator,
                                    trigger_update=False)
@@ -516,7 +515,6 @@ class Scorer:
     def populate_widgets(self):
         """Update the widgets with defaults or values from the data"""
         for key, widget in self.widgets().items():
-            widget.refresh()
 
             if key == "_progress_label":
                 total = self._data.to_score()
@@ -527,9 +525,9 @@ class Scorer:
                     widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
                 continue
             
-            if key == "_viewer_label":
-                widget.set_value(viewer_to_text("viewer", self._data))
-                continue
+            # if key == "_viewer_label":
+            #     widget.refresh()set_value(viewer_to_text("viewer", self._data))
+            #     continue
 
             # Take value from the current value in _data
             widget.refresh()
