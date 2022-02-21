@@ -138,7 +138,9 @@ class Scorer:
                 args = {
                     "description": " ",
                     "field_name": label,
+                    "column_name": label,
                     **view,
+                    "parent": self,
                 }
                 self.add_widgets(**{label: Markdown(**args)})
             
@@ -248,10 +250,13 @@ class Scorer:
         
     def run(self):
         """Run the scorer to edit the data frame."""
-        self.full_selector()
-        system.view_series(self._data)
+        if "series" in config:
+            self.full_selector()
+        else:
+            self.select_index()
         self.display_widgets()
-
+        self.populate_widgets()
+        system.view_series(self._data)
 
     def extract_scorer(self, score):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
@@ -430,11 +435,6 @@ class Scorer:
                 else:
                     if "description" not in process_score:
                         process_score["args"]["description"] = " "
-                # Taken out as should be done via widget. NL 2021-02-21
-                # if "display" in process_score:
-                #     process_score["args"]["value"] = self.display_to_value(process_score["display"])
-                # if "tally" in process_score:
-                #     process_score["args"]["value"] = self.tally_to_value(process_score["tally"])
 
             if "source" in process_score:
                 # Set arguments of widget from data fields if source is given
@@ -468,8 +468,10 @@ class Scorer:
             widget.display()
             
     def load_flows(self):
+        """Reload flows from data stores."""
         self._data.load_flows()
-
+        self.populate_widgets()
+        
     def save_flows(self):
         access.write_scores(self._data._writedata)
         if self._data._writeseries is not None:
@@ -525,30 +527,8 @@ class Scorer:
                     widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
                 continue
             
-            # if key == "_viewer_label":
-            #     widget.refresh()set_value(viewer_to_text("viewer", self._data))
-            #     continue
-
-            # Take value from the current value in _data
             widget.refresh()
             
-            # if self._column_names_dict[key][0] != "_": # Ignore columns starting with _
-            #     if self._column_names_dict[key] not in self._default_field_vals:
-            #         self._default_field_vals[self._column_names_dict[key]] = None
-            #     widget.set_value(self._default_field_vals[self._column_names_dict[key]])
-
-            #     # Take a default value from default source specified in _referia.yml
-            #     if self._column_names_dict[key] in self._default_field_source:
-            #         dval = self._data.get_value_column(self._default_field_source[self._column_names_dict[key]])
-            #         widget.set_value(val)
-
-
-                # Widget refresh should do this automatically.
-                # if self._column_names_dict[key] in self._data.columns:
-                #     dval = self._data.get_value_column(self._column_names_dict[key])
-                #     widget.set_value(dval)
-                # else:
-                #     self._data.add_column(self._column_names_dict[key])
 
 
 

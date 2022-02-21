@@ -181,26 +181,34 @@ class ReferiaWidget():
         
 class ReferiaStatefulWidget(ReferiaWidget):
     def __init__(self, **args):
-        super().__init__(**args)
         self._conversion = None
         self._viewer = {}
         self._column_name = None
         self._field_name = None
         if "conversion" in args:
             self._conversion = args["conversion"]
-        if self._conversion is not None and "value" in args:
-            args["value"] = self._conversion(args["value"])
+            del args["conversion"]
         if "display" in args:
             self._viewer["display"] = args["display"]
+            del args["display"]
         if "tally" in args:
             self._viewer["tally"] = args["tally"]
+            del args["tally"]
         if "conditions" in args:
             self._viewer["conditions"] = args["conditions"]
+            del args["conditions"]
         if "column_name" in args:
             self._column_name = args["column_name"]
+            del args["column_name"]
         if "field_name" in args:
             self._field_name = args["field_name"]
-            
+            del args["field_name"]
+        super().__init__(**args)
+        if "value" in args:
+            self._default_value = args["value"]
+            self.set_value(args["value"])
+        else:
+            self._default_value = self._ipywidget_function().value
         # Is this a private field (one that doesn't update the parent data)
         if self._field_name is not None and self._field_name[0] == "_": 
             self.private = True
@@ -214,11 +222,11 @@ class ReferiaStatefulWidget(ReferiaWidget):
         return ipyw.Textarea
 
     def _widget_events(self):
+        """Create any relevant wiget event handlers."""
         self._ipywidget.observe(self.on_value_change, names="value")
 
     def on_value_change(self, value):
         pass
-
     
     def get_value(self):
         """Get the value of the widget."""
@@ -236,7 +244,9 @@ class ReferiaStatefulWidget(ReferiaWidget):
 
     def reset_value(self):
         """Reset value to default for widget."""
-        self._ipywidget.value = self._ipywidget_function().value
+        
+        
+        self._ipywidget.value = self._default_value
         
     def get_column(self):
         return self._column_name
@@ -250,23 +260,26 @@ class FieldWidget(ReferiaStatefulWidget):
         super().__init__(**args)
         
     def on_value_change(self, change):
+        """When value of the widget changes update the relevant parent data structure."""
         self.set_value(change.new)
         if not self.private and self._parent is not None:
             self._parent.set_column(self.get_column())
             self._parent.set_value(self.get_value())
 
     def has_viewer(self):
+        """Does the widget have a viewer structure for generating its values."""
         return len(self._viewer)>0
     
     def refresh(self):
+        """Update the widget value from the data."""
         self._ipywidget.observe(self.null, names='value')
         column = self.get_column()
         if column is not None and self._parent is not None:
-            self._parent.set_column(column)
             if self.has_viewer():
                 value = self._parent._data.viewer_to_value(self._viewer)
                 self.set_value(value)
             else:
+                self._parent.set_column(column)
                 self.set_value(self._parent.get_value())
         else:
             self.reset_value()
