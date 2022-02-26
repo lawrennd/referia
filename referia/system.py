@@ -40,6 +40,8 @@ def open_localfile(filename):
     ext = ext.lower()
     if ext == ".pdf":
         open_pdf(filename)
+    elif ext == ".ipynb":
+        open_ipynb(filename)
     elif ext == ".mp4":
         open_video(filename)
     elif ext == ".py":
@@ -60,7 +62,12 @@ def open_python(filename):
     """Use the system viewer to open a python file."""
     log.info(f"Opening file \"{filename}\".")
     os.system(f"open --background \"{filename}\"")
-    
+
+def open_ipynb(filename):
+    """Use the system viewer to open a python file."""
+    log.info(f"Opening file \"{filename}\".")
+    os.system(f"open --background \"{filename}\"")
+
 def open_pdf(filename):
     """Use the system viewer to open a PDF."""
     log.info(f"Opening file \"{filename}\".")
@@ -176,6 +183,8 @@ def view_files(data):
         displays += config["localpdf"]
     if "localvideo" in config:
         displays += config["localvideo"]
+    if "localipynb" in config:
+        displays += config["localipynb"]
 
     for view in displays:
         view_file(view, data)

@@ -392,7 +392,7 @@ class Data:
         else:
             log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
-    def mapping(self, mapping=None):
+    def mapping(self, mapping=None, series=None):
         """Generate dictionary of mapping between variable names and column values."""
         if mapping is None:
             if "mapping" in config:
@@ -402,8 +402,11 @@ class Data:
 
         format = {}
         for key, column in mapping.items():
-            self.set_column(column)
-            format[key] = self.get_value()
+            if series is None:
+                self.set_column(column)
+                format[key] = self.get_value()
+            else:
+                format[key] = series[column]
 
         return format
 
@@ -526,22 +529,19 @@ class Data:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
 
-        df.set_index(df[details["index"]], inplace=True)
-
         if "fields" in details:
             for field in details["fields"]:
                 column = pd.Series(index=df.index, dtype="object")
                 if "name" in field:
                     if "value" in field:
                         for index in df.index:
-                            self.set_index(index)
-                            format = self.mapping()
+                            format = self.mapping(series=df.loc[index])
                             column[index] = field["value"].format(**format)
 
                     elif "source" in field and "regexp" in field:
                         regexp = field["regexp"]
                         if field["source"] not in df.columns:
-                            log.warning(f"No column {source} in DataFrame.".format(source=field["source"]))
+                            log.warning("No column \"{source}\" in DataFrame.".format(source=field["source"]))
                         for index in df.index:
                             source = df.at[index, field["source"]]
                             match = re.match(
@@ -560,6 +560,13 @@ class Data:
                 else:
                     log.warning(f"No \"name\" associated with field entry.")
 
+        index_col = details["index"]
+        if index_col in df.columns:
+            df.set_index(df[index_col], inplace=True)
+            del df[index_col]
+        else:
+            log.warning(f"No index column \"{index_col}\" found in data frame.")
+        
         return df
     
     def to_score(self):

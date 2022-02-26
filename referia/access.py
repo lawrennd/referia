@@ -337,8 +337,11 @@ def write_data(df, details):
 
 def write_scores(df):
     """Write the scoring spread sheet to data frames."""
-    write_data(df, config["scores"])
+    write_df = pd.concat([pd.Series(df.index, name=df.index.name), df], axis=1)    
+    write_data(write_df, config["scores"])
 
 def write_series(df):
     """Load in the series spread sheet to data frames."""
-    write_data(df, config["series"])
+    write_df = pd.concat([pd.Series(df.index, name=df.index.name), df], axis=1)    
+    write_data(write_df, config["series"])
+
