@@ -7,9 +7,11 @@ import filecmp
 from shutil import copy2
 import tempfile
 
+import pypdftk as tk
+
 from .config import *
 from .log import Logger
-from .util import to_camel_case
+from .util import to_camel_case, notempty
 from . import access
 from . import assess
 from . import display
@@ -98,7 +100,7 @@ def copy_file(origfile, destfile, view, data):
             # Extract pages from a PDF
             firstpage = data.get_value_column(view["pages"]["first"])
             lastpage = data.get_value_column(view["pages"]["last"])
-            if assess.notempty(firstpage) and assess.notempty(lastpage) and assess.notempty(view["field"]):
+            if notempty(firstpage) and notempty(lastpage) and notempty(view["field"]):
                 firstpage = int(firstpage)
                 lastpage = int(lastpage)
                 log.info(f"Extracting \"{destfile}\" from \"{origfile}\" pages {firstpage}-{lastpage}")
@@ -205,7 +207,7 @@ def view_urls(data):
             if "field" in view and type(val) is str:
                 urlterm = val
             elif "display" in view:
-                urlterm = display.view_to_text(view, data)
+                urlterm = data.view_to_value(view)
             else:
                 urlterm = ""
             urlname = unidecode(view["url"] + urlterm.replace(" ", "%20"))

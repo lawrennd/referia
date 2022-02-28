@@ -18,8 +18,6 @@ import matplotlib.pyplot as plt
 
 from ipywidgets import jslink, jsdlink
 
-import pypdftk as tk
-
 from .config import *
 from .log import Logger
 from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton
