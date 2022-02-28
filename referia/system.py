@@ -160,7 +160,7 @@ def view_file(view, data):
         _, ext = os.path.splitext(filename)
         if len(tmpname)>0:
             tmpdirectory = tempfile.gettempdir()
-            destfile = str(data.get_value_column(config["allocation"]["index"])) + "_" + tmpname + ext
+            destfile = str(data.get_index()) + "_" + tmpname + ext
             destname = os.path.join(tmpdirectory, destfile)
             if not os.path.exists(destname):
                 log.debug(f"Copying \"{filename}\" to \"{destname}\".")

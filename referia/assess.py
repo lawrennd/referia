@@ -406,7 +406,11 @@ class Data:
                 self.set_column(column)
                 format[key] = self.get_value()
             else:
-                format[key] = series[column]
+                if column in series:
+                    format[key] = series[column]
+                else:
+                    log.info(f"No column \"{column}\" found in series.")
+                    format[key] = None
 
         return format
 
