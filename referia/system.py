@@ -107,7 +107,6 @@ class GoogleChrome(object):
 
 def create_document(document, **args):
     """Create a document based on the data we have."""
-    print(args)
     doctype = document["type"]
     if doctype == "email":
         create_email(document, **args)
@@ -118,24 +117,41 @@ def create_document(document, **args):
 
 def create_email(document, **args):
     """Create an email based on the data we have."""
-    emailargs = {}
-    if "maintext" in args:
-        emailargs["body"] = markdown2html(args["maintext"])
+    email_args = {}
+    if "content" in args:
+        email_args["body"] = markdown2html(args["content"])
     if "title" in args:
-        emailargs["subject"] = args["title"]
+        email_args["subject"] = args["title"]
     if "filename" in args:
-        emailargs["attach"] = extract_full_filename(args)
+        email_args["attach"] = extract_full_filename(args)
         
     for recips in ["to", "cc", "bcc"]:
         if recips in args:
-            emailargs[recips] = args[recips]
-    draft_email(**emailargs)
+            email_args[recips] = args[recips]
+    if "to" in email_args:
+        to = email_args["to"]
+    else:
+        to = "unknown address"
+    log.info(f"Drafting email to \"{to}\".")
+    draft_email(**email_args)
 
 def create_docx(document, **args):
     pass
 
 def create_markdown(document, **args):
-    pass
+    """Create a markdown document."""
+    filename = extract_full_filename(args)
+    if "content" in args:
+        content = args["content"]
+    else:
+        content = ""
+    data = {}
+    for key, item in args.items():
+        if key not in ["filename", "directory"]:
+            data[key] = item
+    access.write_markdown_file(data=data, filename=filename)
+    open_localfile(filename)
+            
     
 # Email scripts originally from https://stackoverflow.com/questions/61529817/automate-outlook-on-mac-with-python
 def draft_email(subject="", body="", to=[], cc=[], bcc=[], attach=None):

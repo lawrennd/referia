@@ -526,17 +526,17 @@ class Scorer:
     def create_document(self, document):
         """Create a document from the data we've provided."""
         args = {}
-        maintext = ""
+        content = ""
         if "header" in document:
-            maintext += self.template_to_value(document["header"])
+            content += self.template_to_value(document["header"])
         if "body" in document:
-            maintext += self.template_to_value(document["body"])
+            content += self.template_to_value(document["body"])
         if "footer" in document:
-            maintext += self.template_to_value(document["footer"])
-        args["maintext"] = maintext
+            content += self.template_to_value(document["footer"])
+        args["content"] = content
         
-        for field in ["to", "cc", "bcc", "directory", "filename", "title"]:
-            if field in document:
+        for field in document:
+            if field not in ["header", "body", "footer", "type"]:
                 args[field] = self._data.view_to_value(document[field])
         system.create_document(document, **args)
         

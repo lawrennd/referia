@@ -81,9 +81,22 @@ How thoughtful was the gift, does it match who you are?"
 
 
 documents:
+- type: markdown
+  title:
+    display: "Gift Summary"
+  abstract:
+    display: "{description}"
+  header:
+    use: viewer
+  body:
+    use: scorer
+  footer:
+    display: "And that's it"
+  filename:
+    display: "{keyname}.md"
 - type: email
   title:
-    display: Thanks for the gift of {description}
+    display: "Thanks for the gift of {description}"
   to:
     display: "{senderEmail}"
   header:
@@ -92,6 +105,8 @@ documents:
     use: scorer
   footer:
     display: "Regards,\n\nNeil"
+  filename:
+    display: "{keyname}.md"
 
 combinator:
 - field: Comment
