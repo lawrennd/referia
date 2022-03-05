@@ -11,7 +11,8 @@ except ImportError:
 
 
 def load_user_config(user_file="_referia.yml", directory="."):
-    filename = os.path.join(os.path.expandvars(directory), user_file) 
+    filename = os.path.join(os.path.expandvars(directory), user_file)
+    conf = {}
     if os.path.exists(filename):
         with open(filename) as file:
             conf = yaml.load(file, Loader=yaml.FullLoader)

@@ -187,11 +187,11 @@ class Data:
 
     def set_column(self, column):
         """Set the current column focus."""
-        if column not in self.columns:
+        if column != self.index.name and column not in self.columns:
             if self._writedata is not None or self._writeseries is not None:
                 self.add_column(column)
 
-        if column not in self.columns:
+        if column != self.index.name and column not in self.columns:
             self._column = None
         else:
             self._column = column
@@ -338,6 +338,8 @@ class Data:
             return self._writedata.at[index, column]
         elif self._data is not None and column in self._data.columns:
             return self._data.at[index, column]
+        elif self._data is not None and column==self._data.index.name:
+            return index
         else:
             log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
