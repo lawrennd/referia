@@ -11,10 +11,16 @@ import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .util import to_camel_case, notempty
+from .util import to_camel_case, notempty, markdown2html, extract_full_filename
 from . import access
 from . import assess
 from . import display
+
+import appscript as ap
+import mactypes as mt
+import pathlib as pl
+
+
 
 TMPPDFFILES={}
 
@@ -90,6 +96,107 @@ def open_url(urlname):
     log.info(f"Opening url \"{urlname}\".")
     os.system(f"open -a \"{browser}\" --background \"{urlname}\"")
 
+
+class Outlook(object):
+    def __init__(self):
+        self.client = ap.app("Microsoft Outlook")
+
+class GoogleChrome(object):
+    def __init__(self):
+        self.client = ap.app("Google Chrome")
+
+def create_document(document, **args):
+    """Create a document based on the data we have."""
+    print(args)
+    doctype = document["type"]
+    if doctype == "email":
+        create_email(document, **args)
+    if doctype == "docx":
+        create_docx(document, **args)
+    if doctype == "markdown":
+        create_markdown(document, **args)
+
+def create_email(document, **args):
+    """Create an email based on the data we have."""
+    emailargs = {}
+    if "maintext" in args:
+        emailargs["body"] = markdown2html(args["maintext"])
+    if "title" in args:
+        emailargs["subject"] = args["title"]
+    if "filename" in args:
+        emailargs["attach"] = extract_full_filename(args)
+        
+    for recips in ["to", "cc", "bcc"]:
+        if recips in args:
+            emailargs[recips] = args[recips]
+    draft_email(**emailargs)
+
+def create_docx(document, **args):
+    pass
+
+def create_markdown(document, **args):
+    pass
+    
+# Email scripts originally from https://stackoverflow.com/questions/61529817/automate-outlook-on-mac-with-python
+def draft_email(subject="", body="", to=[], cc=[], bcc=[], attach=None):
+    """Draft an email for sending."""
+    msg = Message(subject=subject, body=body, to_recip=to, cc_recip=cc, bcc_recip=bcc)
+
+    # attach file
+    if attach is not None:
+        p = pl.Path(attach)
+        msg.add_attachment(p)
+
+    msg.show()
+
+
+class Message(object):
+    
+    def __init__(self, parent=None, subject="", body="", to_recip=[], cc_recip=[], bcc_recip=[], show_=False):
+
+        if parent is None: parent = Outlook()
+        client = parent.client
+
+        self.msg = client.make(
+            new=ap.k.outgoing_message,
+            with_properties={ap.k.subject: subject, ap.k.content: body})
+
+        if len(to_recip)>0:
+            self.add_recipients(emails=to_recip, type_='to')
+        if len(cc_recip)>0:
+            self.add_recipients(emails=cc_recip, type_='cc')
+        if len(bcc_recip)>0:
+            self.add_recipients(emails=bcc_recip, type_='bcc')
+        if show_: self.show()
+
+    def show(self):
+        self.msg.open()
+        self.msg.activate()
+
+    def add_attachment(self, p):
+        # p is a pl.Path() obj, could also pass string
+
+        p = mt.Alias(str(p)) # convert string/path obj to POSIX/mactypes path
+
+        attach = self.msg.make(new=ap.k.attachment, with_properties={ap.k.file: p})
+
+    def add_recipients(self, emails, type_='to'):
+        if not isinstance(emails, list): emails = [emails]
+        for email in emails:
+            self.add_recipient(email=email, type_=type_)
+
+    def add_recipient(self, email, type_='to'):
+        msg = self.msg
+
+        if type_ == 'to':
+            recipient = ap.k.to_recipient
+        elif type_ == 'cc':
+            recipient = ap.k.cc_recipient
+
+        msg.make(new=recipient,
+                 with_properties={ap.k.email_address: {ap.k.address: email}})
+
+    
 def copy_file(origfile, destfile, view, data):
     """Copy a file, or pages from it, for separate editing or viewing."""
     _, ext = os.path.splitext(origfile)

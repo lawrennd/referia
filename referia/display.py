@@ -20,7 +20,7 @@ from ipywidgets import jslink, jsdlink
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton
 from . import access
 from . import assess
 from . import system
@@ -146,6 +146,19 @@ class Scorer:
             for score in config["scorer"]:
                 self.extract_scorer(score)
 
+        if "documents" in config:
+            documents = config["documents"]
+            for count, document in enumerate(documents):
+                label = "_doc_button" + str(count)
+                args = {
+                    "document": document,
+                    "type": document["type"],
+                    "parent": self,
+                }
+                self.add_widgets(**{label: CreateDocButton(**args)})
+
+
+            
         _save_button = SaveButton(parent=self)
         self.add_widgets(_save_button=_save_button)
                     
@@ -465,6 +478,32 @@ class Scorer:
         for key, widget in self.widgets().items():
             widget.display()
             
+    def template_to_value(self, template):
+        """Convert a template to values."""
+        if "use" in template:
+            if template["use"] == "viewer":
+                return self._data.viewer_to_value(config["viewer"])
+            elif template["use"] == "scorer":
+                return self.widgets_to_value()
+        else:
+            return self._data.viewer_to_value(template)
+
+    def widgets_to_value(self):
+        """Convert the widget outputs into text."""
+        value = ""
+        for key, widget in self.widgets().items():
+            value += widget.to_markdown()
+            if value != "":
+                value+= "\n\n"
+        return value
+    
+    def view_scorer(self):
+        text = ""
+        for key, widget in self.widgets().items():
+            text += widget.to_markdown()
+        return text
+
+    
     def load_flows(self):
         """Reload flows from data stores."""
         log.info(f"Reload of flows requested.")
@@ -484,6 +523,23 @@ class Scorer:
         if self._data._writeseries is not None:
             access.write_series(self._data._writeseries)
 
+    def create_document(self, document):
+        """Create a document from the data we've provided."""
+        args = {}
+        maintext = ""
+        if "header" in document:
+            maintext += self.template_to_value(document["header"])
+        if "body" in document:
+            maintext += self.template_to_value(document["body"])
+        if "footer" in document:
+            maintext += self.template_to_value(document["footer"])
+        args["maintext"] = maintext
+        
+        for field in ["to", "cc", "bcc", "directory", "filename", "title"]:
+            if field in document:
+                args[field] = self._data.view_to_value(document[field])
+        system.create_document(document, **args)
+        
     def value_updated(self):
         """If a value in a row has been updated, modify other values"""
         # Need to determine if these should update series or data.

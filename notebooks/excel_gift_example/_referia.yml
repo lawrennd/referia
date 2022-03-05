@@ -14,6 +14,7 @@ logging:
 mapping:
   keyname: keyname
   description: Description
+  senderEmail: Sender Email
   thoughtfulnessComment: Thoughtfulness Comment
   thoughtfulnessExpectation: Thoughtfulness Expectation
   expenseComment: Expense Comment
@@ -75,8 +76,22 @@ How thoughtful was the gift, does it match who you are?"
   max: 10
   step: 1
 - type: CriterionComment
-  criterion: '<h4>Other Comments</h4>'
+  criterion: '#### Other Comments'
   prefix: Other
+
+
+documents:
+- type: email
+  title:
+    display: Thanks for the gift of {description}
+  to:
+    display: "{senderEmail}"
+  header:
+    use: viewer
+  body:
+    use: scorer
+  footer:
+    display: "Regards,\n\nNeil"
 
 combinator:
 - field: Comment

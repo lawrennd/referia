@@ -1,8 +1,22 @@
 from pandas.api.types import is_bool_dtype, is_integer_dtype, is_float_dtype, is_string_dtype
 
 import pandas as pd
+import markdown
+import os
 
 """Utility functions for helping, e.g. to create the relevant yaml files quickly."""
+
+def markdown2html(text):
+    return markdown.markdown(text)
+
+def extract_full_filename(details):
+    """Return the filename from the details of directory and filename"""
+    if "directory" not in details or details["directory"] is None:
+        return details["filename"]
+    return os.path.join(
+        os.path.expandvars(details["directory"]),
+        details["filename"],
+    )
 
 def camel_capitalize(text):
     if text == text.upper():

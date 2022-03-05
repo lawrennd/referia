@@ -4,19 +4,16 @@ import glob
 
 import IPython
 import ipywidgets as ipyw
-import markdown
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 
 from .config import *
-from .util import notempty
+from .util import notempty, markdown2html
 from .log import Logger
 from . import display
 from . import system
 
-def markdown2html(text):
-    return markdown.markdown(text)
 
 log = Logger(
     name=__name__,
@@ -176,6 +173,8 @@ class ReferiaWidget():
     def null(self, void):
         pass
 
+    def to_markdown(self):
+        return ""
         
 class ReferiaStatefulWidget(ReferiaWidget):
     def __init__(self, **args):
@@ -229,6 +228,10 @@ class ReferiaStatefulWidget(ReferiaWidget):
     def get_value(self):
         """Get the value of the widget."""
         return self._ipywidget.value
+
+    def get_description(self):
+        """Get the value of the widget."""
+        return self._ipywidget.description
     
     def set_value(self, value):
         """Set the value of the widget."""
@@ -241,15 +244,20 @@ class ReferiaStatefulWidget(ReferiaWidget):
             self.reset_value()
 
     def reset_value(self):
-        """Reset value to default for widget."""
-        
-        
+        """Reset value to default for widget."""  
         self._ipywidget.value = self._default_value
         
     def get_column(self):
         return self._column_name
-                           
-
+    
+    def to_markdown(self):
+        description = self.get_description()
+        value = self.get_value()
+        if description is None or description.strip() == "":
+            return f"{value}"
+        else:
+            return f"#### {description}\n\n{value}"
+    
 class FieldWidget(ReferiaStatefulWidget):
     """Widget for editing field values in parent data."""
     def __init__(self, function=None, conversion=None, **args):
@@ -538,8 +546,20 @@ def interactive(function, **args):
 
 
 fixed = ipyw.fixed
-
+class CreateDocButton(ReferiaWidget):
+    """Create a document for editing based on the information we have."""
+    def __init__(self, **args):
+        args["description"] = "Create " + args["type"]
+        super().__init__(**args)
+        self.type = args["type"]
+        self.document = args["document"]
+        
+    def on_click(self, b):
+        self._parent.create_document(self.document)
+    
+        
 class SaveButton(ReferiaWidget):
+    """Write the data to the appropriate storage files."""
     def __init__(self, **args):
         args["description"] = "Save Flows"
         super().__init__(**args)

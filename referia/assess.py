@@ -416,10 +416,9 @@ class Data:
 
         return format
 
+        
     def viewer_to_value(self, viewer):
-        column = self.get_column()
-        index = self.get_index()
-        subindex = self.get_subindex()
+        """Convert a viewer structure to populated values."""
         value = ""
         if type(viewer) is not list:
             viewer = [viewer]

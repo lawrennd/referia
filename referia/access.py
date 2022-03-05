@@ -12,7 +12,7 @@ import frontmatter
 import numpy as np
 import pandas as pd
 
-    
+from .util import extract_full_filename
 from .log import Logger
 from .config import *
 
@@ -62,15 +62,6 @@ def extract_sheet(details, gsheet=True):
             return 0
         else:
             return None
-
-def extract_full_filename(details):
-    """Return the filename from the details of directory and filename"""
-    if "directory" not in details or details["directory"] is None:
-        return details["filename"]
-    return os.path.join(
-        os.path.expandvars(details["directory"]),
-        details["filename"],
-    )
 
     
 def read_yaml(details):
