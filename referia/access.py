@@ -31,6 +31,7 @@ log = Logger(
 )
 
 
+
 def str_type():
     return str
 
@@ -74,16 +75,16 @@ def extract_full_filename(details):
     
 def read_yaml(details):
     """Read data from a yaml file."""
-    filename = os.path.join(
-        os.path.expandvars(details["directory"]),
-        details["filename"],
-    )
+    filename = extract_full_filename(details)
     data =  read_yaml_file(filename)
-    return data
+    return pd.DataFrame(data)
+
+def write_yaml(df, details):
+    """Write data to a yaml file."""
+    filename = extract_full_filename(details)
+    write_yaml_file(df.to_dict("records"), filename)
     
-
-
-def read_directory(details, read_file=None, read_file_args={}, default_glob="*.yaml"):
+def read_directory(details, read_file=None, read_file_args={}, default_glob="*"):
     """Read scoring data from a directory of files."""
     if "glob" in details:
         glob_text = details["glob"]
@@ -97,9 +98,9 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*.y
     )
     filenames = glob.glob(globname)
     if len(filenames) == 0:
-        log.warning(f"No files in {globname}")
+        log.warning(f"No files in \"{globname}\"")
     
-    log.info(f"Reading directory {globname}")
+    log.info(f"Reading directory \"{globname}\"")
     data = []
     for filename in filenames:
         if read_file is None:
@@ -123,9 +124,18 @@ def read_yaml_file(filename):
             log.info(f"Reading yaml file {filename}")
             data = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
-            print(exc)
+            log.warning(exc)
             data = {}
     return data
+
+def write_yaml_file(data, filename):
+    """Write a yaml file from a python dictionary."""
+    with open(filename, "w") as stream:
+        try:
+            log.info(f"Writing yaml file {filename}")
+            yaml.dump(data, stream, sort_keys=False)
+        except yaml.YAMLError as exc:
+            log.warning(exc)
 
     
 def read_markdown_file(filename, include_content=True):
@@ -138,31 +148,23 @@ def read_markdown_file(filename, include_content=True):
             if include_content:
                 data["content"] = post.content
         except yaml.YAMLError as exc:
-            print(exc)
+            log.warning(exc)
             data = {}
             
     return data
 
-def write_markdown_file(data, filename, include_content=True):
-    """Read a markdown file and return a python dictionary."""
-    if include_content:
-        content = data["content"]
-        del data["content"]
+def write_markdown_file(data, filename, include_content=True, content="content"):
+    """Write a markdown file from a python dictionary"""
+    if include_content and content in data:
+        write_data = {key: item for (key, item) in data.items() if key != content}
+        content = data[content]
     else:
-        with open(filename, "r") as stream:
-            try:
-                content = frontmatter.load(stream).content
-            except yaml.YAMLError as exc:
-                print(exc)
-                content = ""
-        
-            
+        write_data = data
+        content = ""
     log.info(f"Writing markdown file {filename}")
-    post = frontmatter.Post(content, **data)
-    with open(filename, "w") as stream:
-        frontmatter.dump(post, stream)
-            
-    return data
+    post = frontmatter.Post(content, **write_data)
+    with open(filename, "wb") as stream:
+        frontmatter.dump(post, stream, sort_keys=False)
 
 
 
@@ -200,7 +202,6 @@ if GSPREAD_AVAILABLE:
     
 
 
-
 def write_excel(df, details):
     """Write data to an excel spreadsheet."""
     filename = extract_full_filename(details)
@@ -209,7 +210,7 @@ def write_excel(df, details):
     writer = pd.ExcelWriter(
         filename,
         engine="xlsxwriter",
-        datetime_format="YYYY-MM-DD HH:MM:SS"
+        datetime_format="YYYY-MM-DD HH:MM:SS.000"
     )
     sheet_name=details["sheet"]
     df.to_excel(
@@ -219,6 +220,7 @@ def write_excel(df, details):
         index=False
     )
     writer.save()
+    writer.close()
     
 if GSPREAD_AVAILABLE:
     def write_gsheet(df, details):
@@ -241,48 +243,102 @@ if GSPREAD_AVAILABLE:
             start=(details["header"]+1,1),
         )
 
+
+directory_readers = [
+    {
+        "default_glob": "*.yaml",
+        "read_file": read_yaml_file,
+        "name": "read_yaml_directory",
+        "docstr": "Read a directory of yaml files.",
+    },
+    {
+        "default_glob": "*.md",
+        "read_file": read_markdown_file,
+        "name": "read_markdown_directory",
+        "docstr": "Read a directory of markdown files.",
+    },
+    {
+        "default_glob": "*",
+        "read_file": None,
+        "name": "read_plain_directory",
+        "docstr": "Read a directory of files.",
+    },
+]
+
+directory_writers =[
+    {
+        "write_file": write_yaml_file,
+        "name": "write_yaml_directory",
+        "docstr": "Write a directory of yaml files.",
+    },
+    {
+        "write_file": write_markdown_file,
+        "name": "write_markdown_directory",
+        "docstr": "Write a directory of markdown files.",
+    },
+]
+
+def gdrf_(default_glob, read_file, name="", docstr=""):
+    """Function generator for different directory readers."""
+    def directory_reader(details):
+        globname = None
+        if "glob" in details:
+            globname = details["glob"]
+        if globname is None or globname == "":
+            globname = default_glob
+        return read_directory(
+            details=details,
+            read_file=read_file,
+            default_glob=globname,
+        )
+            
+    directory_reader.__name__ = name
+    directory_reader.__docstr__ = docstr
+    return directory_reader
+
+def gdwf_(write_file, name="", docstr=""):
+    """Function generator for different directory writers."""
+    def directory_writer(details):
+        pass
+    directory_writer.__name__ = name
+    directory_writer.__docstr__ = docstr
+    return directory_writer
+
+def populate_directory_readers(readers):
+    """populate_directory_readers: automatically create functions for reading directories."""
+    this_module = sys.modules[__name__]
+    for reader in readers:
+        setattr(
+            this_module,
+            reader["name"],
+            gdrf_(**reader),
+        )
+def populate_directory_writers(writers):
+    """populate_directory_readers: automatically create functions for reading directories."""
+    this_module = sys.modules[__name__]
+    for writer in writers:
+        setattr(
+            this_module,
+            writer["name"],
+            gdwf_(**writer),
+        )
+
+populate_directory_readers(directory_readers)
+populate_directory_writers(directory_writers)
+
 def read_data(details):
-    globname = None
-    if "glob" in details:
-        globname = details["glob"]
     if details["type"] == "excel":
         df = read_excel(details)
     elif details["type"] == "gsheet":
         df = read_gsheet(details)
     elif details["type"] == "yaml":
         df = read_yaml(details)
-    elif details["type"] == "markdown":
-        df = read_markdown(details)
     elif details["type"] == "yaml_directory":
-        if globname is None or globname == "":
-            default_glob = "*.yaml"
-        else:
-            default_glob = globname
-        df = read_directory(
-            details=details,
-            read_file=read_yaml_file,
-            default_glob=default_glob,
-        )
+        df = read_yaml_directory(details)
     elif details["type"] == "markdown_directory":
-        if globname is None or globname == "":
-            default_glob = "*.md"
-        else:
-            default_glob = globname
-        df = read_directory(
-            details=details,
-            read_file=read_markdown_file,
-            default_glob=globname,
-        )
+        df = read_markdown_directory(details)
     elif details["type"] == "directory":
-        if globname is None or globname == "":
-            default_glob = "*"
-        else:
-            default_glob = globname
-        df = read_directory(
-            details=details,
-            read_file=None,
-            default_glob=globname,
-        )
+        df = read_plain_directory(details)
 
     return df
 
@@ -333,6 +389,14 @@ def write_data(df, details):
         write_excel(df, details)
     elif details["type"] == "gsheet":
         write_gsheet(df, details)
+    elif details["type"] == "gsheet":
+        write_gsheet(df, details)
+    elif details["type"] == "yaml":
+        write_yaml(df, details)
+    elif details["type"] == "yaml_directory":
+        write_yaml_directory(df, details)
+    elif details["type"] == "markdown_directory":
+        write_markdown_directory(df, details)
 
 
 def write_scores(df):

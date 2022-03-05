@@ -40,6 +40,7 @@ REQUIRED = [
     "gspread",
     "gspread_pandas",
     "ipyfilechooser",
+    "mimesis",
     "pypdftk",
 ]
 
