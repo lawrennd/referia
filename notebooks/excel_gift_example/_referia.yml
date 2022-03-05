@@ -21,6 +21,7 @@ mapping:
   expenseExpectation: Expense Expectation
   overallComment: Overall Comment
   overallScore: Overall Score
+  comment: Comment
 
 allocation:
   index: keyname
@@ -79,6 +80,12 @@ How thoughtful was the gift, does it match who you are?"
   criterion: '#### Other Comments'
   prefix: Other
 
+combinator:
+- field: Comment
+  display: "Thoughtfulness: {thoughtfulnessComment} *{thoughtfulnessExpectation} bar*\n
+Expense: {expenseComment} *{expenseExpectation} bar*\n
+\n
+Overall: {overallComment} **Score: {overallScore}**"
 
 documents:
 - type: markdown
@@ -104,13 +111,7 @@ documents:
   body:
     use: scorer
   footer:
-    display: "Regards,\n\nNeil"
+    display: "{comment}\n\nRegards,\n\nNeil"
   filename:
     display: "{keyname}.md"
 
-combinator:
-- field: Comment
-  display: "Thoughtfulness: {thoughtfulnessComment} *{thoughtfulnessExpectation} bar*\n
-Expense: {expenseComment} *{expenseExpectation} bar*\n
-\n
-Overall: {overallComment} **Score: {overallScore}**"
