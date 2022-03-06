@@ -18,10 +18,10 @@ from setuptools import find_packages, setup, Command
 
 # Package meta-data.
 NAME = "referia"
-DESCRIPTION = "Template files for performing data analysis with python.."
+DESCRIPTION = "Template files for performing data analysis with python."
 URL = "https://github.com/lawrennd/referia"
-EMAIL = "emal@domain.here"
-AUTHOR = "Givenname Familyname"
+EMAIL = "email@domain.here"
+AUTHOR = "Neil D. Lawrence"
 REQUIRES_PYTHON = ">=3.6.0"
 VERSION = "0.1.0"
 
@@ -47,7 +47,6 @@ REQUIRED = [
 
 # What packages are optional?
 EXTRAS = {
-    "interactive html plots": ["bokeh",],
 }
 
 PACKAGE_DATA = {"referia": ["defaults.yml"]}
