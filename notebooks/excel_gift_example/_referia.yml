@@ -14,12 +14,14 @@ logging:
 mapping:
   keyname: keyname
   description: Description
+  senderEmail: Sender Email
   thoughtfulnessComment: Thoughtfulness Comment
   thoughtfulnessExpectation: Thoughtfulness Expectation
   expenseComment: Expense Comment
   expenseExpectation: Expense Expectation
   overallComment: Overall Comment
   overallScore: Overall Score
+  comment: Comment
 
 allocation:
   index: keyname
@@ -58,22 +60,24 @@ urls:
 
 scorer:
 - type: CriterionCommentRaisesMeetsLowers
-  criterion: "<h4>Gift Thoughtfulness</h4>
-<p>How thoughtful was the gift, does it match who you are?</p>"
+  criterion: "#### Gift Thoughtfulness
+
+How thoughtful was the gift, does it match who you are?"
   prefix: Thoughtfulness
 - type: CriterionCommentRaisesMeetsLowers
-  criterion: "<h4>Gift Expense</h4>
-<p>How expensive was the gift?</p>"
+  criterion: "#### Gift Expense
+  
+  How expensive was the gift?"
   prefix: Expense
 - type: CriterionCommentScore
-  criterion: '<h4>Overall</h4>'
+  criterion: '#### Overall'
   prefix: Overall
   value: 5
   min: 0
   max: 10
   step: 1
 - type: CriterionComment
-  criterion: '<h4>Other Comments</h4>'
+  criterion: '#### Other Comments'
   prefix: Other
 
 combinator:
@@ -82,3 +86,32 @@ combinator:
 Expense: {expenseComment} *{expenseExpectation} bar*\n
 \n
 Overall: {overallComment} **Score: {overallScore}**"
+
+documents:
+- type: markdown
+  title:
+    display: "Gift Summary"
+  abstract:
+    display: "{description}"
+  header:
+    use: viewer
+  body:
+    use: scorer
+  footer:
+    display: "And that's it"
+  filename:
+    display: "{keyname}.md"
+- type: email
+  title:
+    display: "Thanks for the gift of {description}"
+  to:
+    display: "{senderEmail}"
+  header:
+    use: viewer
+  body:
+    use: scorer
+  footer:
+    display: "{comment}\n\nRegards,\n\nNeil"
+  filename:
+    display: "{keyname}.md"
+

@@ -1,0 +1,81 @@
+inherit: 
+  directory: ../excel_gift_example/
+  writable: True
+  append:
+  - mapping
+
+timestamp_field: Gift Series Timestamp
+created_field: Gift Series Created
+
+mapping:
+  Date: Date
+
+series:
+  index: keyname
+  type: excel
+  sheet: Sheet1
+  directory:
+  filename: series.xlsx
+  subindex_generator: hour
+  selector: Date
+  sortby:
+    field: Date
+    ascending: False
+  header: 0
+
+scored:
+  field: Overall Score
+
+viewer:
+- display: "# {keyname}: {description}"
+
+urls:
+- url: ""
+  field: AdditionalInfo
+
+scorer:
+- type: CriterionCommentRaisesMeetsLowers
+  tally:
+    begin: "#### Gift Thoughtfulness
+
+How thoughtful was the gift, does it match who you are?
+
+List of previous comments:"
+    display: "* **{Date}**: {thoughtfulnessComment} *{thoughtfulnessExpectation}*"
+    end: "That's all the thoughts!"
+    which: others
+  prefix: Thoughtfulness
+- type: CriterionCommentRaisesMeetsLowers
+  tally:
+    begin: "#### Gift Expense
+
+How expensive was the gift?
+
+List of previous comments:"
+    display: "* **{Date}**: {expenseComment} *{expenseExpectation}*"
+    end: "That's all the comments!"
+    which: others
+  prefix: Expense
+- type: CriterionCommentScore
+  tally:
+    begin: '#### Overall
+
+List of previous scores:'
+    display: "* **{Date}**: {overallComment} *{overallScore}*"
+    end: "That's all the scores!"
+    which: others
+  prefix: Overall
+  value: 5
+  min: 0
+  max: 10
+  step: 1
+- type: CriterionComment
+  criterion: '#### Other Comments'
+  prefix: Other
+
+combinator:
+- field: Comment
+  display: "Thoughtfulness: {thoughtfulnessComment} *{thoughtfulnessExpectation} bar*\n
+Expense: {expenseComment} *{expenseExpectation} bar*\n
+\n
+Overall: {overallComment} **Score: {overallScore}**"

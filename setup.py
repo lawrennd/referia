@@ -31,15 +31,18 @@ REQUIRED = [
     "numpy",
     "jupyter",
     "matplotlib",
+    "markdown",
     "unidecode",
     "frontmatter",
-    "google-api-python-client",
+    "google-api-python-client", # for loading from google spreadsheets
     "google-auth-httplib2",
     "google-auth-oauthlib",
     "gspread",
     "gspread_pandas",
-    "ipyfilechooser",
-    "pypdftk",
+    "mimesis", # for generating fake data for testing
+    "appscript", # for OSX applescript calls
+    "pypdftk", # for manipulating PDFs.
+    
 ]
 
 # What packages are optional?
