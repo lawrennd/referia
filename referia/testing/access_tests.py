@@ -51,7 +51,7 @@ class AccessTests(unittest.TestCase):
         self.assertTrue(read_data.to_dict("records")==data.to_dict("records"))
 
     def test_write_read_yaml(self):
-        """test_write_read_yaml: test the write to and read from an yaml directory."""
+        """test_write_read_yaml: test the write to and read from an yaml file."""
         details = {
             "filename": "test.yaml",
             "directory": ".",
@@ -60,4 +60,15 @@ class AccessTests(unittest.TestCase):
         rf.access.write_yaml(data, details)
         read_data = rf.access.read_yaml(details)
         self.assertTrue(read_data.to_dict("records")==data.to_dict("records"))
-                
+
+    def test_write_read_yaml_directory(self):
+        """test_write_read_yaml_directory: test the write to and read from an yaml directory."""
+        details = {
+            "filename": "filename",
+            "directory": "yaml_directory",
+        }
+        data = pd.DataFrame(rf.fake.rows(30))
+        rf.access.write_yaml_directory(data, details)
+        read_data = rf.access.read_yaml_directory(details)
+        self.assertTrue(read_data.to_dict("records")==data.to_dict("records"))
+        

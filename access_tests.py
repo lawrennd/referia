@@ -2,4 +2,4 @@
 
 import nose, warnings
 
-nose.main("danalysis", defaultTest="danalysis/tests/access", argv=["", ""])
+nose.main("referia", defaultTest="referia/tests/access", argv=["", ""])

@@ -82,7 +82,10 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
     else:
         glob_text = default_glob
 
-    directory = os.path.expandvars(details["directory"])
+    if "directory" in details:
+        directory = os.path.expandvars(details["directory"])
+    else:
+        directory = "."
     globname = os.path.join(
         directory,
         glob_text,
@@ -104,9 +107,27 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
         elif os.path.isfile(filename):
             data[-1]["Source File Name"] = os.path.basename(filename)
         else:
-            log.warning(f"File {filename} is not a file or a directory.")
+            log.warning(f"File \"{filename}\" is not a file or a directory.")
     return pd.json_normalize(data)
 
+def write_directory(df, details, write_file=None, write_file_args={}):
+    """Write scoring data to a directory of files."""
+    if "directory" in details:
+        directory = os.path.expandvars(details["directory"])
+    else:
+        directory = "."
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        
+        
+    if "filename" in details:
+        filename_column = details["filename"]
+    else: 
+        filename_column = "Source File Name"
+        
+    for index, row in df.iterrows():
+        filename = os.path.join(directory, row[filename_column])
+        write_file(row.to_dict(), filename, **write_file_args)
         
 def read_yaml_file(filename):
     """Read a yaml file and return a python dictionary."""
@@ -289,8 +310,12 @@ def gdrf_(default_glob, read_file, name="", docstr=""):
 
 def gdwf_(write_file, name="", docstr=""):
     """Function generator for different directory writers."""
-    def directory_writer(details):
-        pass
+    def directory_writer(df, details):
+        return write_directory(
+            df=df,
+            details=details,
+            write_file=write_file,
+        )
     directory_writer.__name__ = name
     directory_writer.__docstr__ = docstr
     return directory_writer
