@@ -11,12 +11,10 @@ text = mi.Text('en')
 def row():
     full_name = person.full_name(gender=mi.enums.Gender.FEMALE)
     name = person.name()
-    filename = name + ".yaml"
     date_time = datetime.datetime()
     output = {
         "full_name": full_name,
         "address":addess.address(),
-        "filename":filename,
         "name":name,
         "email":person.email(),
         "city":addess.city(),

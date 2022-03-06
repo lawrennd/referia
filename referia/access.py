@@ -91,6 +91,7 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
         glob_text,
     )
     filenames = glob.glob(globname)
+    filenames.sort()
     if len(filenames) == 0:
         log.warning(f"No files in \"{globname}\"")
     
@@ -101,11 +102,14 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
             data.append({})
         else:
             data.append(read_file(filename, **read_file_args))
-        data[-1]["Source Root"] = directory
+        if "sourceRoot" not in data[-1]:
+            data[-1]["sourceRoot"] = directory
         if os.path.isdir(filename):
-            data[-1]["Source Directory Name"] = os.path.basename(filename)
+            if "sourceDirectory" not in data[-1]:
+                data[-1]["sourceDirectory"] = os.path.basename(filename)
         elif os.path.isfile(filename):
-            data[-1]["Source File Name"] = os.path.basename(filename)
+            if "sourceFilename" not in data[-1]:
+                data[-1]["sourceFilename"] = os.path.basename(filename)
         else:
             log.warning(f"File \"{filename}\" is not a file or a directory.")
     return pd.json_normalize(data)
@@ -116,24 +120,27 @@ def write_directory(df, details, write_file=None, write_file_args={}):
         directory = os.path.expandvars(details["directory"])
     else:
         directory = "."
+
+    if "sourceRoot" not in df:
+        df["sourceRoot"] = directory
     if not os.path.exists(directory):
         os.makedirs(directory)
-        
-        
+                
     if "filename" in details:
         filename_column = details["filename"]
     else: 
-        filename_column = "Source File Name"
-        
+        filename_column = "sourceFilename"
+    
     for index, row in df.iterrows():
         filename = os.path.join(directory, row[filename_column])
-        write_file(row.to_dict(), filename, **write_file_args)
+        row_dict = row.to_dict()        
+        write_file(row_dict, filename, **write_file_args)
         
 def read_yaml_file(filename):
     """Read a yaml file and return a python dictionary."""
     with open(filename, "r") as stream:
         try:
-            log.info(f"Reading yaml file {filename}")
+            log.info(f"Reading yaml file \"{filename}\"")
             data = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             log.warning(exc)
