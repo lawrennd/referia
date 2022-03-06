@@ -1,7 +1,9 @@
-import referia as rf
+import os 
+import tempfile
 import unittest
-
 import pandas as pd
+
+import referia as rf
 
 
 class AccessTests(unittest.TestCase):
@@ -24,10 +26,11 @@ class AccessTests(unittest.TestCase):
 
     def test_write_read_excel(self):
         """test_write_read_excel: test the write to and read from an excel spreadsheet."""
+        tmpDirectory = tempfile.TemporaryDirectory()
         filename = "text.xlsx"
         details = {
             "filename": "test.xlsx",
-            "directory": ".",
+            "directory": tmpDirectory.name,
             "header": 0,
             "sheet": "Sheet1",
         }
@@ -36,12 +39,14 @@ class AccessTests(unittest.TestCase):
         read_data = rf.access.read_excel(details)
         diff = data.compare(read_data)
         self.assertTrue(len(diff.index)==0)
+        tmpDirectory.cleanup()
 
     def test_write_read_excel(self):
         """test_write_read_excel: test the write to and read from an excel spreadsheet."""
+        tmpDirectory = tempfile.TemporaryDirectory()
         details = {
             "filename": "test.xlsx",
-            "directory": ".",
+            "directory": tmpDirectory.name,
             "header": 0,
             "sheet": "Sheet1",
         }
@@ -49,24 +54,28 @@ class AccessTests(unittest.TestCase):
         rf.access.write_excel(data, details)
         read_data = rf.access.read_excel(details)
         self.assertTrue(read_data.to_dict("records")==data.to_dict("records"))
+        tmpDirectory.cleanup()
 
     def test_write_read_yaml(self):
         """test_write_read_yaml: test the write to and read from an yaml file."""
+        tmpDirectory = tempfile.TemporaryDirectory()
         details = {
             "filename": "test.yaml",
-            "directory": ".",
+            "directory": tmpDirectory.name,
         }
         data = pd.DataFrame(rf.fake.rows(30))
         rf.access.write_yaml(data, details)
         read_data = rf.access.read_yaml(details)
         self.assertTrue(read_data.to_dict("records")==data.to_dict("records"))
+        tmpDirectory.cleanup()
 
     def test_write_read_yaml_directory(self):
         """test_write_read_yaml_directory: test the write to and read from an yaml directory."""
+        tmpDirectory = tempfile.TemporaryDirectory()
         extension = ".yaml"
         details = {
             "filename": "sourceFilename",
-            "directory": "yaml_directory",
+            "directory": tmpDirectory.name,
             "glob": "*" + extension,
         }
         data = pd.DataFrame(rf.fake.rows(30))
@@ -77,13 +86,15 @@ class AccessTests(unittest.TestCase):
         rf.access.write_yaml_directory(data, details)
         read_data = rf.access.read_yaml_directory(details)
         self.assertTrue(read_data.to_dict("records")==data.to_dict("records"))
+        tmpDirectory.cleanup()
 
     def test_write_read_markdown_directory(self):
         """test_write_read_markdown_directory: test the write to and read from an markdown directory."""
+        tmpDirectory = tempfile.TemporaryDirectory()
         extension = ".md"
         details = {
             "filename": "sourceFilename",
-            "directory": "markdown_directory",
+            "directory": tmpDirectory.name,
             "glob": "*" + extension,
         }
         data = pd.DataFrame(rf.fake.rows(30))
@@ -94,4 +105,4 @@ class AccessTests(unittest.TestCase):
         rf.access.write_markdown_directory(data, details)
         read_data = rf.access.read_markdown_directory(details)
         self.assertTrue(read_data.to_dict("records")==data.to_dict("records"))
-        
+        tmpDirectory.cleanup()

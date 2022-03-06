@@ -14,8 +14,6 @@ import markdown
 from IPython import display
 import matplotlib.pyplot as plt
 
-
-
 from ipywidgets import jslink, jsdlink
 
 from .config import *

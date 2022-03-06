@@ -238,7 +238,6 @@ def write_excel(df, details):
         startrow=details["header"],
         index=False
     )
-    writer.save()
     writer.close()
     
 if GSPREAD_AVAILABLE:
