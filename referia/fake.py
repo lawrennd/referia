@@ -12,6 +12,7 @@ def row():
     full_name = person.full_name(gender=mi.enums.Gender.FEMALE)
     name = person.name()
     filename = name + ".yaml"
+    date_time = datetime.datetime()
     output = {
         "full_name": full_name,
         "address":addess.address(),
@@ -20,7 +21,7 @@ def row():
         "email":person.email(),
         "city":addess.city(),
         "state":addess.state(),
-        "date_time":datetime.datetime(),
+        # "date_time": date_time,
         "content":text.text(quantity=30),
         "tagline":text.text(quantity=3),
         "randomdata":random.randint(1000,2000),

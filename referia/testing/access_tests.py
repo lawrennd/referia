@@ -63,12 +63,33 @@ class AccessTests(unittest.TestCase):
 
     def test_write_read_yaml_directory(self):
         """test_write_read_yaml_directory: test the write to and read from an yaml directory."""
+        extension = ".yaml"
         details = {
             "filename": "filename",
             "directory": "yaml_directory",
+            "glob": "*" + extension,
         }
         data = pd.DataFrame(rf.fake.rows(30))
+        data["filename"] = data["name"]
+        for ind in data.index:
+            data.at[ind, "filename"] = data.at[ind, "name"] + extension
         rf.access.write_yaml_directory(data, details)
         read_data = rf.access.read_yaml_directory(details)
+        self.assertTrue(read_data.to_dict("records")==data.to_dict("records"))
+
+    def test_write_read_markdown_directory(self):
+        """test_write_read_markdown_directory: test the write to and read from an markdown directory."""
+        extension = ".md"
+        details = {
+            "filename": "filename",
+            "directory": "markdown_directory",
+            "glob": "*" + extension,
+        }
+        data = pd.DataFrame(rf.fake.rows(30))
+        data["filename"] = data["name"]
+        for ind in data.index:
+            data.at[ind, "filename"] = data.at[ind, "name"] + extension
+        rf.access.write_markdown_directory(data, details)
+        read_data = rf.access.read_markdown_directory(details)
         self.assertTrue(read_data.to_dict("records")==data.to_dict("records"))
         
