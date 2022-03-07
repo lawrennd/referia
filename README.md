@@ -4,6 +4,10 @@ The referia library provides tools for assisting with assessment, originally wri
 
 The library uses jupyter notebook as an interface. 
 
+To install use
+
+%pip install referia
+
 Configuration is stored in a local file, _referia.yml
 
 This file provides the source and format of input data (for assessment), the location and format of annotations to store on the assessment as well of details of how to view files and urls associated with the assessment.
