@@ -77,41 +77,66 @@ def write_yaml(df, details):
     
 def read_directory(details, read_file=None, read_file_args={}, default_glob="*"):
     """Read scoring data from a directory of files."""
-    if "glob" in details:
-        glob_text = details["glob"]
-    else:
-        glob_text = default_glob
+    filenames = []
+    dirnames = []
+    if "source" in details:
+        sources = details["source"]
+        if type(sources) is not list:
+            sources = [source]
 
-    if "directory" in details:
-        directory = os.path.expandvars(details["directory"])
-    else:
-        directory = "."
-    globname = os.path.join(
-        directory,
-        glob_text,
-    )
-    filenames = glob.glob(globname)
-    filenames.sort()
+        for source in sources:
+            if "glob" in source:
+                glob_text = source["glob"]
+            else:
+                glob_text = default_glob
+
+            if "directory" in source:
+                directory = os.path.expandvars(source["directory"])
+            else:
+                directory = "."
+            globname = os.path.join(
+                directory,
+                glob_text,
+            )
+            log.info(f"Reading directory \"{globname}\"")
+            newfiles = glob.glob(globname)
+            newdirs = [directory]*len(newfiles)
+            if len(newfiles) == 0:
+                log.warning(f"No files match \"{globname}\"")
+            if "regexp" in source:
+                regexp = source["regexp"]
+                addfiles = []
+                adddirs = []
+                for filename, dirname in zip(newfiles, newdirs):
+                    if re.match(regexp, os.path.basename(filename)):
+                        addfiles.append(filename)
+                        adddirs.append(dirname)
+                if len(addfiles) == 0:
+                    log.warning(f"No files match \"regexp\"")
+            else:
+                addfiles = newfiles
+                adddirs = newdirs
+            filenames += addfiles
+            dirnames += adddirs
     if len(filenames) == 0:
-        log.warning(f"No files in \"{globname}\"")
-    
-    log.info(f"Reading directory \"{globname}\"")
+        log.warning(f"No files in \"{sources}\"")
+        
+    filenames.sort()
     data = []
-    for filename in filenames:
+    for filename, dirname in zip(filenames, dirnames):
         if read_file is None:
             data.append({})
         else:
             data.append(read_file(filename, **read_file_args))
-        if "sourceRoot" not in data[-1]:
-            data[-1]["sourceRoot"] = directory
-        if os.path.isdir(filename):
-            if "sourceDirectory" not in data[-1]:
-                data[-1]["sourceDirectory"] = os.path.basename(filename)
-        elif os.path.isfile(filename):
-            if "sourceFilename" not in data[-1]:
-                data[-1]["sourceFilename"] = os.path.basename(filename)
-        else:
+        split_path = os.path.split(filename)
+        if not os.path.exists(filename):
             log.warning(f"File \"{filename}\" is not a file or a directory.")
+        if "sourceRoot" not in data[-1]:
+            data[-1]["sourceRoot"] = dirname
+        if "sourceDirectory" not in data[-1]:
+            data[-1]["sourceDirectory"] = split_path[0]
+        if "sourceFilename" not in data[-1]:
+            data[-1]["sourceFilename"] = split_path[1]
     return pd.json_normalize(data)
 
 def write_directory(df, details, write_file=None, write_file_args={}):
