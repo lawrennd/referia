@@ -116,6 +116,7 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
 
 def write_directory(df, details, write_file=None, write_file_args={}):
     """Write scoring data to a directory of files."""
+    
     if "directory" in details:
         directory = os.path.expandvars(details["directory"])
     else:
@@ -155,6 +156,19 @@ def write_yaml_file(data, filename):
             yaml.dump(data, stream, sort_keys=False)
         except yaml.YAMLError as exc:
             log.warning(exc)
+
+def read_yaml_meta_file(filename):
+    """Read meta information associated with a file as a yaml and return a python dictionary if it exists."""
+    metafile = filename + ".yml"
+    if os.path.exists(metafile):
+        return read_yaml_file(metafile)
+    else:
+        return {}
+
+def write_yaml_meta_file(data, filename):
+    """Write meta information associated with a file to a yaml."""
+    metafile = filename + ".yml"
+    write_yaml_file(data, metafile)
 
     
 def read_markdown_file(filename, include_content=True):
@@ -281,6 +295,12 @@ directory_readers = [
         "name": "read_plain_directory",
         "docstr": "Read a directory of files.",
     },
+    {
+        "default_glob": "*",
+        "read_file": read_yaml_meta_file,
+        "name": "read_meta_directory",
+        "docstr": "Read a directory of files.",
+    },
 ]
 
 directory_writers =[
@@ -292,6 +312,11 @@ directory_writers =[
     {
         "write_file": write_markdown_file,
         "name": "write_markdown_directory",
+        "docstr": "Write a directory of markdown files.",
+    },
+    {
+        "write_file": write_yaml_meta_file,
+        "name": "write_meta_directory",
         "docstr": "Write a directory of markdown files.",
     },
 ]
@@ -361,6 +386,8 @@ def read_data(details):
         df = read_markdown_directory(details)
     elif details["type"] == "directory":
         df = read_plain_directory(details)
+    elif details["type"] == "meta_directory":
+        df = read_meta_directory(details)
 
     return df
 
@@ -419,6 +446,8 @@ def write_data(df, details):
         write_yaml_directory(df, details)
     elif details["type"] == "markdown_directory":
         write_markdown_directory(df, details)
+    elif details["type"] == "meta_directory":
+        write_meta_directory(df, details)
 
 
 def write_scores(df):
