@@ -274,7 +274,9 @@ def view_file(view, data):
     """View a file containing relevant information to the assessment."""
     filename = ""
     tmpname = ""
-    if "field" in view:
+    if "display" in view:
+        val = data.display_to_value(view["display"])
+    elif "field" in view:
         val = data.get_value_column(view["field"])
         if type(val) is str:
             filename = os.path.expandvars(os.path.join(view["directory"],val))

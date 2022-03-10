@@ -573,7 +573,7 @@ class ReloadButton(ReferiaWidget):
         super().__init__(**args)
 
     def on_click(self, b):
-        self._parent.load_flows()
+        self._parent.load_flows(reload=True)
 
     
 populate_widgets(list_stateful_widgets)

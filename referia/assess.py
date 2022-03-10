@@ -188,7 +188,9 @@ class Data:
     def set_column(self, column):
         """Set the current column focus."""
         if column != self.index.name and column not in self.columns:
-            if self._writedata is not None or self._writeseries is not None:
+            if self._writeseries is not None:
+                self.add_series_column(column)
+            elif self._writedata is not None:
                 self.add_column(column)
 
         if column != self.index.name and column not in self.columns:
@@ -221,9 +223,9 @@ class Data:
             self.set_selector(column)
         else:
             self._selector = column
+            log.info(f"Column {column} of Data._writeseries selected for selection.")
             if self.get_subindex() not in self._writeseries[column]:
                 self.set_subindex(None)
-            log.info(f"Column {column} of Data._writeseries selected for selection.")
 
     def get_subindex(self):
         if self._subindex is None and self._writeseries is not None and self._selector is not None:

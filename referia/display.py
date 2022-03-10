@@ -502,18 +502,23 @@ class Scorer:
         return text
 
     
-    def load_flows(self):
+    def load_flows(self, reload=False):
         """Reload flows from data stores."""
         log.info(f"Reload of flows requested.")
-        index = self.get_index()
-        selector = self.get_selector()
-        subindex = self.get_subindex()
-        log.debug(f"Storing index: \"{index}\" selector: \"{selector}\" subindex: \"{subindex}\"")
+        if reload:
+            index = self.get_index()
+            selector = self.get_selector()
+            subindex = self.get_subindex()
+            log.debug(f"Storing index: \"{index}\" selector: \"{selector}\" subindex: \"{subindex}\"")
         self._data.load_flows()
-        log.debug(f"Resetting index.")
-        self.set_index(index)
-        self.set_selector(selector)
-        self.set_subindex(subindex)
+        if reload:
+            log.debug(f"Resetting index.")
+            if index is not None:
+                self.set_index(index)
+            if selector is not None:
+                self.set_selector(selector)
+            if subindex is not None:
+                self.set_subindex(subindex)
         self.populate_widgets()
         
     def save_flows(self):

@@ -82,7 +82,7 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
     if "source" in details:
         sources = details["source"]
         if type(sources) is not list:
-            sources = [source]
+            sources = [sources]
 
         for source in sources:
             if "glob" in source:
@@ -219,7 +219,7 @@ def write_markdown_file(data, filename, include_content=True, content="content")
     else:
         write_data = data
         content = ""
-    log.info(f"Writing markdown file {filename}")
+    log.info(f"Writing markdown file \"{filename}\"")
     post = frontmatter.Post(content, **write_data)
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)
@@ -230,7 +230,7 @@ def read_excel(details):
     """Read data from an excel spreadsheet."""
     dtypes = extract_dtypes(details)
     filename = extract_full_filename(details)
-    log.info(f"Reading excel file {filename}")
+    log.info(f"Reading excel file \"{filename}\"")
     data =  pd.read_excel(
         filename,
         sheet_name=details["sheet"],
@@ -399,20 +399,29 @@ populate_directory_readers(directory_readers)
 populate_directory_writers(directory_writers)
 
 def read_data(details):
-    if details["type"] == "excel":
+    """Read in the data from the details given in configuration."""
+    if "type" in details:
+        ftype = details["type"]
+    else:
+        log.error("Field \"type\" missing in data source details for read_data.")
+        return
+    
+    if ftype == "excel":
         df = read_excel(details)
-    elif details["type"] == "gsheet":
+    elif ftype == "gsheet":
         df = read_gsheet(details)
-    elif details["type"] == "yaml":
+    elif ftype == "yaml":
         df = read_yaml(details)
-    elif details["type"] == "yaml_directory":
+    elif ftype == "yaml_directory":
         df = read_yaml_directory(details)
-    elif details["type"] == "markdown_directory":
+    elif ftype == "markdown_directory":
         df = read_markdown_directory(details)
-    elif details["type"] == "directory":
+    elif ftype == "directory":
         df = read_plain_directory(details)
-    elif details["type"] == "meta_directory":
+    elif ftype == "meta_directory":
         df = read_meta_directory(details)
+    else:
+        log.error("Unknown type \"{ftype}\" in read_data.")
 
     return df
 
@@ -420,16 +429,40 @@ def allocation():
     """Load in the allocation spread sheet to data frames."""
     return read_data(config["allocation"])
 
+def data_exists(details):
+    """Check if a particular data structure exists or needs to be created."""
+    if "filename" in details:
+        filename = extract_full_filename(details)
+        if os.path.exists(filename):
+            return True
+        else:
+            return False
+    if details["type"] in "gsheet":
+        raise NotImplementedError("Haven't yet implemented check for existence fo particular google sheets.")
+
+    if "source" in details:
+        sources = details["source"]
+        available = True
+        if type(sources) is not list:
+            sources = [sources]
+        for source in sources:
+            directory = source["directory"]
+            if not os.path.exists(directory):
+                log.error("Missing directory \"{directory}\".")
+                available = False
+        return available
+
+    else:
+        log.error("Unhandled data source availability type.")
+        return False
 
 def scores(index=None):
     """Load in the scoring spread sheet to data frames."""
-    filename = extract_full_filename(config["scores"])
-    if config["scores"]["type"] == "gsheet":
-        return read_data(config["scores"])
-    elif os.path.exists(filename):
-        return read_data(config["scores"])
+    scores = config["scores"]
+    if data_exists(scores):
+        return read_data(scores)
     elif index is not None:
-        log.info(f"Creating new DataFrame for write data from index as {filename} is not found.")
+        log.info(f"Creating new DataFrame for write data from index as \"{scores}\" is not found.")
         return pd.DataFrame(index=index, data=index)
     else:
         raise FileNotFoundError(
@@ -438,20 +471,18 @@ def scores(index=None):
             )
 
 
-def series(source):
+def series(index=None):
     """Load in a series to data frame"""
-    filename = extract_full_filename(config["series"])
-    if config["series"]["type"] == "gsheet":
-        return read_data(config["series"])
-    elif os.path.exists(filename):
-        return read_data(config["series"])
+    series = config["series"]
+    if data_exists(series):
+        return read_data(series)
     elif index is not None:
-        log.info(f"Creating new DataFrame for write data from index as {filename} is not found.")
+        log.info(f"Creating new DataFrame for write data from index as \"{series}\" is not found.")
         return pd.DataFrame(index=index, data=index)
     else:
         raise FileNotFoundError(
             errno.ENOENT,
-            os.strerror(errno.ENOENT), filename
+            os.strerror(errno.ENOENT), series
             )
 
 def additional(source):
@@ -459,20 +490,28 @@ def additional(source):
     return read_data(source)
 
 def write_data(df, details):
-    if details["type"] == "excel":
+    """Write the data using the details given in configuration."""
+    if "type" in details:
+        ftype = details["type"]
+    else:
+        log.error("Field \"type\" missing in data source details for write_data.")
+        return
+    if ftype == "excel":
         write_excel(df, details)
-    elif details["type"] == "gsheet":
+    elif ftype == "gsheet":
         write_gsheet(df, details)
-    elif details["type"] == "gsheet":
+    elif ftype == "gsheet":
         write_gsheet(df, details)
-    elif details["type"] == "yaml":
+    elif ftype == "yaml":
         write_yaml(df, details)
-    elif details["type"] == "yaml_directory":
+    elif ftype == "yaml_directory":
         write_yaml_directory(df, details)
-    elif details["type"] == "markdown_directory":
+    elif ftype == "markdown_directory":
         write_markdown_directory(df, details)
-    elif details["type"] == "meta_directory":
+    elif ftype == "meta_directory":
         write_meta_directory(df, details)
+    else:
+        log.error("Unknown type \"{ftype}\" in read_data.")
 
 
 def write_scores(df):
