@@ -6,6 +6,7 @@ import re
 import tempfile
 
 import yaml
+import json
 
 import frontmatter
 
@@ -63,6 +64,16 @@ def extract_sheet(details, gsheet=True):
         else:
             return None
 
+def read_json(details):
+    """Read data from a json file."""
+    filename = extract_full_filename(details)
+    data = read_json_file(filename)
+    return pd.DataFrame(data)
+
+def write_json(df, details):
+    """Write data to a json file."""
+    filename = extract_full_filename(details)
+    write_json_file(df.to_dict("records"), filename)
     
 def read_yaml(details):
     """Read data from a yaml file."""
@@ -74,7 +85,8 @@ def write_yaml(df, details):
     """Write data to a yaml file."""
     filename = extract_full_filename(details)
     write_yaml_file(df.to_dict("records"), filename)
-    
+
+
 def read_directory(details, read_file=None, read_file_args={}, default_glob="*"):
     """Read scoring data from a directory of files."""
     filenames = []
@@ -118,8 +130,10 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
                 adddirs = newdirs
             filenames += addfiles
             dirnames += adddirs
-    if len(filenames) == 0:
-        log.warning(f"No files in \"{sources}\"")
+        if len(filenames) == 0:
+            log.warning(f"No files in \"{sources}\".")
+    else:
+        log.warning(f"No source in \"{details}\".")
         
     filenames.sort()
     data = []
@@ -161,7 +175,27 @@ def write_directory(df, details, write_file=None, write_file_args={}):
         filename = os.path.join(directory, row[filename_column])
         row_dict = row.to_dict()        
         write_file(row_dict, filename, **write_file_args)
-        
+
+def read_json_file(filename):
+    """Read a json file and return a python dictionary."""
+    with open(filename, "r") as stream:
+        try:
+            log.info(f"Reading json file \"{filename}\"")
+            data = json.load(stream)
+        except json.JSONDecodeError as exc:
+            log.warning(exc)
+            data = {}
+    return data
+
+def write_json_file(data, filename):
+    """Write a json file from a python dicitonary."""
+    with open(filename, "w") as stream:
+        try:
+            log.info(f"Writing json file \"{filename}\".")
+            json.dump(data, stream, sort_keys=False)
+        except json.JSONDecodeError as exc:
+            log.warning(exc)
+            
 def read_yaml_file(filename):
     """Read a yaml file and return a python dictionary."""
     with open(filename, "r") as stream:
@@ -177,7 +211,7 @@ def write_yaml_file(data, filename):
     """Write a yaml file from a python dictionary."""
     with open(filename, "w") as stream:
         try:
-            log.info(f"Writing yaml file {filename}")
+            log.info(f"Writing yaml file \"{filename}\".")
             yaml.dump(data, stream, sort_keys=False)
         except yaml.YAMLError as exc:
             log.warning(exc)
@@ -186,9 +220,11 @@ def read_yaml_meta_file(filename):
     """Read meta information associated with a file as a yaml and return a python dictionary if it exists."""
     metafile = filename + ".yml"
     if os.path.exists(metafile):
-        return read_yaml_file(metafile)
+        data = read_yaml_file(metafile)
     else:
-        return {}
+        data = {}
+    data["sourceFilename"] = filename
+    return data
 
 def write_yaml_meta_file(data, filename):
     """Write meta information associated with a file to a yaml."""
@@ -225,17 +261,55 @@ def write_markdown_file(data, filename, include_content=True, content="content")
         frontmatter.dump(post, stream, sort_keys=False)
 
 
+def read_csv(details):
+    """Read data from a csv file."""
+    dtypes = extract_dtypes(details)
+    filename = extract_full_filename(details)
+    if "header" in details:
+        header = details["header"]
+    else:
+        header = 0
 
+    if "delimiter" in details:
+        delimiter = details["delimiter"]
+    else:
+        delimiter = ","
+
+    if "quotechar" in details:
+        quotechar = details["quotechar"]
+    else:
+        quotechar = "\""
+    log.info(f"Reading csv file \"{filename}\" from row \"{header}\" with quote character {quotechar} and delimiter \"{delimiter}\"")
+        
+    data = pd.read_csv(
+        filename,
+        dtype=dtypes,
+        header=header,
+        delimiter=delimiter,
+        quotechar=quotechar,
+    )
+    return data
+    
 def read_excel(details):
     """Read data from an excel spreadsheet."""
     dtypes = extract_dtypes(details)
     filename = extract_full_filename(details)
-    log.info(f"Reading excel file \"{filename}\"")
+    if "header" in details:
+        header = details["header"]
+    else:
+        header = 0
+
+    if "sheet" in details:
+        sheet_name = details["sheet"]
+    else:
+        sheet_name = "Sheet1"
+    log.info(f"Reading excel file \"{filename}\" sheet \"{sheet_name}\" from row \"{header}\"")
+        
     data =  pd.read_excel(
         filename,
-        sheet_name=details["sheet"],
+        sheet_name=sheet_name,
         dtype=dtypes,
-        header=details["header"],
+        header=header,
     )
     return data
 
@@ -263,8 +337,18 @@ if GSPREAD_AVAILABLE:
 def write_excel(df, details):
     """Write data to an excel spreadsheet."""
     filename = extract_full_filename(details)
-    log.info(f"Writing excel file {filename}")
-        
+    if "header" in details:
+        header = details["header"]
+    else:
+        header = 0
+
+    if "sheet" in details:
+        sheet_name = details["sheet"]
+    else:
+        sheet_name = "Sheet1"
+    
+    log.info(f"Writing excel file \"{filename}\" sheet \"{sheet_name}\" header at row \"{header}\".")
+    
     writer = pd.ExcelWriter(
         filename,
         engine="xlsxwriter",
@@ -274,11 +358,34 @@ def write_excel(df, details):
     df.to_excel(
         writer,
         sheet_name=sheet_name,
-        startrow=details["header"],
+        startrow=header,
         index=False
     )
     writer.close()
-    
+
+def write_csv(df, details):
+    """Write data to an csv spreadsheet."""
+    filename = extract_full_filename(details)
+    if "delimiter" in details:
+        delimiter = details["delimiter"]
+    else:
+        delimiter = ","
+
+    if "quotechar" in details:
+        quotechar = details["quotechar"]
+    else:
+        quotechar = "\""
+    log.info(f"Writing csv file \"{filename}\" with quote character {quotechar} and delimiter \"{delimiter}\"")
+
+    with open(filename, "w") as stream:
+        df.to_csv(
+            stream,
+            sep=delimiter,
+            quotechar=quotechar,
+            header=True,
+            index=False,
+        )
+
 if GSPREAD_AVAILABLE:
     def write_gsheet(df, details):
         """Read data from a Google sheet."""
@@ -303,10 +410,16 @@ if GSPREAD_AVAILABLE:
 
 directory_readers = [
     {
-        "default_glob": "*.yaml",
+        "default_glob": "*.yml",
         "read_file": read_yaml_file,
         "name": "read_yaml_directory",
         "docstr": "Read a directory of yaml files.",
+    },
+    {
+        "default_glob": "*.json",
+        "read_file": read_json_file,
+        "name": "read_json_directory",
+        "docstr": "Read a directory of json files.",
     },
     {
         "default_glob": "*.md",
@@ -324,11 +437,16 @@ directory_readers = [
         "default_glob": "*",
         "read_file": read_yaml_meta_file,
         "name": "read_meta_directory",
-        "docstr": "Read a directory of files.",
+        "docstr": "Read a directory of yaml meta files.",
     },
 ]
 
 directory_writers =[
+    {
+        "write_file": write_json_file,
+        "name": "write_json_directory",
+        "docstr": "Write a directory of json files.",
+    },
     {
         "write_file": write_yaml_file,
         "name": "write_yaml_directory",
@@ -342,7 +460,7 @@ directory_writers =[
     {
         "write_file": write_yaml_meta_file,
         "name": "write_meta_directory",
-        "docstr": "Write a directory of markdown files.",
+        "docstr": "Write a directory of yaml meta files.",
     },
 ]
 
@@ -412,6 +530,10 @@ def read_data(details):
         df = read_gsheet(details)
     elif ftype == "yaml":
         df = read_yaml(details)
+    elif ftype == "csv":
+        df = read_csv(details)
+    elif ftype == "json":
+        df = read_json(details)
     elif ftype == "yaml_directory":
         df = read_yaml_directory(details)
     elif ftype == "markdown_directory":
@@ -500,8 +622,10 @@ def write_data(df, details):
         write_excel(df, details)
     elif ftype == "gsheet":
         write_gsheet(df, details)
-    elif ftype == "gsheet":
-        write_gsheet(df, details)
+    elif ftype == "csv":
+        write_csv(df, details)
+    elif ftype == "json":
+        write_json(df, details)
     elif ftype == "yaml":
         write_yaml(df, details)
     elif ftype == "yaml_directory":
