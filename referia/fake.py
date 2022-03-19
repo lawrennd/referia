@@ -19,7 +19,7 @@ def row():
         "email":person.email(),
         "city":addess.city(),
         "state":addess.state(),
-        # "date_time": date_time,
+        "date_time": date_time,
         "content":text.text(quantity=30),
         "tagline":text.text(quantity=3),
         "randomdata":random.randint(1000,2000),
