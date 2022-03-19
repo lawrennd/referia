@@ -566,7 +566,8 @@ class Data:
                     df[field["name"]] = column
                 else:
                     log.warning(f"No \"name\" associated with field entry.")
-
+        if "index" not in details:
+            raise ValueError("Missing index field in data frame specification in _referia.yml")
         index_col = details["index"]
         if index_col in df.columns:
             df.set_index(df[index_col], inplace=True)

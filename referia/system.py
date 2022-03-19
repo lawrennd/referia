@@ -6,6 +6,8 @@ from unidecode import unidecode
 import filecmp
 from shutil import copy2
 import tempfile
+import random
+import string
 
 import pypdftk as tk
 
@@ -54,6 +56,8 @@ def open_localfile(filename):
         open_video(filename)
     elif ext == ".py":
         open_python(filename)
+    elif ext == ".docx":
+        open_docx(filename)
     elif ext == ".md" or ext == ".markdown":
         open_markdown(filename)
     else:
@@ -67,6 +71,11 @@ def open_markdown(filename):
     os.system(f"open --background \"{filename}\"")
 
 def open_python(filename):
+    """Use the system viewer to open a python file."""
+    log.info(f"Opening file \"{filename}\".")
+    os.system(f"open --background \"{filename}\"")
+
+def open_docx(filename):
     """Use the system viewer to open a python file."""
     log.info(f"Opening file \"{filename}\".")
     os.system(f"open --background \"{filename}\"")
@@ -273,19 +282,30 @@ def view_directory(view):
 def view_file(view, data):
     """View a file containing relevant information to the assessment."""
     filename = ""
-    tmpname = ""
+    tmpname = ''.join(random.choices(string.digits+string.ascii_letters, k=8))
+    temp_file = False
+    if "temp_file" in view:
+        temp_file = view["temp_file"]
     if "display" in view:
         val = data.display_to_value(view["display"])
+        tmpname = to_camel_case(view["display"].replace("/", "_").replace("{","").replace("}", ""))
     elif "field" in view:
         val = data.get_value_column(view["field"])
-        if type(val) is str:
-            filename = os.path.expandvars(os.path.join(view["directory"],val))
-            tmpname = to_camel_case(view["field"])
+        tmpname = to_camel_case(view["field"])        
     elif "file" in view:
-        filename = os.path.expandvars(os.path.join(view["directory"], view["file"]))
+        val = view["file"]
+
+    if "directory" in view:
+        directory = view["directory"]
+    else:
+        directory = "."
+        
+    if type(val) is str:
+        filename = os.path.expandvars(os.path.join(directory,val))
+
     if os.path.exists(filename):
         _, ext = os.path.splitext(filename)
-        if len(tmpname)>0:
+        if temp_file:
             tmpdirectory = tempfile.gettempdir()
             destfile = str(data.get_index()) + "_" + tmpname + ext
             destname = os.path.join(tmpdirectory, destfile)
@@ -312,6 +332,8 @@ def view_files(data):
         displays += config["localvideo"]
     if "localipynb" in config:
         displays += config["localipynb"]
+    if "localdocx" in config:
+        displays += config["localdocx"]
 
     for view in displays:
         view_file(view, data)
