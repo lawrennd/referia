@@ -353,6 +353,12 @@ class Data:
         else:
             log.warning(f"\"{column}\" requested to be added to write data but already exists.")
 
+    def set_dtype(self, column, dtype):
+        """Set a Data._writedata column to the given data type."""
+        if column in self._writedata.columns:
+            log.info(f"\"{column}\" being set to \"{dtype}\".")
+            self._writedata[column] = self._writedata[column].astype(dtype)
+            
     def add_row(self, index=None, subindex=None):
         """Add a row with a given index (and optionally subindex) to the data structure."""
         def append_row(df, index, subindex=None, selector=None):

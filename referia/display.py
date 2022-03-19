@@ -552,13 +552,22 @@ class Scorer:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        self.set_column(timestamp_field)
+        if timestamp_field not in self._data._writedata.columns:
+            self._data.add_column(timestamp_field)
+            self._data.set_dtype(timestamp_field, "datetime64")
+
+        self.set_column(timestamp_field)        
         self.set_value(today_val,
                        trigger_update=False)
         if "created_field" in config:
             created_field = config["created_field"]
         else:
             created_field = "Created"
+
+        if created_field not in self._data._writedata.columns:
+            self._data.add_column(created_field)
+            self._data.set_dtype(created_field, "datetime64")
+            
         if created_field not in self._data._writedata.columns or assess.empty(self._data.get_value_column(created_field)):
             self.set_column(created_field)
             self.set_value(today_val,

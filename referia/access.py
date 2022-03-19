@@ -33,6 +33,30 @@ log = Logger(
 
 
 
+class EnvTag(yaml.YAMLObject):
+    yaml_tag = u'!ENV'
+
+    def __init__(self, env_var):
+        self.env_var = env_var
+
+    def __repr__(self):
+        v = os.environ.get(self.env_var) or ''
+        return 'EnvTag({}, contains={})'.format(self.env_var, v)
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        return EnvTag(node.value)
+
+    @classmethod
+    def to_yaml(cls, dumper, data):
+        return dumper.represent_scalar(cls.yaml_tag, data.env_var)
+
+# Required for safe_load
+yaml.SafeLoader.add_constructor('!ENV', EnvTag.from_yaml)
+# Required for safe_dump
+yaml.SafeDumper.add_multi_representer(EnvTag, EnvTag.to_yaml)
+
+
 def str_type():
     return str
 
@@ -166,13 +190,13 @@ def write_directory(df, details, write_file=None, write_file_args={}):
     if not os.path.exists(directory):
         os.makedirs(directory)
                 
-    if "filename" in details:
-        filename_column = details["filename"]
+    if "filename_field" in details:
+        filename_field = details["filename_field"]
     else: 
-        filename_column = "sourceFilename"
+        filename_field = "sourceFilename"
     
     for index, row in df.iterrows():
-        filename = os.path.join(directory, row[filename_column])
+        filename = os.path.join(directory, row[filename_field])
         row_dict = row.to_dict()        
         write_file(row_dict, filename, **write_file_args)
 
@@ -223,7 +247,6 @@ def read_yaml_meta_file(filename):
         data = read_yaml_file(metafile)
     else:
         data = {}
-    data["sourceFilename"] = filename
     return data
 
 def write_yaml_meta_file(data, filename):
@@ -618,22 +641,26 @@ def write_data(df, details):
     else:
         log.error("Field \"type\" missing in data source details for write_data.")
         return
+    write_df = df
+    for x in  write_df.select_dtypes(include=['datetime64']).columns.tolist():
+        write_df[x] = write_df[x].astype(str)
+
     if ftype == "excel":
-        write_excel(df, details)
+        write_excel(write_df, details)
     elif ftype == "gsheet":
-        write_gsheet(df, details)
+        write_gsheet(write_df, details)
     elif ftype == "csv":
-        write_csv(df, details)
+        write_csv(write_df, details)
     elif ftype == "json":
-        write_json(df, details)
+        write_json(write_df, details)
     elif ftype == "yaml":
-        write_yaml(df, details)
+        write_yaml(write_df, details)
     elif ftype == "yaml_directory":
-        write_yaml_directory(df, details)
+        write_yaml_directory(write_df, details)
     elif ftype == "markdown_directory":
-        write_markdown_directory(df, details)
+        write_markdown_directory(write_df, details)
     elif ftype == "meta_directory":
-        write_meta_directory(df, details)
+        write_meta_directory(write_df, details)
     else:
         log.error("Unknown type \"{ftype}\" in read_data.")
 
