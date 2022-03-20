@@ -554,7 +554,7 @@ class Scorer:
             timestamp_field = "Timestamp"
         if timestamp_field not in self._data._writedata.columns:
             self._data.add_column(timestamp_field)
-        self._data.set_dtype(timestamp_field, "datetime64")
+        self._data.set_dtype(timestamp_field, "datetime64[ns]")
 
         self.set_column(timestamp_field)        
         self.set_value(today_val,
@@ -566,7 +566,7 @@ class Scorer:
 
         if created_field not in self._data._writedata.columns:
             self._data.add_column(created_field)
-        self._data.set_dtype(created_field, "datetime64")
+        self._data.set_dtype(created_field, "datetime64[ns]")
             
         if created_field not in self._data._writedata.columns or assess.empty(self._data.get_value_column(created_field)):
             self.set_column(created_field)

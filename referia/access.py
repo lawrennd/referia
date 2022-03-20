@@ -169,40 +169,40 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
         split_path = os.path.split(filename)
         if not os.path.exists(filename):
             log.warning(f"File \"{filename}\" is not a file or a directory.")
-        if "sourceRoot" not in data[-1]:
-            data[-1]["sourceRoot"] = dirname
-        if "sourceDirectory" not in data[-1]:
-            data[-1]["sourceDirectory"] = split_path[0]
-        if "sourceFilename" not in data[-1]:
-            data[-1]["sourceFilename"] = split_path[1]
+        root_field = details["store_fields"]["root"]
+        directory_field = details["store_fields"]["directory"]
+        filename_field = details["store_fields"]["filename"]
+        if root_field not in data[-1]:
+            data[-1][root_field] = dirname
+        if directory_field not in data[-1]:
+            data[-1][directory_field] = split_path[0].replace(dirname, '')
+        if filename_field not in data[-1]:
+            data[-1][filename_field] = split_path[1]
     return pd.json_normalize(data)
 
 def write_directory(df, details, write_file=None, write_file_args={}):
     """Write scoring data to a directory of files."""
-    
-    if "directory" in details:
-        directory = os.path.expandvars(details["directory"])
-    else:
-        directory = "."
+    filename_field = details["store_fields"]["filename"]
+    directory_field = details["store_fields"]["directory"]
+    root_field = details["store_fields"]["root"]
 
-    if "sourceRoot" not in df:
-        df["sourceRoot"] = directory
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-                
-    if "filename_field" in details:
-        filename_field = details["filename_field"]
-    else: 
-        filename_field = "sourceFilename"
-    
     for index, row in df.iterrows():
-        filename = os.path.join(directory, row[filename_field])
+        directoryname = os.path.expandvars(
+            os.path.join(
+                row[root_field],
+                row[directory_field],
+            )
+        )
+        if not os.path.exists(directoryname):
+            os.makedirs(directoryname)
+        
+        fullfilename = os.path.join(directoryname, row[filename_field])
         row_dict = row.to_dict()
         row_dict = remove_empty(row_dict)
-        write_file(row_dict, filename, **write_file_args)
+        write_file(row_dict, fullfilename, **write_file_args)
 
 def remove_empty(row_dict):
-    """Remove any empty fields in a dictionary to tidy up saved files."""
+    """Remove any empty fields in the dictionary to tidy up saved files."""
     delete_keys = []
     for key, item in row_dict.items():
         if pd.isnull(item):
@@ -502,6 +502,7 @@ directory_writers =[
 def gdrf_(default_glob, read_file, name="", docstr=""):
     """Function generator for different directory readers."""
     def directory_reader(details):
+        details = update_store_fields(details)
         globname = None
         if "glob" in details:
             globname = details["glob"]
@@ -517,9 +518,29 @@ def gdrf_(default_glob, read_file, name="", docstr=""):
     directory_reader.__docstr__ = docstr
     return directory_reader
 
+def update_store_fields(details):
+    """Add default store fields values"""
+    # TK: Perhaps this should be set in config defaults somewhere.
+    # Extracts info about where the directory read file data is to be written.
+    if "store_fields" not in details:
+        details["store_fields"] = {
+            "root": "sourceRoot",
+            "directory": "sourceDirectory",
+            "filename": "sourceFilename",
+        }
+    else:
+        if "root" not in details["store_fields"]:
+            details["store_fields"]["root"] =  "sourceRoot"
+        if "directory" not in details["store_fields"]:
+            details["store_fields"]["directory"] =  "sourceDirectory"
+        if "filename" not in details["store_fields"]:
+            details["store_fields"]["filename"] =  "sourceFilename"
+    return details
+    
 def gdwf_(write_file, name="", docstr=""):
     """Function generator for different directory writers."""
     def directory_writer(df, details):
+        details = update_store_fields(details)
         return write_directory(
             df=df,
             details=details,
@@ -664,7 +685,7 @@ def write_data(df, details):
             else:
                 date_series.at[ind] = val.isoformat()
                 
-        write_df[x] = date_series
+        write_df[col] = date_series
 
     if ftype == "excel":
         write_excel(write_df, details)
