@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pandas.api.types import is_bool_dtype, is_integer_dtype, is_float_dtype, is_string_dtype
 
 import pandas as pd
@@ -5,6 +7,14 @@ import markdown
 import os
 
 """Utility functions for helping, e.g. to create the relevant yaml files quickly."""
+
+def yyyymmddToDatetime(date):
+    """Convert from YYYY-MM-DD string to a datetime.datetime object."""
+    if type(date) is str: 
+        return datetime.strptime(date, "%Y-%m-%d")
+    else:
+        return date
+
 
 def markdown2html(text):
     return markdown.markdown(text)

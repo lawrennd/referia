@@ -197,8 +197,20 @@ def write_directory(df, details, write_file=None, write_file_args={}):
     
     for index, row in df.iterrows():
         filename = os.path.join(directory, row[filename_field])
-        row_dict = row.to_dict()        
+        row_dict = row.to_dict()
+        row_dict = remove_empty(row_dict)
         write_file(row_dict, filename, **write_file_args)
+
+def remove_empty(row_dict):
+    """Remove any empty fields in a dictionary to tidy up saved files."""
+    delete_keys = []
+    for key, item in row_dict.items():
+        if pd.isnull(item):
+            delete_keys.append(key)
+
+    for key in delete_keys:
+        del row_dict[key]
+    return row_dict
 
 def read_json_file(filename):
     """Read a json file and return a python dictionary."""
@@ -641,9 +653,18 @@ def write_data(df, details):
     else:
         log.error("Field \"type\" missing in data source details for write_data.")
         return
+
+    # Convert datetime columns to strings in isoformat for ease of writing.
     write_df = df
-    for x in  write_df.select_dtypes(include=['datetime64']).columns.tolist():
-        write_df[x] = write_df[x].astype(str)
+    for col in write_df.select_dtypes(include=['datetime64']).columns.tolist():
+        date_series = pd.Series(index=write_df.index, name=col,dtype="object")
+        for ind, val in write_df[col].items():
+            if pd.isnull(val):
+                date_series.at[ind] = None
+            else:
+                date_series.at[ind] = val.isoformat()
+                
+        write_df[x] = date_series
 
     if ftype == "excel":
         write_excel(write_df, details)

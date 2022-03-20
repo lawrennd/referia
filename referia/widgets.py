@@ -9,7 +9,7 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 
 from .config import *
-from .util import notempty, markdown2html
+from .util import notempty, markdown2html, yyyymmddToDatetime
 from .log import Logger
 from . import display
 from . import system
@@ -62,6 +62,13 @@ list_stateful_widgets = [
     {
         "name" : "Textarea",
         "function" : ipyw.Textarea,
+        "default_args" : {},
+        "docstr" : None,
+        "conversion" : None,
+    },
+    {
+        "name" : "BoundedFloatText",
+        "function" : ipyw.BoundedFloatText,
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
@@ -120,7 +127,7 @@ list_stateful_widgets = [
         "function" : ipyw.DatePicker,
         "default_args" : {},
         "docstr" : None,
-        "conversion" : None,
+        "conversion" : yyyymmddToDatetime,
     },
 ]
 
