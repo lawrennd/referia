@@ -257,9 +257,9 @@ class Data:
             generator = "today"
 
         if generator == "today":
-            return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d')).isoformat()
+            return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d'))
         elif generator == "hour":
-            return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d %H:00')).isoformat()
+            return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d %H:00'))
 
     def get_subseries(self):
         return self._writeseries[self._writeseries.index.isin([self.get_index()])]
