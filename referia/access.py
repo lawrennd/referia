@@ -675,37 +675,39 @@ def write_data(df, details):
         log.error("Field \"type\" missing in data source details for write_data.")
         return
 
-    # Convert datetime columns to strings in isoformat for ease of writing.
-    write_df = df
-    for col in write_df.select_dtypes(include=['datetime64']).columns.tolist():
-        date_series = pd.Series(index=write_df.index, name=col,dtype="object")
-        for ind, val in write_df[col].items():
-            if pd.isnull(val):
-                date_series.at[ind] = None
-            else:
-                date_series.at[ind] = val.isoformat()
-                
-        write_df[col] = date_series
-
     if ftype == "excel":
-        write_excel(write_df, details)
+        write_excel(df, details)
     elif ftype == "gsheet":
-        write_gsheet(write_df, details)
+        write_gsheet(df, details)
     elif ftype == "csv":
-        write_csv(write_df, details)
+        write_csv(df, details)
     elif ftype == "json":
-        write_json(write_df, details)
+        write_json(df, details)
     elif ftype == "yaml":
-        write_yaml(write_df, details)
+        write_yaml(df, details)
     elif ftype == "yaml_directory":
-        write_yaml_directory(write_df, details)
+        write_yaml_directory(df, details)
     elif ftype == "markdown_directory":
-        write_markdown_directory(write_df, details)
+        write_markdown_directory(df, details)
     elif ftype == "meta_directory":
-        write_meta_directory(write_df, details)
+        write_meta_directory(df, details)
     else:
         log.error("Unknown type \"{ftype}\" in read_data.")
 
+
+def convert_datetime_to_str(df):
+    """Convert datetime columns to strings in isoformat for ease of writing."""
+    write_df = df.copy(deep=True)
+    for col in df.select_dtypes(include=['datetime64']).columns.tolist():
+        date_series = pd.Series(index=df.index, name=col,dtype="object")
+        for ind, val in df[col].items():
+            if pd.isnull(val):
+                date_series.at[ind] = None
+            else:
+                date_series.at[ind] = val.strftime("%Y-%m-%d %H:%M:%S.%f")
+                
+        write_df[col] = date_series
+    return write_df
 
 def write_scores(df):
     """Write the scoring spread sheet to data frames."""
