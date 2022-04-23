@@ -42,6 +42,7 @@ REQUIRED = [
     "mimesis", # for generating fake data for testing
     "appscript", # for OSX applescript calls
     "pypdftk", # for manipulating PDFs.
+    "zipfile", # For storing files as zip
     
 ]
 

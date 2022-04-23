@@ -9,6 +9,8 @@ import tempfile
 import random
 import string
 
+import zipfile as zf
+
 import pypdftk as tk
 
 from .config import *
@@ -117,13 +119,31 @@ class GoogleChrome(object):
 def create_document(document, **args):
     """Create a document based on the data we have."""
     doctype = document["type"]
-    if doctype == "email":
-        create_email(document, **args)
     if doctype == "docx":
         create_docx(document, **args)
+    if doctype == "email":
+        create_email(document, **args)
+    if doctype == "excel":
+        create_excel(document, **args)
     if doctype == "markdown":
         create_markdown(document, **args)
+    if doctype == "zip":
+        create_zip(document, **args)
 
+def create_zip(document, **args):
+    """Create a zip file based on the files listed."""
+    zip_args = {}
+    zip_args["filename"] = extract_full_filename(args)
+    if "password" in args:
+        zip_args["password"] = arg["password"]
+    else:
+        zip_args["password"] = None
+    zip_args["file_columns"] = args["file_columns"]
+    filename = zip_args["filename"]
+    log.info(f"Writing files to \"{filename}\"")
+    write_zip(**zip_args)
+    pz.compress_multiple(filelist, [], filename, password, 4)
+            
 def create_email(document, **args):
     """Create an email based on the data we have."""
     email_args = {}
@@ -145,7 +165,8 @@ def create_email(document, **args):
     draft_email(**email_args)
 
 def create_docx(document, **args):
-    pass
+    filename = extract_full_filename(args)
+    raise NotImplementedError("Not yet implemented creat docx")
 
 def create_markdown(document, **args):
     """Create a markdown document."""
@@ -161,7 +182,10 @@ def create_markdown(document, **args):
     access.write_markdown_file(data=data, filename=filename)
     open_localfile(filename)
             
-    
+
+def write_zip(filename=None, password=None, file_columns):
+    pass
+
 # Email scripts originally from https://stackoverflow.com/questions/61529817/automate-outlook-on-mac-with-python
 def draft_email(subject="", body="", to=[], cc=[], bcc=[], attach=None):
     """Draft an email for sending."""
