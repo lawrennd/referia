@@ -9,7 +9,7 @@ import tempfile
 import random
 import string
 
-import zipfile as zf
+import pyminizip as pz
 
 import pypdftk as tk
 
@@ -138,11 +138,20 @@ def create_zip(document, **args):
         zip_args["password"] = arg["password"]
     else:
         zip_args["password"] = None
-    zip_args["file_columns"] = args["file_columns"]
+    columns = args["columns"]
+    if "directory_columns" in args:
+        directory_columns = args["directory_columns"]
+    else:
+        directory_columns = []
     filename = zip_args["filename"]
+
+    if type(columns) is not list:
+        columns = [columns]
+    if type(directory_columns) is not list:
+        directory_columns = [directory_columns]        
+
     log.info(f"Writing files to \"{filename}\"")
     write_zip(**zip_args)
-    pz.compress_multiple(filelist, [], filename, password, 4)
             
 def create_email(document, **args):
     """Create an email based on the data we have."""
@@ -179,12 +188,14 @@ def create_markdown(document, **args):
     for key, item in args.items():
         if key not in ["filename", "directory"]:
             data[key] = item
-    access.write_markdown_file(data=data, filename=filename)
+    access.write_markdown_file(data=data, filename=filename, content)
     open_localfile(filename)
             
 
-def write_zip(filename=None, password=None, file_columns):
-    pass
+def write_zip(filename=None, password=None, filelist=None, directorylist=[], compress=4):
+    """Write a zip file using pyminizip"""
+    pz.compress_multiple(filelist, directorylist, filename, password, compress)
+    
 
 # Email scripts originally from https://stackoverflow.com/questions/61529817/automate-outlook-on-mac-with-python
 def draft_email(subject="", body="", to=[], cc=[], bcc=[], attach=None):

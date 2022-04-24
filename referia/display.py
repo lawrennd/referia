@@ -155,6 +155,21 @@ class Scorer:
                 }
                 self.add_widgets(**{label: CreateDocButton(**args)})
 
+        if "summary" in config:
+            for entry in config["summary"]:
+                
+            
+        if "summary_documents" in config:
+            documents = config["summary_documents"]
+            for count, document in enumerate(documents):
+                label = "_doc_button" + str(count)
+                args = {
+                    "document": document,
+                    "type": document["type"],
+                    "parent": self,
+                }
+                self.add_widgets(**{label: CreateSummaryDocButton(**args)})
+                
 
             
         _save_button = SaveButton(parent=self)
@@ -542,6 +557,25 @@ class Scorer:
             if field not in ["header", "body", "footer", "type"]:
                 args[field] = self._data.view_to_value(document[field])
         system.create_document(document, **args)
+
+    def create_summary_document(self, document):
+        """Create a document from the data we've provided."""
+        args = {}
+        content = ""
+        if "header" in document:
+            content += self.template_to_value(document["header"])
+        if "body" in document:
+            for index in self.get_index():
+                self.set_index(index)
+                content += self.template_to_value(document["body"])
+        if "footer" in document:
+            content += self.template_to_value(document["footer"])
+        args["content"] = content
+        
+        for field in document:
+            if field not in ["header", "body", "footer", "type"]:
+                args[field] = self._data.view_to_value(document[field])
+        system.create_summary_document(document, **args)
         
     def value_updated(self):
         """If a value in a row has been updated, modify other values"""

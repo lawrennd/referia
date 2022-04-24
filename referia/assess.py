@@ -66,7 +66,7 @@ class Data:
             columns += list(self._writeseries.columns)
         # Should perhaps make this unique column list? As in practice it behaves that way.
         return pd.Index(columns)
-        
+
     def _allocation(self):
         """Load in the allocation spread sheet to data frames."""
         self._data = access.allocation()
@@ -321,8 +321,10 @@ class Data:
         """Return the value of the current cell under focus."""
         # Ordering here dictates the priority of selection, first series, then writedata, then data.
         column = self.get_column()
+        if column == None:
+            return None
         index = self.get_index()
-        if index == None or column == None:
+        if index == None:
             return None
         selector = self.get_selector()
         subindex = self.get_subindex()

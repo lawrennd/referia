@@ -552,7 +552,6 @@ def interactive(function, **args):
     ipyw.interactive(function, **newargs)
 
 
-fixed = ipyw.fixed
 class CreateDocButton(ReferiaWidget):
     """Create a document for editing based on the information we have."""
     def __init__(self, **args):
@@ -563,7 +562,18 @@ class CreateDocButton(ReferiaWidget):
         
     def on_click(self, b):
         self._parent.create_document(self.document)
-    
+
+class CreateSummaryDocButton(ReferiaWidget):
+    """Create a summary document based on all the entries."""
+    def __init__(self, **args):
+        args["description"] = "Create Summary" + args["type"]
+        super().__init__(**args)
+        self.type = args["type"]
+        self.document = args["document"]
+        
+    def on_click(self, b):
+        self._parent.create_summary_document(self.document)
+
         
 class SaveButton(ReferiaWidget):
     """Write the data to the appropriate storage files."""
