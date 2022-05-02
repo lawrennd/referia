@@ -127,30 +127,22 @@ def create_document(document, **args):
         create_excel(document, **args)
     if doctype == "markdown":
         create_markdown(document, **args)
-    if doctype == "zip":
-        create_zip(document, **args)
 
-def create_zip(document, **args):
+def create_summary(details, **args):
+    doctype = details["type"]
+    if doctype == "zip":
+        create_zip(details, **args)
+
+def create_zip(details, **args):
     """Create a zip file based on the files listed."""
     zip_args = {}
-    zip_args["filename"] = extract_full_filename(args)
-    if "password" in args:
-        zip_args["password"] = arg["password"]
+    zip_args["filename"] = extract_full_filename(details["store"])
+    if "password" in details:
+        zip_args["password"] = details["password"]
     else:
         zip_args["password"] = None
-    columns = args["columns"]
-    if "directory_columns" in args:
-        directory_columns = args["directory_columns"]
-    else:
-        directory_columns = []
-    filename = zip_args["filename"]
+    zip_args["filelist"] = args["entries"]
 
-    if type(columns) is not list:
-        columns = [columns]
-    if type(directory_columns) is not list:
-        directory_columns = [directory_columns]        
-
-    log.info(f"Writing files to \"{filename}\"")
     write_zip(**zip_args)
             
 def create_email(document, **args):
@@ -188,7 +180,7 @@ def create_markdown(document, **args):
     for key, item in args.items():
         if key not in ["filename", "directory"]:
             data[key] = item
-    access.write_markdown_file(data=data, filename=filename, content)
+    access.write_markdown_file(data=data, filename=filename, content=content)
     open_localfile(filename)
             
 

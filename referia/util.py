@@ -57,6 +57,18 @@ def to_camel_case(text):
     else:
         return text
 
+def sub_path_environment(path):
+    """Replace a path with values from environment variables."""
+    vars = ["HOME", "USERPROFILE"]
+    for var in vars:
+        if var in os.environ:
+            path = path.replace(os.environ[var], "$" + var)
+    return path
+
+def get_path_env():
+    """Return the current parth with environment variables."""
+    return sub_path_environment(os.path.abspath(os.getcwd()))
+                                
 def draft_combinator(fieldname, columns):
     print("combinator:")
     print("- field: {fieldname}".format(fieldname=fieldname))

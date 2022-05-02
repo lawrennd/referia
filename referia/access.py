@@ -13,7 +13,7 @@ import frontmatter
 import numpy as np
 import pandas as pd
 
-from .util import extract_full_filename
+from .util import extract_full_filename, get_path_env
 from .log import Logger
 from .config import *
 
@@ -173,7 +173,7 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
         directory_field = details["store_fields"]["directory"]
         filename_field = details["store_fields"]["filename"]
         if root_field not in data[-1]:
-            data[-1][root_field] = dirname
+            data[-1][root_field] = get_path_env()
         if directory_field not in data[-1]:
             data[-1][directory_field] = split_path[0].replace(dirname, '')
         if filename_field not in data[-1]:
@@ -187,19 +187,22 @@ def write_directory(df, details, write_file=None, write_file_args={}):
     root_field = details["store_fields"]["root"]
 
     for index, row in df.iterrows():
-        directoryname = os.path.expandvars(
-            os.path.join(
-                row[root_field],
-                row[directory_field],
+        # Don't write a file that contains only nulls
+        if not row.isnull().values.all():
+            
+            directoryname = os.path.expandvars(
+                os.path.join(
+                    row[root_field],
+                    row[directory_field],
+                )
             )
-        )
-        if not os.path.exists(directoryname):
-            os.makedirs(directoryname)
-        
-        fullfilename = os.path.join(directoryname, row[filename_field])
-        row_dict = row.to_dict()
-        row_dict = remove_empty(row_dict)
-        write_file(row_dict, fullfilename, **write_file_args)
+            if not os.path.exists(directoryname):
+                os.makedirs(directoryname)
+
+            fullfilename = os.path.join(directoryname, row[filename_field])
+            row_dict = row.to_dict()
+            row_dict = remove_empty(row_dict)
+            write_file(row_dict, fullfilename, **write_file_args)
 
 def remove_empty(row_dict):
     """Remove any empty fields in the dictionary to tidy up saved files."""
@@ -243,12 +246,22 @@ def read_yaml_file(filename):
             data = {}
     return data
 
+def yaml_prep(data):
+    """Prepare any fields for writing in yaml"""
+    writedata = data.copy()
+    for key, item in writedata.items():
+        if pd.api.types.is_datetime64_dtype(item) or type(item) is pd.Timestamp:
+            writedata[key] = item.strftime("%Y-%m-%d %H:%M:%S.%f")
+    return writedata
+
+    
 def write_yaml_file(data, filename):
     """Write a yaml file from a python dictionary."""
+    writedata = yaml_prep(data)
     with open(filename, "w") as stream:
         try:
             log.info(f"Writing yaml file \"{filename}\".")
-            yaml.dump(data, stream, sort_keys=False)
+            yaml.dump(writedata, stream, sort_keys=False)
         except yaml.YAMLError as exc:
             log.warning(exc)
 

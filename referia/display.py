@@ -18,7 +18,7 @@ from ipywidgets import jslink, jsdlink
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, BoundedFloatText
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText
 from . import access
 from . import assess
 from . import system
@@ -156,13 +156,20 @@ class Scorer:
                 self.add_widgets(**{label: CreateDocButton(**args)})
 
         if "summary" in config:
-            for entry in config["summary"]:
-                
+            summaries = config["summary"]
+            for count, summary in enumerate(summaries):
+                label = "_summary_button" + str(count)
+                args = {
+                    "details": summary,
+                    "type": summary["type"],
+                    "parent": self,
+                }
+                self.add_widgets(**{label: CreateSummaryButton(**args)})
             
         if "summary_documents" in config:
             documents = config["summary_documents"]
             for count, document in enumerate(documents):
-                label = "_doc_button" + str(count)
+                label = "_summary_doc_button" + str(count)
                 args = {
                     "document": document,
                     "type": document["type"],
@@ -576,7 +583,25 @@ class Scorer:
             if field not in ["header", "body", "footer", "type"]:
                 args[field] = self._data.view_to_value(document[field])
         system.create_summary_document(document, **args)
-        
+
+    def create_summary(self, details):
+        """Create a summary file given the relevant information"""
+        args = {}
+        args["entries"] = []
+        if "columns" in details:
+            columns = details["columns"]
+            if type(columns) is not list:
+                columns = [columns]
+            
+            for column in columns:
+                for index in self.index:
+                    print(f"Set index {index}")
+                    self.set_index(index)
+                    val = self._data.get_value_column(column)
+                    print(f"Value is {val}")
+                    args["entries"].append(val)
+        system.create_summary(details, **args)
+    
     def value_updated(self):
         """If a value in a row has been updated, modify other values"""
         # Need to determine if these should update series or data.

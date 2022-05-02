@@ -328,10 +328,18 @@ class Data:
             return None
         selector = self.get_selector()
         subindex = self.get_subindex()
-        if self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
+        # Prioritise returning from the _data structure first.
+        if self._data is not None and column in self._data.columns:
+            try:
+                return self._data.at[index, column]
+            except KeyError as err:
+                raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _data.") from err
+        elif self._data is not None and column==self._data.index.name:
+            return index
+        elif self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
             if subindex is not None:
                 indexer = (self._writeseries.index.isin([index])
-                    & (self._writeseries[selector]==subindex).values)
+                           & (self._writeseries[selector]==subindex).values)
                 if indexer.sum()>0:
                     return self._writeseries.loc[indexer, column].iloc[0]
                 else:
@@ -339,11 +347,13 @@ class Data:
             else:
                 log.warning(f"No subindex selected, returning None.")
         elif self._writedata is not None and column in self._writedata.columns:
-            return self._writedata.at[index, column]
-        elif self._data is not None and column in self._data.columns:
-            return self._data.at[index, column]
-        elif self._data is not None and column==self._data.index.name:
-            return index
+            if index in self._data.index and not index in self._writedata.index:
+                # If index isn't created in write data yet, return None.
+                return None
+            try:
+                return self._writedata.at[index, column]
+            except KeyError as err:
+                raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _writedata.") from err
         else:
             log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
@@ -551,7 +561,10 @@ class Data:
                     if "value" in field:
                         for index in df.index:
                             format = self.mapping(series=df.loc[index])
-                            column[index] = field["value"].format(**format)
+                            try:
+                                column[index] = field["value"].format(**format)
+                            except KeyError as err:
+                                raise KeyError(f"Formatting _referia.yml file contains a key that does not exist in field named \"{name}\" with value \"{value}\".".format(name=field["name"], value=field["value"])) from err
 
                     elif "source" in field and "regexp" in field:
                         regexp = field["regexp"]
@@ -565,7 +578,7 @@ class Data:
                             )
                             if match:
                                 if len(match.groups())>1:
-                                    log.warning(f"Multiple regular expression matches in {regexp}.")
+                                    log.warning(f"Multiple regular expression matches in \"{regexp}\".")
                                 column[index] = match.group(1)
                             else:
                                 log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
