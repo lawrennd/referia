@@ -325,11 +325,13 @@ def view_file(view, data):
     if "directory" in view:
         directory = view["directory"]
     else:
-        directory = "."
+        directory = "" # If display is a full path, placing "." here messes it up
         
     if type(val) is str:
         filename = os.path.expandvars(os.path.join(directory,val))
-
+    else:
+        log.warning(f"Provided file {val} is not in string form.")
+        
     if os.path.exists(filename):
         _, ext = os.path.splitext(filename)
         if temp_file:

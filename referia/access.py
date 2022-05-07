@@ -175,7 +175,10 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*")
         if root_field not in data[-1]:
             data[-1][root_field] = get_path_env()
         if directory_field not in data[-1]:
-            data[-1][directory_field] = split_path[0].replace(dirname, '')
+            direc = split_path[0].replace(dirname, '')
+            if direc == "": # ensure at least a "." for directory
+                direc = "."
+            data[-1][directory_field] = direc
         if filename_field not in data[-1]:
             data[-1][filename_field] = split_path[1]
     return pd.json_normalize(data)

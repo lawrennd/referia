@@ -69,9 +69,14 @@ class Data:
 
     def _allocation(self):
         """Load in the allocation spread sheet to data frames."""
-        self._data = access.allocation()
-        self._data = self._finalize_df(self._data, config["allocation"])
-
+        df = access.allocation()
+        df = self._finalize_df(df, config["allocation"])
+        if df.index.is_unique:
+            self._data = df
+        else:
+            duplicates = ', '.join(df.index[df.index.duplicated()])
+            raise ValueError(f"The index for the allocation must be unique. Index \"{duplicates}\" is/are duplicated.")
+        
     def _additional(self):
         """Load in the allocation spread sheet to data frames."""
 
@@ -81,20 +86,27 @@ class Data:
             configs = config["additional"]
 
         for i, conf in enumerate(configs):
-            if i == 0:
-                additional = self._finalize_df(access.additional(conf), conf)
+            df = self._finalize_df(access.additional(conf), conf)
+            if df.index.is_unique:
+                if i == 0:
+                    additional = df
+                else:
+                    additional = additional.join(df, rsuffix="_" + str(i))
             else:
-                additional = additional.join(
-                    self._finalize_df(access.additional(conf), conf),
-                    rsuffix="_" + str(i)
-                )
+                duplicates = ', '.join(df.index[df.index.duplicated()])
+                raise ValueError(f"The index for additional data frame {i} must be unique. Index \"{duplicates}\" is/are duplicated.")
 
         self._data = self._data.join(additional, rsuffix="additional")
 
     def _scores(self):
         """Load in the score data to data frames."""
-        self._writedata = access.scores(self.index)
-        self._writedata = self._finalize_df(self._writedata, config["scores"])
+        df = access.scores(self.index)
+        df = self._finalize_df(df, config["scores"])
+        if df.index.is_unique:
+            self._writedata = df
+        else:
+            duplicates = ', '.join(df.index[df.index.duplicated()])
+            raise ValueError(f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated.")
 
 
     def _series(self):
@@ -417,6 +429,7 @@ class Data:
     def mapping(self, mapping=None, series=None):
         """Generate dictionary of mapping between variable names and column values."""
         if mapping is None:
+            # If a mapping is provided in _referia.yml use it, otherwise generate
             if "mapping" in config:
                 mapping = config["mapping"]
             else:
@@ -564,7 +577,7 @@ class Data:
                             try:
                                 column[index] = field["value"].format(**format)
                             except KeyError as err:
-                                raise KeyError(f"Formatting _referia.yml file contains a key that does not exist in field named \"{name}\" with value \"{value}\".".format(name=field["name"], value=field["value"])) from err
+                                raise KeyError("Formatting _referia.yml file contains a key that does not exist in field named \"{name}\" with value \"{value}\".".format(**field)) from err
 
                     elif "source" in field and "regexp" in field:
                         regexp = field["regexp"]

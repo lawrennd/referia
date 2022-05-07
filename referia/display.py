@@ -14,11 +14,11 @@ import markdown
 from IPython import display
 import matplotlib.pyplot as plt
 
-from ipywidgets import jslink, jsdlink
+from ipywidgets import jslink, jsdlink, Layout
 
 from .config import *
 from .log import Logger
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, Layout, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText
+from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText
 from . import access
 from . import assess
 from . import system
@@ -477,16 +477,21 @@ class Scorer:
 
             # Set up arguments for the widget
             args = process_score["args"]
-            args["field_name"] = field_name
+            try:
+                args["field_name"] = field_name
+            except TypeError as err:
+                raise TypeError("The argument \"args\" in _referia.yml should be in the form of a mapping.") from err
             args["column_name"] = self._column_names_dict[field_name]
             if "display" in process_score and "display" not in args:
                 args["display"] = process_score["display"]
             if "tally" in process_score and "tally" not in args:
                 args["tally"] = process_score["tally"]
+            # Layout descriptor can be in main structure, or in args.
             if "layout" in process_score and "layout" not in args:
                 args["layout"] =  Layout(**process_score["layout"])
+            elif "layout" in args:
+                args["layout"] = Layout(**args["layout"])
             args["parent"] = self
-
             # Add the widget
             self.add_widgets(**{field_name: widget_type(**args)})
         else:
