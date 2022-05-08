@@ -128,11 +128,25 @@ def create_document(document, **args):
     if doctype == "markdown":
         create_markdown(document, **args)
 
+
 def create_summary(details, **args):
+    """Create a summary file based on the data in all fields."""
     doctype = details["type"]
     if doctype == "zip":
         create_zip(details, **args)
 
+def create_summary_document(document, **args):
+    """Create a summary document based on the data in all fields."""
+    doctype = details["type"]
+    if doctype == "docx":
+        create_docx(document, **args)
+    if doctype == "email":
+        create_email(document, **args)
+    if doctype == "excel":
+        create_excel(document, **args)
+    if doctype == "markdown":
+        create_markdown(document, **args)
+        
 def create_zip(details, **args):
     """Create a zip file based on the files listed."""
     zip_args = {}

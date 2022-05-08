@@ -74,7 +74,8 @@ class Data:
         if df.index.is_unique:
             self._data = df
         else:
-            duplicates = ', '.join(df.index[df.index.duplicated()])
+            strindex = pd.Series([str(ind) for ind in df.index])
+            duplicates = ', '.join(strindex[df.index.duplicated()])
             raise ValueError(f"The index for the allocation must be unique. Index \"{duplicates}\" is/are duplicated.")
         
     def _additional(self):
@@ -93,7 +94,8 @@ class Data:
                 else:
                     additional = additional.join(df, rsuffix="_" + str(i))
             else:
-                duplicates = ', '.join(df.index[df.index.duplicated()])
+                strindex = pd.Series([str(ind) for ind in df.index])
+                duplicates = ', '.join(strindex[df.index.duplicated()])
                 raise ValueError(f"The index for additional data frame {i} must be unique. Index \"{duplicates}\" is/are duplicated.")
 
         self._data = self._data.join(additional, rsuffix="additional")
@@ -105,7 +107,8 @@ class Data:
         if df.index.is_unique:
             self._writedata = df
         else:
-            duplicates = ', '.join(df.index[df.index.duplicated()])
+            strindex = pd.Series([str(ind) for ind in df.index])
+            duplicates = ', '.join(strindex[df.index.duplicated()])
             raise ValueError(f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated.")
 
 
@@ -491,7 +494,10 @@ class Data:
 
     def display_to_value(self, display):
         format = self.mapping()
-        return display.format(**format)    
+        try:
+            return display.format(**format)
+        except KeyError as err:
+            raise KeyError(f"The mapping doesn't contain the key {err} requested in \"{display}\". Set the mapping in \"_referia.yml\".") from err
 
     def tally_to_value(self, tally):
         format = self.mapping()
@@ -577,14 +583,20 @@ class Data:
                             try:
                                 column[index] = field["value"].format(**format)
                             except KeyError as err:
-                                raise KeyError("Formatting _referia.yml file contains a key that does not exist in field named \"{name}\" with value \"{value}\".".format(**field)) from err
+                                name = field["name"]
+                                value = field["value"]
+                                raise KeyError(f"Formatting _referia.yml file contains key \"{err}\" that does not exist in field named \"{name}\" with value \"{value}\".".format(**field)) from err
 
                     elif "source" in field and "regexp" in field:
                         regexp = field["regexp"]
                         if field["source"] not in df.columns:
                             log.warning("No column \"{source}\" in DataFrame.".format(source=field["source"]))
                         for index in df.index:
-                            source = df.at[index, field["source"]]
+                            try: 
+                                source = df.at[index, field["source"]]
+                            except KeyError as err:
+                                name = field["name"]
+                                raise KeyError(f"Could not find the source field, \"{err}\", listed in _referia.yml under name: \"{name}\" in the DataFrame.")
                             match = re.match(
                                 regexp,
                                 source,
