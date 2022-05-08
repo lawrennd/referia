@@ -284,8 +284,11 @@ class Data:
     def get_subindices(self):
         if self._selector is None:
             return []
-        return pd.Index(self.get_subseries()[self._selector].values, name=self._selector)
-
+        try:
+            return pd.Index(self.get_subseries()[self._selector].values, name=self._selector)
+        except KeyError as err:
+            raise KeyError(f"Could not find index \"{err}\" in the subseries when using it as a selector.")
+        
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
         if column in self._data.columns:
