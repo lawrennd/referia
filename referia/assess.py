@@ -117,6 +117,8 @@ class Data:
         series = config["series"]
         if "selector" in series:
             self._selector = series["selector"]
+        else:
+            raise ValueError(f"The series in _referia.yml does not specify a selector.")
         self._writeseries = access.series(self.index)
         self._writeseries = self._finalize_df(self._writeseries, config['series'])
         self.sort_series()
