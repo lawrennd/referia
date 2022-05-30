@@ -320,6 +320,18 @@ def view_directory(view):
     """View a directory containing relevant information to the assessment."""
     pass
 
+def extract_file(view, data):
+    """Extract information from a given file returning it as a string."""
+    if "source" in view:
+        filename = data.get_value_column(view["source"])
+    
+    if os.path.exists(filename):
+        if "extractor" in view:
+            extractor = view["extractor"]
+            if extractor == "pdfannots":
+                return subprocess.run(["pdfannots", filename], capture_output=True)
+    log.warning(f"Unknown extractor in {view}.")
+                
 def view_file(view, data):
     """View a file containing relevant information to the assessment."""
     filename = ""

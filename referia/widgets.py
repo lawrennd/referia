@@ -299,6 +299,7 @@ class FieldWidget(ReferiaStatefulWidget):
         self._ipywidget.observe(self.on_value_change, names="value")
             
 
+
 class IndexSelector(ReferiaStatefulWidget):
     def __init__(self, parent):
         args = {
@@ -321,23 +322,10 @@ class IndexSelector(ReferiaStatefulWidget):
 class ReferiaMultiWidget(ReferiaStatefulWidget):
     """Class for forming a collection of widgets that interact."""
     def __init__(self, **args):
-        pass
-    
-class FullSelector(ReferiaMultiWidget):
-    def __init__(self, parent, stateful_args, stateless_args):
         self._parent = parent
         self._ipywidgets = {}
-        for key, item in stateful_args.items():
-            item["value"] = item["value_function"]()
-            if "options_function" in item:
-                item["options"] = item["options_function"]()
-            if "display_when_function" in item:
-                if "layout" not in item:
-                    item["layout"] = {}
-                if item["display_when_function"]():
-                    item["layout"]["display"] = "block"
-                else:
-                    item["layout"]["display"] = "none"
+
+        # Create widget, set the values and set update changes.
         for key, item in stateful_args.items():
             self._ipywidgets[key] = {
                 "function": item["function"],
@@ -351,11 +339,12 @@ class FullSelector(ReferiaMultiWidget):
             self._ipywidgets[key]["widget"] = self._ipywidgets[key]["function"](**item)
             self._ipywidgets[key]["update"] = gwu_(key, item, self)
 
+        # Create the generator functions for when widgets change.
         for key, item in self._ipywidgets.items():
             self._ipywidgets[key]["on_change"] = gwc_(key, item, self)            
             self._ipywidgets[key]["widget"].observe(self._ipywidgets[key]["on_change"], names="value")
 
-
+        # Create the generator functions for when widget is clicked.
         for key, item in stateless_args.items():
             self._ipywidgets[key] = {
                 "function": item["function"],
@@ -371,6 +360,44 @@ class FullSelector(ReferiaMultiWidget):
         for key, item in self._ipywidgets.items():
             objects.append(item["widget"])
         IPython.display.display(ipyw.VBox(objects))
+
+class ActionExtractor(ReferiaMultiWidget):
+    """This multi widget allows a box to be filled from an action taken by a button."""
+    def __init__(self, parent, action_function, action_args):
+        stateful_args = {
+            "extract_information" : {
+                "function" : ipyw.Textarea,
+                "defaultargs" : {},
+            }
+        }
+        stateless_args = {
+            "extract_button" : {
+                "function": ipyw.Button,
+                "on_click_function": action,
+                "description": "Add Row",
+            }
+        }
+        super().__init__(parent, stateful_args, stateless_args)
+        
+        
+            
+class FullSelector(ReferiaMultiWidget):
+    """This multi widget allows a range of interacting selectors."""
+    def __init__(self, parent, stateful_args, stateless_args):
+        # Set the item values and option values from the functions.
+        for key, item in stateful_args.items():
+            item["value"] = item["value_function"]()
+            if "options_function" in item:
+                item["options"] = item["options_function"]()
+            if "display_when_function" in item:
+                if "layout" not in item:
+                    item["layout"] = {}
+                if item["display_when_function"]():
+                    item["layout"]["display"] = "block"
+                else:
+                    item["layout"]["display"] = "none"
+        super().__init__(parent, stateful_args, stateless_args)
+
 
     
 
