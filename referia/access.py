@@ -10,6 +10,8 @@ import json
 
 import frontmatter
 
+import pypandoc
+
 import numpy as np
 import pandas as pd
 
@@ -297,7 +299,7 @@ def read_markdown_file(filename, include_content=True):
             data = {}
             
     return data
-
+    
 def write_markdown_file(data, filename, include_content=True, content="content"):
     """Write a markdown file from a python dictionary"""
     if include_content and content in data:
@@ -311,7 +313,23 @@ def write_markdown_file(data, filename, include_content=True, content="content")
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)
 
+def write_docx_file(data, filename, include_content=True, content="content"):
+    """Write a docx file from a python dictionary."""
+    directory = tempfile.gettempdir()
+    tmpfile = os.path.join(directory, "tmp.md")
+    write_markdown_file(data, tmpfile, include_content, content)
+    log.info(f"Converting markdown file \"{tmpfile}\" to docx file \"{filename}\"")
+    pypandoc.convert_file(tmpfile, "docx", outputfile=filename)
 
+    
+def write_tex_file(data, filename, include_content=True, content="content"):
+    """Write a docx file from a python dictionary."""
+    directory = tempfile.gettempdir()
+    tmpfile = os.path.join(directory, "tmp.md")
+    write_markdown_file(data, tmpfile, include_content, content)
+    log.info(f"Converting markdown file \"{tmpfile}\" to tex file \"{filename}\"")
+    pypandoc.convert_file(tmpfile, "tex", outputfile=filename)
+    
 def read_csv(details):
     """Read data from a csv file."""
     dtypes = extract_dtypes(details)

@@ -58,6 +58,8 @@ def load_user_config(user_file="_referia.yml", directory="."):
                         item.update(conf[key])
                         conf[key] = item
                         continue
+                    if type(conf[key]) is None:
+                        conf[key] = item
                     else:
                         raise ValueError("Cannot append to non dictionary or list type.")
                 if key == "scores" and not inherit["writable"]:

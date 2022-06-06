@@ -179,12 +179,9 @@ def create_email(document, **args):
     log.info(f"Drafting email to \"{to}\".")
     draft_email(**email_args)
 
-def create_docx(document, **args):
-    filename = extract_full_filename(args)
-    raise NotImplementedError("Not yet implemented creat docx")
 
-def create_markdown(document, **args):
-    """Create a markdown document."""
+def create_document_content(document, **args):
+    """Create the content for the documents."""
     filename = extract_full_filename(args)
     if "content" in args:
         content = args["content"]
@@ -194,6 +191,17 @@ def create_markdown(document, **args):
     for key, item in args.items():
         if key not in ["filename", "directory"]:
             data[key] = item
+    return data, filename, content
+
+def create_docx(document, **args):
+    """Create a Microsoft word style document."""
+    data, filename, content = create_document_content(document, **args)
+    access.write_docx_file(data=data, filename=filename, content=content)
+    open_localfile(filename)
+
+def create_markdown(document, **args):
+    """Create a markdown document."""
+    data, filename, content = create_document_content(document, **args)
     access.write_markdown_file(data=data, filename=filename, content=content)
     open_localfile(filename)
             
