@@ -33,7 +33,7 @@ REQUIRED = [
     "matplotlib",
     "markdown",
     "unidecode",
-    "frontmatter",
+    "python-frontmatter",
     "google-api-python-client", # for loading from google spreadsheets
     "google-auth-httplib2",
     "google-auth-oauthlib",
@@ -43,6 +43,7 @@ REQUIRED = [
     "appscript", # for OSX applescript calls
     "pypdftk", # for manipulating PDFs.
     "pyminizip", # For storing files as zip
+    "pypandoc", # for calling pandoc
     
 ]
 

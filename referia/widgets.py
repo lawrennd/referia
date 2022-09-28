@@ -321,7 +321,7 @@ class IndexSelector(ReferiaStatefulWidget):
 
 class ReferiaMultiWidget(ReferiaStatefulWidget):
     """Class for forming a collection of widgets that interact."""
-    def __init__(self, **args):
+    def __init__(self, parent, stateful_args, stateless_args):
         self._parent = parent
         self._ipywidgets = {}
 
