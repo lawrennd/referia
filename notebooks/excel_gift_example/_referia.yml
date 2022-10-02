@@ -1,3 +1,7 @@
+title: "Gift Assessment Notebook"
+date: 2021-12-24¶
+author: Neil D. Lawrence
+description: This notebook is for demonstrating how the referia assessment system works.
 browser: "Google Chrome.app"
 google_oauth:
   keyfile: google_secret.json

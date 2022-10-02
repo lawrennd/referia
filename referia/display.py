@@ -291,6 +291,7 @@ class Scorer:
 
     def extract_scorer(self, score):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
+            
         if score['type'] == 'Criterion':
             value = None
             display = None

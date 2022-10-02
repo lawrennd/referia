@@ -1,3 +1,7 @@
+title: Google Sheets Assessment Example
+date: 2022-01-07
+author: Neil D. Lawrence
+description: This notebook is for demonstrating how the referia assessment system works with Google Sheets.
 browser: "Google Chrome.app"
 google_oauth:
   keyfile: google_secret.json
