@@ -34,7 +34,7 @@ def load_user_config(user_file="_referia.yml", directory="."):
                 if type(conf["viewer"]) is list:
                     conf["viewer"] = [viewelem] + conf["viewer"]
                 else:
-                    conf["viewer"] = [viewwlem, conf["viewer"]]
+                    conf["viewer"] = [viewelem, conf["viewer"]]
             else:
                 conf["viewer"] = [viewelem]
                 inherit["append"].append("viewer")

@@ -315,7 +315,7 @@ class IndexSelector(ReferiaStatefulWidget):
         if not self.private and self._parent is not None:
             self._parent.set_index(self.get_value())
             system.view_series(self._parent._data)
-
+        
     def refresh(self):
         pass
 
@@ -452,6 +452,14 @@ class IndexSubIndexSelectorSelect(FullSelector):
         }
         super().__init__(parent, stateful_args, stateless_args)
 
+    def on_value_change(self, change):
+        if not self.private and self._parent is not None:
+            self._parent.set_index(self.get_value())
+            system.view_series(self._parent._data)
+
+
+
+            
 def gocf_(key, item, obj, docstr=None):
     """Generator function for on_click function for the button class."""
     def on_click(b):
@@ -488,6 +496,7 @@ def gwc_(key, item, obj, docstr=None):
                 pass
             elif "update" in widget:
                 widget["update"]()
+
     on_change.__name__ = name
     on_change.__docstr__ = docstr
     return on_change

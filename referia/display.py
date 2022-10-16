@@ -143,7 +143,7 @@ class Scorer:
         if "scorer" in config:
             for score in config["scorer"]:
                 self.extract_scorer(score)
-
+                
         if "documents" in config:
             documents = config["documents"]
             for count, document in enumerate(documents):
@@ -289,6 +289,7 @@ class Scorer:
         self.populate_widgets()
         system.view_series(self._data)
 
+        
     def extract_scorer(self, score):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
             
@@ -344,6 +345,21 @@ class Scorer:
                 self.extract_scorer(sub_score)
             return
 
+        if score["type"] == "CriterionCommentDate":
+            criterion = json.loads(json.dumps(score))
+            criterion["type"] = "CriterionComment"
+            prefix = score["prefix"]
+            date = {
+                "field": prefix + " Date",
+                "type": "DatePicker",
+                "args": {
+                    "description": "Date",
+                }
+            }
+            for sub_score in [criterion, date]:
+                self.extract_scorer(sub_score)
+            return
+        
 
         if score["type"] == "CriterionCommentRaisesMeetsLowers":
             criterioncomment = json.loads(json.dumps(score))
@@ -568,7 +584,11 @@ class Scorer:
         
         for field in document:
             if field not in ["header", "body", "footer", "type"]:
-                args[field] = self._data.view_to_value(document[field])
+                args[field] = document[field]
+                if document[field] is not None:
+                    if type(document[field]) is dict:
+                        if "tally" in document[field] or "display" in document[field]:
+                            args[field] = self._data.view_to_value(document[field])
         system.create_document(document, **args)
 
     def create_summary_document(self, document):

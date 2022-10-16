@@ -8,6 +8,7 @@ from shutil import copy2
 import tempfile
 import random
 import string
+import datetime
 
 import pyminizip as pz
 
@@ -127,6 +128,8 @@ def create_document(document, **args):
         create_excel(document, **args)
     if doctype == "markdown":
         create_markdown(document, **args)
+    if doctype == "letter":
+        create_letter(document, **args)
 
 
 def create_summary(details, **args):
@@ -146,6 +149,8 @@ def create_summary_document(document, **args):
         create_excel(document, **args)
     if doctype == "markdown":
         create_markdown(document, **args)
+    if doctype == "letter":
+        create_letter(document, **args)
         
 def create_zip(details, **args):
     """Create a zip file based on the files listed."""
@@ -158,7 +163,8 @@ def create_zip(details, **args):
     zip_args["filelist"] = args["entries"]
 
     write_zip(**zip_args)
-            
+
+    
 def create_email(document, **args):
     """Create an email based on the data we have."""
     email_args = {}
@@ -189,7 +195,7 @@ def create_document_content(document, **args):
         content = ""
     data = {}
     for key, item in args.items():
-        if key not in ["filename", "directory"]:
+        if key not in ["filename", "directory", "content"]:
             data[key] = item
     return data, filename, content
 
@@ -205,11 +211,37 @@ def create_markdown(document, **args):
     access.write_markdown_file(data=data, filename=filename, content=content)
     open_localfile(filename)
             
+def create_letter(document, **args):
+    """Create a markdown letter."""
+    data, filename, content = create_document_content(document, **args)
+    access.write_letter_file(data=data, filename=filename, content=content)
+    open_localfile(filename)
 
+def compute_val(compute):
+    ctype = compute["type"]
+    if ctype == "python":
+        call = compute["call"]
+        if call == "today":
+            if "args" in compute and "format" in compute["args"]:
+                format = compute["args"]["format"]
+            else:
+                format = "%Y-%m%-d"
+            return datetime.datetime.now().strftime(format)
+
+        if call == "sum":
+            pass
+        else:
+            log.info(f"No relevant call {call} found.")
+            return None
+        
+    else:
+        log.info(f"No relevant compute type {ctype} found.")
+        return None
+    
 def write_zip(filename=None, password=None, filelist=None, directorylist=[], compress=4):
     """Write a zip file using pyminizip"""
     pz.compress_multiple(filelist, directorylist, filename, password, compress)
-    
+
 
 # Email scripts originally from https://stackoverflow.com/questions/61529817/automate-outlook-on-mac-with-python
 def draft_email(subject="", body="", to=[], cc=[], bcc=[], attach=None):

@@ -10,6 +10,7 @@ from .config import *
 from .log import Logger
 from .util import to_camel_case
 from . import access
+from . import system
 
 log = Logger(
     name=__name__,
@@ -46,6 +47,7 @@ class Data:
         self._selector = None
         # The value in the selected entry column entry column value from the series to use
         self._subindex = None
+        self._subindex_value = 0
         self.load_flows()
 
     @property
@@ -174,6 +176,7 @@ class Data:
         
     def set_index(self, index):
         """Index setter"""
+        orig_index = self._index
         if self._data is not None and index not in self.index:
             self.add_row(index=index)
             self.set_index(index)
@@ -182,6 +185,20 @@ class Data:
             self._subindex = None
             log.info(f"Index {index} selected.")
 
+        # If index has changed, run computes.
+        if self._index != orig_index:
+            if "compute" in config:
+                for compute in config["compute"]:
+                    self.run_compute(compute)
+                    
+    def run_compute(self, compute):
+        """Interpret a computation element form the yaml file and return the relevant answer."""
+        field = compute["field"]
+        val = system.compute_val(compute)
+        self.set_column(field)
+        self.set_value(val)
+
+        
     def set_subindex(self, subindex):
         """Subindex setter"""
         if subindex is None:
@@ -204,13 +221,13 @@ class Data:
 
     def set_column(self, column):
         """Set the current column focus."""
-        if column != self.index.name and column not in self.columns:
+        if column not in self.columns and (self.index is not None and column != self.index.name) or self.index is None:
             if self._writeseries is not None:
                 self.add_series_column(column)
             elif self._writedata is not None:
                 self.add_column(column)
 
-        if column != self.index.name and column not in self.columns:
+        if column not in self.columns and (self.index is not None and column != self.index.name) or self.index is None:
             self._column = None
         else:
             self._column = column
@@ -277,7 +294,10 @@ class Data:
             return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d'))
         elif generator == "hour":
             return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d %H:00'))
-
+        elif generator == "integer":
+            self._subindex_value += 1
+            return self._subindex_value
+        
     def get_subseries(self):
         return self._writeseries[self._writeseries.index.isin([self.get_index()])]
 
@@ -320,9 +340,15 @@ class Data:
         if column in self._data.columns:
             log.warning(f"Warning attempting to write to {column} in self._data.")
 
-        if selector is not None:
-            if column not in self._writeseries.columns:
-                self.add_series_column(column)
+        if column in self._writedata.columns:
+            self._update_type(self._writedata, column, value)
+            self._writedata.at[index, column] = value
+        elif self._writeseries is None or selector is None:
+            self.add_column(column)
+            self.set_column(column)
+            self.set_value(value)
+        elif column in self._writeseries.columns:
+            
             self._update_type(self._writeseries, column, value)
             self._writeseries.loc[
                 self._writeseries.index.isin([index])
@@ -330,11 +356,9 @@ class Data:
                 column
             ] = value
         else:
-            if column not in self._writedata.columns:
-                self.add_column(column)
+            self.add_series_column(column)
+            self.set_series_value(value, column)
 
-            self._update_type(self._writedata, column, value)
-            self._writedata.at[index, column] = value
 
 
     def get_value(self):
@@ -445,15 +469,11 @@ class Data:
 
         format = {}
         for key, column in mapping.items():
-            if series is None:
+            if series is not None and column in series:
+                format[key] = series[column]
+            else:
                 self.set_column(column)
                 format[key] = self.get_value()
-            else:
-                if column in series:
-                    format[key] = series[column]
-                else:
-                    log.info(f"No column \"{column}\" found in series.")
-                    format[key] = None
 
         return format
 

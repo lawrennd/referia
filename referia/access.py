@@ -300,35 +300,65 @@ def read_markdown_file(filename, include_content=True):
             
     return data
     
-def write_markdown_file(data, filename, include_content=True, content="content"):
+def write_markdown_file(data, filename, content, include_content=True):
     """Write a markdown file from a python dictionary"""
     if include_content and content in data:
-        write_data = {key: item for (key, item) in data.items() if key != content}
+        write_data = {key: item for (key, item) in data.items() if key != "content"}
         content = data[content]
     else:
+        if not include_content:
+            content = ""
         write_data = data
-        content = ""
+
     log.info(f"Writing markdown file \"{filename}\"")
     post = frontmatter.Post(content, **write_data)
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)
 
-def write_docx_file(data, filename, include_content=True, content="content"):
+def write_letter_file(data, filename, content, include_content=True):
+    """Write a letter file from a python dictionary"""
+    if include_content and content in data:
+        write_data = {key: item for (key, item) in data.items() if key != "content"}
+        content = data[content]
+    else:
+        if not include_content:
+            content = ""
+        write_data = data
+        
+    log.info(f"Writing markdown letter file \"{filename}\"")
+    post = frontmatter.Post(content, **write_data)
+    with open(filename, "wb") as stream:
+        frontmatter.dump(post, stream, sort_keys=False)
+
+def write_letter_pdf_file(data, filename, content, include_content=True):
+    """Write a PDF letter file from a python dictionary"""
+    directory = tempfile.gettempdir()
+    tmpfile = os.path.join(directory, "tmp.md")
+    write_letter_file(data, tmpfile, content, include_content)
+    extra_args=["--template template-letter.tex"]
+    pypandoc.convert_file(tmpfile, "pdf", outputfile=filename, extra_args=extra_args)
+    
+    
+def write_docx_file(data, filename, content, include_content=True):
     """Write a docx file from a python dictionary."""
     directory = tempfile.gettempdir()
     tmpfile = os.path.join(directory, "tmp.md")
-    write_markdown_file(data, tmpfile, include_content, content)
+    write_markdown_file(data, tmpfile, content, include_content)
     log.info(f"Converting markdown file \"{tmpfile}\" to docx file \"{filename}\"")
-    pypandoc.convert_file(tmpfile, "docx", outputfile=filename)
+    extra_args=[]
+    if "reference-doc" in data:
+        extra_args.append("--reference-doc=" + data["reference-doc"])
+    pypandoc.convert_file(tmpfile, "docx", outputfile=filename, extra_args=extra_args)
 
     
-def write_tex_file(data, filename, include_content=True, content="content"):
+def write_tex_file(data, filename, content, include_content=True):
     """Write a docx file from a python dictionary."""
     directory = tempfile.gettempdir()
     tmpfile = os.path.join(directory, "tmp.md")
-    write_markdown_file(data, tmpfile, include_content, content)
+    write_markdown_file(data, tmpfile, content, include_content)
     log.info(f"Converting markdown file \"{tmpfile}\" to tex file \"{filename}\"")
-    pypandoc.convert_file(tmpfile, "tex", outputfile=filename)
+    extra_args=[]
+    pypandoc.convert_file(tmpfile, "tex", outputfile=filename, extra_args=extra_args)
     
 def read_csv(details):
     """Read data from a csv file."""
