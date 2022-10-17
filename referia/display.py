@@ -103,6 +103,10 @@ class Scorer:
         self._write_score = True
         self._select_subindex = False
         self._select_selector = False
+
+        self._precompute = []
+        self._postcompute = []
+        
         if data is None:
             self._data = assess.Data()
         else:
@@ -292,6 +296,16 @@ class Scorer:
         
     def extract_scorer(self, score):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
+
+        if score["type"] == "precompute":
+            # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
+            self._precompute.append(score)
+            return
+
+        if score["type"] == "postcompute":
+            # These are score items that are computed every time the row is updated.
+            self._postcompute.append(score)
+            return
             
         if score['type'] == 'Criterion':
             value = None
@@ -630,6 +644,11 @@ class Scorer:
     
     def value_updated(self):
         """If a value in a row has been updated, modify other values"""
+
+        # If index has changed, run computes.
+        for compute in self._postcompute:
+            assess.run_compute(compute)
+        
         # Need to determine if these should update series or data.
         # Update timestamp fields.
         today_val = pd.to_datetime("today")
