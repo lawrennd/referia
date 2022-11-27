@@ -19,6 +19,7 @@ from .util import extract_full_filename, get_path_env
 from .log import Logger
 from .config import *
 
+GSPREAD_AVAILABLE=True
 try:
     import gspread_pandas as gspd
 except ImportError:
@@ -419,10 +420,13 @@ if GSPREAD_AVAILABLE:
         filename = extract_full_filename(details)
         log.info(f"Reading Google sheet named {filename}")
         sheet = extract_sheet(details)
+        gconfig = {}
+        for key, val in config["google_oauth"].items():
+            gconfig[key] = os.path.expandvars(val)
         gsheet = gspd.Spread(
             spread=filename,
             sheet=sheet,
-            config=config["gspread_pandas"],
+            config=gconfig,
         )
         data= gsheet.sheet_to_df(
             index=None,
