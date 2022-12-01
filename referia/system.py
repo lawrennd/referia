@@ -130,6 +130,8 @@ def create_document(document, **args):
         create_markdown(document, **args)
     if doctype == "letter":
         create_letter(document, **args)
+    if doctype == "formlink":
+        create_formlink(document, **args)
 
 
 def create_summary(details, **args):
@@ -217,6 +219,12 @@ def create_letter(document, **args):
     access.write_letter_file(data=data, filename=filename, content=content)
     open_localfile(filename)
 
+def create_formlink(document, **args):
+    """Write a form link (url)."""
+    data, filename, content = create_document_content(document, **args)
+    access.write_formlink(data=data, filename=filename, content=content)
+    open_localfile(filename)
+    
 def compute_val(compute):
     ctype = compute["type"]
     if ctype == "python":

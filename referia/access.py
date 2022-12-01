@@ -299,7 +299,12 @@ def read_markdown_file(filename, include_content=True):
             data = {}
             
     return data
-    
+
+def write_url_file(data, filename, content, include_content=True):
+    """Write a url to a file"""
+    # This is with writing links to prefilled google forms in mind.
+    raise NotImplemented("The write url file function has not been implemented.")
+
 def write_markdown_file(data, filename, content, include_content=True):
     """Write a markdown file from a python dictionary"""
     if include_content and content in data:
@@ -315,6 +320,11 @@ def write_markdown_file(data, filename, content, include_content=True):
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)
 
+def create_letter(document, **args):
+    """Create a markdown letter."""
+    data, filename, content = create_document_content(document, **args)
+    access.write_letter_file(data=data, filename=filename, content=content)
+    open_localfile(filename)
 def write_letter_file(data, filename, content, include_content=True):
     """Write a letter file from a python dictionary"""
     if include_content and content in data:
@@ -330,13 +340,29 @@ def write_letter_file(data, filename, content, include_content=True):
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)
 
-def write_letter_pdf_file(data, filename, content, include_content=True):
-    """Write a PDF letter file from a python dictionary"""
-    directory = tempfile.gettempdir()
-    tmpfile = os.path.join(directory, "tmp.md")
-    write_letter_file(data, tmpfile, content, include_content)
-    extra_args=["--template template-letter.tex"]
-    pypandoc.convert_file(tmpfile, "pdf", outputfile=filename, extra_args=extra_args)
+def create_letter(document, **args):
+    """Create a markdown letter."""
+    data, filename, content = create_document_content(document, **args)
+    access.write_letter_file(data=data, filename=filename, content=content)
+    open_localfile(filename)
+def write_letter_file(data, filename, content, include_content=True):
+    """Write a letter file from a python dictionary"""
+    if include_content and content in data:
+        write_data = {key: item for (key, item) in data.items() if key != "content"}
+        content = data[content]
+    else:
+        if not include_content:
+            content = ""
+        write_data = data
+        
+    log.info(f"Writing markdown letter file \"{filename}\"")
+    post = frontmatter.Post(content, **write_data)
+    with open(filename, "wb") as stream:
+        frontmatter.dump(post, stream, sort_keys=False)
+        
+def write_formlink(data, filename, content, include_content=True):
+    """Write a url to prepopulate a Google form"""
+    write_url_file(data, filename, content, include_content)
     
     
 def write_docx_file(data, filename, content, include_content=True):
