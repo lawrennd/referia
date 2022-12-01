@@ -5,7 +5,7 @@ description: This notebook is for demonstrating how the referia assessment syste
 browser: "Google Chrome.app"
 google_oauth:
   keyfile: google_secret.json
-  directory: $HOME/.config/gspread_pandas/
+  directory: $HOME/.config/google_oauth/
 
 sortby:
   field: index

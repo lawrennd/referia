@@ -426,7 +426,7 @@ class Data:
             # Handle the fact that the index is stored as a column also
             if df.index.name in row:
                 row[df.index.name] = index
-            return df.append(row)            
+            return df.concat(row)            
         if index is None:
             index = self.get_index()
         if subindex is None and self._writeseries is not None:
