@@ -16,7 +16,7 @@ import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .util import to_camel_case, notempty, markdown2html, extract_full_filename
+from .util import to_camel_case, notempty, markdown2html, extract_full_filename, extract_abs_filename, renderable
 from . import access
 from . import assess
 from . import display
@@ -174,9 +174,10 @@ def create_email(document, **args):
         email_args["body"] = markdown2html(args["content"])
     if "title" in args:
         email_args["subject"] = args["title"]
-    if "filename" in args:
-        email_args["attach"] = extract_full_filename(args)
-        
+    if "attach" in args:
+        margs = {"filename": args["attach"]}
+        email_args["attach"] = extract_full_filename(margs)
+                
     for recips in ["to", "cc", "bcc"]:
         if recips in args:
             email_args[recips] = args[recips]
@@ -366,7 +367,7 @@ def edit_files(data):
 
 def view_directory(view):
     """View a directory containing relevant information to the assessment."""
-    pass
+    raise NotImplementedError("view_directory not yet implemented.")
 
 def extract_file(view, data):
     """Extract information from a given file returning it as a string."""
@@ -387,9 +388,9 @@ def view_file(view, data):
     temp_file = False
     if "temp_file" in view:
         temp_file = view["temp_file"]
-    if "display" in view:
-        val = data.display_to_value(view["display"])
-        tmpname = to_camel_case(view["display"].replace("/", "_").replace("{","").replace("}", ""))
+    if renderable(view):
+        val = data.view_to_value(view)
+        tmpname = data.view_to_tmpname(view)
     elif "field" in view:
         val = data.get_value_column(view["field"])
         tmpname = to_camel_case(view["field"])        
@@ -456,7 +457,7 @@ def view_urls(data):
                 val = None
             if "field" in view and type(val) is str:
                 urlterm = val
-            elif "display" in view:
+            elif renderable(view):
                 urlterm = data.view_to_value(view)
             else:
                 urlterm = ""

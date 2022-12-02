@@ -30,6 +30,7 @@ REQUIRED = [
     "pandas",
     "numpy",
     "jupyter",
+    "python-liquid",
     "matplotlib",
     "markdown",
     "unidecode",

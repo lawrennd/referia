@@ -52,7 +52,10 @@ def load_user_config(user_file="_referia.yml", directory="."):
                             additional = additional + [item]
                         continue
                     if type(conf[key]) is list:
-                        conf[key] = item + conf[key]
+                        if type(item) is list:
+                            conf[key] = item + conf[key]
+                        else:
+                            conf[key] = [item] + conf[key]
                         continue
                     if type(conf[key]) is dict:
                         item.update(conf[key])

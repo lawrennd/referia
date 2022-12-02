@@ -198,6 +198,15 @@ class ReferiaStatefulWidget(ReferiaWidget):
         if "tally" in args:
             self._viewer["tally"] = args["tally"]
             del args["tally"]
+        if "list" in args:
+            self._viewer["list"] = args["list"]
+            del args["list"]
+        if "join" in args:
+            self._viewer["join"] = args["join"]
+            del args["join"]
+        if "liquid" in args:
+            self._viewer["liquid"] = args["liquid"]
+            del args["liquid"]
         if "conditions" in args:
             self._viewer["conditions"] = args["conditions"]
             del args["conditions"]

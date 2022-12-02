@@ -28,12 +28,37 @@ def extract_full_filename(details):
         details["filename"],
     )
 
+
+def extract_abs_filename(details):
+    """Return the absolute filename by adding current directory if it's not present"""
+    return os.path.abspath(extract_full_filename(details))
+
+def renderable(view):
+    """Check if a field is rendarable"""
+    valid_views = ["display", "tally", "liquid", "join", "list"]
+    for v in valid_views:
+        if v in view:
+            return True
+    return False
+
 def camel_capitalize(text):
     if text == text.upper():
         return text
     else:
         return text.capitalize()
-    
+
+def remove_nan(dictionary):
+    """Delete missing entries from dictionary"""
+    dictionary2 = dictionary.copy()
+    for key, entry in dictionary.items():
+        if type(entry) is dict:
+            dictionary2[key] = remove_nan(entry)
+        else:
+            isna = pd.isna(entry)
+            if type(isna) is bool and isna:
+                del(dictionary2[key])
+    return dictionary2
+
 def notempty(val):
     return pd.notna(val) and val!=""
 

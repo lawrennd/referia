@@ -312,12 +312,18 @@ class Scorer:
             display = None
             tally = None
             prefix = score["prefix"]
+            if "criterion" in score:
+                value = score["criterion"]
             if "display" in score:
                 display = score["display"]
-            elif "criterion" in score:
-                value = score["criterion"]
+            if "liquid" in score:
+                liquid = score["liquid"]
             if "tally" in score:
                 tally = score["tally"]
+            if "list" in score:
+                lis = score["list"]
+            if "join" in score:
+                liquid = score["join"]
             if "width" in score:
                 width = score["width"]
             else:
@@ -331,10 +337,16 @@ class Scorer:
                 }
             if value is not None:
                 criterion["args"]["value"] = value
-            elif display is not None:
+            if display is not None:
                 criterion["args"]["display"] = display
+            if liquid is not None:
+                criterion["args"]["liquid"] = liquid
             if tally is not None:
                 criterion["args"]["tally"] = tally
+            if join is not None:
+                criterion["args"]["join"] = join
+            if lis is not None:
+                criterion["args"]["list"] = lis
             self.extract_scorer(criterion)
             return
 
@@ -601,7 +613,7 @@ class Scorer:
                 args[field] = document[field]
                 if document[field] is not None:
                     if type(document[field]) is dict:
-                        if "tally" in document[field] or "display" in document[field]:
+                        if "tally" in document[field] or "display" in document[field] or "list" in document[field] or "join" in document[field]:
                             args[field] = self._data.view_to_value(document[field])
         system.create_document(document, **args)
 

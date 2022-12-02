@@ -3,12 +3,13 @@ import os
 import re
 
 import pandas as pd
+import liquid as lq
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .config import *
 from .log import Logger
-from .util import to_camel_case
+from .util import to_camel_case, remove_nan
 from . import access
 from . import system
 
@@ -48,6 +49,8 @@ class Data:
         # The value in the selected entry column entry column value from the series to use
         self._subindex = None
         self._subindex_value = 0
+        self.load_liquid()
+        
         self.load_flows()
 
     @property
@@ -124,6 +127,7 @@ class Data:
         self._writeseries = access.series(self.index)
         self._writeseries = self._finalize_df(self._writeseries, config['series'])
         self.sort_series()
+
         
     def sort_series(self):
         """Sort the series by the column specified."""
@@ -173,7 +177,28 @@ class Data:
         self._writeseries = None
         self.load_input_flows()
         self.load_output_flows()
-        
+
+    def load_liquid(self):
+        """Load the liquid environment."""
+        loader = None
+        if "liquid" in config:
+            if "templates" in config["liquid"]:
+                if "dir" in config["liquid"]["templates"]:
+                    templates_path = [os.path.abspath(config["liquid"]["templates"])]
+                else:
+                    template_path = [
+                        os.path.join(os.path.dirname(__file__), "templates"),
+                    ]
+            
+                    if "ext" in config["liquid"]:
+                        ext = config["liquid"]["ext"]
+                        loader = lq.loaders.FileExtensionLoader(search_path=template_path, ext=ext)
+                    else:
+                        loader = lq.FileSystemLoader(template_path)
+            elif "dict" in config["liquid"]["templates"]:
+                loader = lq.loaders.DictLoader(config["liquid"]["templates"]["dict"])
+        self._liquid_env = lq.Environment(loader=loader)
+
     def set_index(self, index):
         """Index setter"""
         orig_index = self._index
@@ -333,6 +358,9 @@ class Data:
     def set_value(self, value):
         """Set the value of the current cell under focus."""
         column = self.get_column()
+        if column is None:
+            log.warning(f"Warning attempting to write a value {value} when column is not set.")
+            return
         index = self.get_index()
         selector = self.get_selector()
         subindex = self.get_subindex()
@@ -340,7 +368,7 @@ class Data:
         if column in self._data.columns:
             log.warning(f"Warning attempting to write to {column} in self._data.")
 
-        if column in self._writedata.columns:
+        if self._writedata is not None and column in self._writedata.columns:
             self._update_type(self._writedata, column, value)
             self._writedata.at[index, column] = value
         elif self._writeseries is None or selector is None:
@@ -403,6 +431,8 @@ class Data:
             return None
 
     def add_column(self, column):
+        if self._writedata is None:
+            raise ValueError("There is no _writedata loaded to add a column to.")
         if column not in self._writedata.columns:
             log.info(f"\"{column}\" not in write columns ... adding.")
             self._writedata[column] = None
@@ -492,7 +522,24 @@ class Data:
     def view_to_value(self, view):
         """Create the text of the view."""
         value = ""
+                         
         if self.conditions(view):
+            if "list" in view:
+                values = []
+                for v in view["list"]:
+                    values.append(self.view_to_value(v))
+                return values
+            if "join" in view:
+                if "list" not in view["join"]:
+                    log.warning("No field \"list\" in \"concat\" viewer.")
+                elements = self.view_to_value(view["join"])
+                if "separator" in view["join"]:
+                    sep = view["join"]["separator"]
+                else:
+                    sep = "\n\n"
+                return sep.join(elements)
+            if "liquid" in view:
+                value += self.liquid_to_value(view["liquid"])
             if "display" in view:
                 value += self.display_to_value(view["display"])
             if "tally" in view:
@@ -501,6 +548,30 @@ class Data:
         else:
             return ""
 
+    def view_to_tmpname(self, view):
+        """Convert a view to a temporary name"""
+        if "list" in view:
+            name = "list_"
+            for v in view["list"]:
+                name += self.view_to_tmpname(v)
+                name += "_"
+            return name
+        elif "join" in view:
+            name = "join_"
+            if "list" not in view["join"]:
+                log.warning("No field \"list\" in \"concat\" viewer.")
+            name += self.view_to_tmpname(view["join"])
+            return name
+        elif "tally" in view:
+            value += self.tally_to_tmpname(view["tally"])
+        elif "liquid" in view:
+            value += self.liquid_to_tmpname(view["liquid"])
+        elif "display" in view:
+            value += self.display_to_tmpname(view["display"])
+        else:
+            return ""
+        return value
+
     def conditions(self, view):
         """Check if the viewer should be displayed."""
         if "conditions" not in view:
@@ -508,8 +579,14 @@ class Data:
         else:
             for condition in view["conditions"]:
                 if "present" in condition:
-                    if not condition["present"]["field"] in self._parent._parent.columns():
+                    if not condition["present"]["field"] in self.columns:
                         return False
+                    else:
+                        self.set_column(condition["present"]["field"])
+                        if pd.isna(self.get_value()):
+                            return False
+                        else:
+                            return True
 
                 if "equal" in condition:
                     self._parent.set_column(condition["equal"]["field"])
@@ -517,6 +594,11 @@ class Data:
                         return False
         return True
 
+    def display_to_tmpname(self, display):
+        """Convert a display string to a temp name"""
+        return to_camel_case(display.replace("/", "_").replace("{","").replace("}", ""))
+
+    
     def display_to_value(self, display):
         format = self.mapping()
         try:
@@ -524,24 +606,45 @@ class Data:
         except KeyError as err:
             raise KeyError(f"The mapping doesn't contain the key {err} requested in \"{display}\". Set the mapping in \"_referia.yml\".") from err
 
+    def liquid_to_tmpname(self, display):
+        """Convert a display string to a temp name"""
+        return to_camel_case(display.replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
+        
+    def liquid_to_value(self, display):
+        kwargs = remove_nan(self.mapping())
+        return self._liquid_env.from_string(display).render(**kwargs)
+    
+    def tally_to_tmpname(self, tally):
+        """Convert a tally to a temporary name"""
+        tmpname = ""
+        if "begin" in tally:
+            tmpname += "begin_"
+            tmpname += self.view_to_tmpname(tally["begin"])
+        tmpname += "display_"
+        tmpname += self.view_to_tmpname(tally["display"])
+        if "end" in tally:
+            tmpname += "end_"
+            tmpname += self.view_to_tmpname(tally["end"])
+        return tmpname
+        
     def tally_to_value(self, tally):
         format = self.mapping()
         orig_subindex = self.get_subindex()
         value = ""
         if "begin" in tally:
-            value += self.display_to_value(tally["begin"])
+            value += self.view_to_value(tally["begin"])
             if value != "":
                 value += "\n\n"
         subindices = self.tally_series(tally)
         # Reverse series so it's most distant event first.
         for subindex in subindices[::-1]:
             self.set_subindex(subindex)
-            value += self.display_to_value(tally["display"])
+            value += self.view_to_value(tally["display"])
             if value != "":
                 value += "\n\n"
         self.set_subindex(orig_subindex)
         if "end" in tally:
-            value += self.display_to_value(tally["end"])
+            value += self.view_to_value(tally["end"])
             if value != "":
                 value += "\n\n"
         return value    
