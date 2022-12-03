@@ -97,8 +97,8 @@ class Scorer:
         # Store the map between valid python varliable names and their boxed widgets.
         self._widget_dict = {}
                 
-        self._default_field_vals = pd.Series()
-        self._default_field_source = pd.Series()
+        self._default_field_vals = pd.Series(dtype=object)
+        self._default_field_source = pd.Series(dtype=object)
 
         self._write_score = True
         self._select_subindex = False

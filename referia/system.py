@@ -16,7 +16,7 @@ import pypdftk as tk
 
 from .config import *
 from .log import Logger
-from .util import to_camel_case, notempty, markdown2html, extract_full_filename, extract_abs_filename, renderable
+from .util import to_camel_case, notempty, markdown2html, extract_full_filename, extract_abs_filename, renderable, tallyable
 from . import access
 from . import assess
 from . import display
@@ -391,6 +391,9 @@ def view_file(view, data):
     if renderable(view):
         val = data.view_to_value(view)
         tmpname = data.view_to_tmpname(view)
+    elif tallyable(view):
+        val = data.tally_to_value(view)
+        tmpname = data.tally_to_tmpname(view)
     elif "field" in view:
         val = data.get_value_column(view["field"])
         tmpname = to_camel_case(view["field"])        
@@ -459,6 +462,8 @@ def view_urls(data):
                 urlterm = val
             elif renderable(view):
                 urlterm = data.view_to_value(view)
+            elif tallyable(view):
+                urlterm = data.tally_to_value(view)
             else:
                 urlterm = ""
             urlname = unidecode(view["url"] + urlterm.replace(" ", "%20"))

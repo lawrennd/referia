@@ -5,11 +5,14 @@ import re
 import pandas as pd
 import liquid as lq
 
+from liquid.filter import string_filter
+import urllib.parse
+
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .config import *
 from .log import Logger
-from .util import to_camel_case, remove_nan
+from .util import to_camel_case, remove_nan, renderable, tallyable
 from . import access
 from . import system
 
@@ -20,6 +23,10 @@ log = Logger(
 )
 
 
+@string_filter
+def url_escape(string):
+    """Filter to escape urls for liquid"""
+    return urllib.parse.quote(string.encode('utf8'))
 
 def empty(val):
     return pd.isna(val) or val==""
@@ -50,6 +57,7 @@ class Data:
         self._subindex = None
         self._subindex_value = 0
         self.load_liquid()
+        self.add_liquid_filters()
         
         self.load_flows()
 
@@ -198,7 +206,11 @@ class Data:
             elif "dict" in config["liquid"]["templates"]:
                 loader = lq.loaders.DictLoader(config["liquid"]["templates"]["dict"])
         self._liquid_env = lq.Environment(loader=loader)
-
+        
+        
+    def add_liquid_filters(self):
+        self._liquid_env.add_filter("url_escape", url_escape)
+        
     def set_index(self, index):
         """Index setter"""
         orig_index = self._index
@@ -449,14 +461,14 @@ class Data:
         """Add a row with a given index (and optionally subindex) to the data structure."""
         def append_row(df, index, subindex=None, selector=None):
             """Add an empty row with a given index to a data frame."""
-            row = pd.Series(index=df.columns)
+            row = pd.Series(index=df.columns, dtype=object)
             row.name = index
             if selector is not None and subindex is not None:
                 row[selector] = subindex
             # Handle the fact that the index is stored as a column also
             if df.index.name in row:
                 row[df.index.name] = index
-            return df.concat(row)            
+            return df.append(row)
         if index is None:
             index = self.get_index()
         if subindex is None and self._writeseries is not None:
@@ -508,18 +520,18 @@ class Data:
         return format
 
         
-    def viewer_to_value(self, viewer):
+    def viewer_to_value(self, viewer, kwargs=None):
         """Convert a viewer structure to populated values."""
         value = ""
         if type(viewer) is not list:
             viewer = [viewer]
         for view in viewer:
-            value += self.view_to_value(view)
+            value += self.view_to_value(view, kwargs)
             if value != "":
                 value += "\n\n"
         return value
 
-    def view_to_value(self, view):
+    def view_to_value(self, view, kwargs=None):
         """Create the text of the view."""
         value = ""
                          
@@ -527,26 +539,24 @@ class Data:
             if "list" in view:
                 values = []
                 for v in view["list"]:
-                    values.append(self.view_to_value(v))
+                    values.append(self.view_to_value(v, kwargs))
                 return values
             if "join" in view:
                 if "list" not in view["join"]:
                     log.warning("No field \"list\" in \"concat\" viewer.")
-                elements = self.view_to_value(view["join"])
+                elements = self.view_to_value(view["join"], kwargs)
                 if "separator" in view["join"]:
                     sep = view["join"]["separator"]
                 else:
                     sep = "\n\n"
                 return sep.join(elements)
             if "liquid" in view:
-                value += self.liquid_to_value(view["liquid"])
+                value += self.liquid_to_value(view["liquid"], kwargs)
             if "display" in view:
-                value += self.display_to_value(view["display"])
-            if "tally" in view:
-                value += self.tally_to_value(view["tally"])
+                value += self.display_to_value(view["display"], kwargs)
             return value
         else:
-            return ""
+            return None
 
     def view_to_tmpname(self, view):
         """Convert a view to a temporary name"""
@@ -562,15 +572,22 @@ class Data:
                 log.warning("No field \"list\" in \"concat\" viewer.")
             name += self.view_to_tmpname(view["join"])
             return name
-        elif "tally" in view:
-            value += self.tally_to_tmpname(view["tally"])
         elif "liquid" in view:
-            value += self.liquid_to_tmpname(view["liquid"])
+            name = self.liquid_to_tmpname(view["liquid"])
+            return name
         elif "display" in view:
-            value += self.display_to_tmpname(view["display"])
-        else:
-            return ""
-        return value
+            name = self.display_to_tmpname(view["display"])
+            return name
+
+    def tally_to_value(self, tally):
+        """Create the text of the view."""
+        value += self.tally_values(tally)
+
+    def tally_to_tmpname(self, tally):
+        """Convert a view to a temporary name"""
+        if "tally" in view:
+            name = self.tally_to_tmpname(view["tally"])
+        return name
 
     def conditions(self, view):
         """Check if the viewer should be displayed."""
@@ -599,10 +616,11 @@ class Data:
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", ""))
 
     
-    def display_to_value(self, display):
-        format = self.mapping()
+    def display_to_value(self, display, kwargs=None):
+        if kwargs is None:
+            kwargs = self.mapping()
         try:
-            return display.format(**format)
+            return display.format(**kwargs)
         except KeyError as err:
             raise KeyError(f"The mapping doesn't contain the key {err} requested in \"{display}\". Set the mapping in \"_referia.yml\".") from err
 
@@ -610,9 +628,10 @@ class Data:
         """Convert a display string to a temp name"""
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
         
-    def liquid_to_value(self, display):
-        kwargs = remove_nan(self.mapping())
-        return self._liquid_env.from_string(display).render(**kwargs)
+    def liquid_to_value(self, display, kwargs=None):
+        if kwargs is None:
+            kwargs = self.mapping()
+        return self._liquid_env.from_string(display).render(**remove_nan(kwargs))
     
     def tally_to_tmpname(self, tally):
         """Convert a tally to a temporary name"""
@@ -627,14 +646,13 @@ class Data:
             tmpname += self.view_to_tmpname(tally["end"])
         return tmpname
         
-    def tally_to_value(self, tally):
-        format = self.mapping()
-        orig_subindex = self.get_subindex()
+    def tally_values(self, tally):
         value = ""
         if "begin" in tally:
             value += self.view_to_value(tally["begin"])
             if value != "":
                 value += "\n\n"
+        orig_subindex = self.get_subindex()
         subindices = self.tally_series(tally)
         # Reverse series so it's most distant event first.
         for subindex in subindices[::-1]:
@@ -705,16 +723,12 @@ class Data:
             for field in details["fields"]:
                 column = pd.Series(index=df.index, dtype="object")
                 if "name" in field:
-                    if "value" in field:
+                    if renderable(field):
                         for index in df.index:
-                            format = self.mapping(series=df.loc[index])
-                            try:
-                                column[index] = field["value"].format(**format)
-                            except KeyError as err:
-                                name = field["name"]
-                                value = field["value"]
-                                raise KeyError(f"Formatting _referia.yml file contains key \"{err}\" that does not exist in field named \"{name}\" with value \"{value}\".".format(**field)) from err
-
+                            self.set_index(df.at[index, details["index"]])
+                            kwargs = self.mapping(series=df.loc[index])
+                            column[index] = self.view_to_value(field, kwargs)
+                            
                     elif "source" in field and "regexp" in field:
                         regexp = field["regexp"]
                         if field["source"] not in df.columns:
