@@ -237,14 +237,27 @@ def compute_val(compute):
                 format = "%Y-%m%-d"
             return datetime.datetime.now().strftime(format)
 
-        if call == "sum":
+        elif call == "sum":
             pass
+
+        elif "datetime" in call:
+            if call["datetime"] == "strptime":
+                if "args" in compute and "date_string" in compute["args"]:
+                    return datetime.strptime(**compute["args"])
+                else:
+                    log.error(f"Incorrect arguments in datetime.strptime call.")
+
+            if call["datetime"] == "fromisoformat":
+                if "args" in compute and "date_string" in compute["args"]:
+                    return datatime.fromisoformat(**compute["args"])
+                else:
+                    log.error(f"Incorrect arguments in datetime.fromisoformat call.")
         else:
-            log.info(f"No relevant call {call} found.")
+            log.error(f"No relevant call {call} found.")
             return None
         
     else:
-        log.info(f"No relevant compute type {ctype} found.")
+        log.error(f"No relevant compute type {ctype} found.")
         return None
     
 def write_zip(filename=None, password=None, filelist=None, directorylist=[], compress=4):
