@@ -12,7 +12,7 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .config import *
 from .log import Logger
-from .util import to_camel_case, remove_nan, renderable, tallyable
+from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html
 from . import access
 from . import system
 
@@ -22,11 +22,20 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
+sys_functions = {
+    "max": system.max,
+    "today": system.today,
+}
 
 @string_filter
 def url_escape(string):
     """Filter to escape urls for liquid"""
     return urllib.parse.quote(string.encode('utf8'))
+
+@string_filter
+def markdownify(string):
+    """Filter to convert markdown to html for liquid"""
+    return markdown2html(string.encode("utf8"))
 
 def empty(val):
     return pd.isna(val) or val==""
@@ -56,6 +65,11 @@ class Data:
         # The value in the selected entry column entry column value from the series to use
         self._subindex = None
         self._subindex_value = 0
+        if "subindex_generator" in config["series"]:
+            self._subindex_generator = config["series"]["subindex_generator"]
+        else:
+            self._subindex_generator = "today"
+        
         self.load_liquid()
         self.add_liquid_filters()
         
@@ -210,6 +224,7 @@ class Data:
         
     def add_liquid_filters(self):
         self._liquid_env.add_filter("url_escape", url_escape)
+        self._liquid_env.add_filter("markdownify", markdownify)
         
     def set_index(self, index):
         """Index setter"""
@@ -221,7 +236,7 @@ class Data:
             self._index = index
             self._subindex = None
             log.info(f"Index \"{index}\" selected.")
-
+        self._prep_subindex()
         # If index has changed, run computes.
         if self._index != orig_index:
             if "compute" in config:
@@ -231,9 +246,10 @@ class Data:
     def run_compute(self, compute):
         """Interpret a computation element form the yaml file and return the relevant answer."""
         field = compute["field"]
-        val = system.compute_val(compute)
         self.set_column(field)
-        self.set_value(val)
+        if self.get_value() is not None or "refresh" in compute and compute["refresh"] is True:
+            val = system.compute_val(compute)
+            self.set_value(val)
 
         
     def set_subindex(self, subindex):
@@ -297,7 +313,18 @@ class Data:
             log.info(f"Column {column} of Data._writeseries selected for selection.")
             if self.get_subindex() not in self._writeseries[column]:
                 self.set_subindex(None)
+            self._prep_subindex()
 
+    def _prep_subindex(self):
+        if self._writeseries is not None and self._selector is not None:
+            subindices = self.get_subindices()
+            
+            if len(subindices)>0:
+                else:
+                    reset
+                index = self.get_index()
+                log.info(f"No subindex set, using first entry of portion of Data._writeseries indexed by \"{index}\".")
+        
     def get_subindex(self):
         if self._subindex is None and self._writeseries is not None and self._selector is not None:
             self.reset_subindex()
@@ -322,18 +349,7 @@ class Data:
     
     def generate_subindex(self):
         """Generate a new subindex for use."""
-        if "subindex_generator" in config["series"]:
-            generator = config["series"]["subindex_generator"]
-        else:
-            generator = "today"
-
-        if generator == "today":
-            return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d'))
-        elif generator == "hour":
-            return pd.to_datetime(pd.to_datetime("today").strftime('%Y-%m-%d %H:00'))
-        elif generator == "integer":
-            self._subindex_value += 1
-            return self._subindex_value
+        return sys_functions[self._subindex["generator"]](**self._subindex["args"])
         
     def get_subseries(self):
         return self._writeseries[self._writeseries.index.isin([self.get_index()])]
@@ -399,8 +415,54 @@ class Data:
             self.add_series_column(column)
             self.set_series_value(value, column)
 
+    def get_column_values(self):
+        """Return a pd.Series containing all the values in a column."""
+        column = self.get_column()
+        if column == None:
+            return None
+        selector = self.get_selector()
+        subindex = self.get_subindex()
+        # Prioritise returning from the _data structure first.
+        if self._data is not None and column in self._data.columns:
+            try:
+                return self._data[column]
+            except KeyError as err:
+                raise KeyError(f"Cannot find column: \"{column}\" in _data.") from err
+        elif self._data is not None and column==self._data.index.name:
+            return self._data.index
+        elif self._writeseries is not None and column in self._writeseries.columns:
+            try:
+                return self._writeseries[column]
+            except KeyError as err:
+                raise KeyError(f"Cannot find column: \"{column}\" in _writeseries.") from err
+            
+        elif self._writedata is not None and column in self._writedata.columns:
+            try:
+                return self._writedata[column]
+            except KeyError as err:
+                raise KeyError(f"Cannot find column: \"{column}\" in _writedata.") from err
+        else:
+            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
+            return None
 
-
+    def get_subseries_values(self):
+        """Return a pd.Series containing all the values in a column."""
+        column = self.get_column()
+        if column == None:
+            return None
+        index = self.get_index()
+        # Prioritise returning from the _data structure first.
+        if self._writeseries is not None and column in self._writeseries.columns:
+            indexer = self._writeseries.index.isin([index])                 
+            if indexer.sum()>0:
+                return self._writeseries.loc[indexer, column]
+            else:
+                log.warning(f"No data available with this index returning None.")
+                return None
+        else:
+            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
+            return None
+        
     def get_value(self):
         """Return the value of the current cell under focus."""
         # Ordering here dictates the priority of selection, first series, then writedata, then data.
@@ -643,7 +705,10 @@ class Data:
     def liquid_to_value(self, display, kwargs=None):
         if kwargs is None:
             kwargs = self.mapping()
-        return self._liquid_env.from_string(display).render(**remove_nan(kwargs))
+        try:
+            return self._liquid_env.from_string(display).render(**remove_nan(kwargs))
+        except Exception as err:
+            raise Exception(f"In {display}\n\n {err}") from err
     
     def tally_to_tmpname(self, tally):
         """Convert a tally to a temporary name"""
@@ -739,19 +804,19 @@ class Data:
             index = pd.Index(range(len(indexcol)))
             newdf = pd.DataFrame(index=index, columns=[details["index"], "entries"])
             newdf[details["index"]] = indexcol
+            newdetails = details.copy()
+            del newdetails["series"]
             for ind in range(len(indexcol)):
                 entries = []
-                for col in df.columns:
-                    if col != details["index"]:
-                        # Iterate down rows where index column matches given index.
-                        for ind2 in df.index[df[details["index"]]==indexcol[ind]]:
-                            entry = remove_nan(df.loc[ind2].to_dict())
-                            del entry[details["index"]]
-                            # Substitute column titles for entries provided in mapping.
-                            map_entry = {}
-                            for key, key2 in mapping.items():
-                                map_entry[key] = entry[key2]
-                            entries.append(map_entry)
+                for ind2 in df.index[df[details["index"]]==indexcol[ind]]:
+                    entry = remove_nan(df.loc[ind2].to_dict())
+                    map_entry = entry.copy()
+                    del map_entry[details["index"]]
+                    for key, key2 in mapping.items():
+                        if key2 in entry:
+                            map_entry[key] = entry[key2]
+                            del map_entry[key2]
+                    entries.append(map_entry)
                 newdf.at[ind, "entries"] = entries
                 newdf.at[ind, details["index"]] = indexcol[ind]
             return self._finalize_df(newdf, newdetails)

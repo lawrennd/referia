@@ -671,7 +671,7 @@ class Scorer:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        if timestamp_field not in self._data._writedata.columns:
+        if self._data._writedata is not None and timestamp_field not in self._data._writedata.columns:
             self._data.add_column(timestamp_field)
         self._data.set_dtype(timestamp_field, "datetime64[ns]")
 

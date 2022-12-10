@@ -34,6 +34,22 @@ log = Logger(
     level=config["logging"]["level"],
     filename=config["logging"]["filename"]
 )
+list_system_functions = [
+    {
+        "name" : "today",
+        "function" : datetime.datetime.now().strftime,
+        "default_args" : {
+            "format": "%Y-%m-%d",
+        },
+        "docstr" : "Return today's date as a string in %Y-%m-%d format.",
+    },
+    {
+        "name" : "max",
+        "function" : pd.max,
+        "default_args" : {},
+    },
+]
+
 
 def clear_temp_files():
     delete_keys = []
@@ -234,7 +250,7 @@ def compute_val(compute):
             if "args" in compute and "format" in compute["args"]:
                 format = compute["args"]["format"]
             else:
-                format = "%Y-%m%-d"
+                format = "%Y-%m-%d"
             return datetime.datetime.now().strftime(format)
 
         elif call == "sum":
@@ -489,4 +505,56 @@ def view_series(data):
     view_urls(data)
     edit_files(data)
 
+    
+def gcf_(name, function, default_args={}, docstr=None):
+    """This function wraps the widget function and calls it with any additional default arguments as specified."""
+    def function(**args):
+        other_args = default_args.copy()
+        other_args.update(args)
+        return compute_function(data=data,
+            function=function,
+            field_args=field_args,
+            subseries_args=subseries_args,
+            column_args=column_args,
+            other_args=other_args,
+        )
+    function.__name__ = name
+    function.__docstr__ = docstr
+    return function
 
+def compute_function(data=data,
+                     function=function,
+                     field_args=field_args,
+                     subseries_args=subseries_args,
+                     column_args=column_args,
+                     other_args=other_args):
+    ind = data.get_index()
+    sind = data.get_subindex()
+    selector = data.get_selector()
+    col = data.get_column()
+    args = other_args.copy()
+    
+    if column_args is not None:
+        for key, value in column_args.items():
+            data.set_column(value)
+            args[key] = data.get_column_values()
+    if subseries_args is not None:
+        for key, value in subseries_args.items():
+            data.set_column(value)
+            args[key] = data.get_subseries_values()
+    if field_args is not None:
+        args.update(data.mapping())
+    return function(**args)
+                     
+
+def populate_functions(list_functions):
+    """populate_functions: Automatically creates function wrapper objects and adds them to the module."""
+    this_module = sys.modules[__name__]
+    for function in list_functions:
+        setattr(
+            this_module,
+            function["name"],
+            gcf_(**function),
+        )
+
+populate_functions(list_system_functions)
