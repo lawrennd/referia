@@ -500,14 +500,21 @@ class Data:
         else:
             log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
+    def _default_mapping(self):
+        """Generate the default mapping from config or from columns"""
+        # If a mapping is provided in _referia.yml use it, otherwise generate
+        if "mapping" in config:
+            mapping = config["mapping"]
+        else:
+            mapping = automapping(self.columns)
+        if "entries" not in mapping:
+            mapping["entries"] = "entries" # Covers series entries.
+        return mapping
+    
     def mapping(self, mapping=None, series=None):
         """Generate dictionary of mapping between variable names and column values."""
         if mapping is None:
-            # If a mapping is provided in _referia.yml use it, otherwise generate
-            if "mapping" in config:
-                mapping = config["mapping"]
-            else:
-                mapping = automapping(self.columns)
+            mapping = self._default_mapping()
 
         format = {}
         for key, column in mapping.items():
@@ -536,25 +543,30 @@ class Data:
         value = ""
                          
         if self.conditions(view):
-            if "list" in view:
-                values = []
-                for v in view["list"]:
-                    values.append(self.view_to_value(v, kwargs))
-                return values
-            if "join" in view:
-                if "list" not in view["join"]:
-                    log.warning("No field \"list\" in \"concat\" viewer.")
-                elements = self.view_to_value(view["join"], kwargs)
-                if "separator" in view["join"]:
-                    sep = view["join"]["separator"]
-                else:
-                    sep = "\n\n"
-                return sep.join(elements)
-            if "liquid" in view:
-                value += self.liquid_to_value(view["liquid"], kwargs)
-            if "display" in view:
-                value += self.display_to_value(view["display"], kwargs)
-            return value
+            if type(view) is dict:
+                if "list" in view:
+                    values = []
+                    for v in view["list"]:
+                        values.append(self.view_to_value(v, kwargs))
+                    return values
+                if "join" in view:
+                    if "list" not in view["join"]:
+                        log.warning("No field \"list\" in \"concat\" viewer.")
+                    elements = self.view_to_value(view["join"], kwargs)
+                    if "separator" in view["join"]:
+                        sep = view["join"]["separator"]
+                    else:
+                        sep = "\n\n"
+                    return sep.join(elements)
+                if "liquid" in view:
+                    value += self.liquid_to_value(view["liquid"], kwargs)
+                if "tally" in view:
+                    value += self.tally_to_value(view["tally"], kwargs)
+                if "display" in view:
+                    value += self.display_to_value(view["display"], kwargs)
+                return value
+            else:
+                raise TypeError("View should be a \"dict\".")
         else:
             return None
 
@@ -579,9 +591,9 @@ class Data:
             name = self.display_to_tmpname(view["display"])
             return name
 
-    def tally_to_value(self, tally):
+    def tally_to_value(self, tally, kwargs=None):
         """Create the text of the view."""
-        value += self.tally_values(tally)
+        return self.tally_values(tally, kwargs)
 
     def tally_to_tmpname(self, tally):
         """Convert a view to a temporary name"""
@@ -640,16 +652,16 @@ class Data:
             tmpname += "begin_"
             tmpname += self.view_to_tmpname(tally["begin"])
         tmpname += "display_"
-        tmpname += self.view_to_tmpname(tally["display"])
+        tmpname += self.view_to_tmpname(tally)
         if "end" in tally:
             tmpname += "end_"
             tmpname += self.view_to_tmpname(tally["end"])
         return tmpname
         
-    def tally_values(self, tally):
+    def tally_values(self, tally, kwargs=None):
         value = ""
         if "begin" in tally:
-            value += self.view_to_value(tally["begin"])
+            value += tally["begin"]
             if value != "":
                 value += "\n\n"
         orig_subindex = self.get_subindex()
@@ -657,12 +669,12 @@ class Data:
         # Reverse series so it's most distant event first.
         for subindex in subindices[::-1]:
             self.set_subindex(subindex)
-            value += self.view_to_value(tally["display"])
+            value += self.view_to_value(tally, kwargs)
             if value != "":
                 value += "\n\n"
         self.set_subindex(orig_subindex)
         if "end" in tally:
-            value += self.view_to_value(tally["end"])
+            value += tally["end"]
             if value != "":
                 value += "\n\n"
         return value    
@@ -722,6 +734,7 @@ class Data:
 
         if "series" in details and details["series"]:
             """The data frame is a series (with multiple identical indices)"""
+            mapping = self._default_mapping()
             indexcol = list(set(df[details["index"]]))
             index = pd.Index(range(len(indexcol)))
             newdf = pd.DataFrame(index=index, columns=[details["index"], "entries"])
@@ -732,9 +745,13 @@ class Data:
                     if col != details["index"]:
                         # Iterate down rows where index column matches given index.
                         for ind2 in df.index[df[details["index"]]==indexcol[ind]]:
-                            entry = remove_nan(df.at[index].to_dict())
+                            entry = remove_nan(df.loc[ind2].to_dict())
                             del entry[details["index"]]
-                            entries.append(entry)
+                            # Substitute column titles for entries provided in mapping.
+                            map_entry = {}
+                            for key, key2 in mapping.items():
+                                map_entry[key] = entry[key2]
+                            entries.append(map_entry)
                 newdf.at[ind, "entries"] = entries
                 newdf.at[ind, details["index"]] = indexcol[ind]
             return self._finalize_df(newdf, newdetails)

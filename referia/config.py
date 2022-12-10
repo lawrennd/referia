@@ -13,76 +13,89 @@ except ImportError:
 def load_user_config(user_file="_referia.yml", directory="."):
     filename = os.path.join(os.path.expandvars(directory), user_file)
     conf = {}
-    if os.path.exists(filename):
-        with open(filename) as file:
-            conf = yaml.load(file, Loader=yaml.FullLoader)
-        parent = None
-        inherit = {}
-        if "inherit" in conf:
-            inherit = conf["inherit"]
-            if "ignore" not in inherit:
-                inherit["ignore"] = []
-            if "append" not in inherit:
-                inherit["append"] = [] 
+    if not os.path.exists(filename):
+        return conf
+    
+    with open(filename) as file:
+        conf = yaml.load(file, Loader=yaml.FullLoader)
 
-            del conf["inherit"]
-            parent = load_user_config(user_file, inherit["directory"])
-            viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(inherit["directory"], "assessment.ipynb") + '" target="_blank">here</a>.'}
+    parent = None
+    inherit = {}
+    if "inherit" in conf:
+        # Load in parent configuration
+        inherit = conf["inherit"]
+        writable = "writable" in inherit and inherit["writable"]
+        if "ignore" not in inherit:
+            inherit["ignore"] = []
+        if "append" not in inherit:
+            inherit["append"] = [] 
 
-            
-            if "viewer" in conf:
-                if type(conf["viewer"]) is list:
-                    conf["viewer"] = [viewelem] + conf["viewer"]
-                else:
-                    conf["viewer"] = [viewelem, conf["viewer"]]
+        del conf["inherit"]
+        parent = load_user_config(user_file, inherit["directory"])
+        viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(inherit["directory"], "assessment.ipynb") + '" target="_blank">here</a>.'}
+
+        # Add links to parent assessment by placing in viewer.
+        if "viewer" in conf:
+            if type(conf["viewer"]) is list:
+                conf["viewer"] = [viewelem] + conf["viewer"]
             else:
-                conf["viewer"] = [viewelem]
-                inherit["append"].append("viewer")
+                conf["viewer"] = [viewelem, conf["viewer"]]
+        else:
+            conf["viewer"] = [viewelem]
+            inherit["append"].append("viewer")
 
-        if parent is not None:
-            additional = []
-            for key, item in parent.items():
-                if key in inherit["ignore"]:
-                    continue
-                if key in inherit["append"] and key in conf:
-                    if key == "additional":
-                        if type(item) is list:
-                            additional = additional + item
-                        else:
-                            additional = additional + [item]
-                        continue
-                    if type(conf[key]) is list:
-                        if type(item) is list:
-                            conf[key] = item + conf[key]
-                        else:
-                            conf[key] = [item] + conf[key]
-                        continue
-                    if type(conf[key]) is dict:
-                        item.update(conf[key])
-                        conf[key] = item
-                        continue
-                    if type(conf[key]) is None:
-                        conf[key] = item
+    if parent is not None:
+        # Place loaded conf under the parent conf.
+        additional = []
+        for key, item in parent.items():
+            if key in inherit["ignore"]:
+                # Ignore this key when inheriting
+                continue
+            if key in inherit["append"] and key in conf:
+                # Append to this key when inheriting
+                if key == "additional":
+                    if type(item) is list:
+                        additional = additional + item
                     else:
-                        raise ValueError("Cannot append to non dictionary or list type.")
-                if key == "scores" and "writable" not in inherit or not inherit["writable"]:
-                    additional = additional + [item]
+                        additional = additional + [item]
                     continue
-                if key == "series" and "writable" not in inherit or not inherit["writable"]:
-                    item["series"] = True # Convert series to be readable only
-                    additional = additional + [item]
+                if type(conf[key]) is list:
+                    if type(item) is list:
+                        conf[key] = item + conf[key]
+                    else:
+                        conf[key] = [item] + conf[key]
                     continue
-                if key not in conf:
-                    conf[key] = parent[key]
+                if type(conf[key]) is dict:
+                    item.update(conf[key])
+                    conf[key] = item
                     continue
-                
-            if "additional" in conf:
-                if type(conf["additional"]) is list:
-                    conf["additional"] = additional + conf["additional"]
+                if type(conf[key]) is None:
+                    conf[key] = item
                 else:
-                    conf["additional"] = additional + [conf["additional"]]
-            elif len(additional)>0:
-                conf["additional"] = additional
+                    raise ValueError("Cannot append to non dictionary or list type.")
+                continue
+            
+            if key == "scores" and not writable:
+                additional = additional + [item]
+                continue
+
+            if key == "series" and not writable:
+                item["series"] = True # Convert series to be readable only
+                additional = additional + [item]
+                continue
+
+            if key not in conf:
+                # Augment the configuration with the parent key.
+                conf[key] = parent[key]
+                continue
+
+        if "additional" in conf:
+            if type(conf["additional"]) is list:
+                conf["additional"] = additional + conf["additional"]
+            else:
+                conf["additional"] = additional + [conf["additional"]]
+        elif len(additional)>0:
+            conf["additional"] = additional
     return conf
 
 def load_config():

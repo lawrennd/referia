@@ -307,10 +307,13 @@ class Scorer:
             self._postcompute.append(score)
             return
             
-        if score['type'] == 'Criterion':
+        if score["type"] == "Criterion":
             value = None
             display = None
             tally = None
+            liquid = None
+            lis = None
+            join = None
             prefix = score["prefix"]
             if "criterion" in score:
                 value = score["criterion"]
@@ -525,10 +528,10 @@ class Scorer:
             except TypeError as err:
                 raise TypeError("The argument \"args\" in _referia.yml should be in the form of a mapping.") from err
             args["column_name"] = self._column_names_dict[field_name]
-            if "display" in process_score and "display" not in args:
-                args["display"] = process_score["display"]
-            if "tally" in process_score and "tally" not in args:
-                args["tally"] = process_score["tally"]
+
+            for field in ["display", "tally", "liquid"]:
+                if field in process_score and field not in args:
+                    args[field] = process_score[field]
             # Layout descriptor can be in main structure, or in args.
             if "layout" in process_score and "layout" not in args:
                 args["layout"] =  Layout(**process_score["layout"])
@@ -613,7 +616,7 @@ class Scorer:
                 args[field] = document[field]
                 if document[field] is not None:
                     if type(document[field]) is dict:
-                        if "tally" in document[field] or "display" in document[field] or "list" in document[field] or "join" in document[field]:
+                        if "tally" in document[field] or "display" in document[field] or "list" in document[field] or "join" in document[field] or "liquid" in document[field]:
                             args[field] = self._data.view_to_value(document[field])
         system.create_document(document, **args)
 
