@@ -724,14 +724,19 @@ class Data:
             """The data frame is a series (with multiple identical indices)"""
             indexcol = list(set(df[details["index"]]))
             index = pd.Index(range(len(indexcol)))
-            newdf = pd.DataFrame(index=index, columns=df.columns)
+            newdf = pd.DataFrame(index=index, columns=[details["index"], "entries"])
             newdf[details["index"]] = indexcol
-            for col in df.columns:
-                if col != details["index"]:
-                    for ind in range(len(indexcol)):
-                        newdf.at[ind, col] = list(df[df[details["index"]]==indexcol[ind]][col])
-            newdetails = details.copy()
-            del newdetails["series"]
+            for ind in range(len(indexcol)):
+                entries = []
+                for col in df.columns:
+                    if col != details["index"]:
+                        # Iterate down rows where index column matches given index.
+                        for ind2 in df.index[df[details["index"]]==indexcol[ind]]:
+                            entry = remove_nan(df.at[index].to_dict())
+                            del entry[details["index"]]
+                            entries.append(entry)
+                newdf.at[ind, "entries"] = entries
+                newdf.at[ind, details["index"]] = indexcol[ind]
             return self._finalize_df(newdf, newdetails)
                 
             

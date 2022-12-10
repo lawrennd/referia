@@ -65,7 +65,11 @@ def load_user_config(user_file="_referia.yml", directory="."):
                         conf[key] = item
                     else:
                         raise ValueError("Cannot append to non dictionary or list type.")
-                if key == "scores" and not inherit["writable"]:
+                if key == "scores" and "writable" not in inherit or not inherit["writable"]:
+                    additional = additional + [item]
+                    continue
+                if key == "series" and "writable" not in inherit or not inherit["writable"]:
+                    item["series"] = True # Convert series to be readable only
                     additional = additional + [item]
                     continue
                 if key not in conf:
