@@ -720,9 +720,20 @@ class Data:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
 
-        """if "series" in details and details["series"]:
+        if "series" in details and details["series"]:
             """The data frame is a series (with multiple identical indices)"""
-            newdf = pd.DataFrame"""
+            indexcol = list(set(df[details["index"]]))
+            index = pd.Index(range(len(indexcol)))
+            newdf = pd.DataFrame(index=index, columns=df.columns)
+            newdf[details["index"]] = indexcol
+            for col in df.columns:
+                if col != details["index"]:
+                    for ind in range(len(indexcol)):
+                        newdf.at[ind, col] = list(df[df[details["index"]]==indexcol[ind]][col])
+            newdetails = details.copy()
+            del newdetails["series"]
+            return self._finalize_df(newdf, newdetails)
+                
             
         if "fields" in details:
             for field in details["fields"]:
