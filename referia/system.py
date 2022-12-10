@@ -249,7 +249,7 @@ def compute_val(compute):
 
             if call["datetime"] == "fromisoformat":
                 if "args" in compute and "date_string" in compute["args"]:
-                    return datatime.fromisoformat(**compute["args"])
+                    return datetime.datetime.fromisoformat(compute["args"]["date_string"])
                 else:
                     log.error(f"Incorrect arguments in datetime.fromisoformat call.")
         else:

@@ -220,7 +220,7 @@ class Data:
         else:
             self._index = index
             self._subindex = None
-            log.info(f"Index {index} selected.")
+            log.info(f"Index \"{index}\" selected.")
 
         # If index has changed, run computes.
         if self._index != orig_index:
@@ -715,10 +715,15 @@ class Data:
         
 
     def _finalize_df(self, df, details):
+        """This function augments the raw data and sets the index of the data frame."""
         """for field in dtypes:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
 
+        """if "series" in details and details["series"]:
+            """The data frame is a series (with multiple identical indices)"""
+            newdf = pd.DataFrame"""
+            
         if "fields" in details:
             for field in details["fields"]:
                 column = pd.Series(index=df.index, dtype="object")
@@ -749,6 +754,9 @@ class Data:
                                 column[index] = match.group(1)
                             else:
                                 log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
+                    elif "value" in field:
+                        for index in df.index:
+                            column[index] = field["value"]
                     else:
                         log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\" (for format derived fields) in fields.")
                     df[field["name"]] = column
