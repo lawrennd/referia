@@ -595,9 +595,12 @@ class Scorer:
         self.populate_widgets()
 
     def save_flows(self):
-        access.write_scores(self._data._writedata)
+        if self._data._writedata is not None:
+            log.info(f"Writing _writedata.")
+            access.write_scores(self._data._writedata)
         if self._data._writeseries is not None:
             access.write_series(self._data._writeseries)
+            log.info(f"Writing _writeseries.")
 
     def create_document(self, document):
         """Create a document from the data we've provided."""

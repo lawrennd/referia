@@ -240,13 +240,14 @@ class Data:
     def _series(self):
         """Load in the series data to data frames."""
         series = config["series"]
+        self._writeseries = access.series(self.index)
+        self._writeseries = self._finalize_df(self._writeseries,
+                                              config['series'])
+        
         if "selector" in series:
             self.set_selector(series["selector"])
         else:
             raise ValueError(f"The series in _referia.yml does not specify a selector.")
-        self._writeseries = access.series(self.index)
-        self._writeseries = self._finalize_df(self._writeseries,
-                                              config['series'])
         self.sort_series()
 
     def sort_series(self):
@@ -422,15 +423,14 @@ class Data:
             return
 
         if column not in self.get_selectors():
-            log.info(f"Column {column} of chosen for selection not in Data._writeseries ... adding.")
+            log.info(f"Column \"{column}\" of chosen for selection not in Data._writeseries ... adding.")
             self.add_column(column)
             self.set_selector(column)
         else:
             self._selector = column
-            log.info(f"Column {column} of Data._writeseries selected for selection.")
+            log.info(f"Column \"{column}\" of Data._writeseries selected for selection.")
             if self.get_subindex() not in self._writeseries[column]:
                 self.set_subindex(None)
-
 
     def get_subindex(self):
         if self._subindex is None and self._writeseries is not None and self._selector is not None:
