@@ -241,7 +241,7 @@ class Data:
         """Load in the series data to data frames."""
         series = config["series"]
         if "selector" in series:
-            self._selector = series["selector"]
+            self.set_selector(series["selector"])
         else:
             raise ValueError(f"The series in _referia.yml does not specify a selector.")
         self._writeseries = access.series(self.index)
@@ -417,10 +417,12 @@ class Data:
         """Set which column of the series is to be used for selection."""
         # Set to None to indicate that self._writedata is correct place for recording.
         if column is None:
+            log.warning(f"No column selected for selector, setting to \"None\".")
             self._selector = None
             return
 
         if column not in self.get_selectors():
+            log.info(f"Column {column} of chosen for selection not in Data._writeseries ... adding.")
             self.add_column(column)
             self.set_selector(column)
         else:
