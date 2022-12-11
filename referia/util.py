@@ -16,8 +16,12 @@ def yyyymmddToDatetime(date):
         return date
 
 def add_one_to_max(values=None):
+
     if values is None:
-        return None
+        return 1
+    mv=values.max()
+    if pd.isna(mv):
+        return 1
     else:
         return values.max() + 1
 

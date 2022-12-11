@@ -38,34 +38,34 @@ def expand_cell():
 <style>
 .container {
     width: 100% !important;
-}   
+}
 
 div.notebook-container {
     width: 100% !important;
     height: fit-content;
-}  
+}
 
 div.menubar-container {
     width: 100% !important;
     height: fit-content;
-}  
+}
 
 div.maintoolbar-container {
     width: 100% !important;
     height: fit-content;
-}  
+}
 
 div.cell.selected {
-    border-left-width: 1px !important;  
+    border-left-width: 1px !important;
 }
 
 div.output_scroll {
     resize: vertical !important;
 }
 
-.output_wrapper .output { 
-    overflow-y: visible; 
-    height: fit-content; 
+.output_wrapper .output {
+    overflow-y: visible;
+    height: fit-content;
 }
 
 
@@ -91,12 +91,12 @@ def clean_string(instring):
 
 class Scorer:
     def __init__(self, index=None, data=None):
-        
+
         # Store the map between valid python variable names and data column names
         self._column_names_dict = {}
         # Store the map between valid python varliable names and their boxed widgets.
         self._widget_dict = {}
-                
+
         self._default_field_vals = pd.Series(dtype=object)
         self._default_field_source = pd.Series(dtype=object)
 
@@ -106,7 +106,7 @@ class Scorer:
 
         self._precompute = []
         self._postcompute = []
-        
+
         if data is None:
             self._data = assess.Data()
         else:
@@ -121,7 +121,7 @@ class Scorer:
         """Create the widgets to be used for display."""
         _reload_button = ReloadButton(parent=self)
         self.add_widgets(_reload_button=_reload_button)
-                        
+
         # Process the different scorers in from the _referia.yml file
         if "scored" in config:
             _progress_label = Markdown(description=" ", field_name="_progress_label")
@@ -132,7 +132,7 @@ class Scorer:
             views = config["viewer"]
             if type(views) is not list:
                 views = [views]
-            
+
             for count, view in enumerate(views):
                 label = "_viewer_label" + str(count)
                 args = {
@@ -143,11 +143,11 @@ class Scorer:
                     "parent": self,
                 }
                 self.add_widgets(**{label: Markdown(**args)})
-            
+
         if "scorer" in config:
             for score in config["scorer"]:
                 self.extract_scorer(score)
-                
+
         if "documents" in config:
             documents = config["documents"]
             for count, document in enumerate(documents):
@@ -169,7 +169,7 @@ class Scorer:
                     "parent": self,
                 }
                 self.add_widgets(**{label: CreateSummaryButton(**args)})
-            
+
         if "summary_documents" in config:
             documents = config["summary_documents"]
             for count, document in enumerate(documents):
@@ -180,12 +180,12 @@ class Scorer:
                     "parent": self,
                 }
                 self.add_widgets(**{label: CreateSummaryDocButton(**args)})
-                
 
-            
+
+
         _save_button = SaveButton(parent=self)
         self.add_widgets(_save_button=_save_button)
-                    
+
     def add_widgets(self, **kwargs):
         self._widget_dict = {**self._widget_dict, **kwargs}
 
@@ -202,7 +202,7 @@ class Scorer:
 
     def get_value(self):
         return self._data.get_value()
-    
+
     def set_value(self, value, trigger_update=True):
         """Update a value in one of the output flows."""
         old_value = self.get_value()
@@ -215,10 +215,10 @@ class Scorer:
 
     def get_column(self):
         return self._data.get_column()
-    
+
     def set_column(self, column):
         self._data.set_column(column)
-        
+
     def get_selectors(self):
         return self._data.get_selectors()
 
@@ -231,14 +231,14 @@ class Scorer:
     def get_indices(self):
         return self._data.index
 
-    
-    
+
+
     def get_subindices(self):
         return self._data.get_subindices()
-    
+
     def get_subindex(self):
         return self._data.get_subindex()
-    
+
     def set_subindex(self, value):
         self._data.set_subindex(value)
         self.populate_widgets()
@@ -246,7 +246,7 @@ class Scorer:
     def add_series_row(self):
         """Add a row with a generated subindex to the series."""
         self._data.add_series_row()
-        
+
     def full_selector(self):
         """Select a selector and subindex from the data"""
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
@@ -261,7 +261,7 @@ class Scorer:
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
         self._selector_widget.display()
 
-        
+
     def select_subindex(self):
         """Select a subindex from the data"""
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
@@ -282,7 +282,7 @@ class Scorer:
     def set_select_subindex(self, value):
         """Set state of subindex selection."""
         self._select_subindex = value
-        
+
     def run(self):
         """Run the scorer to edit the data frame."""
         if "series" in config:
@@ -293,7 +293,7 @@ class Scorer:
         self.populate_widgets()
         system.view_series(self._data)
 
-        
+
     def extract_scorer(self, score):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
@@ -306,7 +306,7 @@ class Scorer:
             # These are score items that are computed every time the row is updated.
             self._postcompute.append(score)
             return
-            
+
         if score["type"] == "Criterion":
             value = None
             display = None
@@ -388,7 +388,7 @@ class Scorer:
             for sub_score in [criterion, date]:
                 self.extract_scorer(sub_score)
             return
-        
+
 
         if score["type"] == "CriterionCommentRaisesMeetsLowers":
             criterioncomment = json.loads(json.dumps(score))
@@ -484,7 +484,7 @@ class Scorer:
                 # Create an instance of the object to extract default value.
                 self._default_field_vals[score["field"]] = widget_type(parent=self, field_name=score["field"]).get_value()
                 if "value" in score:
-                    self._default_field_vals[score["field"]] = score["value"]               
+                    self._default_field_vals[score["field"]] = score["value"]
                 if "args" in score and "value" in score["args"]:
                     self._default_field_vals[score["field"]] = score["args"]["value"]
                 if "default" in score:
@@ -543,12 +543,12 @@ class Scorer:
         else:
             raise Exception("Cannot find " + score["type"] + " interaction type.")
 
-        
+
     def display_widgets(self):
         """Display the field entry widgets"""
         for key, widget in self.widgets().items():
             widget.display()
-            
+
     def template_to_value(self, template):
         """Convert a template to values."""
         if "use" in template:
@@ -567,14 +567,14 @@ class Scorer:
             if value != "":
                 value+= "\n\n"
         return value
-    
+
     def view_scorer(self):
         text = ""
         for key, widget in self.widgets().items():
             text += widget.to_markdown()
         return text
 
-    
+
     def load_flows(self, reload=False):
         """Reload flows from data stores."""
         log.info(f"Reload of flows requested.")
@@ -593,7 +593,7 @@ class Scorer:
             if subindex is not None:
                 self.set_subindex(subindex)
         self.populate_widgets()
-        
+
     def save_flows(self):
         access.write_scores(self._data._writedata)
         if self._data._writeseries is not None:
@@ -610,7 +610,7 @@ class Scorer:
         if "footer" in document:
             content += self.template_to_value(document["footer"])
         args["content"] = content
-        
+
         for field in document:
             if field not in ["header", "body", "footer", "type"]:
                 args[field] = document[field]
@@ -633,7 +633,7 @@ class Scorer:
         if "footer" in document:
             content += self.template_to_value(document["footer"])
         args["content"] = content
-        
+
         for field in document:
             if field not in ["header", "body", "footer", "type"]:
                 args[field] = self._data.view_to_value(document[field])
@@ -647,7 +647,7 @@ class Scorer:
             columns = details["columns"]
             if type(columns) is not list:
                 columns = [columns]
-            
+
             for column in columns:
                 for index in self.index:
                     print(f"Set index {index}")
@@ -656,14 +656,14 @@ class Scorer:
                     print(f"Value is {val}")
                     args["entries"].append(val)
         system.create_summary(details, **args)
-    
+
     def value_updated(self):
         """If a value in a row has been updated, modify other values"""
 
         # If index has changed, run computes.
         for compute in self._postcompute:
             assess.run_compute(compute)
-        
+
         # Need to determine if these should update series or data.
         # Update timestamp fields.
         today_val = pd.to_datetime("today")
@@ -671,11 +671,11 @@ class Scorer:
             timestamp_field = config["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
-        if self._data._writedata is not None and timestamp_field not in self._data._writedata.columns:
+        if timestamp_field not in self._data.columns:
             self._data.add_column(timestamp_field)
         self._data.set_dtype(timestamp_field, "datetime64[ns]")
 
-        self.set_column(timestamp_field)        
+        self.set_column(timestamp_field)
         self.set_value(today_val,
                        trigger_update=False)
         if "created_field" in config:
@@ -683,11 +683,11 @@ class Scorer:
         else:
             created_field = "Created"
 
-        if created_field not in self._data._writedata.columns:
+        if created_field not in self._data.columns:
             self._data.add_column(created_field)
         self._data.set_dtype(created_field, "datetime64[ns]")
-            
-        if created_field not in self._data._writedata.columns or assess.empty(self._data.get_value_column(created_field)):
+
+        if created_field not in self._data.columns or assess.empty(self._data.get_value_column(created_field)):
             self.set_column(created_field)
             self.set_value(today_val,
                            trigger_update=False)
@@ -702,7 +702,7 @@ class Scorer:
                                    trigger_update=False)
                 else:
                     log.error("Missing key 'field' in combinator view.")
-            
+
 
     def widgets(self):
         """Return the widgets associated with the display"""
@@ -720,12 +720,5 @@ class Scorer:
                 if "_progress_label" in self.widgets():
                     widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
                 continue
-            
+
             widget.refresh()
-            
-
-
-
-            
-    
-

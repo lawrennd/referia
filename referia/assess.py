@@ -62,7 +62,7 @@ list_functions = [
     },
 ]
 
-    
+
 
 @string_filter
 def url_escape(string):
@@ -96,6 +96,8 @@ class Data:
         self._writedata = None
         # Which column is the current focus in the data.
         self._column = None
+        # Which subindex is the current focus in the data.
+        self._subindex = None
         # The series data for writing to (where there may be multiple entries associated with one index)
         self._writeseries = None
         # Which entry column in the series to disambiguate the selection of the focus.
@@ -114,8 +116,9 @@ class Data:
                     "function": self.gcf_(function=compute["function"]),
                     "args" : self.gca_(**compute),
                     "field" : compute["field"],
+                    "refresh" : "refresh" in compute and compute["refresh"],
                 })
-        
+
         self.load_liquid()
         self.add_liquid_filters()
         self.load_flows()
@@ -138,7 +141,7 @@ class Data:
             "default_args" : {},# list_function["default_args"],
         }
 
-    
+
     def gcf_(self, function):
         """Function generator for compute functions."""
 
@@ -146,30 +149,30 @@ class Data:
         for list_function in list_functions:
             if list_function["name"] == function:
                 found_function = True
-                continue
+                break
         if not found_function:
             raise ValueError("Function \"{function}\" not found in list_functions.")
-            
+
         def compute_function(args={}, subseries_args={}, column_args={}, default_args={}):
 
             kwargs = default_args.copy()
-            
+            kwargs.update(args)
             for key, value in column_args.items():
                 self.set_column(value)
                 kwargs[key] = self.get_column_values()
             for key, value in subseries_args.items():
                 self.set_column(value)
                 kwargs[key] = self.get_subseries_values()
-            kwargs.update(remove_nan(self.mapping(args)))
-            
+            # kwargs.update(remove_nan(self.mapping(args)))
+
             return list_function["function"](**kwargs)
-        
+
         compute_function.__name__ = list_function["name"]
         if "docstr" in list_function:
             compute_function.__docstr__ = list_function["docstr"]
         return compute_function
-        
-        
+
+
     @property
     def index(self):
         if self._data is not None:
@@ -199,7 +202,7 @@ class Data:
             strindex = pd.Series([str(ind) for ind in df.index])
             duplicates = ', '.join(strindex[df.index.duplicated()])
             raise ValueError(f"The index for the allocation must be unique. Index \"{duplicates}\" is/are duplicated.")
-        
+
     def _additional(self):
         """Load in the allocation spread sheet to data frames."""
 
@@ -245,7 +248,7 @@ class Data:
         self._writeseries = self._finalize_df(self._writeseries,
                                               config['series'])
         self.sort_series()
-        
+
     def sort_series(self):
         """Sort the series by the column specified."""
         if "series" in config:
@@ -306,7 +309,7 @@ class Data:
                     template_path = [
                         os.path.join(os.path.dirname(__file__), "templates"),
                     ]
-            
+
                     if "ext" in config["liquid"]:
                         ext = config["liquid"]["ext"]
                         loader = lq.loaders.FileExtensionLoader(search_path=template_path, ext=ext)
@@ -315,12 +318,12 @@ class Data:
             elif "dict" in config["liquid"]["templates"]:
                 loader = lq.loaders.DictLoader(config["liquid"]["templates"]["dict"])
         self._liquid_env = lq.Environment(loader=loader)
-        
-        
+
+
     def add_liquid_filters(self):
         self._liquid_env.add_filter("url_escape", url_escape)
         self._liquid_env.add_filter("markdownify", markdownify)
-        
+
     def set_index(self, index):
         """Index setter"""
         orig_index = self._index
@@ -329,30 +332,39 @@ class Data:
             self.set_index(index)
         else:
             self._index = index
-            self._subindex = None
             log.info(f"Index \"{index}\" selected.")
+            self.check_or_set_subseries()
         # If index has changed, run computes.
         if self._index != orig_index:
             self.run_compute()
-                    
-    def run_compute(self):
+
+    def check_or_set_subseries(self):
+        """Check if there is a sub-series if so, use top subindex, if not create a row."""
+        if self._writeseries is not None:
+            subindices = self.get_subseries()
+            if len(subindices) > 0:
+                if self.get_subindex() is None:
+                    self.set_subindex(subindices[0])
+            else:
+                self.add_series_row(self._index)
+
+    def run_compute(self, series=None):
         """Interpret a computation element form the yaml file and return the relevant answer."""
         for compute in self._computes:
-            # Store state
-            ind = self.get_index()
-            sind = self.get_subindex()
-            selector = self.get_selector()
-            col = self.get_column()
-            # Run compute
-            self.set_column(compute["field"])
-            self.set_value(compute["function"](**compute["args"]))
-            # Restore state
-            self.set_index(ind)
-            self.set_subindex(sind)
-            self.set_selector(selector)
-            self.set_column(col)
 
-        
+            # Run compute
+            if series is None:
+                for compute in self._computes:
+                    self.set_column(compute["field"])
+                    val = self.get_value()
+                    if pd.isna(val) or compute["refresh"]:
+                        self.set_value(compute["function"](**compute["args"]))
+            else:
+                if compute["field"] in series.index:
+                    if pd.isna(series[compute["field"]]) or compute["refresh"]:
+                        series[compute["field"]] = compute["function"](**compute["args"])
+
+
     def set_subindex(self, subindex):
         """Subindex setter"""
         if subindex is None:
@@ -361,6 +373,7 @@ class Data:
             return
 
         if self._writeseries is not None and subindex not in self.get_subindices():
+            index = self.get_index()
             raise ValueError(f"Subindex \"{subindex}\" under \"{index}\" not available in current series.")
         else:
             self._subindex=subindex
@@ -376,6 +389,7 @@ class Data:
     def set_column(self, column):
         """Set the current column focus."""
         if column not in self.columns and (self.index is not None and column != self.index.name) or self.index is None:
+            # If column isn't present add it
             if self._writeseries is not None:
                 self.add_series_column(column)
             elif self._writedata is not None:
@@ -389,7 +403,7 @@ class Data:
     def get_column(self):
         """Get the current column focus."""
         return self._column
-    
+
     def get_selector(self):
         return self._selector
 
@@ -398,7 +412,7 @@ class Data:
             return None
         else:
             return self._writeseries.columns
-    
+
     def set_selector(self, column):
         """Set which column of the series is to be used for selection."""
         # Set to None to indicate that self._writedata is correct place for recording.
@@ -415,7 +429,7 @@ class Data:
             if self.get_subindex() not in self._writeseries[column]:
                 self.set_subindex(None)
 
-        
+
     def get_subindex(self):
         if self._subindex is None and self._writeseries is not None and self._selector is not None:
             self.reset_subindex()
@@ -432,7 +446,7 @@ class Data:
             self.add_series_row()
 
 
-    
+
     def generate_subindex(self):
         """Generate a new subindex for use."""
         # Store state
@@ -445,7 +459,7 @@ class Data:
         self.set_index(ind)
         self.set_selector(selector)
         self.set_column(col)
-        
+
     def get_subseries(self):
         return self._writeseries[self._writeseries.index.isin([self.get_index()])]
 
@@ -456,7 +470,7 @@ class Data:
             return pd.Index(self.get_subseries()[self._selector].values, name=self._selector)
         except KeyError as err:
             raise KeyError(f"Could not find index \"{err}\" in the subseries when using it as a selector.")
-        
+
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
         if column in self._data.columns:
@@ -472,7 +486,7 @@ class Data:
         """Set a value to the write data frame"""
         self.set_column(column)
         self.set_value(value)
-        
+
     def get_value_column(self, column):
         """Get a value from the data frame(s)"""
         self.set_column(column)
@@ -482,12 +496,11 @@ class Data:
         """Set the value of the current cell under focus."""
         column = self.get_column()
         if column is None:
-            log.warning(f"Warning attempting to write a value {value} when column is not set.")
-            return
+            raise KeyError(f"Warning attempting to write a value {value} when column is not set.")
         index = self.get_index()
         selector = self.get_selector()
         subindex = self.get_subindex()
-        # If trying to set a numeric valued column's entry to a string, set the type of column to object.      
+        # If trying to set a numeric valued column's entry to a string, set the type of column to object.
         if column in self._data.columns:
             log.warning(f"Warning attempting to write to {column} in self._data.")
 
@@ -499,7 +512,7 @@ class Data:
             self.set_column(column)
             self.set_value(value)
         elif column in self._writeseries.columns:
-            
+
             self._update_type(self._writeseries, column, value)
             self._writeseries.loc[
                 self._writeseries.index.isin([index])
@@ -530,7 +543,7 @@ class Data:
                 return self._writeseries[column]
             except KeyError as err:
                 raise KeyError(f"Cannot find column: \"{column}\" in _writeseries.") from err
-            
+
         elif self._writedata is not None and column in self._writedata.columns:
             try:
                 return self._writedata[column]
@@ -548,7 +561,7 @@ class Data:
         index = self.get_index()
         # Prioritise returning from the _data structure first.
         if self._writeseries is not None and column in self._writeseries.columns:
-            indexer = self._writeseries.index.isin([index])                 
+            indexer = self._writeseries.index.isin([index])
             if indexer.sum()>0:
                 return self._writeseries.loc[indexer, column]
             else:
@@ -557,7 +570,7 @@ class Data:
         else:
             log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
-        
+
     def get_value(self):
         """Return the value of the current cell under focus."""
         # Ordering here dictates the priority of selection, first series, then writedata, then data.
@@ -610,10 +623,14 @@ class Data:
 
     def set_dtype(self, column, dtype):
         """Set a Data._writedata column to the given data type."""
-        if column in self._writedata.columns:
+        if self._writedata is not None and column in self._writedata.columns:
             log.info(f"\"{column}\" being set to \"{dtype}\".")
             self._writedata[column] = self._writedata[column].astype(dtype)
-            
+        if self._writeseries is not None and column in self._writeseries.columns:
+            log.info(f"\"{column}\" being set to \"{dtype}\".")
+            self._writeseries[column] = self._writeseries[column].astype(dtype)
+
+
     def add_row(self, index=None, subindex=None):
         """Add a row with a given index (and optionally subindex) to the data structure."""
         def append_row(df, index):
@@ -623,6 +640,7 @@ class Data:
             # Handle the fact that the index is stored as a column also
             if df.index.name in row:
                 row[df.index.name] = index
+            self.run_compute(row)
             return df.append(row)
 
         if index is None:
@@ -632,19 +650,16 @@ class Data:
         if self._data is not None and index not in self.index:
             self._data = append_row(self._data, index)
             log.info(f"\"{index}\" added as row in Data._data.")
-            self.run_compute()
             self.set_index(index)
 
         if self._writedata is not None and index not in self._writedata.index:
             self._writedata = append_row(self._writedata, index)
             log.info(f"\"{index}\" added as row in Data._writedata.")
-            self.run_compute()
             self.set_index(index)
 
         if self._writeseries is not None and index not in self._writeseries.index:
             self._writeseries = append_row(self._writeseries, index)
             log.info(f"\"{index}\" added as row in Data._writeseries.")
-            self.run_compute()
             self.set_index(index)
 
     def add_series_row(self, index=None):
@@ -656,15 +671,15 @@ class Data:
             # Handle the fact that the index is stored as a column also
             if df.index.name in row:
                 row[df.index.name] = index
+            self.run_compute(row)
             return df.append(row)
-            
+
         if index is None:
             index = self.get_index()
         self._writeseries = append_row(self._writeseries, index)
-        self.run_compute()
         selector = self.get_selector()
-        subindex = self.get_subindex()
-        log.info(f"\"{index}\" added \"{selector}\" with \"{subindex}\" added as row in Data._writeseries.")
+        log.info(f"\"{index}\" added subseries row in Data._writeseries.")
+
 
     def add_series_column(self, column):
         """Add a column to the data series"""
@@ -684,7 +699,7 @@ class Data:
         if "entries" not in mapping:
             mapping["entries"] = "entries" # Covers series entries.
         return mapping
-    
+
     def mapping(self, mapping=None, series=None):
         """Generate dictionary of mapping between variable names and column values."""
         if mapping is None:
@@ -700,7 +715,7 @@ class Data:
 
         return format
 
-        
+
     def viewer_to_value(self, viewer, kwargs=None):
         """Convert a viewer structure to populated values."""
         value = ""
@@ -715,7 +730,7 @@ class Data:
     def view_to_value(self, view, kwargs=None):
         """Create the text of the view."""
         value = ""
-                         
+
         if self.conditions(view):
             if type(view) is dict:
                 if "list" in view:
@@ -801,7 +816,7 @@ class Data:
         """Convert a display string to a temp name"""
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", ""))
 
-    
+
     def display_to_value(self, display, kwargs=None):
         if kwargs is None:
             kwargs = self.mapping()
@@ -813,7 +828,7 @@ class Data:
     def liquid_to_tmpname(self, display):
         """Convert a display string to a temp name"""
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
-        
+
     def liquid_to_value(self, display, kwargs=None):
         if kwargs is None:
             kwargs = self.mapping()
@@ -821,7 +836,7 @@ class Data:
             return self._liquid_env.from_string(display).render(**remove_nan(kwargs))
         except Exception as err:
             raise Exception(f"In {display}\n\n {err}") from err
-    
+
     def tally_to_tmpname(self, tally):
         """Convert a tally to a temporary name"""
         tmpname = ""
@@ -834,7 +849,7 @@ class Data:
             tmpname += "end_"
             tmpname += self.view_to_tmpname(tally["end"])
         return tmpname
-        
+
     def tally_values(self, tally, kwargs=None):
         value = ""
         if "begin" in tally:
@@ -854,12 +869,18 @@ class Data:
             value += tally["end"]
             if value != "":
                 value += "\n\n"
-        return value    
+        return value
 
     def tally_series(self, tally):
         orig_subindex = self.get_subindex()
         subindices = self.get_subindices()
-        cur_loc = subindices.get_loc(orig_subindex)
+        if subindices is None:
+            return None
+        if orig_subindex in subindices:
+            cur_loc = subindices.get_loc(orig_subindex)
+        else:
+            cur_loc = 0
+            orig_subindex = subindices[0]
         def subind_val(ind):
             try:
                 return pd.Index([subindices[ind]])
@@ -873,14 +894,14 @@ class Data:
                     return pd.Index(subindices[ind:])
                 else:
                     return pd.Index(subindices[:ind])
-                
+
             except IndexError as e:
                 log.info(f"Requested invalid index in Data.tally_series()")
                 if starter:
                     return pd.Index(subindices[cur_loc:])
                 else:
                     return pd.Index(subindices[:cur_loc])
-            
+
         if "which" not in tally:
             return subindices
         elif tally["which"] == "pop":
@@ -901,7 +922,7 @@ class Data:
             return subindices
         else:
             raise ValueError("Unrecognised subindices specifier in tally.")
-        
+
 
     def _finalize_df(self, df, details):
         """This function augments the raw data and sets the index of the data frame."""
@@ -932,24 +953,26 @@ class Data:
                 newdf.at[ind, "entries"] = entries
                 newdf.at[ind, details["index"]] = indexcol[ind]
             return self._finalize_df(newdf, newdetails)
-                
-            
+
+
         if "fields" in details:
             for field in details["fields"]:
                 column = pd.Series(index=df.index, dtype="object")
                 if "name" in field:
                     if renderable(field):
                         for index in df.index:
-                            self.set_index(df.at[index, details["index"]])
+                            if len(self.columns)>0:
+                                # If there are existing columns, make sure index is set.
+                                self.set_index(df.at[index, details["index"]])
                             kwargs = self.mapping(series=df.loc[index])
                             column[index] = self.view_to_value(field, kwargs)
-                            
+
                     elif "source" in field and "regexp" in field:
                         regexp = field["regexp"]
                         if field["source"] not in df.columns:
                             log.warning("No column \"{source}\" in DataFrame.".format(source=field["source"]))
                         for index in df.index:
-                            try: 
+                            try:
                                 source = df.at[index, field["source"]]
                             except KeyError as err:
                                 name = field["name"]
@@ -980,9 +1003,9 @@ class Data:
             del df[index_col]
         else:
             log.warning(f"No index column \"{index_col}\" found in data frame.")
-        
+
         return df
-    
+
     def to_score(self):
         if self._writedata is not None:
             return len(self._writedata.index)
@@ -995,7 +1018,7 @@ class Data:
                 return self._writedata[config["scored"]["field"]].count()
             else:
                 return 0
-        
+
 
     def _update_type(self, df, column, value):
         """Update the type of a given column according to a value passed."""
@@ -1006,8 +1029,3 @@ class Data:
         if is_numeric_dtype(coltype) and is_bool_dtype(type(value)):
             log.info(f"Changing column \"{column}\" type to 'object' due to bool input.")
             df[column] = df[column].astype("boolean")
-
-        
-
-                     
-
