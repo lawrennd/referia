@@ -243,9 +243,9 @@ class Scorer:
         self._data.set_subindex(value)
         self.populate_widgets()
 
-    def add_new_row_to_series(self):
+    def add_series_row(self):
         """Add a row with a generated subindex to the series."""
-        self._data.add_new_row_to_series()
+        self._data.add_series_row()
         
     def full_selector(self):
         """Select a selector and subindex from the data"""

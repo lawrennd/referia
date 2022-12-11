@@ -455,7 +455,7 @@ class IndexSubIndexSelectorSelect(FullSelector):
         stateless_args = {
             "generate_button" : {
                 "function": ipyw.Button,
-                "on_click_function": parent.add_new_row_to_series,
+                "on_click_function": parent.add_series_row,
                 "description": "Add Row",
             }
         }

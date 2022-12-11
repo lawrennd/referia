@@ -51,7 +51,15 @@ list_functions = [
         "name" : "next_integer",
         "function" : add_one_to_max,
         "default_args" : {},
-    }
+    },
+    {
+        "name" : "today",
+        "function" : datetime.datetime.now().strftime,
+        "default_args": {
+            "format": "%Y-%m-%d",
+        },
+        "docstr" : "Return today's date as a string.",
+    },
 ]
 
     
@@ -102,28 +110,49 @@ class Data:
                 computes = [config["compute"]]
 
             for compute in computes:
-                self._computes.append(self.gcf_(**compute))
+                self._computes.append({
+                    "function": self.gcf_(function=compute["function"]),
+                    "args" : self.gca_(**compute),
+                    "field" : compute["field"],
+                })
         
-        if "subindex_generator" in config["series"]:
-            self._subindex_generator = self.gcf_(**config["series"]["subindex_generator"])
         self.load_liquid()
         self.add_liquid_filters()
         self.load_flows()
 
-    def gcf_(self, field, function, args={}, subseries_args={}, column_args={}):
-        """Function generator for compute functions."""
 
+    def gca_(self, field, function, args={}, subseries_args={}, column_args={}):
+        """Args generator for compute functions."""
+
+        found_function = False
         for list_function in list_functions:
             if list_function["name"] == function:
+                found_function = True
                 continue
-            
-        def compute_function():
-            ind = self.get_index()
-            sind = self.get_subindex()
-            selector = self.get_selector()
-            col = self.get_column()
+        if not found_function:
+            raise ValueError("Function \"{function}\" not found in list_functions.")
+        return {
+            "subseries_args" : subseries_args,
+            "column_args" : column_args,
+            "args" : args,
+            "default_args" : {},# list_function["default_args"],
+        }
 
-            kwargs = list_function["default_args"].copy()
+    
+    def gcf_(self, function):
+        """Function generator for compute functions."""
+
+        found_function = False
+        for list_function in list_functions:
+            if list_function["name"] == function:
+                found_function = True
+                continue
+        if not found_function:
+            raise ValueError("Function \"{function}\" not found in list_functions.")
+            
+        def compute_function(args={}, subseries_args={}, column_args={}, default_args={}):
+
+            kwargs = default_args.copy()
             
             for key, value in column_args.items():
                 self.set_column(value)
@@ -131,15 +160,9 @@ class Data:
             for key, value in subseries_args.items():
                 self.set_column(value)
                 kwargs[key] = self.get_subseries_values()
-            kwargs.update(self.mapping(args))
-
-            self.set_index(ind)
-            self.set_subindex(sind)
-            self.set_selector(selector)
-            self.set_column(col)
+            kwargs.update(remove_nan(self.mapping(args)))
             
-            self.set_column(field)
-            self.set_value(list_function["function"](**kwargs))
+            return list_function["function"](**kwargs)
         
         compute_function.__name__ = list_function["name"]
         if "docstr" in list_function:
@@ -315,7 +338,19 @@ class Data:
     def run_compute(self):
         """Interpret a computation element form the yaml file and return the relevant answer."""
         for compute in self._computes:
-            compute()
+            # Store state
+            ind = self.get_index()
+            sind = self.get_subindex()
+            selector = self.get_selector()
+            col = self.get_column()
+            # Run compute
+            self.set_column(compute["field"])
+            self.set_value(compute["function"](**compute["args"]))
+            # Restore state
+            self.set_index(ind)
+            self.set_subindex(sind)
+            self.set_selector(selector)
+            self.set_column(col)
 
         
     def set_subindex(self, subindex):
@@ -326,7 +361,7 @@ class Data:
             return
 
         if self._writeseries is not None and subindex not in self.get_subindices():
-            self.add_row(subindex=subindex)
+            raise ValueError(f"Subindex \"{subindex}\" under \"{index}\" not available in current series.")
         else:
             self._subindex=subindex
             log.info(f"Subindex \"{subindex}\" selected.")
@@ -394,18 +429,22 @@ class Data:
             self.set_subindex(subindices[0])
         else:
             log.info(f"No subindex available.")
-            self.add_new_row_to_series()
+            self.add_series_row()
 
-    def add_new_row_to_series(self):
-        """Add a row with a generated subindex to the series."""
-        subindex = self.generate_subindex()
-        log.info(f"Generated new subindex \"{subindex}\".")
-        self.add_row(index=self.get_index(), subindex=subindex)
 
     
     def generate_subindex(self):
         """Generate a new subindex for use."""
-        return self._subindex_generator()
+        # Store state
+        ind = self.get_index()
+        selector = self.get_selector()
+        col = self.get_column()
+        # Generate subindex
+        self._subindex_generator()
+        # Restore state
+        self.set_index(ind)
+        self.set_selector(selector)
+        self.set_column(col)
         
     def get_subseries(self):
         return self._writeseries[self._writeseries.index.isin([self.get_index()])]
@@ -577,39 +616,56 @@ class Data:
             
     def add_row(self, index=None, subindex=None):
         """Add a row with a given index (and optionally subindex) to the data structure."""
-        def append_row(df, index, subindex=None, selector=None):
+        def append_row(df, index):
             """Add an empty row with a given index to a data frame."""
             row = pd.Series(index=df.columns, dtype=object)
             row.name = index
-            if selector is not None and subindex is not None:
-                row[selector] = subindex
             # Handle the fact that the index is stored as a column also
             if df.index.name in row:
                 row[df.index.name] = index
             return df.append(row)
+
         if index is None:
             index = self.get_index()
-        if subindex is None and self._writeseries is not None:
-            subindex = self.get_subindex()
 
         selector = self.get_selector()
         if self._data is not None and index not in self.index:
             self._data = append_row(self._data, index)
-            self.set_index(index)
             log.info(f"\"{index}\" added as row in Data._data.")
+            self.run_compute()
+            self.set_index(index)
 
         if self._writedata is not None and index not in self._writedata.index:
-            log.info(f"\"{index}\" added as row in Data._writedata.")
             self._writedata = append_row(self._writedata, index)
+            log.info(f"\"{index}\" added as row in Data._writedata.")
+            self.run_compute()
             self.set_index(index)
 
-        if self._writeseries is not None and subindex not in self.get_subindices():
-            self._writeseries = append_row(self._writeseries, index, subindex, selector)
-            log.info(f"\"{index}\" with subindex \"{subindex}\" added as row in Data._writeseries.")
+        if self._writeseries is not None and index not in self._writeseries.index:
+            self._writeseries = append_row(self._writeseries, index)
+            log.info(f"\"{index}\" added as row in Data._writeseries.")
+            self.run_compute()
             self.set_index(index)
-            self.set_subindex(subindex)
-            self.sort_series()
+
+    def add_series_row(self, index=None):
+        """Add a row to the series."""
+
+        def append_row(df, index):
+            row = pd.Series(index=df.columns, dtype=object)
+            row.name = index
+            # Handle the fact that the index is stored as a column also
+            if df.index.name in row:
+                row[df.index.name] = index
+            return df.append(row)
             
+        if index is None:
+            index = self.get_index()
+        self._writeseries = append_row(self._writeseries, index)
+        self.run_compute()
+        selector = self.get_selector()
+        subindex = self.get_subindex()
+        log.info(f"\"{index}\" added \"{selector}\" with \"{subindex}\" added as row in Data._writeseries.")
+
     def add_series_column(self, column):
         """Add a column to the data series"""
         if column not in self._writeseries.columns:
