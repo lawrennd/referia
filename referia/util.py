@@ -15,6 +15,11 @@ def yyyymmddToDatetime(date):
     else:
         return date
 
+def add_one_to_max(values=None):
+    if values is None:
+        return None
+    else:
+        return values.max() + 1
 
 def markdown2html(text):
     return markdown.markdown(text)

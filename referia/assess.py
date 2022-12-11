@@ -5,6 +5,8 @@ import re
 import pandas as pd
 import liquid as lq
 
+import datetime
+
 from liquid.filter import string_filter
 import urllib.parse
 
@@ -12,7 +14,7 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .config import *
 from .log import Logger
-from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html
+from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max
 from . import access
 from . import system
 
@@ -22,15 +24,43 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
-sys_functions = {
-    "max": system.max,
-    "today": system.today,
-}
+list_functions = [
+    {
+        "name" : "fromisoformat",
+        "function" : datetime.datetime.fromisoformat,
+        "default_args" : {},
+        "docstr" : "Return date in isoformat.",
+    },
+    {
+        "name" : "strptime",
+        "function" : datetime.datetime.strptime,
+        "default_args" : {},
+        "docstr" : "Returns date in strptime format.",
+    },
+    {
+        "name" : "max",
+        "function" : lambda x: x.max(),
+        "default_args" : {},
+    },
+    {
+        "name" : "sum",
+        "function" : lambda x: x.sum(),
+        "default_args" : {},
+    },
+    {
+        "name" : "next_integer",
+        "function" : add_one_to_max,
+        "default_args" : {},
+    }
+]
+
+    
 
 @string_filter
 def url_escape(string):
     """Filter to escape urls for liquid"""
     return urllib.parse.quote(string.encode('utf8'))
+
 
 @string_filter
 def markdownify(string):
@@ -63,18 +93,60 @@ class Data:
         # Which entry column in the series to disambiguate the selection of the focus.
         self._selector = None
         # The value in the selected entry column entry column value from the series to use
-        self._subindex = None
-        self._subindex_value = 0
-        if "subindex_generator" in config["series"]:
-            self._subindex_generator = config["series"]["subindex_generator"]
-        else:
-            self._subindex_generator = "today"
+
+        self._computes=[]
+        if "compute" in config:
+            if type(config["compute"]) is list:
+                computes = config["compute"]
+            else:
+                computes = [config["compute"]]
+
+            for compute in computes:
+                self._computes.append(self.gcf_(**compute))
         
+        if "subindex_generator" in config["series"]:
+            self._subindex_generator = self.gcf_(**config["series"]["subindex_generator"])
         self.load_liquid()
         self.add_liquid_filters()
-        
         self.load_flows()
 
+    def gcf_(self, field, function, args={}, subseries_args={}, column_args={}):
+        """Function generator for compute functions."""
+
+        for list_function in list_functions:
+            if list_function["name"] == function:
+                continue
+            
+        def compute_function():
+            ind = self.get_index()
+            sind = self.get_subindex()
+            selector = self.get_selector()
+            col = self.get_column()
+
+            kwargs = list_function["default_args"].copy()
+            
+            for key, value in column_args.items():
+                self.set_column(value)
+                kwargs[key] = self.get_column_values()
+            for key, value in subseries_args.items():
+                self.set_column(value)
+                kwargs[key] = self.get_subseries_values()
+            kwargs.update(self.mapping(args))
+
+            self.set_index(ind)
+            self.set_subindex(sind)
+            self.set_selector(selector)
+            self.set_column(col)
+            
+            self.set_column(field)
+            self.set_value(list_function["function"](**kwargs))
+        
+        compute_function.__name__ = list_function["name"]
+        if "docstr" in list_function:
+            compute_function.__docstr__ = list_function["docstr"]
+        return compute_function
+        
+        
     @property
     def index(self):
         if self._data is not None:
@@ -147,9 +219,9 @@ class Data:
         else:
             raise ValueError(f"The series in _referia.yml does not specify a selector.")
         self._writeseries = access.series(self.index)
-        self._writeseries = self._finalize_df(self._writeseries, config['series'])
+        self._writeseries = self._finalize_df(self._writeseries,
+                                              config['series'])
         self.sort_series()
-
         
     def sort_series(self):
         """Sort the series by the column specified."""
@@ -236,20 +308,14 @@ class Data:
             self._index = index
             self._subindex = None
             log.info(f"Index \"{index}\" selected.")
-        self._prep_subindex()
         # If index has changed, run computes.
         if self._index != orig_index:
-            if "compute" in config:
-                for compute in config["compute"]:
-                    self.run_compute(compute)
+            self.run_compute()
                     
-    def run_compute(self, compute):
+    def run_compute(self):
         """Interpret a computation element form the yaml file and return the relevant answer."""
-        field = compute["field"]
-        self.set_column(field)
-        if self.get_value() is not None or "refresh" in compute and compute["refresh"] is True:
-            val = system.compute_val(compute)
-            self.set_value(val)
+        for compute in self._computes:
+            compute()
 
         
     def set_subindex(self, subindex):
@@ -313,17 +379,7 @@ class Data:
             log.info(f"Column {column} of Data._writeseries selected for selection.")
             if self.get_subindex() not in self._writeseries[column]:
                 self.set_subindex(None)
-            self._prep_subindex()
 
-    def _prep_subindex(self):
-        if self._writeseries is not None and self._selector is not None:
-            subindices = self.get_subindices()
-            
-            if len(subindices)>0:
-                else:
-                    reset
-                index = self.get_index()
-                log.info(f"No subindex set, using first entry of portion of Data._writeseries indexed by \"{index}\".")
         
     def get_subindex(self):
         if self._subindex is None and self._writeseries is not None and self._selector is not None:
@@ -349,7 +405,7 @@ class Data:
     
     def generate_subindex(self):
         """Generate a new subindex for use."""
-        return sys_functions[self._subindex["generator"]](**self._subindex["args"])
+        return self._subindex_generator()
         
     def get_subseries(self):
         return self._writeseries[self._writeseries.index.isin([self.get_index()])]
@@ -896,6 +952,6 @@ class Data:
             df[column] = df[column].astype("boolean")
 
         
-def data():
-    return Data()
-        
+
+                     
+
