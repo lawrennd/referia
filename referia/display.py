@@ -559,6 +559,16 @@ class Scorer:
         else:
             return self._data.viewer_to_value(template)
 
+    def summary_template_to_value(self, template):
+        """Convert a summary template to values. Summary templates operate across the entire document."""
+        if "use" in template:
+            if template["use"] == "viewer":
+                return self._data.summary_viewer_to_value(config["viewer"])
+            elif template["use"] == "scorer":
+                return self.widgets_to_value()
+        else:
+            return self._data.summary_viewer_to_value(template)
+        
     def widgets_to_value(self):
         """Convert the widget outputs into text."""
         value = ""
@@ -628,18 +638,18 @@ class Scorer:
         args = {}
         content = ""
         if "header" in document:
-            content += self.template_to_value(document["header"])
+            content += self.summary_template_to_value(document["header"])
         if "body" in document:
             for index in self.get_index():
                 self.set_index(index)
-                content += self.template_to_value(document["body"])
+                content += self.summary_template_to_value(document["body"])
         if "footer" in document:
-            content += self.template_to_value(document["footer"])
+            content += self.summary_template_to_value(document["footer"])
         args["content"] = content
 
         for field in document:
             if field not in ["header", "body", "footer", "type"]:
-                args[field] = self._data.view_to_value(document[field])
+                args[field] = self._data.summary_view_to_value(document[field])
         system.create_summary_document(document, **args)
 
     def create_summary(self, details):

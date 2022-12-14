@@ -412,7 +412,11 @@ class Data:
         if self._writeseries is None:
             return None
         else:
-            return self._writeseries.columns
+            selectors = list(self._writeseries.columns)
+            if self._selector is not None and self._selector in selectors:
+                # Return selectors with selector at front (to ensure it is default) for widgets)
+                selectors.insert(0, selectors.pop(selectors.index(self._selector)))
+            return selectors
 
     def set_selector(self, column):
         """Set which column of the series is to be used for selection."""
@@ -482,7 +486,6 @@ class Data:
             self.add_series_column(column)
 
         self._update_type(self._writeseries, column, value)
-        self.get_subseries().at[get]
 
     def set_value_column(self, value, column):
         """Set a value to the write data frame"""
@@ -615,13 +618,26 @@ class Data:
             return None
 
     def add_column(self, column):
-        if self._writedata is None:
-            raise ValueError("There is no _writedata loaded to add a column to.")
-        if column not in self._writedata.columns:
+        if self._writedata is None and self._writeseries is None:
+            raise ValueError("There is no _writedata or _writeseries loaded to add a column to.")
+
+        if self._writeseries is not None and column in self._writeseries.columns:
+            log.warning(f"\"{column}\" requested to be added but it already exists in _writeseries.")
+            return
+
+        if self._writedata is not None and column in self._writedata.columns:
+            log.warning(f"\"{column}\" requested to be added but it already exists in _writedata.")
+            return
+        
+        if self._writeseries is not None and column not in self._writeseries.columns:
+            log.info(f"\"{column}\" not in writeseries columns ... adding.")
+            self._writeseries[column] = None
+            return
+        
+        if self._writedata is not None and column not in self._writedata.columns:
             log.info(f"\"{column}\" not in write columns ... adding.")
             self._writedata[column] = None
-        else:
-            log.warning(f"\"{column}\" requested to be added to write data but already exists.")
+            return
 
     def set_dtype(self, column, dtype):
         """Set a Data._writedata column to the given data type."""
@@ -729,6 +745,17 @@ class Data:
                 value += "\n\n"
         return value
 
+    def summary_viewer_to_value(self, viewer, kwargs=None):
+        """Convert a summary viewer structure to populated values."""
+        value = ""
+        if type(viewer) is not list:
+            viewer = [viewer]
+        for view in viewer:
+            value += self.summary_view_to_value(view, kwargs)
+            if value != "":
+                value += "\n\n"
+        return value
+    
     def view_to_value(self, view, kwargs=None):
         """Create the text of the view."""
         value = ""
@@ -860,8 +887,7 @@ class Data:
                 value += "\n\n"
         orig_subindex = self.get_subindex()
         subindices = self.tally_series(tally)
-        # Reverse series so it's most distant event first.
-        for subindex in subindices[::-1]:
+        for subindex in subindices:
             self.set_subindex(subindex)
             value += self.view_to_value(tally, kwargs)
             if value != "":
@@ -890,7 +916,7 @@ class Data:
                 log.info(f"Requested invalid index in Data.tally_series()")
                 return pd.Index([subindices[cur_loc]])
 
-        def subind_series(ind, starter=True):
+        def subind_series(ind, starter=True, reverse=False):
             try:
                 if starter:
                     return pd.Index(subindices[ind:])
@@ -904,22 +930,27 @@ class Data:
                 else:
                     return pd.Index(subindices[:cur_loc])
 
+        if "reverse" not in tally or not tally["reverse"]:
+            reverse=False
+        else:
+            reverse=True
+            
         if "which" not in tally:
             return subindices
         elif tally["which"] == "pop":
-            return subind_val(0)
+            return subind_val(0, reverse=reverse)
         elif tally["which"] == "bottom":
-            return subind_val(-1)
+            return subind_val(-1, reverse=reverse)
         elif tally["which"] == "previous":
-            return subind_val(cur_loc+1)
+            return subind_val(cur_loc+1, reverse=reverse)
         elif tally["which"] == "next":
-            return subind_val(cur_loc-1)
+            return subind_val(cur_loc-1, reverse=reverse)
         elif tally["which"] == "earlier":
-            return subind_series(cur_loc+1)
+            return subind_series(cur_loc+1, reverse=reverse)
         elif tally["which"] == "later":
-            return subind_series(cur_loc, starter=False)
+            return subind_series(cur_loc, starter=False, reverse=reverse)
         elif tally["which"] == "others":
-            return subind_series(cur_loc, starter=False).append(subind_series(cur_loc+1))
+            return subind_series(cur_loc, starter=False, reverse=reverse).append(subind_series(cur_loc+1))
         elif tally["which"] == "all":
             return subindices
         else:
@@ -1016,7 +1047,7 @@ class Data:
 
     def scored(self):
         if "scored" in config:
-            if config["scored"]["field"] in self._writedata.columns:
+            if self._writedata is not None and config["scored"]["field"] in self._writedata.columns:
                 return self._writedata[config["scored"]["field"]].count()
             else:
                 return 0

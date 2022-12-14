@@ -142,7 +142,7 @@ def create_summary(details, **args):
 
 def create_summary_document(document, **args):
     """Create a summary document based on the data in all fields."""
-    doctype = details["type"]
+    doctype = document["type"]
     if doctype == "docx":
         create_docx(document, **args)
     if doctype == "email":
