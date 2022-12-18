@@ -697,9 +697,13 @@ def read_data(details):
 
     return df
 
-def allocation():
+def allocation(source=None):
     """Load in the allocation spread sheet to data frames."""
-    return read_data(config["allocation"])
+    return read_data(source)
+
+def additional(source):
+    """Load in the additional spread sheet to data frames."""
+    return read_data(source)
 
 def data_exists(details):
     """Check if a particular data structure exists or needs to be created."""
@@ -757,9 +761,6 @@ def series(index=None):
             os.strerror(errno.ENOENT), series
             )
 
-def additional(source):
-    """Load in the additional spread sheet to data frames."""
-    return read_data(source)
 
 def write_data(df, details):
     """Write the data using the details given in configuration."""

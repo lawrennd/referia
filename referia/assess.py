@@ -192,38 +192,109 @@ class Data:
         # Should perhaps make this unique column list? As in practice it behaves that way.
         return pd.Index(columns)
 
-    def _allocation(self):
-        """Load in the allocation spread sheet to data frames."""
-        df = access.allocation()
-        df = self._finalize_df(df, config["allocation"])
-        if df.index.is_unique:
-            self._data = df
-        else:
-            strindex = pd.Series([str(ind) for ind in df.index])
-            duplicates = ', '.join(strindex[df.index.duplicated()])
-            raise ValueError(f"The index for the allocation must be unique. Index \"{duplicates}\" is/are duplicated.")
-
-    def _additional(self):
-        """Load in the allocation spread sheet to data frames."""
-
-        if type(config["additional"]) is not list:
-            configs = [config["additional"]]
-        else:
-            configs = config["additional"]
-
+    def _augment_data(self, configs, how="left", suffix='', concat=False, axis=0):
+        if type(configs) is not list:
+            configs = [configs]
         for i, conf in enumerate(configs):
-            df = self._finalize_df(access.additional(conf), conf)
+            df = self._finalize_df(access.read_data(conf), conf)
             if df.index.is_unique:
-                if i == 0:
-                    additional = df
+                if "join" in conf:
+                    join = conf["join"]
                 else:
-                    additional = additional.join(df, rsuffix="_" + str(i))
+                    join = how
+                if "rsuffix" in conf:
+                    rsuffix = conf["rsuffix"]
+                else:
+                    rsuffix = suffix.format(joinNo=i)
+                if i == 0:
+                    data = df
+                else:
+                    if concat:
+                        data = pd.concat([data, df], axis=axis, join=join)
+                    else:
+                        data = data.join(df, rsuffix=rsuffix, how=join)
             else:
                 strindex = pd.Series([str(ind) for ind in df.index])
                 duplicates = ', '.join(strindex[df.index.duplicated()])
-                raise ValueError(f"The index for additional data frame {i} must be unique. Index \"{duplicates}\" is/are duplicated.")
+                raise ValueError(f"The index for the incorporated data frame \"{i}\" must be unique. Index \"{duplicates}\" is/are duplicated.")
+        if self._data is None:
+            self._data = data
+        else:
+            if concat:
+                self._data = pd.concat([self._data, data], join=how, axis=axis)
+            else:                    
+                self._data.join(data, rsuffix="additional", how=how)
 
-        self._data = self._data.join(additional, rsuffix="additional")
+    def _remove_index_duplicates(self):
+        """Rename the index of any duplicates"""
+        existlist=[]
+        count=0
+        indseries = pd.Series(self._data.index)
+        for i, ind in indseries.items():
+            if ind not in existlist:
+                existlist.append(ind)
+                count=0
+                continue
+            else:
+                count+=1
+                indseries.at[i] = str(ind) + "_" + str(count)
+        self._data.index = indseries
+
+    def _allocation(self):
+        """Load in the allocation spread sheet to data frames."""
+        self._augment_data(config["allocation"], how="outer", concat=True, axis=0)
+        self._remove_index_duplicates()
+        # if type(config["allocation"]) is not list:
+        #     configs = [config["allocation"]]
+        # else:
+        #     configs = config["allocation"]
+
+        # for i, conf in enumerate(configs):
+        #     df = self._finalize_df(access.allocation(conf), conf)
+        #     if df.index.is_unique:
+        #         # Default join for allocation is "outer"
+        #         if "join" in conf:
+        #             join = conf["join"]
+        #         else:
+        #             join = "outer"
+        #         if i == 0:
+        #             allocation = df
+        #         else:
+        #             allocation = allocation.join(df, rsuffix="_" + str(i), how=join)
+        #     else:
+        #         strindex = pd.Series([str(ind) for ind in df.index])
+        #         duplicates = ', '.join(strindex[df.index.duplicated()])
+        #         raise ValueError(f"The index for the allocation must be unique. Index \"{duplicates}\" is/are duplicated.")
+        # self._data = allocation    
+
+    def _additional(self):
+        """Load in the allocation spread sheet to data frames."""
+        self._augment_data(config["additional"], concat=False, how="inner", suffix="_{joinNo}")
+
+        # if type(config["additional"]) is not list:
+        #     configs = [config["additional"]]
+        # else:
+        #     configs = config["additional"]
+
+        # for i, conf in enumerate(configs):
+        #     df = self._finalize_df(access.additional(conf), conf)
+        #     if df.index.is_unique:
+        #         # Default join for additional is "inner"
+        #         if "join" in conf:
+        #             join = conf["join"]
+        #         else:
+        #             join = "left"
+        #         if i == 0:
+        #             additional = df
+        #         else:
+        #             additional = additional.join(df, rsuffix="_" + str(i), how=join)
+        #     else:
+        #         strindex = pd.Series([str(ind) for ind in df.index])
+        #         duplicates = ', '.join(strindex[df.index.duplicated()])
+        #         raise ValueError(f"The index for additional data frame {i} must be unique. Index \"{duplicates}\" is/are duplicated.")
+
+        
+        # self._data = self._data.join(additional, rsuffix="additional", how="left")
 
     def _scores(self):
         """Load in the score data to data frames."""
@@ -619,7 +690,7 @@ class Data:
 
     def add_column(self, column):
         if self._writedata is None and self._writeseries is None:
-            raise ValueError("There is no _writedata or _writeseries loaded to add a column to.")
+            raise ValueError(f"There is no _writedata or _writeseries loaded to add the column \"{column}\" to.")
 
         if self._writeseries is not None and column in self._writeseries.columns:
             log.warning(f"\"{column}\" requested to be added but it already exists in _writeseries.")
