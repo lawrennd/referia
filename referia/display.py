@@ -553,21 +553,11 @@ class Scorer:
         """Convert a template to values."""
         if "use" in template:
             if template["use"] == "viewer":
-                return self._data.viewer_to_value(config["viewer"])
+                return self._data.view_to_value(config["viewer"])
             elif template["use"] == "scorer":
                 return self.widgets_to_value()
         else:
-            return self._data.viewer_to_value(template)
-
-    def summary_template_to_value(self, template):
-        """Convert a summary template to values. Summary templates operate across the entire document."""
-        if "use" in template:
-            if template["use"] == "viewer":
-                return self._data.summary_viewer_to_value(config["viewer"])
-            elif template["use"] == "scorer":
-                return self.widgets_to_value()
-        else:
-            return self._data.summary_viewer_to_value(template)
+            return self._data.view_to_value(template)
         
     def widgets_to_value(self):
         """Convert the widget outputs into text."""
@@ -612,45 +602,41 @@ class Scorer:
             access.write_series(self._data._writeseries)
             log.info(f"Writing _writeseries.")
 
-    def create_document(self, document):
+    def create_document(self, document, summary=False):
         """Create a document from the data we've provided."""
         args = {}
-        content = ""
-        if "header" in document:
-            content += self.template_to_value(document["header"])
-        if "body" in document:
-            content += self.template_to_value(document["body"])
-        if "footer" in document:
-            content += self.template_to_value(document["footer"])
-        args["content"] = content
-
         for field in document:
-            if field not in ["header", "body", "footer", "type"]:
+            if field not in ["type"]:
                 args[field] = document[field]
                 if document[field] is not None:
                     if type(document[field]) is dict:
                         if "tally" in document[field] or "display" in document[field] or "list" in document[field] or "join" in document[field] or "liquid" in document[field]:
-                            args[field] = self._data.view_to_value(document[field])
+                            if summary and field in ["content", "body"]:
+                                ind = self.get_index()
+                                txt = ""
+                                for ind2 in self.get_indices():
+                                    self.set_index(ind2)
+                                    txt += self.template_to_value(document[field])
+                                    txt += "\n\n"
+                                args[field] = txt
+                                self.set_index(ind)
+                            else:
+                                args[field] = self.template_to_value(document[field])
+        if "body" in args:
+            if "content" in args:
+                log.warning(f"Contents field being overwritten by body in create_document")       
+            args["content"] = args["body"]
+        if "header" in args:
+            args["content"] = args["header"] + "\n\n" + args["content"]
+            del args["header"]
+        if "footer" in args:
+            args["content"] = args["content"] + "\n\n" + args["footer"]
+            del args["footer"]
+            
+            
         system.create_document(document, **args)
 
-    def create_summary_document(self, document):
-        """Create a document from the data we've provided."""
-        args = {}
-        content = ""
-        if "header" in document:
-            content += self.summary_template_to_value(document["header"])
-        if "body" in document:
-            for index in self.get_index():
-                self.set_index(index)
-                content += self.summary_template_to_value(document["body"])
-        if "footer" in document:
-            content += self.summary_template_to_value(document["footer"])
-        args["content"] = content
-
-        for field in document:
-            if field not in ["header", "body", "footer", "type"]:
-                args[field] = self._data.summary_view_to_value(document[field])
-        system.create_summary_document(document, **args)
+    
 
     def create_summary(self, details):
         """Create a summary file given the relevant information"""

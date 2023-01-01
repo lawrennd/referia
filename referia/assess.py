@@ -816,6 +816,38 @@ class Data:
                 value += "\n\n"
         return value
 
+    def view_to_value(self, view, kwargs=None):
+        """Create the text of the view."""
+        value = ""
+
+        if self.conditions(view):
+            if type(view) is dict:
+                if "list" in view:
+                    values = []
+                    for v in view["list"]:
+                        values.append(self.view_to_value(v, kwargs))
+                    return values
+                if "join" in view:
+                    if "list" not in view["join"]:
+                        log.warning("No field \"list\" in \"concat\" viewer.")
+                    elements = self.view_to_value(view["join"], kwargs)
+                    if "separator" in view["join"]:
+                        sep = view["join"]["separator"]
+                    else:
+                        sep = "\n\n"
+                    return sep.join(elements)
+                if "liquid" in view:
+                    value += self.liquid_to_value(view["liquid"], kwargs)
+                if "tally" in view:
+                    value += self.tally_to_value(view["tally"], kwargs)
+                if "display" in view:
+                    value += self.display_to_value(view["display"], kwargs)
+                return value
+            else:
+                raise TypeError("View should be a \"dict\".")
+        else:
+            return None
+
     def summary_viewer_to_value(self, viewer, kwargs=None):
         """Convert a summary viewer structure to populated values."""
         value = ""
@@ -827,8 +859,8 @@ class Data:
                 value += "\n\n"
         return value
     
-    def view_to_value(self, view, kwargs=None):
-        """Create the text of the view."""
+    def summary_view_to_value(self, view, kwargs=None):
+        """Create the text of the summary view."""
         value = ""
 
         if self.conditions(view):
