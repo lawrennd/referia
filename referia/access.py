@@ -15,7 +15,7 @@ import pypandoc
 import numpy as np
 import pandas as pd
 
-from .util import extract_full_filename, get_path_env
+from .util import extract_full_filename, get_path_env, remove_nan
 from .log import Logger
 from .config import *
 
@@ -309,7 +309,7 @@ def read_docx_file(filename, include_content=True):
     extra_args.append("--standalone")
     pypandoc.convert_file(filename, "markdown", outputfile=tmpfile, extra_args=extra_args)
     data = read_markdown_file(tmpfile, include_content)
-    return data
+    return remove_nan(data)
 
 def write_url_file(data, filename, content, include_content=True):
     """Write a url to a file"""
@@ -746,8 +746,8 @@ def data_exists(details):
             sources = [sources]
         for source in sources:
             directory = source["directory"]
-            if not os.path.exists(directory):
-                log.error("Missing directory \"{directory}\".")
+            if not os.path.exists(os.path.expandvars(directory)):
+                log.error(f"Missing directory \"{directory}\".")
                 available = False
         return available
 

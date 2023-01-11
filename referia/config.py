@@ -2,6 +2,8 @@ import os
 import yaml
 import numpy as np
 
+
+
 GSPREAD_AVAILABLE=True
 try:
     import gspread_pandas.conf as gspdconf
@@ -11,6 +13,7 @@ except ImportError:
 
 
 def load_user_config(user_file="_referia.yml", directory="."):
+    #log.info(f"Loading in configuration from \"{directory}\"")
     filename = os.path.join(os.path.expandvars(directory), user_file)
     conf = {}
     if not os.path.exists(filename):
