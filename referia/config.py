@@ -83,7 +83,7 @@ def load_user_config(user_file="_referia.yml", directory="."):
                 continue
 
             if key == "series" and not writable:
-                item["series"] = True # Convert series to be readable only
+                item["readable_series"] = True # Convert series to be readable only
                 additional = additional + [item]
                 continue
 

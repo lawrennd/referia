@@ -1142,20 +1142,19 @@ class Data:
             field = details["index"]
             if type(field) is str:
                 if field in df.columns:
-                    df.set_index(df[field], inplace=True)
-                    df.index.name = field
+                    index_column_name = details["index"]
                 else:
                     log.warning(f"No index column \"{field}\" found in data frame.")
             elif type(field) is dict:
                 if renderable(field):
-                    df.set_index(self._index_from_renderable(df, **field), inplace=True)
+                    column = self._index_from_renderable(df, **field)
                 elif "source" in field and "regexp" in field:
-                    df.set_index(self._series_from_regexp_of_field(df, **field), inplace=True)
-
-                if "name" in field:
-                    df.index.name = field["name"]
+                    column = self._series_from_regexp_of_field(df, **field)
+                df[field["name"]] = column
+                index_column_name = field["name"]
 
             
+
         if "fields" in details and details["fields"] is not None:
             for field in details["fields"]:
                 if "name" in field:
@@ -1173,28 +1172,28 @@ class Data:
                 else:
                     log.warning(f"No \"name\" associated with field entry.")
 
-        if "series" in details and details["series"]:
+        if "readable_series" in details and details["readable_series"]:
             """The data frame is a series (with multiple identical indices)"""
             mapping = self._default_mapping()
-            indexcol = list(set(df[details["index"]]))
+            indexcol = list(set(df.index))
             index = pd.Index(range(len(indexcol)))
-            newdf = pd.DataFrame(index=index, columns=[details["index"], "entries"])
-            newdf[details["index"]] = indexcol
+            newdf = pd.DataFrame(index=index, columns=[index_column_name, "entries"])
+            newdf[index_column_name] = indexcol
             newdetails = details.copy()
-            del newdetails["series"]
+            del newdetails["readable_series"]
             for ind in range(len(indexcol)):
                 entries = []
-                for ind2 in df.index[df[details["index"]]==indexcol[ind]]:
+                for ind2 in df.index[df[index_column_name]==indexcol[ind]]:
                     entry = remove_nan(df.loc[ind2].to_dict())
                     map_entry = entry.copy()
-                    del map_entry[details["index"]]
+                    del map_entry[index_column_name]
                     for key, key2 in mapping.items():
                         if key2 in entry:
                             map_entry[key] = entry[key2]
                             del map_entry[key2]
                     entries.append(map_entry)
                 newdf.at[ind, "entries"] = entries
-                newdf.at[ind, details["index"]] = indexcol[ind]
+                newdf.at[ind, index_column_name] = indexcol[ind]
                                  
             if "fields" in details:
                 """Fields have already been resolved."""
@@ -1202,10 +1201,8 @@ class Data:
                 
             return self._finalize_df(newdf, newdetails)
 
-        index_col = details["index"]
-        if type(index_col) is str and index_col in df.columns:
-            df.set_index(df[index_col], inplace=True)
-            del df[index_col]
+        df.set_index(df[index_column_name], inplace=True)
+        del df[index_column_name]
 
         return df
 
