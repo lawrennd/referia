@@ -79,12 +79,12 @@ def load_user_config(user_file="_referia.yml", directory="."):
                 continue
             
             if key == "scores" and not writable:
-                additional = additional + [item]
+                additional = [item] + additional
                 continue
 
             if key == "series" and not writable:
-                item["readable_series"] = True # Convert series to be readable only
-                additional = additional + [item]
+                item["series"] = True # Convert series to be readable only
+                additional = [item] + additional
                 continue
 
             if key not in conf:
@@ -94,9 +94,9 @@ def load_user_config(user_file="_referia.yml", directory="."):
 
         if "additional" in conf:
             if type(conf["additional"]) is list:
-                conf["additional"] = additional + conf["additional"]
+                conf["additional"] = conf["additional"] + additional
             else:
-                conf["additional"] = additional + [conf["additional"]]
+                conf["additional"] = [conf["additional"]] + additional
         elif len(additional)>0:
             conf["additional"] = additional
     return conf
