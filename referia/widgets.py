@@ -606,7 +606,7 @@ class CreateDocButton(ReferiaWidget):
         self.document = args["document"]
         
     def on_click(self, b):
-        self._parent.create_document(self.document)
+        self._parent.create_document(self.document, summary=False)
 
 class CreateSummaryDocButton(ReferiaWidget):
     """Create a summary document based on all the entries."""
@@ -617,7 +617,7 @@ class CreateSummaryDocButton(ReferiaWidget):
         self.document = args["document"]
         
     def on_click(self, b):
-        self._parent.create_summary_document(self.document)
+        self._parent.create_document(self.document, summary=True)
 
 class CreateSummaryButton(ReferiaWidget):
     """Create a summary based on all the entries."""

@@ -2,6 +2,8 @@ import os
 import yaml
 import numpy as np
 
+
+
 GSPREAD_AVAILABLE=True
 try:
     import gspread_pandas.conf as gspdconf
@@ -11,6 +13,7 @@ except ImportError:
 
 
 def load_user_config(user_file="_referia.yml", directory="."):
+    #log.info(f"Loading in configuration from \"{directory}\"")
     filename = os.path.join(os.path.expandvars(directory), user_file)
     conf = {}
     if not os.path.exists(filename):
@@ -76,12 +79,12 @@ def load_user_config(user_file="_referia.yml", directory="."):
                 continue
             
             if key == "scores" and not writable:
-                additional = additional + [item]
+                additional = [item] + additional
                 continue
 
             if key == "series" and not writable:
                 item["series"] = True # Convert series to be readable only
-                additional = additional + [item]
+                additional = [item] + additional
                 continue
 
             if key not in conf:
@@ -91,9 +94,9 @@ def load_user_config(user_file="_referia.yml", directory="."):
 
         if "additional" in conf:
             if type(conf["additional"]) is list:
-                conf["additional"] = additional + conf["additional"]
+                conf["additional"] = conf["additional"] + additional
             else:
-                conf["additional"] = additional + [conf["additional"]]
+                conf["additional"] = [conf["additional"]] + additional
         elif len(additional)>0:
             conf["additional"] = additional
     return conf

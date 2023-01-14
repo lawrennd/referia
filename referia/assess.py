@@ -193,6 +193,7 @@ class Data:
         return pd.Index(columns)
 
     def _augment_data(self, configs, how="left", suffix='', concat=False, axis=0):
+        """Augment the data by joining or concatenating the new values."""
         if type(configs) is not list:
             configs = [configs]
         for i, conf in enumerate(configs):
@@ -206,24 +207,17 @@ class Data:
                     rsuffix = conf["rsuffix"]
                 else:
                     rsuffix = suffix.format(joinNo=i)
-                if i == 0:
-                    data = df
+                if self._data is None:
+                    self._data = df
                 else:
                     if concat:
-                        data = pd.concat([data, df], axis=axis, join=join)
+                        self._data = pd.concat([self._data, df], axis=axis, join=join)
                     else:
-                        data = data.join(df, rsuffix=rsuffix, how=join)
+                        self._data = self._data.join(df, rsuffix=rsuffix, how=join)
             else:
                 strindex = pd.Series([str(ind) for ind in df.index])
                 duplicates = ', '.join(strindex[df.index.duplicated()])
                 raise ValueError(f"The index for the incorporated data frame \"{i}\" must be unique. Index \"{duplicates}\" is/are duplicated.")
-        if self._data is None:
-            self._data = data
-        else:
-            if concat:
-                self._data = pd.concat([self._data, data], join=how, axis=axis)
-            else:
-                self._data = self._data.join(data, rsuffix="additional", how=how)
 
     def _remove_index_duplicates(self):
         """Rename the index of any duplicates"""
@@ -242,59 +236,14 @@ class Data:
 
     def _allocation(self):
         """Load in the allocation spread sheet to data frames."""
+        # Augment the data with default augmentation as "outer"
         self._augment_data(config["allocation"], how="outer", concat=True, axis=0)
         self._remove_index_duplicates()
-        # if type(config["allocation"]) is not list:
-        #     configs = [config["allocation"]]
-        # else:
-        #     configs = config["allocation"]
-
-        # for i, conf in enumerate(configs):
-        #     df = self._finalize_df(access.allocation(conf), conf)
-        #     if df.index.is_unique:
-        #         # Default join for allocation is "outer"
-        #         if "join" in conf:
-        #             join = conf["join"]
-        #         else:
-        #             join = "outer"
-        #         if i == 0:
-        #             allocation = df
-        #         else:
-        #             allocation = allocation.join(df, rsuffix="_" + str(i), how=join)
-        #     else:
-        #         strindex = pd.Series([str(ind) for ind in df.index])
-        #         duplicates = ', '.join(strindex[df.index.duplicated()])
-        #         raise ValueError(f"The index for the allocation must be unique. Index \"{duplicates}\" is/are duplicated.")
-        # self._data = allocation    
 
     def _additional(self):
         """Load in the allocation spread sheet to data frames."""
-        self._augment_data(config["additional"], concat=False, how="inner", suffix="_{joinNo}")
-
-        # if type(config["additional"]) is not list:
-        #     configs = [config["additional"]]
-        # else:
-        #     configs = config["additional"]
-
-        # for i, conf in enumerate(configs):
-        #     df = self._finalize_df(access.additional(conf), conf)
-        #     if df.index.is_unique:
-        #         # Default join for additional is "inner"
-        #         if "join" in conf:
-        #             join = conf["join"]
-        #         else:
-        #             join = "left"
-        #         if i == 0:
-        #             additional = df
-        #         else:
-        #             additional = additional.join(df, rsuffix="_" + str(i), how=join)
-        #     else:
-        #         strindex = pd.Series([str(ind) for ind in df.index])
-        #         duplicates = ', '.join(strindex[df.index.duplicated()])
-        #         raise ValueError(f"The index for additional data frame {i} must be unique. Index \"{duplicates}\" is/are duplicated.")
-
-        
-        # self._data = self._data.join(additional, rsuffix="additional", how="left")
+        # Augment the data with default augmentation as "inner"
+        self._augment_data(config["additional"], how="inner", concat=False, suffix="_{joinNo}")
 
     def _scores(self):
         """Load in the score data to data frames."""
@@ -311,14 +260,8 @@ class Data:
     def _series(self):
         """Load in the series data to data frames."""
         series = config["series"]
-        self._writeseries = access.series(self.index)
-        self._writeseries = self._finalize_df(self._writeseries,
-                                              config['series'])
-        
-        if "selector" in series:
-            self.set_selector(series["selector"])
-        else:
-            raise ValueError(f"The series in _referia.yml does not specify a selector.")
+        df = access.series(self.index)
+        self._writeseries = self._finalize_df(df, config['series'])        
         self.sort_series()
 
     def sort_series(self):
@@ -400,6 +343,7 @@ class Data:
         """Index setter"""
         orig_index = self._index
         if self._data is not None and index not in self.index:
+            raise ValueError(f"Index not found in \"{index}\" not found in _data")
             self.add_row(index=index)
             self.set_index(index)
         else:
@@ -420,21 +364,22 @@ class Data:
             else:
                 self.add_series_row(self._index)
 
-    def run_compute(self, series=None):
-        """Interpret a computation element form the yaml file and return the relevant answer."""
+    def run_compute(self, df=None):
+        """Run any computation elements on the data frame."""
         for compute in self._computes:
-
             # Run compute
-            if series is None:
+            if df is None:
                 for compute in self._computes:
                     self.set_column(compute["field"])
-                    val = self.get_value()
-                    if pd.isna(val) or compute["refresh"]:
-                        self.set_value(compute["function"](**compute["args"]))
+                    if self.get_column() is not None: # check that it set column
+                        val = self.get_value()
+                        if pd.isna(val) or compute["refresh"]:
+                            self.set_value(compute["function"](**compute["args"]))
             else:
-                if compute["field"] in series.index:
-                    if pd.isna(series[compute["field"]]) or compute["refresh"]:
-                        series[compute["field"]] = compute["function"](**compute["args"])
+                if compute["field"] in df.columns:
+                    for index in df.index:
+                        if pd.isna(df.at[index, compute["field"]]) or compute["refresh"]:
+                            df.at[index, compute["field"]] = compute["function"](**compute["args"])
 
 
     def set_subindex(self, subindex):
@@ -466,6 +411,8 @@ class Data:
                 self.add_series_column(column)
             elif self._writedata is not None:
                 self.add_column(column)
+            else: 
+                log.warning(f"No write data/series to add column \"{column}\" to.")
 
         if column not in self.columns and (self.index is not None and column != self.index.name) or self.index is None:
             self._column = None
@@ -658,15 +605,8 @@ class Data:
             return None
         selector = self.get_selector()
         subindex = self.get_subindex()
-        # Prioritise returning from the _data structure first.
-        if self._data is not None and column in self._data.columns:
-            try:
-                return self._data.at[index, column]
-            except KeyError as err:
-                raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _data.") from err
-        elif self._data is not None and column==self._data.index.name:
-            return index
-        elif self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
+        # Prioritise returning from the _writeseries then the _writedata structure first.
+        if self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
             if subindex is not None:
                 indexer = (self._writeseries.index.isin([index])
                            & (self._writeseries[selector]==subindex).values)
@@ -684,6 +624,13 @@ class Data:
                 return self._writedata.at[index, column]
             except KeyError as err:
                 raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _writedata.") from err
+        elif self._data is not None and column in self._data.columns:
+            try:
+                return self._data.at[index, column]
+            except KeyError as err:
+                raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _data.") from err
+        elif self._data is not None and column==self._data.index.name:
+            return index
         else:
             log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
@@ -719,53 +666,43 @@ class Data:
             log.info(f"\"{column}\" being set to \"{dtype}\".")
             self._writeseries[column] = self._writeseries[column].astype(dtype)
 
+    def _append_row(self, df, index):
+        row = pd.DataFrame(columns=df.columns, index=pd.Index([index], name=df.index.name))
+        # Handle the fact that the index is stored as a column also
+        if df.index.name in row:
+            row[df.index.name] = index
+        self.run_compute(row)
+        # was return df.append(row) before append deprecation
+        return pd.concat([df, row])
 
     def add_row(self, index=None, subindex=None):
         """Add a row with a given index (and optionally subindex) to the data structure."""
-        def append_row(df, index):
-            """Add an empty row with a given index to a data frame."""
-            row = pd.Series(index=df.columns, dtype=object)
-            row.name = index
-            # Handle the fact that the index is stored as a column also
-            if df.index.name in row:
-                row[df.index.name] = index
-            self.run_compute(row)
-            return df.append(row)
-
         if index is None:
             index = self.get_index()
 
         selector = self.get_selector()
         if self._data is not None and index not in self.index:
-            self._data = append_row(self._data, index)
+            self._data = self._append_row(self._data, index)
             log.info(f"\"{index}\" added as row in Data._data.")
             self.set_index(index)
 
         if self._writedata is not None and index not in self._writedata.index:
-            self._writedata = append_row(self._writedata, index)
+            self._writedata = self._append_row(self._writedata, index)
             log.info(f"\"{index}\" added as row in Data._writedata.")
             self.set_index(index)
 
         if self._writeseries is not None and index not in self._writeseries.index:
-            self._writeseries = append_row(self._writeseries, index)
+            self._writeseries = self._append_row(self._writeseries, index)
             log.info(f"\"{index}\" added as row in Data._writeseries.")
             self.set_index(index)
 
     def add_series_row(self, index=None):
         """Add a row to the series."""
 
-        def append_row(df, index):
-            row = pd.Series(index=df.columns, dtype=object)
-            row.name = index
-            # Handle the fact that the index is stored as a column also
-            if df.index.name in row:
-                row[df.index.name] = index
-            self.run_compute(row)
-            return df.append(row)
 
         if index is None:
             index = self.get_index()
-        self._writeseries = append_row(self._writeseries, index)
+        self._writeseries = self._append_row(self._writeseries, index)
         selector = self.get_selector()
         log.info(f"\"{index}\" added subseries row in Data._writeseries.")
 
@@ -796,13 +733,19 @@ class Data:
 
         format = {}
         for key, column in mapping.items():
-            if series is not None and column in series:
-                format[key] = series[column]
+            if series is not None:
+                if column in series:
+                    format[key] = series[column]
+                else:
+                    log.info(f"\"{column}\" not in provided series, getting using get_value()")
+                    self.set_column(column)
+                    format[key] = self.get_value()
+                    
             else:
                 self.set_column(column)
                 format[key] = self.get_value()
 
-        return format
+        return remove_nan(format)
 
 
     def viewer_to_value(self, viewer, kwargs=None):
@@ -816,6 +759,38 @@ class Data:
                 value += "\n\n"
         return value
 
+    def view_to_value(self, view, kwargs=None):
+        """Create the text of the view."""
+        value = ""
+
+        if self.conditions(view):
+            if type(view) is dict:
+                if "list" in view:
+                    values = []
+                    for v in view["list"]:
+                        values.append(self.view_to_value(v, kwargs))
+                    return values
+                if "join" in view:
+                    if "list" not in view["join"]:
+                        log.warning("No field \"list\" in \"concat\" viewer.")
+                    elements = self.view_to_value(view["join"], kwargs)
+                    if "separator" in view["join"]:
+                        sep = view["join"]["separator"]
+                    else:
+                        sep = "\n\n"
+                    return sep.join(elements)
+                if "liquid" in view:
+                    value += self.liquid_to_value(view["liquid"], kwargs)
+                if "tally" in view:
+                    value += self.tally_to_value(view["tally"], kwargs)
+                if "display" in view:
+                    value += self.display_to_value(view["display"], kwargs)
+                return value
+            else:
+                raise TypeError("View should be a \"dict\".")
+        else:
+            return None
+
     def summary_viewer_to_value(self, viewer, kwargs=None):
         """Convert a summary viewer structure to populated values."""
         value = ""
@@ -827,8 +802,8 @@ class Data:
                 value += "\n\n"
         return value
     
-    def view_to_value(self, view, kwargs=None):
-        """Create the text of the view."""
+    def summary_view_to_value(self, view, kwargs=None):
+        """Create the text of the summary view."""
         value = ""
 
         if self.conditions(view):
@@ -1027,6 +1002,52 @@ class Data:
         else:
             raise ValueError("Unrecognised subindices specifier in tally.")
 
+    def _column_from_renderable(self, df, **kwargs):
+        """Create a column from a renderable field."""
+        return self._series_from_renderable(df, is_index=False, **kwargs)
+
+
+    def _index_from_renderable(self, df, **kwargs):
+        """Create an index from a renderable field."""
+        return self._series_from_renderable(df, is_index=True, **kwargs)
+
+    def _series_from_value(self, df, value, name, **kwargs):
+        """Create a series from a given value."""
+        series = pd.Series(index=df.index, dtype="object")
+        for index in series.index:
+            series[index] = value
+        return series        
+
+    def _series_from_renderable(self, df, is_index=False, index_col=None, **kwargs):
+        """Extract a series from a renderable dictionary."""
+        series = pd.Series(index=df.index, dtype="object")
+        for index in series.index:
+            if not is_index and len(self.columns)>0:
+                self.set_index(index)
+            kwargs2 = self.mapping(series=df.loc[index])
+            series[index] = self.view_to_value(kwargs, kwargs2)
+        return series
+    
+    def _series_from_regexp_of_field(self, df, source, regexp, name, **kwargs):
+        """Extract a series from data frame field and regular expression."""
+        series = pd.Series(index=df.index, dtype="object")
+        for index in series.index:
+            try:
+                sourcetext = df.at[index, source]
+            except KeyError as err:
+                raise KeyError(f"Could not find the source field, \"{err}\", listed in _referia.yml under name: \"{name}\" in the DataFrame.")
+            match = re.match(
+                regexp,
+                sourcetext,
+            )
+            if match:
+                if len(match.groups())>1:
+                    log.warning(f"Multiple regular expression matches in \"{regexp}\".")
+                series[index] = match.group(1)
+            else:
+                log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
+        return series
+
 
     def _finalize_df(self, df, details):
         """This function augments the raw data and sets the index of the data frame."""
@@ -1034,79 +1055,95 @@ class Data:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
 
+        if "index" not in details:
+            raise ValueError("Missing index field in data frame specification in _referia.yml")
+
+        if "selector" in details:
+            field = details["selector"]
+            if type(field) is str:
+                if field in df.columns:
+                    self._selector = field 
+                else:
+                    log.warning(f"No selector column \"{field}\" found in data frame.")
+            elif type(field) is dict:
+                if "name" in field:
+                    if renderable(field):
+                        column  = self._index_from_renderable(df, **field)
+                    elif "source" in field and "regexp" in field:
+                        column = self._series_from_regexp_of_field(df, **field)
+
+                    df[field["name"]] = column
+                    self._selector = field["name"]
+                else:
+                    log.warning(f"No \"name\" associated with selector entry.")
+                    
+        if "index" in details:            
+            field = details["index"]
+            if type(field) is str:
+                if field in df.columns:
+                    index_column_name = details["index"]
+                else:
+                    raise ValueError(f"No index column \"{field}\" found in data frame.")
+            elif type(field) is dict:
+                if "name" not in field:
+                    field["name"] = "index"
+                if renderable(field):
+                    column = self._index_from_renderable(df, **field)
+                elif "source" in field and "regexp" in field:
+                    column = self._series_from_regexp_of_field(df, **field)
+                df[field["name"]] = column
+                index_column_name = field["name"]
+
+            
+
+        if "fields" in details and details["fields"] is not None:
+            for field in details["fields"]:
+                if "name" in field:
+                    if renderable(field):
+                        column = self._column_from_renderable(df, **field)
+
+                    elif "source" in field and "regexp" in field:
+                        column = self._series_from_regexp_of_field(df, **field)
+                        
+                    elif "value" in field:
+                        column = self._series_from_value(df, **field)
+                    else:
+                        log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\", \"liquid\", \"display\", (for renderable fields) in fields.")
+                    df[field["name"]] = column
+                else:
+                    log.warning(f"No \"name\" associated with field entry.")
+
         if "series" in details and details["series"]:
             """The data frame is a series (with multiple identical indices)"""
             mapping = self._default_mapping()
-            indexcol = list(set(df[details["index"]]))
+            indexcol = list(set(df.index))
             index = pd.Index(range(len(indexcol)))
-            newdf = pd.DataFrame(index=index, columns=[details["index"], "entries"])
-            newdf[details["index"]] = indexcol
+            newdf = pd.DataFrame(index=index, columns=[index_column_name, "entries"])
+            newdf[index_column_name] = indexcol
             newdetails = details.copy()
             del newdetails["series"]
             for ind in range(len(indexcol)):
                 entries = []
-                for ind2 in df.index[df[details["index"]]==indexcol[ind]]:
+                for ind2 in df.index[df[index_column_name]==indexcol[ind]]:
                     entry = remove_nan(df.loc[ind2].to_dict())
                     map_entry = entry.copy()
-                    del map_entry[details["index"]]
+                    del map_entry[index_column_name]
                     for key, key2 in mapping.items():
                         if key2 in entry:
                             map_entry[key] = entry[key2]
                             del map_entry[key2]
                     entries.append(map_entry)
                 newdf.at[ind, "entries"] = entries
-                newdf.at[ind, details["index"]] = indexcol[ind]
+                newdf.at[ind, index_column_name] = indexcol[ind]
+                                 
+            if "fields" in details:
+                """Fields have already been resolved."""
+                del newdetails["fields"]
+                
             return self._finalize_df(newdf, newdetails)
 
-
-        if "fields" in details:
-            for field in details["fields"]:
-                column = pd.Series(index=df.index, dtype="object")
-                if "name" in field:
-                    if renderable(field):
-                        for index in df.index:
-                            if len(self.columns)>0:
-                                # If there are existing columns, make sure index is set.
-                                self.set_index(df.at[index, details["index"]])
-                            kwargs = self.mapping(series=df.loc[index])
-                            column[index] = self.view_to_value(field, kwargs)
-
-                    elif "source" in field and "regexp" in field:
-                        regexp = field["regexp"]
-                        if field["source"] not in df.columns:
-                            log.warning("No column \"{source}\" in DataFrame.".format(source=field["source"]))
-                        for index in df.index:
-                            try:
-                                source = df.at[index, field["source"]]
-                            except KeyError as err:
-                                name = field["name"]
-                                raise KeyError(f"Could not find the source field, \"{err}\", listed in _referia.yml under name: \"{name}\" in the DataFrame.")
-                            match = re.match(
-                                regexp,
-                                source,
-                            )
-                            if match:
-                                if len(match.groups())>1:
-                                    log.warning(f"Multiple regular expression matches in \"{regexp}\".")
-                                column[index] = match.group(1)
-                            else:
-                                log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
-                    elif "value" in field:
-                        for index in df.index:
-                            column[index] = field["value"]
-                    else:
-                        log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\" (for format derived fields) in fields.")
-                    df[field["name"]] = column
-                else:
-                    log.warning(f"No \"name\" associated with field entry.")
-        if "index" not in details:
-            raise ValueError("Missing index field in data frame specification in _referia.yml")
-        index_col = details["index"]
-        if index_col in df.columns:
-            df.set_index(df[index_col], inplace=True)
-            del df[index_col]
-        else:
-            log.warning(f"No index column \"{index_col}\" found in data frame.")
+        df.set_index(df[index_column_name], inplace=True)
+        del df[index_column_name]
 
         return df
 

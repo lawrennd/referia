@@ -15,7 +15,7 @@ import pypandoc
 import numpy as np
 import pandas as pd
 
-from .util import extract_full_filename, get_path_env
+from .util import extract_full_filename, get_path_env, remove_nan
 from .log import Logger
 from .config import *
 
@@ -114,7 +114,7 @@ def write_yaml(df, details):
     write_yaml_file(df.to_dict("records"), filename)
 
 
-def read_directory(details, read_file=None, read_file_args={}, default_glob="*"):
+def read_directory(details, read_file=None, read_file_args={}, default_glob="*", source=None):
     """Read scoring data from a directory of files."""
     filenames = []
     dirnames = []
@@ -300,6 +300,16 @@ def read_markdown_file(filename, include_content=True):
             data = {}
             
     return data
+
+def read_docx_file(filename, include_content=True):
+    """Read information from a docx file."""
+    directory = tempfile.gettempdir()
+    tmpfile = os.path.join(directory, "tmp.md")
+    extra_args = []
+    extra_args.append("--standalone")
+    pypandoc.convert_file(filename, "markdown", outputfile=tmpfile, extra_args=extra_args)
+    data = read_markdown_file(tmpfile, include_content)
+    return remove_nan(data)
 
 def write_url_file(data, filename, content, include_content=True):
     """Write a url to a file"""
@@ -568,6 +578,12 @@ directory_readers = [
         "name": "read_meta_directory",
         "docstr": "Read a directory of yaml meta files.",
     },
+    {
+        "default_glob": "*.docx",
+        "read_file": read_docx_file,
+        "name": "read_docx_directory",
+        "docstr": "Read a directory of word files.",
+    },
 ]
 
 directory_writers =[
@@ -602,10 +618,15 @@ def gdrf_(default_glob, read_file, name="", docstr=""):
             globname = details["glob"]
         if globname is None or globname == "":
             globname = default_glob
+        if "source" in details:
+            source = details["source"]
+        else:
+            source = None
         return read_directory(
             details=details,
             read_file=read_file,
             default_glob=globname,
+            source=source,
         )
             
     directory_reader.__name__ = name
@@ -692,6 +713,8 @@ def read_data(details):
         df = read_plain_directory(details)
     elif ftype == "meta_directory":
         df = read_meta_directory(details)
+    elif ftype == "docx_directory":
+        df = read_docx_directory(details)
     else:
         log.error("Unknown type \"{ftype}\" in read_data.")
 
@@ -723,8 +746,8 @@ def data_exists(details):
             sources = [sources]
         for source in sources:
             directory = source["directory"]
-            if not os.path.exists(directory):
-                log.error("Missing directory \"{directory}\".")
+            if not os.path.exists(os.path.expandvars(directory)):
+                log.error(f"Missing directory \"{directory}\".")
                 available = False
         return available
 
