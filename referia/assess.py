@@ -222,8 +222,8 @@ class Data:
         else:
             if concat:
                 self._data = pd.concat([self._data, data], join=how, axis=axis)
-            else:                    
-                self._data.join(data, rsuffix="additional", how=how)
+            else:
+                self._data = self._data.join(data, rsuffix="additional", how=how)
 
     def _remove_index_duplicates(self):
         """Rename the index of any duplicates"""
