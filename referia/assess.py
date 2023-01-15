@@ -17,6 +17,7 @@ from .log import Logger
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max
 from . import access
 from . import system
+from . import data
 
 log = Logger(
     name=__name__,
@@ -86,76 +87,9 @@ def automapping(columns):
         mapping[field] = column
     return mapping
 
-class DataObject():
-    def __init__(self):
-        pass
-
-    @property
-    def columns(self):
-        raise NotImplementedError("This is a base class")
-
-    @property
-    def index(self):
-        raise NotImplementedError("This is a base class")
-    
-    def get_value(self):
-        raise NotImplementedError("This is a base class")
-
-    def set_value(self, val):
-        raise NotImplementedError("This is a base class")
-
-    def get_column(self):
-        raise NotImplementedError("This is a base class")
-    
-    def set_column(self, column):
-        raise NotImplementedError("This is a base class")
-
-    def get_subindex(self):
-        raise NotImplementedError("This is a base class")
-
-    def set_subindex(self, val):
-        raise NotImplementedError("This is a base class")
-
-    def get_subindices(self):
-        raise NotImplementedError("This is a base class")
-    
-class DataFrame(DataObject):
-    def __init__(self, data, selector=None):
-        self._data = data
-        self._column = data.columns[0]
-        self._index = data.index[0]
-        self._selector = selector
-
-    @property
-    def columns(self):
-        return self._data.columns
-
-    def index(self):
-        return self._data.index
-
-    def get_index(self):
-        return self._index
-
-    def set_index(self, index):
-        if index in self.index:
-            self._index = index
-        else:
-            raise KeyError("Invalid index set.")
-
-    def get_column(self):
-        return self._column
-    
-    def set_column(self, column):
-        if column in self.columns:
-            self._column = column
-        else:
-            raise KeyError("Invalid column set.")        
-
-    def get_value(self):
-        return self._data.at[self._index, self._column]
     
         
-class Data(DataObject):
+class Data(data.DataObject):
     def __init__(self):
         # Data that is input (not for writing to)
         self._data = None
