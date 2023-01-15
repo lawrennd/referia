@@ -1,0 +1,23 @@
+- name: interview-scoring
+  type: CriterionCommentScore
+  prefix: "Preliminary"
+  liquid: '<h3>Score</h3>
+
+<p><ul>
+<li>10  Exceptional candidate - must take</li>
+<li>9  Very strong - definitely worth an offer</li>
+<li>8  Strong - worth an offer</li>
+<li>7  Probably worth an offer</li>
+<li>6  Possibly worth an offer</li>
+<li>5  Doubtful of an offer</li>
+<li>4  Weak</li>
+<li>1-3 Probably unacceptable</li>
+</ul>'
+
+  args:
+    value: 6
+    min: 1
+    max: 10
+    step: 1.0
+    layout:
+      width: "800px"

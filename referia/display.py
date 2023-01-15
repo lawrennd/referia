@@ -297,6 +297,13 @@ class Scorer:
     def extract_scorer(self, score):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
+        if score["type"] == "load":
+            # This is a score item that is stored in a file.
+            df = self._finalize_df(access.read_data(conf), conf)
+            for ind, series in df.iterrows():
+                self.extract_scorer(remove_nan(series.to_dict()))
+            return
+        
         if score["type"] == "precompute":
             # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
             self._precompute.append(score)
