@@ -294,48 +294,48 @@ class Scorer:
         system.view_series(self._data)
 
 
-    def extract_scorer(self, score):
+    def extract_scorer(self, details):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
-        if score["type"] == "load":
+        if details["type"] == "read":
             # This is a score item that is stored in a file.
-            df = self._finalize_df(access.read_data(conf), conf)
+            df,  details = access.read_data(details)
             for ind, series in df.iterrows():
                 self.extract_scorer(remove_nan(series.to_dict()))
             return
         
-        if score["type"] == "precompute":
+        if details["type"] == "precompute":
             # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
-            self._precompute.append(score)
+            self._precompute.append(details)
             return
 
-        if score["type"] == "postcompute":
+        if details["type"] == "postcompute":
             # These are score items that are computed every time the row is updated.
-            self._postcompute.append(score)
+            self._postcompute.append(details)
             return
 
-        if score["type"] == "Criterion":
+        if details["type"] == "Criterion":
             value = None
             display = None
             tally = None
             liquid = None
             lis = None
             join = None
-            prefix = score["prefix"]
-            if "criterion" in score:
-                value = score["criterion"]
-            if "display" in score:
-                display = score["display"]
-            if "liquid" in score:
-                liquid = score["liquid"]
-            if "tally" in score:
-                tally = score["tally"]
-            if "list" in score:
-                lis = score["list"]
-            if "join" in score:
-                liquid = score["join"]
-            if "width" in score:
-                width = score["width"]
+            prefix = details["prefix"]
+            if "criterion" in details:
+                value = details["criterion"]
+            if "display" in details:
+                display = details["display"]
+            if "liquid" in details:
+                liquid = details["liquid"]
+            if "tally" in details:
+                tally = details["tally"]
+            if "list" in details:
+                lis = details["list"]
+            if "join" in details:
+                liquid = details["join"]
+            if "width" in details:
+                width = details["width"]
             else:
                 width = "800px"
                 criterion = {
@@ -360,12 +360,12 @@ class Scorer:
             self.extract_scorer(criterion)
             return
 
-        if score["type"] == "CriterionComment":
-            criterion = json.loads(json.dumps(score))
+        if details["type"] == "CriterionComment":
+            criterion = json.loads(json.dumps(details))
             criterion["type"] = "Criterion"
-            prefix = score["prefix"]
-            if "width" in score:
-                width = score["width"]
+            prefix = details["prefix"]
+            if "width" in details:
+                width = details["width"]
             else:
                 width = "800px"
                 comment = {
@@ -381,10 +381,10 @@ class Scorer:
                 self.extract_scorer(sub_score)
             return
 
-        if score["type"] == "CriterionCommentDate":
-            criterion = json.loads(json.dumps(score))
+        if details["type"] == "CriterionCommentDate":
+            criterion = json.loads(json.dumps(details))
             criterion["type"] = "CriterionComment"
-            prefix = score["prefix"]
+            prefix = details["prefix"]
             date = {
                 "field": prefix + " Date",
                 "type": "DatePicker",
@@ -397,11 +397,11 @@ class Scorer:
             return
 
 
-        if score["type"] == "CriterionCommentRaisesMeetsLowers":
-            criterioncomment = json.loads(json.dumps(score))
+        if details["type"] == "CriterionCommentRaisesMeetsLowers":
+            criterioncomment = json.loads(json.dumps(details))
             criterioncomment["type"] = "CriterionComment"
 
-            prefix = score["prefix"]
+            prefix = details["prefix"]
             expectation = {
                 "field": prefix + " Expectation",
                 "type": "Dropdown",
@@ -420,11 +420,11 @@ class Scorer:
                 self.extract_scorer(sub_score)
             return
 
-        if score["type"] == "CriterionCommentRaisesMeetsLowersFlag":
-            criterioncommentraisesmeetslowers = json.loads(json.dumps(score))
+        if details["type"] == "CriterionCommentRaisesMeetsLowersFlag":
+            criterioncommentraisesmeetslowers = json.loads(json.dumps(details))
             criterioncommentraisesmeetslowers["type"] = "CriterionCommentRaisesMeetsLowers"
 
-            prefix = score["prefix"]
+            prefix = details["prefix"]
             flag = {
                 "field": prefix + " Flag",
                 "type": "Flag",
@@ -437,29 +437,29 @@ class Scorer:
                 self.extract_scorer(sub_score)
             return
 
-        if score["type"] == "CriterionCommentScore":
-            criterioncomment = json.loads(json.dumps(score))
+        if details["type"] == "CriterionCommentScore":
+            criterioncomment = json.loads(json.dumps(details))
             criterioncomment["type"] = "CriterionComment"
-            if "width" in score:
-                width = score["width"]
+            if "width" in details:
+                width = details["width"]
             else:
                 width = "800px"
 
-            prefix = score["prefix"]
-            if "min" in score:
-                minval = score["min"]
+            prefix = details["prefix"]
+            if "min" in details:
+                minval = details["min"]
             else:
                 minval = 0
-            if "max" in score:
-                maxval = score["max"]
+            if "max" in details:
+                maxval = details["max"]
             else:
                 maxval = 10
-            if "step" in score:
-                step = score["step"]
+            if "step" in details:
+                step = details["step"]
             else:
                 step = 1
-            if "value" in score:
-                value = score["value"]
+            if "value" in details:
+                value = details["value"]
             else:
                 value = int(((maxval-minval)/2)/step)*step + minval
 
@@ -481,55 +481,55 @@ class Scorer:
 
         # Get the widget type from the global variables list
         global_variables = globals()
-        if score["type"] in global_variables:
-            widget_type = global_variables[score["type"]]
+        if details["type"] in global_variables:
+            widget_type = global_variables[details["type"]]
 
-            if "field" in score:
-                field_name = clean_string(score["field"])
-                self._column_names_dict[field_name] = score["field"]
+            if "field" in details:
+                field_name = clean_string(details["field"])
+                self._column_names_dict[field_name] = details["field"]
 
                 # Create an instance of the object to extract default value.
-                self._default_field_vals[score["field"]] = widget_type(parent=self, field_name=score["field"]).get_value()
-                if "value" in score:
-                    self._default_field_vals[score["field"]] = score["value"]
-                if "args" in score and "value" in score["args"]:
-                    self._default_field_vals[score["field"]] = score["args"]["value"]
-                if "default" in score:
-                    if "source" in score["default"]:
-                        source = score["default"]["source"]
+                self._default_field_vals[details["field"]] = widget_type(parent=self, field_name=details["field"]).get_value()
+                if "value" in details:
+                    self._default_field_vals[details["field"]] = details["value"]
+                if "args" in details and "value" in details["args"]:
+                    self._default_field_vals[details["field"]] = details["args"]["value"]
+                if "default" in details:
+                    if "source" in details["default"]:
+                        source = details["default"]["source"]
                         if source in self._data.columns:
-                            self._default_field_source[score["field"]] = source
+                            self._default_field_source[details["field"]] = source
                         else:
                             log.warning(f"Missing column \"{source}\" in data.columns")
-                    if "value" in score["default"]:
-                        self._default_field_vals[score["field"]] = score["default"]["value"]
+                    if "value" in details["default"]:
+                        self._default_field_vals[details["field"]] = details["default"]["value"]
 
             else:
                 # Field field_name is missing, generate a random one.
                 field_name = "_" + "".join(random.choice(string.ascii_letters) for _ in range(39))
                 self._column_names_dict[field_name] = field_name
 
-            # Deep copy of score so we don't change it globally.
-            process_score = json.loads(json.dumps(score))
+            # Deep copy of details so we don't change it globally.
+            process_details = json.loads(json.dumps(details))
 
             # Deal with HTML descriptions (setting them to blank if not set)
-            if process_score["type"] in ["HTML", "HTMLMath", "Markdown"]:
-                if "args" not in process_score:
-                    process_score["args"] = {"description": " "}
+            if process_details["type"] in ["HTML", "HTMLMath", "Markdown"]:
+                if "args" not in process_details:
+                    process_details["args"] = {"description": " "}
                 else:
-                    if "description" not in process_score:
-                        process_score["args"]["description"] = " "
+                    if "description" not in process_details:
+                        process_details["args"]["description"] = " "
 
-            if "source" in process_score:
+            if "source" in process_details:
                 # Set arguments of widget from data fields if source is given
-                if "args" in process_score["source"]:
-                    for arg, field in process_score["source"]["args"]:
-                        if arg not in process_score["args"]:
+                if "args" in process_details["source"]:
+                    for arg, field in process_details["source"]["args"]:
+                        if arg not in process_details["args"]:
                             self.set_column(field)
-                            process_score["args"][arg] = self.get_value()
+                            process_details["args"][arg] = self.get_value()
 
             # Set up arguments for the widget
-            args = process_score["args"]
+            args = process_details["args"]
             try:
                 args["field_name"] = field_name
             except TypeError as err:
@@ -537,18 +537,18 @@ class Scorer:
             args["column_name"] = self._column_names_dict[field_name]
 
             for field in ["display", "tally", "liquid"]:
-                if field in process_score and field not in args:
-                    args[field] = process_score[field]
+                if field in process_details and field not in args:
+                    args[field] = process_details[field]
             # Layout descriptor can be in main structure, or in args.
-            if "layout" in process_score and "layout" not in args:
-                args["layout"] =  Layout(**process_score["layout"])
+            if "layout" in process_details and "layout" not in args:
+                args["layout"] =  Layout(**process_details["layout"])
             elif "layout" in args:
                 args["layout"] = Layout(**args["layout"])
             args["parent"] = self
             # Add the widget
             self.add_widgets(**{field_name: widget_type(**args)})
         else:
-            raise Exception("Cannot find " + score["type"] + " interaction type.")
+            raise Exception("Cannot find " + details["type"] + " interaction type.")
 
 
     def display_widgets(self):

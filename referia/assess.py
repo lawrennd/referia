@@ -86,7 +86,76 @@ def automapping(columns):
         mapping[field] = column
     return mapping
 
-class Data:
+class DataObject():
+    def __init__(self):
+        pass
+
+    @property
+    def columns(self):
+        raise NotImplementedError("This is a base class")
+
+    @property
+    def index(self):
+        raise NotImplementedError("This is a base class")
+    
+    def get_value(self):
+        raise NotImplementedError("This is a base class")
+
+    def set_value(self, val):
+        raise NotImplementedError("This is a base class")
+
+    def get_column(self):
+        raise NotImplementedError("This is a base class")
+    
+    def set_column(self, column):
+        raise NotImplementedError("This is a base class")
+
+    def get_subindex(self):
+        raise NotImplementedError("This is a base class")
+
+    def set_subindex(self, val):
+        raise NotImplementedError("This is a base class")
+
+    def get_subindices(self):
+        raise NotImplementedError("This is a base class")
+    
+class DataFrame(DataObject):
+    def __init__(self, data, selector=None):
+        self._data = data
+        self._column = data.columns[0]
+        self._index = data.index[0]
+        self._selector = selector
+
+    @property
+    def columns(self):
+        return self._data.columns
+
+    def index(self):
+        return self._data.index
+
+    def get_index(self):
+        return self._index
+
+    def set_index(self, index):
+        if index in self.index:
+            self._index = index
+        else:
+            raise KeyError("Invalid index set.")
+
+    def get_column(self):
+        return self._column
+    
+    def set_column(self, column):
+        if column in self.columns:
+            self._column = column
+        else:
+            raise KeyError("Invalid column set.")        
+
+    def get_value(self):
+        return self._data.at[self._index, self._column]
+    
+        
+class Data(DataObject):
     def __init__(self):
         # Data that is input (not for writing to)
         self._data = None
@@ -197,7 +266,7 @@ class Data:
         if type(configs) is not list:
             configs = [configs]
         for i, conf in enumerate(configs):
-            df = self._finalize_df(access.read_data(conf), conf)
+            df = self._finalize_df(*access.read_data(conf))
             if df.index.is_unique:
                 if "join" in conf:
                     join = conf["join"]
@@ -247,8 +316,7 @@ class Data:
 
     def _scores(self):
         """Load in the score data to data frames."""
-        df = access.scores(self.index)
-        df = self._finalize_df(df, config["scores"])
+        df = self._finalize_df(*access.scores(config["scores"], self.index))
         if df.index.is_unique:
             self._writedata = df
         else:
@@ -259,9 +327,7 @@ class Data:
 
     def _series(self):
         """Load in the series data to data frames."""
-        series = config["series"]
-        df = access.series(self.index)
-        self._writeseries = self._finalize_df(df, config['series'])        
+        self._writeseries = self._finalize_df(*access.series(config["series"], self.index))
         self.sort_series()
 
     def sort_series(self):
@@ -735,12 +801,7 @@ class Data:
         for key, column in mapping.items():
             if series is not None:
                 if column in series:
-                    format[key] = series[column]
-                else:
-                    log.info(f"\"{column}\" not in provided series, getting using get_value()")
-                    self.set_column(column)
-                    format[key] = self.get_value()
-                    
+                    format[key] = series[column]                    
             else:
                 self.set_column(column)
                 format[key] = self.get_value()
@@ -1054,7 +1115,6 @@ class Data:
         """for field in dtypes:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
-
         if "index" not in details:
             raise ValueError("Missing index field in data frame specification in _referia.yml")
 
@@ -1113,10 +1173,13 @@ class Data:
                 else:
                     log.warning(f"No \"name\" associated with field entry.")
 
+
+
+        # If it's a series post-process
         if "series" in details and details["series"]:
             """The data frame is a series (with multiple identical indices)"""
             mapping = self._default_mapping()
-            indexcol = list(set(df.index))
+            indexcol = list(set(df[index_column_name]))
             index = pd.Index(range(len(indexcol)))
             newdf = pd.DataFrame(index=index, columns=[index_column_name, "entries"])
             newdf[index_column_name] = indexcol
@@ -1139,12 +1202,14 @@ class Data:
             if "fields" in details:
                 """Fields have already been resolved."""
                 del newdetails["fields"]
+            if "selector" in details:
+                del newdetails["selector"]
                 
+            newdetails["index"] = index_column_name
             return self._finalize_df(newdf, newdetails)
-
+        
         df.set_index(df[index_column_name], inplace=True)
         del df[index_column_name]
-
         return df
 
     def to_score(self):

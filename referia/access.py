@@ -687,6 +687,13 @@ def populate_directory_writers(writers):
 populate_directory_readers(directory_readers)
 populate_directory_writers(directory_writers)
 
+def finalize_data(df, details):
+    """Finalize the data frame by augmenting with any columns. """
+    """Eventually this should do any augmentation that isn't required by the series. The problem is at the moment the liquid rendering (and other renderings) are too integrated with assess. They need to be pulled out and not so dependent on the data structure."""
+    
+    return df, details
+    
+
 def read_data(details):
     """Read in the data from the details given in configuration."""
     if "type" in details:
@@ -718,15 +725,7 @@ def read_data(details):
     else:
         log.error("Unknown type \"{ftype}\" in read_data.")
 
-    return df
-
-def allocation(source=None):
-    """Load in the allocation spread sheet to data frames."""
-    return read_data(source)
-
-def additional(source):
-    """Load in the additional spread sheet to data frames."""
-    return read_data(source)
+    return finalize_data(df, details)
 
 def data_exists(details):
     """Check if a particular data structure exists or needs to be created."""
@@ -755,14 +754,13 @@ def data_exists(details):
         log.error("Unhandled data source availability type.")
         return False
 
-def scores(index=None):
+def scores(details, index=None):
     """Load in the scoring spread sheet to data frames."""
-    scores = config["scores"]
-    if data_exists(scores):
-        return read_data(scores)
+    if data_exists(details):
+        return read_data(details)
     elif index is not None:
-        log.info(f"Creating new DataFrame for write data from index as \"{scores}\" is not found.")
-        return pd.DataFrame(index=index, data=index)
+        log.info(f"Creating new DataFrame for write data from index as \"{details}\" is not found.")
+        return finalize_data(pd.DataFrame(index=index, data=index), details)
     else:
         raise FileNotFoundError(
             errno.ENOENT,
@@ -770,18 +768,17 @@ def scores(index=None):
             )
 
 
-def series(index=None):
+def series(details, index=None):
     """Load in a series to data frame"""
-    series = config["series"]
-    if data_exists(series):
-        return read_data(series)
+    if data_exists(details):
+        return read_data(details)
     elif index is not None:
-        log.info(f"Creating new DataFrame for write data from index as \"{series}\" is not found.")
-        return pd.DataFrame(index=index, data=index)
+        log.info(f"Creating new DataFrame for write data from index as \"{details}\" is not found.")
+        return finalize_data(pd.DataFrame(index=index, data=index), details)
     else:
         raise FileNotFoundError(
             errno.ENOENT,
-            os.strerror(errno.ENOENT), series
+            os.strerror(errno.ENOENT), details
             )
 
 
