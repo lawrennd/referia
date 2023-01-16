@@ -1,7 +1,15 @@
+- name: do-well
+  type: CriterionComment
+  criterion: '<h3>What did Candidate do Well?</h3>'
+  prefix: Did Well
+- name: do-better
+  type: CriterionComment
+  prefix: Do Better
+  criterion: '<h3>What could Candidate do Better?</h3>'
 - name: interview-scoring
   type: CriterionCommentScore
-  prefix: "Preliminary"
-  liquid: '<h3>Score</h3>
+  prefix: Overall
+  criterion: '<h3>Score</h3>
 
 <p><ul>
 <li>10  Exceptional candidate - must take</li>
@@ -21,3 +29,11 @@
     step: 1.0
     layout:
       width: "800px"
+- name: other-comment
+  type: CriterionComment
+  prefix: Other
+  criterion: "Any other comment or issues in the interview."
+- name: disruption-comment
+  type: CriterionComment
+  prefix: Disruption Comment
+  criterion: List any disruptions that occurred to the interview here.

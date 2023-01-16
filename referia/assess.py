@@ -63,8 +63,6 @@ list_functions = [
     },
 ]
 
-
-
 @string_filter
 def url_escape(string):
     """Filter to escape urls for liquid"""

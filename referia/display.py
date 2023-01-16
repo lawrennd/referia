@@ -18,6 +18,7 @@ from ipywidgets import jslink, jsdlink, Layout
 
 from .config import *
 from .log import Logger
+from .util import remove_nan
 from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText
 from . import access
 from . import assess
@@ -297,9 +298,11 @@ class Scorer:
     def extract_scorer(self, details):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
-        if details["type"] == "read":
+        if details["type"] == "load":
             # This is a score item that is stored in a file.
-            df,  details = access.read_data(details)
+            if "details" not in details:
+                raise ValueError("Load scorer needs to provide load details as entry under \"details\"")
+            df,  newdetails = access.read_data(details["details"])
             for ind, series in df.iterrows():
                 self.extract_scorer(remove_nan(series.to_dict()))
             return
