@@ -255,6 +255,11 @@ def read_yaml_file(filename):
 def yaml_prep(data):
     """Prepare any fields for writing in yaml"""
     writedata = data.copy()
+    if type(writedata) is list:
+        for num, el in enumerate(writedata):
+            writedata[num] = yaml_prep(el)
+        return writedata
+    
     for key, item in writedata.items():
         if pd.api.types.is_datetime64_dtype(item) or type(item) is pd.Timestamp:
             writedata[key] = item.strftime("%Y-%m-%d %H:%M:%S.%f")
