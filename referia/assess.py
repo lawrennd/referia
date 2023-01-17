@@ -259,7 +259,13 @@ class Data(data.DataObject):
 
     def _series(self):
         """Load in the series data to data frames."""
+        if "selector" not in config["series"]:
+            raise ValueError(f"A series entry must have a \"selector\" column.")
         self._writeseries = self._finalize_df(*access.series(config["series"], self.index))
+        selector = config["series"]["selector"]
+        if selector not in self._writeseries.columns:
+            self._writeseries[selector] = None
+            
         self.sort_series()
 
     def sort_series(self):
@@ -358,7 +364,7 @@ class Data(data.DataObject):
             subindices = self.get_subseries()
             if len(subindices) > 0:
                 if self.get_subindex() is None:
-                    self.set_subindex(subindices[0])
+                    self.set_subindex(subindices[self.get_selector()][0])
             else:
                 self.add_series_row(self._index)
 
@@ -1056,6 +1062,9 @@ class Data(data.DataObject):
                 if field in df.columns:
                     self._selector = field 
                 else:
+                    if "set_selector" in details:
+                        df[field] = details["set_selector"]
+                    self._selector = field 
                     log.warning(f"No selector column \"{field}\" found in data frame.")
             elif type(field) is dict:
                 if "name" in field:

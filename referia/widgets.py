@@ -43,7 +43,7 @@ list_stateful_widgets = [
         "function" : ipyw.Checkbox,
         "default_args" : {},
         "docstr" : None,
-        "conversion" : None,
+        "conversion" : bool,
     },
     {
         "name" : "Flag",
@@ -108,6 +108,27 @@ list_stateful_widgets = [
         "docstr" : None,
         "conversion" : None,
     },
+    {
+        "name" : "RadioButtons",
+        "function" : ipyw.RadioButtons,
+        "default_args" : {},
+        "docstr" : None,
+        "conversion" : None,
+    },            
+    {
+        "name" : "Select",
+        "function" : ipyw.Select,
+        "default_args" : {},
+        "docstr" : None,
+        "conversion" : None,
+    },            
+    {
+        "name" : "SelectMultiple",
+        "function" : ipyw.SelectMultiple,
+        "default_args" : {},
+        "docstr" : None,
+        "conversion" : None,
+    },            
     {
         "name" : "HTMLMath",
         "function" : ipyw.HTMLMath,

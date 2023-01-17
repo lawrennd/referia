@@ -19,7 +19,7 @@ from ipywidgets import jslink, jsdlink, Layout
 from .config import *
 from .log import Logger
 from .util import remove_nan
-from .widgets import IntSlider, FloatSlider, Checkbox, Text, Textarea, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText
+from .widgets import IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText
 from . import access
 from . import assess
 from . import system
@@ -299,14 +299,28 @@ class Scorer:
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
         if details["type"] == "load":
-            # This is a score item that is stored in a file.
+            # This is a link to a widget specificaiton stored in a file
             if "details" not in details:
                 raise ValueError("Load scorer needs to provide load details as entry under \"details\"")
             df,  newdetails = access.read_data(details["details"])
             for ind, series in df.iterrows():
                 self.extract_scorer(remove_nan(series.to_dict()))
             return
-        
+
+        if details["type"] == "group":
+            if "children" not in details:
+                raise ValueError("group scorer needs to provide a list of children under \"children\"")
+            for child in details["children"]:
+                if "name" in child and "name" in details and details["name"] is not None:
+                    child["name"] = details["name"] + "-" + child["name"]
+                if "prefix" in details and details["prefix"] is not None:
+                    if "prefix" in child:
+                        child["prefix"] = details["prefix"] + child["prefix"]
+                    if "field" in child:
+                        child["field"] = details["prefix"] + child["field"]
+                self.extract_scorer(child)
+            return
+            
         if details["type"] == "precompute":
             # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
             self._precompute.append(details)
@@ -483,7 +497,7 @@ class Scorer:
             return
 
         # Get the widget type from the global variables list
-        global_variables = globals()
+        global_variables = globals()        
         if details["type"] in global_variables:
             widget_type = global_variables[details["type"]]
 
@@ -717,6 +731,12 @@ class Scorer:
         """Return the widgets associated with the display"""
         return self._widget_dict
 
+    def last_widget(self):
+        """Return the most recently added widget"""
+        key = self._widget_dict.keys[-1] # Relying on ordered dictionaries here
+        widget = self._widget_dict[key]
+        return key, widget
+    
     def populate_widgets(self):
         """Update the widgets with defaults or values from the data"""
         for key, widget in self.widgets().items():
