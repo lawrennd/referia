@@ -49,6 +49,10 @@ def clear_temp_files():
 
 def open_localfile(filename):
     """Open a local file."""
+    if os.path.isdir(filename):
+        open_directory(filename)
+        return
+    
     _, ext = os.path.splitext(filename)
     ext = ext.lower()
     if ext == ".pdf":
@@ -68,6 +72,11 @@ def open_localfile(filename):
         os.system(f"open --background \"{filename}\"")
 
 
+def open_directory(filename):
+    """Use the system viewer to open a directory.""" 
+    log.info(f"Opening file \"{filename}\".")
+    os.system(f"open --background \"{filename}\"")
+   
 def open_markdown(filename):
     """Use the system viewer to open a markdown file."""
     log.info(f"Opening file \"{filename}\".")
@@ -421,6 +430,8 @@ def view_files(data):
         displays += config["localipynb"]
     if "localdocx" in config:
         displays += config["localdocx"]
+    if "localdirectory" in config:
+        displays += config["localdirectory"]
 
     for view in displays:
         view_file(view, data)

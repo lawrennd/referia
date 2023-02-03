@@ -361,6 +361,7 @@ def create_letter(document, **args):
     data, filename, content = create_document_content(document, **args)
     access.write_letter_file(data=data, filename=filename, content=content)
     open_localfile(filename)
+
 def write_letter_file(data, filename, content, include_content=True):
     """Write a letter file from a python dictionary"""
     if include_content and content in data:
@@ -452,6 +453,7 @@ def read_excel(details):
         dtype=dtypes,
         header=header,
     )
+    
     return data
 
 if GSPREAD_AVAILABLE:

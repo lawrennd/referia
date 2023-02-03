@@ -577,7 +577,14 @@ class Scorer:
         """Convert a template to values."""
         if "use" in template:
             if template["use"] == "viewer":
-                return self._data.view_to_value(config["viewer"])
+                viewer = config["viewer"] 
+                if type(viewer) is not list:
+                    viewer = [viewer]
+                string = ""
+                for view in viewer:
+                    string += self._data.view_to_value(view)
+                    string += "\n\n"
+                return string
             elif template["use"] == "scorer":
                 return self.widgets_to_value()
         else:
@@ -634,7 +641,7 @@ class Scorer:
                 args[field] = document[field]
                 if document[field] is not None:
                     if type(document[field]) is dict:
-                        if "tally" in document[field] or "display" in document[field] or "list" in document[field] or "join" in document[field] or "liquid" in document[field]:
+                        if "tally" in document[field] or "display" in document[field] or "list" in document[field] or "join" in document[field] or "liquid" in document[field] or "use" in document[field]:
                             if summary and field in ["content", "body"]:
                                 ind = self.get_index()
                                 txt = ""

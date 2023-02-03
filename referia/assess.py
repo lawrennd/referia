@@ -25,43 +25,6 @@ log = Logger(
     filename=config["logging"]["filename"]
 )
 
-list_functions = [
-    {
-        "name" : "fromisoformat",
-        "function" : datetime.datetime.fromisoformat,
-        "default_args" : {},
-        "docstr" : "Return date in isoformat.",
-    },
-    {
-        "name" : "strptime",
-        "function" : datetime.datetime.strptime,
-        "default_args" : {},
-        "docstr" : "Returns date in strptime format.",
-    },
-    {
-        "name" : "max",
-        "function" : lambda x: x.max(),
-        "default_args" : {},
-    },
-    {
-        "name" : "sum",
-        "function" : lambda x: x.sum(),
-        "default_args" : {},
-    },
-    {
-        "name" : "next_integer",
-        "function" : add_one_to_max,
-        "default_args" : {},
-    },
-    {
-        "name" : "today",
-        "function" : datetime.datetime.now().strftime,
-        "default_args": {
-            "format": "%Y-%m-%d",
-        },
-        "docstr" : "Return today's date as a string.",
-    },
-]
 
 @string_filter
 def url_escape(string):
@@ -85,11 +48,14 @@ def automapping(columns):
         mapping[field] = column
     return mapping
 
-    
+def render_liquid(data, template, **kwargs):
+    """Wrapper to liquid renderer."""
+    return data.liquid_to_value(template, kwargs)
         
 class Data(data.DataObject):
     def __init__(self):
         # Data that is input (not for writing to)
+        self._list_functions = self._compute_functions_list()
         self._data = None
         # Which index is the current focus in the data.
         self._index = None
@@ -124,22 +90,70 @@ class Data(data.DataObject):
         self.add_liquid_filters()
         self.load_flows()
 
+    def _compute_functions_list(self):
+        return  [
+            {
+                "name" : "liquid",
+                "function" : render_liquid,
+                "default_args" : {
+                    "data" : self,
+                },
+                "docstr": "Render a liquid template.",
+            },
+            {
+                "name" : "fromisoformat",
+                "function" : datetime.datetime.fromisoformat,
+                "default_args" : {},
+                "docstr" : "Return date in isoformat.",
+            },
+            {
+                "name" : "strptime",
+                "function" : datetime.datetime.strptime,
+                "default_args" : {},
+                "docstr" : "Returns date in strptime format.",
+            },
+            {
+                "name" : "max",
+                "function" : lambda x: x.max(),
+                "default_args" : {},
+            },
+            {
+                "name" : "sum",
+                "function" : lambda x: x.sum(),
+                "default_args" : {},
+            },
+            {
+                "name" : "next_integer",
+                "function" : add_one_to_max,
+                "default_args" : {},
+            },
+            {
+                "name" : "today",
+                "function" : datetime.datetime.now().strftime,
+                "default_args": {
+                    "format": "%Y-%m-%d",
+                },
+                "docstr" : "Return today's date as a string.",
+            },
+        ]
 
-    def gca_(self, field, function, args={}, subseries_args={}, column_args={}):
+
+    def gca_(self, field, function, args={}, row_args={}, subseries_args={}, column_args={}):
         """Args generator for compute functions."""
 
         found_function = False
-        for list_function in list_functions:
+        for list_function in self._list_functions:
             if list_function["name"] == function:
                 found_function = True
-                continue
+                break
         if not found_function:
             raise ValueError("Function \"{function}\" not found in list_functions.")
         return {
             "subseries_args" : subseries_args,
             "column_args" : column_args,
+            "row_args" : row_args,
             "args" : args,
-            "default_args" : {},# list_function["default_args"],
+            "default_args" : list_function["default_args"],
         }
 
 
@@ -147,23 +161,34 @@ class Data(data.DataObject):
         """Function generator for compute functions."""
 
         found_function = False
-        for list_function in list_functions:
+        for list_function in self._list_functions:
             if list_function["name"] == function:
                 found_function = True
                 break
         if not found_function:
             raise ValueError("Function \"{function}\" not found in list_functions.")
 
-        def compute_function(args={}, subseries_args={}, column_args={}, default_args={}):
+        def compute_function(args={}, subseries_args={}, column_args={}, row_args={}, default_args={}):
+            """Compute a function using arguments found in subseries (column of sub-series specified by value in dictionary), or columns (full column specified by value in dictionary) or the same row (value from row specified value from dictionary)."""
 
             kwargs = default_args.copy()
             kwargs.update(args)
             for key, value in column_args.items():
                 self.set_column(value)
+                if key in kwargs:
+                    log.warning(f"No key \"{key}\" already column_args found in kwargs.")
                 kwargs[key] = self.get_column_values()
             for key, value in subseries_args.items():
                 self.set_column(value)
+                if key in kwargs:
+                    log.warning(f"No key \"{key}\" from subseries_args already found in kwargs.")   
                 kwargs[key] = self.get_subseries_values()
+            for key, value in row_args.items():
+                self.set_column(value)
+                if key in kwargs:
+                    log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
+
+                kwargs[key] = self.get_value()
             # kwargs.update(remove_nan(self.mapping(args)))
 
             return list_function["function"](**kwargs)
