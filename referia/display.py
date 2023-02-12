@@ -756,6 +756,6 @@ class Scorer:
                     perc=scored/total*100
                     if "_progress_label" in self.widgets():
                         widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
-                break
+                continue
 
             widget.refresh()
