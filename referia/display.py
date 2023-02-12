@@ -750,11 +750,12 @@ class Scorer:
 
             if key == "_progress_label":
                 total = self._data.to_score()
-                scored = self._data.scored()
-                remain = total - scored
-                perc=scored/total*100
-                if "_progress_label" in self.widgets():
-                    widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
-                continue
+                if total > 0:
+                    scored = self._data.scored()
+                    remain = total - scored
+                    perc=scored/total*100
+                    if "_progress_label" in self.widgets():
+                        widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
+                break
 
             widget.refresh()
