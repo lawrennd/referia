@@ -1102,7 +1102,7 @@ class Data(data.DataObject):
                     self._selector = field["name"]
                 else:
                     log.warning(f"No \"name\" associated with selector entry.")
-                    
+        
         if "index" in details:            
             field = details["index"]
             if type(field) is str:
@@ -1110,7 +1110,7 @@ class Data(data.DataObject):
                     index_column_name = details["index"]
                 else:
                     raise ValueError(f"No index column \"{field}\" found in data frame.")
-            elif type(field) is dict:
+            elif type(field) is dict: # Index is created from existing columns
                 if "name" not in field:
                     field["name"] = "index"
                 if renderable(field):
@@ -1121,6 +1121,8 @@ class Data(data.DataObject):
                 index_column_name = field["name"]
 
             
+        df.set_index(df[index_column_name], inplace=True)
+        del df[index_column_name]
 
         if "fields" in details and details["fields"] is not None:
             for field in details["fields"]:
@@ -1174,8 +1176,6 @@ class Data(data.DataObject):
             newdetails["index"] = index_column_name
             return self._finalize_df(newdf, newdetails)
         
-        df.set_index(df[index_column_name], inplace=True)
-        del df[index_column_name]
         return df
 
     def to_score(self):
