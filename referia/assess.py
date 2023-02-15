@@ -372,7 +372,7 @@ class Data(data.DataObject):
         """Index setter"""
         orig_index = self._index
         if self._data is not None and index not in self.index:
-            raise ValueError(f"Index not found in \"{index}\" not found in _data")
+            raise ValueError(f"Index \"{index}\" not found in _data")
             self.add_row(index=index)
             self.set_index(index)
         else:
@@ -1047,7 +1047,10 @@ class Data(data.DataObject):
         series = pd.Series(index=df.index, dtype="object")
         for index in series.index:
             if not is_index and len(self.columns)>0:
-                self.set_index(index)
+                try:
+                    self.set_index(index)
+                except ValueError as err:
+                    log.error(f"Could not set index, \"{index}\", likely due to allocation augmentation.")
             kwargs2 = self.mapping(series=df.loc[index])
             series[index] = self.view_to_value(kwargs, kwargs2)
         return series
