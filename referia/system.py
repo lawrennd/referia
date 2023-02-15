@@ -338,6 +338,9 @@ def edit_files(data):
     for view in displays:
         if "field" in view:
             val = data.get_value_column(view["field"])
+        else:
+            log.warning(f"Missing \"field\" in configuration.")
+            continue
         if type(val) is str:
             storedirectory = os.path.expandvars(view["storedirectory"])
             origfile = os.path.join(os.path.expandvars(view["sourcedirectory"]),val)
@@ -388,6 +391,10 @@ def view_file(view, data):
         tmpname = to_camel_case(view["field"])        
     elif "file" in view:
         val = view["file"]
+    else:
+        log.warning(f"Missing \"field\", \"file\", renderable or tallyable section in the view file configuration.")
+        return
+        
 
     if "directory" in view:
         directory = view["directory"]

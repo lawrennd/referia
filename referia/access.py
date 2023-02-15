@@ -706,8 +706,7 @@ def read_data(details):
     if "type" in details:
         ftype = details["type"]
     else:
-        log.error("Field \"type\" missing in data source details for read_data.")
-        return
+        raise ValueError("Field \"type\" missing in data source details for read_data.")
     
     if ftype == "excel":
         df = read_excel(details)
@@ -730,7 +729,7 @@ def read_data(details):
     elif ftype == "docx_directory":
         df = read_docx_directory(details)
     else:
-        log.error("Unknown type \"{ftype}\" in read_data.")
+        raise ValueError("Unknown type \"{ftype}\" in read_data.")
 
     return finalize_data(df, details)
 
