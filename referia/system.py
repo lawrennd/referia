@@ -348,7 +348,7 @@ def edit_files(data):
                 filestub = view["name"] + ".pdf"
             else:
                 filestub = to_camel_case(view["field"]) + ".pdf"
-            editfilename = str(data.get_value_column(config["allocation"]["index"])) + "_" + filestub
+            editfilename = str(data.get_index()) + "_" + filestub
             destfile = os.path.join(storedirectory,editfilename)
             if not os.path.exists(storedirectory):
                 os.makedirs(storedirectory)
