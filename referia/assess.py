@@ -1223,3 +1223,9 @@ class Data(data.DataObject):
         if is_numeric_dtype(coltype) and is_bool_dtype(type(value)):
             log.info(f"Changing column \"{column}\" type to 'object' due to bool input.")
             df[column] = df[column].astype("boolean")
+
+    def get_most_recent_screen_capture(self):
+        system.copy_screen_capture(filename)
+        self.set_column(column_name)
+        self.set_value(filename)
+        

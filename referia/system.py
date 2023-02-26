@@ -1,10 +1,11 @@
 import os
+import re
 
 from unidecode import unidecode
 
 
 import filecmp
-from shutil import copy2
+from shutil import copy2, move
 import tempfile
 import random
 import string
@@ -300,8 +301,15 @@ class Message(object):
         msg.make(new=recipient,
                  with_properties={ap.k.email_address: {ap.k.address: email}})
 
+def move_file(origfile, destfile):
+    """Move a file for editing or viewing."""
+    if os.path.exists(origfile):
+        log.info(f"Moving \"{origfile}\" to \"{destfile}\"")
+        move(origfile, destfile)
+    else:
+        raise ValueError(f"\"{origfile}\" doesn't exist in move_file.")
     
-def copy_file(origfile, destfile, view, data):
+def copy_file(origfile, destfile, view=None, data=None):
     """Copy a file, or pages from it, for separate editing or viewing."""
     _, ext = os.path.splitext(origfile)
     ext = ext.lower()
@@ -326,6 +334,28 @@ def copy_file(origfile, destfile, view, data):
             copy2(origfile, destfile)
     else:
         log.warning(f"Warning edit file \"{origfile}\" does not exist.")
+
+def move_screen_capture(filename, order=0):
+    """Copy the most recent screen capture to a given location."""
+    if "capture_directory" in config:
+        capture_directory = os.path.expandvars(config["capture_directory"])
+    else:
+        capture_directory = os.path.expandvars("$HOME/Desktop")
+    # set the regular expression pattern
+    if "capture_pattern" in config:
+        capture_pattern = config["capture_pattern"]
+    else:    
+        capture_pattern = r'^Screenshot \d{4}-\d{2}-\d{2} at \d{2}\.\d{2}\.\d{2}\.png$'
+
+    # compile the regular expression pattern
+    regex = re.compile(capture_pattern)
+
+    # use a list comprehension to search for files in the directory that match the regular expression
+    matching_files = [file_name for file_name in os.listdir(capture_directory) if regex.search(file_name)]
+
+    # sort the list of matching file names alphabetically
+    matching_files.sort(reverse=True)
+    move_file(os.path.join(capture_directory, matching_files[order]), filename)
 
 
 def edit_files(data):
