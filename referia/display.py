@@ -376,7 +376,7 @@ class Scorer:
                 criterion["args"]["list"] = lis
             self.extract_scorer(criterion)
             return
-
+            
         if details["type"] == "CriterionComment":
             criterion = json.loads(json.dumps(details))
             criterion["type"] = "Criterion"
