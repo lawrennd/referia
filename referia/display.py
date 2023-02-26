@@ -19,7 +19,8 @@ from ipywidgets import jslink, jsdlink, Layout
 from .config import *
 from .log import Logger
 from .util import remove_nan
-from .widgets import IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText
+from .widgets import IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture
+
 from . import access
 from . import assess
 from . import system

@@ -37,6 +37,21 @@ def markdownify(string):
     """Filter to convert markdown to html for liquid"""
     return markdown2html(string.encode("utf8"))
 
+@string_filter
+def relative_url(string):
+    """Filter to convert to a relative_url a jupyter notebook under liquid"""
+    url = os.path.join("/notebooks", string)
+    return url
+
+@string_filter
+def absolute_url(string):
+    """Filter to convert to a absolute_url a jupyter notebook under liquid"""
+    # Remove the absolute url from beginning if it exists
+    while string[0] == "/":
+       string = string[1:]
+    return os.path.join("http://localhost:8888/notebooks/", string)
+
+
 def empty(val):
     return pd.isna(val) or val==""
 
@@ -367,7 +382,9 @@ class Data(data.DataObject):
     def add_liquid_filters(self):
         self._liquid_env.add_filter("url_escape", url_escape)
         self._liquid_env.add_filter("markdownify", markdownify)
-
+        self._liquid_env.add_filter("relative_url", relative_url)
+        self._liquid_env.add_filter("absolute_url", absolute_url)
+        
     def set_index(self, index):
         """Index setter"""
         orig_index = self._index
@@ -1051,6 +1068,7 @@ class Data(data.DataObject):
                     self.set_index(index)
                 except ValueError as err:
                     log.error(f"Could not set index, \"{index}\", likely due to allocation augmentation.")
+                    
             kwargs2 = self.mapping(series=df.loc[index])
             series[index] = self.view_to_value(kwargs, kwargs2)
         return series
@@ -1150,6 +1168,7 @@ class Data(data.DataObject):
         if "series" in details and details["series"]:
             """The data frame is a series (with multiple identical indices)"""
             mapping = self._default_mapping()
+            df[index_column_name] = df.index
             indexcol = list(set(df[index_column_name]))
             index = pd.Index(range(len(indexcol)))
             newdf = pd.DataFrame(index=index, columns=[index_column_name, "entries"])
@@ -1204,3 +1223,9 @@ class Data(data.DataObject):
         if is_numeric_dtype(coltype) and is_bool_dtype(type(value)):
             log.info(f"Changing column \"{column}\" type to 'object' due to bool input.")
             df[column] = df[column].astype("boolean")
+
+    def get_most_recent_screen_capture(self):
+        system.copy_screen_capture(filename)
+        self.set_column(column_name)
+        self.set_value(filename)
+        

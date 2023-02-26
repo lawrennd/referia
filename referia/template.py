@@ -1,3 +1,5 @@
+#Being done in assess currently, needs to be moved here.
+
 import os
 
 import re
@@ -27,6 +29,16 @@ def url_escape(string):
 def markdownify(string):
     """Filter to convert markdown to html for liquid"""
     return markdown2html(string.encode("utf8"))
+
+@string_filter
+def relative_url(string):
+    """Filter to convert to a relative_url a jupyter notebook under liquid"""
+    return os.path.join("/notebooks", string.encode("utf8"))
+
+@string_filter
+def base_url(string):
+    """Filter to convert to a relative_url a jupyter notebook under liquid"""
+    return os.path.join("http://localhost:8888/notebooks/", string.encode("utf8"))
 
 
 

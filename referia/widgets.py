@@ -9,7 +9,7 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 
 from .config import *
-from .util import notempty, markdown2html, yyyymmddToDatetime
+from .util import notempty, markdown2html, yyyymmddToDatetime, file_to_image
 from .log import Logger
 from . import display
 from . import system
@@ -51,6 +51,15 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : bool,
+    },
+    {
+        "name" : "PngImageFile",
+        "function": ipyw.Image,
+        "default_args" : {
+            format="png",
+        }
+        "docstr": None,
+        "conversion" : file_to_image,
     },
     {
         "name" : "Text",
@@ -404,12 +413,27 @@ class ActionExtractor(ReferiaMultiWidget):
             "extract_button" : {
                 "function": ipyw.Button,
                 "on_click_function": action,
-                "description": "Add Row",
             }
         }
         super().__init__(parent, stateful_args, stateless_args)
         
-        
+class ScreenCapture(ReferiaMultiWidget):
+    """Take the most recent screen capture and display it """
+    def __init__(self, parent):
+        stateful_args = {
+            "image" : {
+                "function" : ipyw.Image,
+                "defaultargs" : {format="png"},
+                }
+            }
+        stateless_args = {
+            "capture_button" : {
+                "function" : ipyw.Button,
+                "on_click_function": parent.copy_screen_capture,
+            }
+        }
+            
+        super().__init__(parent, stateful_args, stateless_args)
             
 class FullSelector(ReferiaMultiWidget):
     """This multi widget allows a range of interacting selectors."""
