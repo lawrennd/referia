@@ -9,7 +9,7 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 
 from .config import *
-from .util import notempty, markdown2html, yyyymmddToDatetime, file_to_image
+from .util import notempty, markdown2html, yyyymmddToDatetime, filename_to_binary
 from .log import Logger
 from . import display
 from . import system
@@ -56,10 +56,10 @@ list_stateful_widgets = [
         "name" : "PngImageFile",
         "function": ipyw.Image,
         "default_args" : {
-            format="png",
-        }
+            "format" : "png",
+        },
         "docstr": None,
-        "conversion" : file_to_image,
+        "conversion" : filename_to_binary,
     },
     {
         "name" : "Text",
@@ -423,9 +423,11 @@ class ScreenCapture(ReferiaMultiWidget):
         stateful_args = {
             "image" : {
                 "function" : ipyw.Image,
-                "defaultargs" : {format="png"},
+                "defaultargs" : {
+                    "format": "png",
                 }
             }
+        }
         stateless_args = {
             "capture_button" : {
                 "function" : ipyw.Button,

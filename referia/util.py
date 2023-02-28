@@ -8,6 +8,10 @@ import os
 
 """Utility functions for helping, e.g. to create the relevant yaml files quickly."""
 
+def filename_to_binary(filename):
+    """Convert a filename to a binary by loading it"""
+    return open(filename, 'rb').read()
+
 def yyyymmddToDatetime(date):
     """Convert from YYYY-MM-DD string to a datetime.datetime object."""
     if type(date) is str: 
