@@ -243,13 +243,21 @@ def write_zip(filename=None, password=None, filelist=None, directorylist=[], com
 
 
 # Email scripts originally from https://stackoverflow.com/questions/61529817/automate-outlook-on-mac-with-python
-def draft_email(subject="", body="", to=[], cc=[], bcc=[], attach=None):
+def draft_email(subject="", body="", to=[], cc=[], bcc=[], attach=[]):
     """Draft an email for sending."""
+    if type(attach) is not list:
+        attach = [attach]
+    to = [ele in to if ele != ""]
+    cc = [ele in cc if ele != ""]
+    bcc = [ele in bcc if ele != ""]
+    attach = [ele in attach if ele != ""]
+    
+            
     msg = Message(subject=subject, body=body, to_recip=to, cc_recip=cc, bcc_recip=bcc)
 
     # attach file
-    if attach is not None:
-        p = pl.Path(attach)
+    for a in attach:
+        p = pl.Path(a)
         msg.add_attachment(p)
 
     msg.show()
