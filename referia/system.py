@@ -247,10 +247,16 @@ def draft_email(subject="", body="", to=[], cc=[], bcc=[], attach=[]):
     """Draft an email for sending."""
     if type(attach) is not list:
         attach = [attach]
-    to = [ele in to if ele != ""]
-    cc = [ele in cc if ele != ""]
-    bcc = [ele in bcc if ele != ""]
-    attach = [ele in attach if ele != ""]
+    if type(to) is not list:
+        to = [to]
+    if type(cc) is not list:
+        cc = [cc]
+    if type(bcc) is not list:
+        bcc = [bcc]
+    to = [ele for ele in to if ele != ""]
+    cc = [ele for ele in cc if ele != ""]
+    bcc = [ele for ele in bcc if ele != ""]
+    attach = [ele for ele in attach if ele != ""]
     
             
     msg = Message(subject=subject, body=body, to_recip=to, cc_recip=cc, bcc_recip=bcc)

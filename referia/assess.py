@@ -1127,10 +1127,8 @@ class Data(data.DataObject):
         if "index" in details:            
             field = details["index"]
             if type(field) is str:
-                if field in df.columns:
-                    index_column_name = details["index"]
-                else:
-                    raise ValueError(f"No index column \"{field}\" found in data frame.")
+                index_column_name = details["index"]
+                
             elif type(field) is dict: # Index is created from existing columns
                 if "name" not in field:
                     field["name"] = "index"
@@ -1142,8 +1140,9 @@ class Data(data.DataObject):
                 index_column_name = field["name"]
 
             
-        df.set_index(df[index_column_name], inplace=True)
-        del df[index_column_name]
+        if index_column_name in df.columns:
+            df.set_index(df[index_column_name], inplace=True)
+            del df[index_column_name]
 
         if "fields" in details and details["fields"] is not None:
             for field in details["fields"]:

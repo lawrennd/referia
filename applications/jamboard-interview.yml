@@ -1,21 +1,19 @@
 - name: jamboard-interview
   type: HTMLMath
   args:
-    value: '<h3>Introduction</h3>
+    value: |
+      ### Introduction
 
-<p><ol>
-<li>Check that the applicant can see and hear you.</li>
-<li>Introduce yourself and fellow interviewer(s). If you are using an observer, explain their role to the candidate, ensuring that they understand that the observer will not be asking any questions or make any judgements regarding their interview performance.</li>
-<li>Remind the applicant that they cannot record the interview.</li>
-<li>Inform the applicant of the format the interview will take.</li>
-<li>Check that the applicant has access to Jamboard and a way of writing on it.<ul><li>Warn candidate not to erase whole jamboard, move on to another page.</li></ul></li>
-<li>Give an indication of how long you think the interview will take.</li>
-<li>Remind the applicant what to do in the event of technical difficulties and reiterate that (worst case contact the Admissions Office.), in the event of substantial problems, the interview will be ended and rescheduled.</li>
-<li>Reassure the applicant that they will not be disadvantaged if technical problems arise or if the interview has to be rescheduled.</li>
-<li>Ask the applicant to confirm that no-one else is in their room or with them online.</li>
-<li> Remind them that they should have other devices switched off during the interview.</li>
-<li>Check that the applicant appears to be the same as the one in the application photo and/or check their ID and indicate that this has been checked on the Interview Report Form.</li>
-</lo>
-</p>'
+      * Check that the applicant can see and hear you.
+      * Introduce yourself and fellow interviewer(s). If you are using an observer, explain their role to the candidate, ensuring that they understand that the observer will not be asking any questions or make any judgements regarding their interview performance.
+      * Remind the applicant that they cannot record the interview.
+      * Inform the applicant of the format the interview will take.
+      * Check that the applicant has access to Jamboard and a way of writing on it.<ul>* Warn candidate not to erase whole jamboard, move on to another page.</ul>
+      * Give an indication of how long you think the interview will take.
+      * Remind the applicant what to do in the event of technical difficulties and reiterate that (worst case contact the Admissions Office.), in the event of substantial problems, the interview will be ended and rescheduled.
+      * Reassure the applicant that they will not be disadvantaged if technical problems arise or if the interview has to be rescheduled.
+      * Ask the applicant to confirm that no-one else is in their room or with them online.
+      *  Remind them that they should have other devices switched off during the interview.
+      * Check that the applicant appears to be the same as the one in the application photo and/or check their ID and indicate that this has been checked on the Interview Report Form.
     layout:
       width: "800px"
