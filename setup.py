@@ -12,6 +12,7 @@
 import io
 import os
 import sys
+import platform
 from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
@@ -45,9 +46,14 @@ REQUIRED = [
     "pypdftk", # for manipulating PDFs.
     "pyminizip", # For storing files as zip
     "pypandoc", # for calling pandoc
-    
 ]
 
+OSX_REQUIRED = [
+    "appscript", # for OSX applescript calls
+    ]
+if platform.system() == "Darwin":  # Darwin stands for macOS
+    REQUIRED += OSX_REQUIRED  # for OSX packages
+    
 # What packages are optional?
 EXTRAS = {
 }
