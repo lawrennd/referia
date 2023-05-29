@@ -42,8 +42,6 @@ REQUIRED = [
     "gspread",
     "gspread_pandas",
     "mimesis", # for generating fake data for testing
-    "appscript", # for OSX applescript calls
-    "pypdftk", # for manipulating PDFs.
     "pyminizip", # For storing files as zip
     "pypandoc", # for calling pandoc
 ]
