@@ -40,13 +40,14 @@ REQUIRED = [
     "google-auth-httplib2",
     "google-auth-oauthlib",
     "gspread",
-    #"gspread_pandas",
     "mimesis", # for generating fake data for testing
     "pyminizip", # For storing files as zip
     "pypandoc", # for calling pandoc
+    "pypdftk", # for pdftk
 ]
 
 OSX_REQUIRED = [
+    "gspread_pandas", # for some reason doesn't install on ubuntu on github actions
     "appscript", # for OSX applescript calls
     ]
 if platform.system() == "Darwin":  # Darwin stands for macOS
