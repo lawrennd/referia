@@ -23,7 +23,7 @@ from . import display
 from . import util
 
 import platform
-if platform.system() = "Darwin":
+if platform.system() == "Darwin":
     OSX=True
     import appscript as ap
     import mactypes as mt
