@@ -40,7 +40,7 @@ REQUIRED = [
     "google-auth-httplib2",
     "google-auth-oauthlib",
     "gspread",
-    "gspread_pandas",
+    #"gspread_pandas",
     "mimesis", # for generating fake data for testing
     "pyminizip", # For storing files as zip
     "pypandoc", # for calling pandoc
