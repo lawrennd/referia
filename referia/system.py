@@ -23,6 +23,7 @@ from . import display
 from . import util
 
 import platform
+OSX = False
 if platform.system() == "Darwin":
     OSX=True
     import appscript as ap
