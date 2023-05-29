@@ -1,5 +1,5 @@
 - name: jamboard-interview
-  type: HTMLMath
+  type: Markdown
   args:
     value: |
       ### Introduction
