@@ -830,7 +830,7 @@ class Data(data.DataObject):
             else:
                 raise TypeError("View should be a \"dict\".")
         else:
-            return None
+            return ""
 
     def summary_viewer_to_value(self, viewer, kwargs=None):
         """Convert a summary viewer structure to populated values."""
@@ -923,8 +923,8 @@ class Data(data.DataObject):
                             return True
 
                 if "equal" in condition:
-                    self._parent.set_column(condition["equal"]["field"])
-                    if not self._parent.get_value() == condition["equal"]["value"]:
+                    self.set_column(condition["equal"]["field"])
+                    if not self.get_value() == condition["equal"]["value"]:
                         return False
         return True
 
