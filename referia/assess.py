@@ -1163,23 +1163,36 @@ class Data(data.DataObject):
 
 
 
-        # If it's a series post-process
+        # If it's a series post-process by creating entries field.
         if "series" in details and details["series"]:
             """The data frame is a series (with multiple identical indices)"""
             mapping = self._default_mapping()
             df[index_column_name] = df.index
             indexcol = list(set(df[index_column_name]))
             index = pd.Index(range(len(indexcol)))
+            # selector_column_name = details["selector"]
+            # selectorcol = list(set(df[selector_column_name]))
+            # selector = pd.Index(range(len(selectorcol)))
             newdf = pd.DataFrame(index=index, columns=[index_column_name, "entries"])
             newdf[index_column_name] = indexcol
             newdetails = details.copy()
             del newdetails["series"]
             for ind in range(len(indexcol)):
                 entries = []
-                for ind2 in df.index[df[index_column_name]==indexcol[ind]]:
-                    entry = remove_nan(df.loc[ind2].to_dict())
+                index_name = indexcol[ind]
+                num_sub_entries = (df.index==index_name).sum()
+                if num_sub_entries > 1:
+                    sub_entries = []
+                    for key, entry in df.loc[index_name].iterrows():
+                        sub_entries.append(remove_nan(entry.to_dict()))
+                        #entry = remove_nan(df.loc[index_name].to_dict(orient="list"))
+                else:
+                    sub_entries = [remove_nan(df.loc[index_name].to_dict())]
+                    # Use the mapping to translate entry names.
+                for entry in sub_entries:
                     map_entry = entry.copy()
                     del map_entry[index_column_name]
+
                     for key, key2 in mapping.items():
                         if key2 in entry:
                             map_entry[key] = entry[key2]
