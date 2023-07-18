@@ -386,25 +386,36 @@ def edit_files(data):
         
     for view in displays:
         if "field" in view:
-            val = data.get_value_column(view["field"])
+            field = view["field"]
+            val = data.get_value_column(field)
         else:
-            log.warning(f"Missing \"field\" in configuration.")
+            log.warning(f"Missing \"field\" in edit_files configuration.")
             continue
         if type(val) is str:
-            storedirectory = os.path.expandvars(view["storedirectory"])
-            origfile = os.path.join(os.path.expandvars(view["sourcedirectory"]),val)
+            if "storedirectory" in view:
+                storedirectory = os.path.expandvars(view["storedirectory"])
+            else:
+                log.warning(f"Missing \"storedirectory\" in edit_files configuration.")
+                continue
+            if "sourcedirectory" in view:
+                origfile = os.path.join(os.path.expandvars(view["sourcedirectory"]),val)
+            else:
+                log.warning(f"Missing \"sourcedirectory\" in edit_files configuration.")
+                continue
+                
             if "name" in view:
                 filestub = view["name"] + ".pdf"
             else:
                 filestub = to_camel_case(view["field"]) + ".pdf"
+
+            # Filename to edit, based on index of the file plus the stub
             editfilename = str(data.get_index()) + "_" + filestub
-            destfile = os.path.join(storedirectory,editfilename)
+            destfile = os.path.join(storedirectory, editfilename)
             if not os.path.exists(storedirectory):
                 os.makedirs(storedirectory)
             if not os.path.exists(destfile):
                 copy_file(origfile, destfile, view, data)
             open_localfile(destfile)
-
 
 def view_directory(view):
     """View a directory containing relevant information to the assessment."""

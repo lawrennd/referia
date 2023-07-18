@@ -278,13 +278,19 @@ class Data(data.DataObject):
     def _allocation(self):
         """Load in the allocation spread sheet to data frames."""
         # Augment the data with default augmentation as "outer"
-        self._augment_data(config["allocation"], how="outer", concat=True, axis=0)
-        self._remove_index_duplicates()
-
+        if "allocation" in config:
+            self._augment_data(config["allocation"], how="outer", concat=True, axis=0)
+            self._remove_index_duplicates()
+        else:
+            log.error(f"No \"allocation\" field in config file.")
+            
     def _additional(self):
         """Load in the allocation spread sheet to data frames."""
         # Augment the data with default augmentation as "inner"
-        self._augment_data(config["additional"], how="inner", concat=False, suffix="_{joinNo}")
+        if "additional" in config:
+            self._augment_data(config["additional"], how="inner", concat=False, suffix="_{joinNo}")
+        else:
+            log.error(f"No \"additional\" field in config file.")
 
     def _scores(self):
         """Load in the score data to data frames."""
@@ -768,8 +774,6 @@ class Data(data.DataObject):
             mapping = config["mapping"]
         else:
             mapping = automapping(self.columns)
-        if "entries" not in mapping:
-            mapping["entries"] = "entries" # Covers series entries.
         return mapping
 
     def mapping(self, mapping=None, series=None):
@@ -1167,6 +1171,15 @@ class Data(data.DataObject):
         if "series" in details and details["series"]:
             """The data frame is a series (with multiple identical indices)"""
             mapping = self._default_mapping()
+            # Make sure there's an entries entry in default mapping
+            if "entries" not in mapping:
+                mapping["entries"] = "entries" # Covers series entries.
+            else:
+                log.warning(f"Existing \"entries\" field in default mapping when incorporating a series.")
+                
+            log.info(f"Augmenting default mapping with an \"entries\" field for accessing series.")
+            config["mapping"] = mapping
+            
             df[index_column_name] = df.index
             indexcol = list(set(df[index_column_name]))
             index = pd.Index(range(len(indexcol)))
