@@ -14,9 +14,9 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .log import Logger
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max
+
 from . import config
 from . import access
-from . import system
 from . import data
 
 
@@ -67,7 +67,6 @@ class Data(data.DataObject):
 
         self._directory = directory
         self._config = config.load_config(directory)
-        self._system = system.Sys(directory)
         
         self._log = Logger(
             name=__name__,
@@ -1254,8 +1253,4 @@ class Data(data.DataObject):
             self._log.info(f"Changing column \"{column}\" type to 'object' due to bool input.")
             df[column] = df[column].astype("boolean")
 
-    def get_most_recent_screen_capture(self):
-        self._system.copy_screen_capture(filename)
-        self.set_column(column_name)
-        self.set_value(filename)
         
