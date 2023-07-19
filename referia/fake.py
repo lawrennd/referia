@@ -26,5 +26,9 @@ def row():
     }
     return output
 
-def rows(rows):
-    return [row() for x in range(rows)]
+def rows(num_rows):
+    return [row() for x in range(num_rows)]
+
+def DataFrame(num_rows):
+    return pd.DataFrame(rows(num_rows))
+

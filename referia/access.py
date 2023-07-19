@@ -830,12 +830,12 @@ def convert_datetime_to_str(df):
         write_df[col] = date_series
     return write_df
 
-def write_scores(df):
+def write_scores(df, config):
     """Write the scoring spread sheet to data frames."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["scores"])
 
-def write_series(df):
+def write_series(df, config):
     """Load in the series spread sheet to data frames."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["series"])

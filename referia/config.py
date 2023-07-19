@@ -101,7 +101,7 @@ def load_user_config(user_file="_referia.yml", directory="."):
             conf["additional"] = additional
     return conf
 
-def load_config():
+def load_config(directory="."):
     default_file = os.path.join(os.path.dirname(__file__), "defaults.yml")
     local_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "machine.yml"))
     user_file = '_referia.yml'
@@ -116,7 +116,7 @@ def load_config():
         with open(local_file) as file:
             conf.update(yaml.load(file, Loader=yaml.FullLoader))
 
-    conf.update(load_user_config(user_file))
+    conf.update(load_user_config(user_file, directory))
 
     if conf=={}:
         raise ValueError(
@@ -143,7 +143,7 @@ def load_config():
         conf["logging"] = {"level": 20, "filename": "referia.log"}
     return conf
 
-config = load_config()
+config = load_config(".")
 
 conf_dir = None
 file_name = "google_secret.json"

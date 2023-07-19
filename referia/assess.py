@@ -12,18 +12,13 @@ import urllib.parse
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
-from .config import *
 from .log import Logger
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max
+from . import config
 from . import access
 from . import system
 from . import data
 
-log = Logger(
-    name=__name__,
-    level=config["logging"]["level"],
-    filename=config["logging"]["filename"]
-)
 
 
 @string_filter
@@ -68,7 +63,17 @@ def render_liquid(data, template, **kwargs):
     return data.liquid_to_value(template, kwargs)
         
 class Data(data.DataObject):
-    def __init__(self):
+    def __init__(self, directory="."):
+
+        self._directory = directory
+        self._config = config.load_config(directory)
+
+        self._log = Logger(
+            name=__name__,
+            level=self._config["logging"]["level"],
+            filename=self._config["logging"]["filename"]
+        )
+
         # Data that is input (not for writing to)
         self._list_functions = self._compute_functions_list()
         self._data = None
@@ -85,13 +90,12 @@ class Data(data.DataObject):
         # Which entry column in the series to disambiguate the selection of the focus.
         self._selector = None
         # The value in the selected entry column entry column value from the series to use
-
         self._computes=[]
-        if "compute" in config:
-            if type(config["compute"]) is list:
-                computes = config["compute"]
+        if "compute" in self._config:
+            if type(self._config["compute"]) is list:
+                computes = self._config["compute"]
             else:
-                computes = [config["compute"]]
+                computes = [self._config["compute"]]
 
             for compute in computes:
                 self._computes.append({
@@ -191,17 +195,17 @@ class Data(data.DataObject):
             for key, value in column_args.items():
                 self.set_column(value)
                 if key in kwargs:
-                    log.warning(f"No key \"{key}\" already column_args found in kwargs.")
+                    self._log.warning(f"No key \"{key}\" already column_args found in kwargs.")
                 kwargs[key] = self.get_column_values()
             for key, value in subseries_args.items():
                 self.set_column(value)
                 if key in kwargs:
-                    log.warning(f"No key \"{key}\" from subseries_args already found in kwargs.")   
+                    self._log.warning(f"No key \"{key}\" from subseries_args already found in kwargs.")   
                 kwargs[key] = self.get_subseries_values()
             for key, value in row_args.items():
                 self.set_column(value)
                 if key in kwargs:
-                    log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
+                    self._log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
 
                 kwargs[key] = self.get_value()
             # kwargs.update(remove_nan(self.mapping(args)))
@@ -278,23 +282,23 @@ class Data(data.DataObject):
     def _allocation(self):
         """Load in the allocation spread sheet to data frames."""
         # Augment the data with default augmentation as "outer"
-        if "allocation" in config:
-            self._augment_data(config["allocation"], how="outer", concat=True, axis=0)
+        if "allocation" in self._config:
+            self._augment_data(self._config["allocation"], how="outer", concat=True, axis=0)
             self._remove_index_duplicates()
         else:
-            log.error(f"No \"allocation\" field in config file.")
+            self._log.error(f"No \"allocation\" field in config file.")
             
     def _additional(self):
         """Load in the allocation spread sheet to data frames."""
         # Augment the data with default augmentation as "inner"
-        if "additional" in config:
-            self._augment_data(config["additional"], how="inner", concat=False, suffix="_{joinNo}")
+        if "additional" in self._config:
+            self._augment_data(self._config["additional"], how="inner", concat=False, suffix="_{joinNo}")
         else:
-            log.error(f"No \"additional\" field in config file.")
+            self._log.error(f"No \"additional\" field in config file.")
 
     def _scores(self):
         """Load in the score data to data frames."""
-        df = self._finalize_df(*access.scores(config["scores"], self.index))
+        df = self._finalize_df(*access.scores(self._config["scores"], self.index))
         if df.index.is_unique:
             self._writedata = df
         else:
@@ -305,10 +309,10 @@ class Data(data.DataObject):
 
     def _series(self):
         """Load in the series data to data frames."""
-        if "selector" not in config["series"]:
+        if "selector" not in self._config["series"]:
             raise ValueError(f"A series entry must have a \"selector\" column.")
-        self._writeseries = self._finalize_df(*access.series(config["series"], self.index))
-        selector = config["series"]["selector"]
+        self._writeseries = self._finalize_df(*access.series(self._config["series"], self.index))
+        selector = self._config["series"]["selector"]
         if selector not in self._writeseries.columns:
             self._writeseries[selector] = None
             
@@ -316,8 +320,8 @@ class Data(data.DataObject):
 
     def sort_series(self):
         """Sort the series by the column specified."""
-        if "series" in config:
-            series = config["series"]
+        if "series" in self._config:
+            series = self._config["series"]
         else:
             return
         if "sortby" in series and "field" in series["sortby"] and series["sortby"]["field"] in self._writeseries:
@@ -326,34 +330,34 @@ class Data(data.DataObject):
             else:
                 ascending=True
             field=series["sortby"]["field"]
-            log.info(f"Sorting series by \"{field}\"")
+            self._log.info(f"Sorting series by \"{field}\"")
             self._writeseries.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_input_flows(self):
         """Load the input flows specified in the _referia.yml file."""
         self._allocation()
-        if "additional" in config:
-            log.info("Joining allocation and additional information.")
+        if "additional" in self._config:
+            self._log.info("Joining allocation and additional information.")
             self._additional()
 
         # If sorting is requested do it here.
         self.sort_data()
 
     def sort_data(self):
-        if "sortby" in config and "field" in config["sortby"] and config["sortby"]["field"] in self._data:
-            if "ascending" in config["sortby"]:
-                ascending = config["sortby"]["ascending"]
+        if "sortby" in self._config and "field" in self._config["sortby"] and self._config["sortby"]["field"] in self._data:
+            if "ascending" in self._config["sortby"]:
+                ascending = self._config["sortby"]["ascending"]
             else:
                 ascending=True
-            field=config["sortby"]["field"]
-            log.info(f"Sorting by \"{field}\"")
+            field=self._config["sortby"]["field"]
+            self._log.info(f"Sorting by \"{field}\"")
             self._data.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_output_flows(self):
         """Load the output flows data specified in the _referia.yml file."""
-        if "scores" in config:
+        if "scores" in self._config:
             self._scores()
-        if "series" in config:
+        if "series" in self._config:
             self._series()
 
     def load_flows(self):
@@ -366,22 +370,22 @@ class Data(data.DataObject):
     def load_liquid(self):
         """Load the liquid environment."""
         loader = None
-        if "liquid" in config:
-            if "templates" in config["liquid"]:
-                if "dir" in config["liquid"]["templates"]:
-                    templates_path = [os.path.abspath(config["liquid"]["templates"])]
+        if "liquid" in self._config:
+            if "templates" in self._config["liquid"]:
+                if "dir" in self._config["liquid"]["templates"]:
+                    templates_path = [os.path.abspath(self._config["liquid"]["templates"])]
                 else:
                     template_path = [
                         os.path.join(os.path.dirname(__file__), "templates"),
                     ]
 
-                    if "ext" in config["liquid"]:
-                        ext = config["liquid"]["ext"]
+                    if "ext" in self._config["liquid"]:
+                        ext = self._config["liquid"]["ext"]
                         loader = lq.loaders.FileExtensionLoader(search_path=template_path, ext=ext)
                     else:
                         loader = lq.FileSystemLoader(template_path)
-            elif "dict" in config["liquid"]["templates"]:
-                loader = lq.loaders.DictLoader(config["liquid"]["templates"]["dict"])
+            elif "dict" in self._config["liquid"]["templates"]:
+                loader = lq.loaders.DictLoader(self._config["liquid"]["templates"]["dict"])
         self._liquid_env = lq.Environment(loader=loader)
 
 
@@ -400,7 +404,7 @@ class Data(data.DataObject):
             self.set_index(index)
         else:
             self._index = index
-            log.info(f"Index \"{index}\" selected.")
+            self._log.info(f"Index \"{index}\" selected.")
             self.check_or_set_subseries()
         # If index has changed, run computes.
         if self._index != orig_index:
@@ -438,7 +442,7 @@ class Data(data.DataObject):
         """Subindex setter"""
         if subindex is None:
             self._subindex = None
-            log.info(f"Subindex set to None.")
+            self._log.info(f"Subindex set to None.")
             return
 
         if self._writeseries is not None and subindex not in self.get_subindices():
@@ -446,12 +450,12 @@ class Data(data.DataObject):
             raise ValueError(f"Subindex \"{subindex}\" under \"{index}\" not available in current series.")
         else:
             self._subindex=subindex
-            log.info(f"Subindex \"{subindex}\" selected.")
+            self._log.info(f"Subindex \"{subindex}\" selected.")
 
 
     def get_index(self):
         if self._index is None and self._data is not None:
-            log.info(f"No index set, using first index of data.")
+            self._log.info(f"No index set, using first index of data.")
             self.set_index(self._data.index[0])
         return self._index
 
@@ -464,7 +468,7 @@ class Data(data.DataObject):
             elif self._writedata is not None:
                 self.add_column(column)
             else: 
-                log.warning(f"No write data/series to add column \"{column}\" to.")
+                self._log.warning(f"No write data/series to add column \"{column}\" to.")
 
         if column not in self.columns and (self.index is not None and column != self.index.name) or self.index is None:
             self._column = None
@@ -492,17 +496,17 @@ class Data(data.DataObject):
         """Set which column of the series is to be used for selection."""
         # Set to None to indicate that self._writedata is correct place for recording.
         if column is None:
-            log.warning(f"No column selected for selector, setting to \"None\".")
+            self._log.warning(f"No column selected for selector, setting to \"None\".")
             self._selector = None
             return
 
         if column not in self.get_selectors():
-            log.info(f"Column \"{column}\" of chosen for selection not in Data._writeseries ... adding.")
+            self._log.info(f"Column \"{column}\" of chosen for selection not in Data._writeseries ... adding.")
             self.add_column(column)
             self.set_selector(column)
         else:
             self._selector = column
-            log.info(f"Column \"{column}\" of Data._writeseries selected for selection.")
+            self._log.info(f"Column \"{column}\" of Data._writeseries selected for selection.")
             if self.get_subindex() not in self._writeseries[column]:
                 self.set_subindex(None)
 
@@ -515,10 +519,10 @@ class Data(data.DataObject):
         subindices = self.get_subindices()
         if len(subindices)>0:
             index = self.get_index()
-            log.info(f"No subindex set, using first entry of portion of Data._writeseries indexed by \"{index}\".")
+            self._log.info(f"No subindex set, using first entry of portion of Data._writeseries indexed by \"{index}\".")
             self.set_subindex(subindices[0])
         else:
-            log.info(f"No subindex available.")
+            self._log.info(f"No subindex available.")
             self.add_series_row()
 
 
@@ -550,7 +554,7 @@ class Data(data.DataObject):
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
         if column in self._data.columns:
-            log.warning(f"Warning attempting to write to {column} in self._data.")
+            self._log.warning(f"Warning attempting to write to {column} in self._data.")
 
         if column not in self._writeseries.columns:
             self.add_series_column(column)
@@ -577,7 +581,7 @@ class Data(data.DataObject):
         subindex = self.get_subindex()
         # If trying to set a numeric valued column's entry to a string, set the type of column to object.
         if column in self._data.columns:
-            log.warning(f"Warning attempting to write to {column} in self._data.")
+            self._log.warning(f"Warning attempting to write to {column} in self._data.")
 
         if self._writedata is not None and column in self._writedata.columns:
             self._update_type(self._writedata, column, value)
@@ -625,7 +629,7 @@ class Data(data.DataObject):
             except KeyError as err:
                 raise KeyError(f"Cannot find column: \"{column}\" in _writedata.") from err
         else:
-            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
+            self._log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
 
     def get_subseries_values(self):
@@ -640,10 +644,10 @@ class Data(data.DataObject):
             if indexer.sum()>0:
                 return self._writeseries.loc[indexer, column]
             else:
-                log.warning(f"No data available with this index returning None.")
+                self._log.warning(f"No data available with this index returning None.")
                 return None
         else:
-            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
+            self._log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
 
     def get_value(self):
@@ -665,9 +669,9 @@ class Data(data.DataObject):
                 if indexer.sum()>0:
                     return self._writeseries.loc[indexer, column].iloc[0]
                 else:
-                    log.warning(f"No data available with this subindex and index , returning None.")
+                    self._log.warning(f"No data available with this subindex and index , returning None.")
             else:
-                log.warning(f"No subindex selected, returning None.")
+                self._log.warning(f"No subindex selected, returning None.")
         elif self._writedata is not None and column in self._writedata.columns:
             if index in self._data.index and not index in self._writedata.index:
                 # If index isn't created in write data yet, return None.
@@ -684,7 +688,7 @@ class Data(data.DataObject):
         elif self._data is not None and column==self._data.index.name:
             return index
         else:
-            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
+            self._log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
 
     def add_column(self, column):
@@ -692,30 +696,30 @@ class Data(data.DataObject):
             raise ValueError(f"There is no _writedata or _writeseries loaded to add the column \"{column}\" to.")
 
         if self._writeseries is not None and column in self._writeseries.columns:
-            log.warning(f"\"{column}\" requested to be added but it already exists in _writeseries.")
+            self._log.warning(f"\"{column}\" requested to be added but it already exists in _writeseries.")
             return
 
         if self._writedata is not None and column in self._writedata.columns:
-            log.warning(f"\"{column}\" requested to be added but it already exists in _writedata.")
+            self._log.warning(f"\"{column}\" requested to be added but it already exists in _writedata.")
             return
         
         if self._writeseries is not None and column not in self._writeseries.columns:
-            log.info(f"\"{column}\" not in writeseries columns ... adding.")
+            self._log.info(f"\"{column}\" not in writeseries columns ... adding.")
             self._writeseries[column] = None
             return
         
         if self._writedata is not None and column not in self._writedata.columns:
-            log.info(f"\"{column}\" not in write columns ... adding.")
+            self._log.info(f"\"{column}\" not in write columns ... adding.")
             self._writedata[column] = None
             return
 
     def set_dtype(self, column, dtype):
         """Set a Data._writedata column to the given data type."""
         if self._writedata is not None and column in self._writedata.columns:
-            log.info(f"\"{column}\" being set to \"{dtype}\".")
+            self._log.info(f"\"{column}\" being set to \"{dtype}\".")
             self._writedata[column] = self._writedata[column].astype(dtype)
         if self._writeseries is not None and column in self._writeseries.columns:
-            log.info(f"\"{column}\" being set to \"{dtype}\".")
+            self._log.info(f"\"{column}\" being set to \"{dtype}\".")
             self._writeseries[column] = self._writeseries[column].astype(dtype)
 
     def _append_row(self, df, index):
@@ -735,17 +739,17 @@ class Data(data.DataObject):
         selector = self.get_selector()
         if self._data is not None and index not in self.index:
             self._data = self._append_row(self._data, index)
-            log.info(f"\"{index}\" added as row in Data._data.")
+            self._log.info(f"\"{index}\" added as row in Data._data.")
             self.set_index(index)
 
         if self._writedata is not None and index not in self._writedata.index:
             self._writedata = self._append_row(self._writedata, index)
-            log.info(f"\"{index}\" added as row in Data._writedata.")
+            self._log.info(f"\"{index}\" added as row in Data._writedata.")
             self.set_index(index)
 
         if self._writeseries is not None and index not in self._writeseries.index:
             self._writeseries = self._append_row(self._writeseries, index)
-            log.info(f"\"{index}\" added as row in Data._writeseries.")
+            self._log.info(f"\"{index}\" added as row in Data._writeseries.")
             self.set_index(index)
 
     def add_series_row(self, index=None):
@@ -756,22 +760,22 @@ class Data(data.DataObject):
             index = self.get_index()
         self._writeseries = self._append_row(self._writeseries, index)
         selector = self.get_selector()
-        log.info(f"\"{index}\" added subseries row in Data._writeseries.")
+        self._log.info(f"\"{index}\" added subseries row in Data._writeseries.")
 
 
     def add_series_column(self, column):
         """Add a column to the data series"""
         if column not in self._writeseries.columns:
-            log.info(f"\"{column}\" not in series columns ... adding.")
+            self._log.info(f"\"{column}\" not in series columns ... adding.")
             self._writeseries[column] = None
         else:
-            log.warning(f"\"{column}\" requested to be added to series data but already exists.")
+            self._log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
     def _default_mapping(self):
         """Generate the default mapping from config or from columns"""
         # If a mapping is provided in _referia.yml use it, otherwise generate
-        if "mapping" in config:
-            mapping = config["mapping"]
+        if "mapping" in self._config:
+            mapping = self._config["mapping"]
         else:
             mapping = automapping(self.columns)
         return mapping
@@ -817,7 +821,7 @@ class Data(data.DataObject):
                     return values
                 if "join" in view:
                     if "list" not in view["join"]:
-                        log.warning("No field \"list\" in \"concat\" viewer.")
+                        self._log.warning("No field \"list\" in \"concat\" viewer.")
                     elements = self.view_to_value(view["join"], kwargs)
                     if "separator" in view["join"]:
                         sep = view["join"]["separator"]
@@ -860,7 +864,7 @@ class Data(data.DataObject):
                     return values
                 if "join" in view:
                     if "list" not in view["join"]:
-                        log.warning("No field \"list\" in \"concat\" viewer.")
+                        self._log.warning("No field \"list\" in \"concat\" viewer.")
                     elements = self.view_to_value(view["join"], kwargs)
                     if "separator" in view["join"]:
                         sep = view["join"]["separator"]
@@ -890,7 +894,7 @@ class Data(data.DataObject):
         elif "join" in view:
             name = "join_"
             if "list" not in view["join"]:
-                log.warning("No field \"list\" in \"concat\" viewer.")
+                self._log.warning("No field \"list\" in \"concat\" viewer.")
             name += self.view_to_tmpname(view["join"])
             return name
         elif "liquid" in view:
@@ -1004,7 +1008,7 @@ class Data(data.DataObject):
             try:
                 return pd.Index([subindices[ind]])
             except IndexError as e:
-                log.info(f"Requested invalid index in Data.tally_series()")
+                self._log.info(f"Requested invalid index in Data.tally_series()")
                 return pd.Index([subindices[cur_loc]])
 
         def subind_series(ind, starter=True, reverse=False):
@@ -1015,7 +1019,7 @@ class Data(data.DataObject):
                     return pd.Index(subindices[:ind])
 
             except IndexError as e:
-                log.info(f"Requested invalid index in Data.tally_series()")
+                self._log.info(f"Requested invalid index in Data.tally_series()")
                 if starter:
                     return pd.Index(subindices[cur_loc:])
                 else:
@@ -1071,7 +1075,7 @@ class Data(data.DataObject):
                 try:
                     self.set_index(index)
                 except ValueError as err:
-                    log.error(f"Could not set index, \"{index}\", likely due to allocation augmentation.")
+                    self._log.error(f"Could not set index, \"{index}\", likely due to allocation augmentation.")
                     
             kwargs2 = self.mapping(series=df.loc[index])
             series[index] = self.view_to_value(kwargs, kwargs2)
@@ -1091,10 +1095,10 @@ class Data(data.DataObject):
             )
             if match:
                 if len(match.groups())>1:
-                    log.warning(f"Multiple regular expression matches in \"{regexp}\".")
+                    self._log.warning(f"Multiple regular expression matches in \"{regexp}\".")
                 series[index] = match.group(1)
             else:
-                log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
+                self._log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
         return series
 
 
@@ -1115,7 +1119,7 @@ class Data(data.DataObject):
                     if "set_selector" in details:
                         df[field] = details["set_selector"]
                     self._selector = field 
-                    log.warning(f"No selector column \"{field}\" found in data frame.")
+                    self._log.warning(f"No selector column \"{field}\" found in data frame.")
             elif type(field) is dict:
                 if "name" in field:
                     if renderable(field):
@@ -1126,7 +1130,7 @@ class Data(data.DataObject):
                     df[field["name"]] = column
                     self._selector = field["name"]
                 else:
-                    log.warning(f"No \"name\" associated with selector entry.")
+                    self._log.warning(f"No \"name\" associated with selector entry.")
         
         if "index" in details:            
             field = details["index"]
@@ -1160,10 +1164,10 @@ class Data(data.DataObject):
                     elif "value" in field:
                         column = self._series_from_value(df, **field)
                     else:
-                        log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\", \"liquid\", \"display\", (for renderable fields) in fields.")
+                        self._log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\", \"liquid\", \"display\", (for renderable fields) in fields.")
                     df[field["name"]] = column
                 else:
-                    log.warning(f"No \"name\" associated with field entry.")
+                    self._log.warning(f"No \"name\" associated with field entry.")
 
 
 
@@ -1175,10 +1179,10 @@ class Data(data.DataObject):
             if "entries" not in mapping:
                 mapping["entries"] = "entries" # Covers series entries.
             else:
-                log.warning(f"Existing \"entries\" field in default mapping when incorporating a series.")
+                self._log.warning(f"Existing \"entries\" field in default mapping when incorporating a series.")
                 
-            log.info(f"Augmenting default mapping with an \"entries\" field for accessing series.")
-            config["mapping"] = mapping
+            self._log.info(f"Augmenting default mapping with an \"entries\" field for accessing series.")
+            self._config["mapping"] = mapping
             
             df[index_column_name] = df.index
             indexcol = list(set(df[index_column_name]))
@@ -1232,9 +1236,9 @@ class Data(data.DataObject):
             return 0
 
     def scored(self):
-        if "scored" in config:
-            if self._writedata is not None and config["scored"]["field"] in self._writedata.columns:
-                return self._writedata[config["scored"]["field"]].count()
+        if "scored" in self._config:
+            if self._writedata is not None and self._config["scored"]["field"] in self._writedata.columns:
+                return self._writedata[self._config["scored"]["field"]].count()
             else:
                 return 0
 
@@ -1243,10 +1247,10 @@ class Data(data.DataObject):
         """Update the type of a given column according to a value passed."""
         coltype = df.dtypes[column]
         if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
-            log.info(f"Changing column \"{column}\" type to 'object' due to string input.")
+            self._log.info(f"Changing column \"{column}\" type to 'object' due to string input.")
             df[column] = df[column].astype("object")
         if is_numeric_dtype(coltype) and is_bool_dtype(type(value)):
-            log.info(f"Changing column \"{column}\" type to 'object' due to bool input.")
+            self._log.info(f"Changing column \"{column}\" type to 'object' due to bool input.")
             df[column] = df[column].astype("boolean")
 
     def get_most_recent_screen_capture(self):

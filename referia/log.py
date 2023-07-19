@@ -1,7 +1,5 @@
 import logging
 
-from .config import *
-
 class Logger():
     def __init__(self, name=None, level=20, filename="referia.log"):
         self.level = level
