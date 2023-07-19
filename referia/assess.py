@@ -67,7 +67,8 @@ class Data(data.DataObject):
 
         self._directory = directory
         self._config = config.load_config(directory)
-
+        self._system = system.Sys(directory)
+        
         self._log = Logger(
             name=__name__,
             level=self._config["logging"]["level"],
@@ -1254,7 +1255,7 @@ class Data(data.DataObject):
             df[column] = df[column].astype("boolean")
 
     def get_most_recent_screen_capture(self):
-        system.copy_screen_capture(filename)
+        self._system.copy_screen_capture(filename)
         self.set_column(column_name)
         self.set_value(filename)
         

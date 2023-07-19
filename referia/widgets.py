@@ -8,18 +8,9 @@ import ipywidgets as ipyw
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 
-from .config import *
 from .util import notempty, markdown2html, yyyymmddToDatetime, filename_to_binary
-from .log import Logger
 from . import display
-from . import system
 
-
-log = Logger(
-    name=__name__,
-    level=config["logging"]["level"],
-    filename=config["logging"]["filename"]
-)
 
 #other = [jslink, jsdlink, MyCheckbox, MyFileChooser]
 
@@ -353,7 +344,7 @@ class IndexSelector(ReferiaStatefulWidget):
         self.set_value(change.new)
         if not self.private and self._parent is not None:
             self._parent.set_index(self.get_value())
-            system.view_series(self._parent._data)
+            self._parent.view_series()
         
     def refresh(self):
         pass
@@ -511,7 +502,7 @@ class IndexSubIndexSelectorSelect(FullSelector):
     def on_value_change(self, change):
         if not self.private and self._parent is not None:
             self._parent.set_index(self.get_value())
-            system.view_series(self._parent._data)
+            self._parent.view_series()
 
 
 
@@ -562,10 +553,8 @@ def gwu_(key, item, obj, docstr=None):
     def on_other_widgets_change():
         widg = obj._ipywidgets[key]["widget"]
         if "options_function" in item:
-            log.debug(f"Updating widget \"{key}\" options.")
             widg.options = item["options_function"]()
         if "value_function" in item:
-            log.debug(f"Updating widget \"{key}\" value.")
             widg.value = item["value_function"]()
         if "display_when_function" in item:
             if item["display_when_function"]():

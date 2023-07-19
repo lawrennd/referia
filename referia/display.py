@@ -95,6 +95,7 @@ class Scorer:
             level=self._config["logging"]["level"],
             filename=self._config["logging"]["filename"]
         )
+        self._system = system.Sys(directory)
         
         # Store the map between valid python variable names and data column names
         self._column_names_dict = {}
@@ -295,7 +296,7 @@ class Scorer:
             self.select_index()
         self.display_widgets()
         self.populate_widgets()
-        system.view_series(self._data)
+        self.view_series()
 
 
     def extract_scorer(self, details):
@@ -668,7 +669,7 @@ class Scorer:
             del args["footer"]
             
             
-        system.create_document(document, **args)
+        self._system.create_document(document, **args)
 
     
 
@@ -688,7 +689,7 @@ class Scorer:
                     val = self._data.get_value_column(column)
                     print(f"Value is {val}")
                     args["entries"].append(val)
-        system.create_summary(details, **args)
+        self._system.create_summary(details, **args)
 
     def value_updated(self):
         """If a value in a row has been updated, modify other values"""
@@ -762,3 +763,9 @@ class Scorer:
                 continue
 
             widget.refresh()
+
+    def view_series(self):
+        self._system.clear_temp_files()
+        self._system.view_files(self._data)
+        self._system.view_urls(self._data)
+        self._system.edit_files(self._data)
