@@ -3,6 +3,8 @@ import yaml
 import numpy as np
 
 
+from .util import to_valid_var
+
 
 GSPREAD_AVAILABLE=True
 try:
@@ -11,8 +13,27 @@ except ImportError:
     GSPREAD_AVAILABILE=False
 
 
+def nodes(user_file="_referia.yml", directory="."):
+    filename = os.path.join(os.path.expandvars(directory), user_file)
+    if not os.path.exists(filename):
+        return []
+    
+    with open(filename) as file:
+        conf = yaml.load(file, Loader=yaml.FullLoader)
 
-def load_user_config(user_file="_referia.yml", directory="."):
+    if "title" in conf:
+        key = to_valid_var(conf["title"])
+    else:
+        key = to_valid_var(directory)
+
+    chain = [(key, directory)]
+    if "inherit" in conf:
+        chain += nodes(user_file=user_file, directory=conf["inherit"]["directory"]) 
+    return chain
+
+    
+
+def load_user_config(user_file="_referia.yml", directory=".", append=[], ignore=[]):
     #log.info(f"Loading in configuration from \"{directory}\"")
     filename = os.path.join(os.path.expandvars(directory), user_file)
     conf = {}
@@ -46,6 +67,10 @@ def load_user_config(user_file="_referia.yml", directory="."):
         else:
             conf["viewer"] = [viewelem]
             inherit["append"].append("viewer")
+
+        # Augment and overwrite appends from config with those provided as arugments
+        inherit["append"] = set(inherit["append"] + append).difference(ignore)
+        inherit["ignore"] = set(inherit["ignore"] + ignore).difference(append)
 
     if parent is not None:
         # Place loaded conf under the parent conf.
@@ -101,7 +126,7 @@ def load_user_config(user_file="_referia.yml", directory="."):
             conf["additional"] = additional
     return conf
 
-def load_config(directory="."):
+def load_config(directory=".", append=[], ignore=[]):
     default_file = os.path.join(os.path.dirname(__file__), "defaults.yml")
     local_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "machine.yml"))
     user_file = '_referia.yml'
@@ -116,7 +141,7 @@ def load_config(directory="."):
         with open(local_file) as file:
             conf.update(yaml.load(file, Loader=yaml.FullLoader))
 
-    conf.update(load_user_config(user_file, directory))
+    conf.update(load_user_config(user_file, directory, append, ignore))
 
     if conf=={}:
         raise ValueError(

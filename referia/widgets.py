@@ -345,6 +345,9 @@ class IndexSelector(ReferiaStatefulWidget):
         if not self.private and self._parent is not None:
             self._parent.set_index(self.get_value())
             self._parent.view_series()
+
+    def set_index(self, value):
+        self.set_value(value)
         
     def refresh(self):
         pass
@@ -504,6 +507,8 @@ class IndexSubIndexSelectorSelect(FullSelector):
             self._parent.set_index(self.get_value())
             self._parent.view_series()
 
+    def set_index(self, value):
+        self._ipywidgets["index_select"]["set_value"](value)
 
 
             

@@ -83,17 +83,39 @@ def view(data):
 def clean_string(instring):
     return re.sub("\W+|^(?=\d)","_", instring)
 
-
+def nodes(chain, index=None):
+    """Display the series of nodes """
+    data = {}
+    scorer = {}
+    oldkey=None
+    while len(chain)>0:
+        key, directory=chain.pop()
+        data[key] = assess.Data(directory=directory)
+        if index is None:
+            index = data[key].index[0]
+        scorer[key] = Scorer(index, data[key], directory=directory, viewer_inherit=False)
+        if oldkey is not None:
+            scorer[oldkey].add_downstream_display(scorer[key])
+        scorer[key].run()
+        oldkey = key
 
 class Scorer:
-    def __init__(self, index=None, data=None, directory="."):
+    def __init__(self, index=None, data=None, directory=".", viewer_inherit=True):
         self._directory = directory
-        self._config = config.load_config(directory)
+        if viewer_inherit:
+            append = ["viewer"]
+            ignore = []
+        else:
+            append = []
+            ignore = ["viewer"]
+            
+        self._config = config.load_config(directory, append=append, ignore=ignore)
 
         self._log = Logger(
             name=__name__,
             level=self._config["logging"]["level"],
-            filename=self._config["logging"]["filename"]
+            filename=self._config["logging"]["filename"],
+            directory=directory,
         )
         self._system = system.Sys(directory)
         
@@ -101,7 +123,8 @@ class Scorer:
         self._column_names_dict = {}
         # Store the map between valid python varliable names and their boxed widgets.
         self._widget_dict = {}
-
+        self._selector_widget = None
+        self._downstream_displays = []
         self._default_field_vals = pd.Series(dtype=object)
         self._default_field_source = pd.Series(dtype=object)
 
@@ -194,6 +217,10 @@ class Scorer:
     def add_widgets(self, **kwargs):
         self._widget_dict = {**self._widget_dict, **kwargs}
 
+    def add_downstream_display(self, display):
+        """Add a display that is downstream of this one to be updated"""
+        self._downstream_displays.append(display)
+        
     @property
     def index(self):
         return self._data.index
@@ -202,9 +229,17 @@ class Scorer:
         return self._data.get_index()
 
     def set_index(self, value):
-        self._data.set_index(value)
-        self.populate_widgets()
-
+        """Set the index of the display system"""
+        oldval = self.get_index()
+        if oldval != value:
+            self._data.set_index(value)
+        
+            if self._selector_widget is not None:
+                self._selector_widget.set_index(value)
+            self.populate_widgets()
+            for ds in self._downstream_displays:
+                ds.set_index(value)
+            
     def get_value(self):
         return self._data.get_value()
 
@@ -236,8 +271,6 @@ class Scorer:
     def get_indices(self):
         return self._data.index
 
-
-
     def get_subindices(self):
         return self._data.get_subindices()
 
@@ -266,7 +299,6 @@ class Scorer:
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
         self._selector_widget.display()
 
-
     def select_subindex(self):
         """Select a subindex from the data"""
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
@@ -287,6 +319,13 @@ class Scorer:
     def set_select_subindex(self, value):
         """Set state of subindex selection."""
         self._select_subindex = value
+        
+    def get_most_recent_screen_capture(self):
+        """This function copys the name of the most recent screen capture to a column."""
+        raise NotImplementedError("Copying screen capture not yet implemented.")
+        filename = self._system.get_screen_capture(filename)
+        self.set_column(column_name)
+        self.set_value(filename)
 
     def run(self):
         """Run the scorer to edit the data frame."""
@@ -298,7 +337,8 @@ class Scorer:
         self.populate_widgets()
         self.view_series()
 
-
+        
+    
     def extract_scorer(self, details):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
@@ -630,13 +670,24 @@ class Scorer:
         self.populate_widgets()
 
     def save_flows(self):
-        if self._data._writedata is not None:
-            self._log.info(f"Writing _writedata.")
-            access.write_scores(self._data._writedata, self._config)
-        if self._data._writeseries is not None:
-            access.write_series(self._data._writeseries, self._config)
-            self._log.info(f"Writing _writeseries.")
+        """Save output flows and reload inputs for any downstream displays."""
+        self._data.save_flows()
+        for ds in self._downstream_displays:
+            ds.load_input_flows()
+            ds.set_index(self.get_index())
+            ds.populate_widgets()
 
+    def load_flows(self):
+        self._data.load_flows()
+        self.populate_widgets()
+        
+    def load_input_flows(self):
+        self._data.load_input_flows()
+
+    def load_output_flows(self):
+        self._data.load_output_flows()
+        
+            
     def create_document(self, document, summary=False):
         """Create a document from the data we've provided."""
         args = {}

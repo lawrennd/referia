@@ -71,7 +71,9 @@ class Data(data.DataObject):
         self._log = Logger(
             name=__name__,
             level=self._config["logging"]["level"],
-            filename=self._config["logging"]["filename"]
+            filename=self._config["logging"]["filename"],
+            directory = directory,
+            
         )
 
         # Data that is input (not for writing to)
@@ -335,6 +337,7 @@ class Data(data.DataObject):
 
     def load_input_flows(self):
         """Load the input flows specified in the _referia.yml file."""
+        self._data = None
         self._allocation()
         if "additional" in self._config:
             self._log.info("Joining allocation and additional information.")
@@ -356,16 +359,24 @@ class Data(data.DataObject):
     def load_output_flows(self):
         """Load the output flows data specified in the _referia.yml file."""
         if "scores" in self._config:
+            self._writedata = None
             self._scores()
         if "series" in self._config:
+            self._writeseries = None
             self._series()
 
     def load_flows(self):
-        self._data = None
-        self._writedata = None
-        self._writeseries = None
         self.load_input_flows()
         self.load_output_flows()
+
+    def save_flows(self):
+        """Save the output flows."""
+        if self._writedata is not None:
+            self._log.info(f"Writing _writedata.")
+            access.write_scores(self._writedata, self._config)
+        if self._writeseries is not None:
+            access.write_series(self._writeseries, self._config)
+            self._log.info(f"Writing _writeseries.")
 
     def load_liquid(self):
         """Load the liquid environment."""

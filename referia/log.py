@@ -1,12 +1,13 @@
+import os
 import logging
 
 class Logger():
-    def __init__(self, name=None, level=20, filename="referia.log"):
+    def __init__(self, name=None, level=20, filename="referia.log", directory="."):
         self.level = level
         self.filename = filename
         self.name = name
         format='%(levelname)s:%(name)s:%(asctime)s:%(message)s'
-        logging.basicConfig(level=level, filename=filename, format=format)
+        logging.basicConfig(level=level, filename=os.path.join(directory,filename), format=format)
         self.logger = logging.getLogger(name)
 
     def debug(self, message):

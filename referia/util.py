@@ -1,5 +1,7 @@
 from datetime import datetime
 
+import re
+
 from pandas.api.types import is_bool_dtype, is_integer_dtype, is_float_dtype, is_string_dtype
 
 import pandas as pd
@@ -82,6 +84,10 @@ def remove_nan(dictionary):
 
 def notempty(val):
     return pd.notna(val) and val!=""
+
+def to_valid_var(varStr):
+    """Replace invalid characters with underscore"""
+    return re.sub('\W|^(?=\d)','_', varStr.lower())
 
 def to_camel_case(text):
     """Remove non alpha-numeric characters and camelize capitalisation"""
