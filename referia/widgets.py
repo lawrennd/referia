@@ -8,7 +8,7 @@ import ipywidgets as ipyw
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 
-from .util import notempty, markdown2html, yyyymmddToDatetime, filename_to_binary
+from .util import notempty, markdown2html, html2markdown, yyyymmddToDatetime, datetimeToYyyymmdd, filename_to_binary
 from . import display
 
 
@@ -21,6 +21,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "FloatSlider",
@@ -28,6 +29,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "Checkbox",
@@ -35,6 +37,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : bool,
+        "reversion" : None,
     },
     {
         "name" : "Flag",
@@ -42,6 +45,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : bool,
+        "reversion" : None,
     },
     {
         "name" : "PngImageFile",
@@ -51,6 +55,7 @@ list_stateful_widgets = [
         },
         "docstr": None,
         "conversion" : filename_to_binary,
+        "reversion" : None,
     },
     {
         "name" : "Text",
@@ -58,6 +63,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "Textarea",
@@ -65,6 +71,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "BoundedFloatText",
@@ -72,6 +79,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "Combobox",
@@ -79,6 +87,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "Dropdown",
@@ -93,6 +102,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "Layout",
@@ -100,6 +110,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "HTML",
@@ -107,6 +118,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "RadioButtons",
@@ -114,6 +126,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },            
     {
         "name" : "Select",
@@ -121,6 +134,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },            
     {
         "name" : "SelectMultiple",
@@ -128,6 +142,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },            
     {
         "name" : "HTMLMath",
@@ -135,6 +150,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : None,
+        "reversion" : None,
     },
     {
         "name" : "Markdown",
@@ -142,6 +158,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : markdown2html,
+        "reversion" : html2markdown,
     },
     {
         "name" : "DatePicker",
@@ -149,6 +166,7 @@ list_stateful_widgets = [
         "default_args" : {},
         "docstr" : None,
         "conversion" : yyyymmddToDatetime,
+        "reversion" : None, #datetimeToYyyymmdd not used as conversion is only to tidy up
     },
 ]
 
@@ -207,12 +225,16 @@ class ReferiaWidget():
 class ReferiaStatefulWidget(ReferiaWidget):
     def __init__(self, **args):
         self._conversion = None
+        self._reversion = None
         self._viewer = {}
         self._column_name = None
         self._field_name = None
         if "conversion" in args:
             self._conversion = args["conversion"]
             del args["conversion"]
+        if "reversion" in args:
+            self._reversion = args["reversion"]
+            del args["reversion"]
         if "display" in args:
             self._viewer["display"] = args["display"]
             del args["display"]
@@ -264,7 +286,10 @@ class ReferiaStatefulWidget(ReferiaWidget):
     
     def get_value(self):
         """Get the value of the widget."""
-        return self._ipywidget.value
+        if self._reversion is None:
+            return self._ipywidget.value
+        else:
+            return self._reversion(self._ipywidget.value)
 
     def get_description(self):
         """Get the value of the widget."""
@@ -297,9 +322,10 @@ class ReferiaStatefulWidget(ReferiaWidget):
     
 class FieldWidget(ReferiaStatefulWidget):
     """Widget for editing field values in parent data."""
-    def __init__(self, function=None, conversion=None, **args):
+    def __init__(self, function=None, conversion=None, reversion=None, **args):
         args["function"] = function
         args["conversion"] = conversion
+        args["reversion"] = reversion
         super().__init__(**args)
         
     def on_value_change(self, change):
@@ -364,6 +390,7 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
                 "function": item["function"],
                 "result_function": item["result_function"],
                 "conversion": item["conversion"],
+                "reversion": item["reversion"],
                 }
             del item["function"]
             del item["result_function"]
@@ -461,6 +488,7 @@ class IndexSubIndexSelectorSelect(FullSelector):
                 "function": ipyw.Dropdown,
                 "result_function" : parent.set_index,
                 "conversion": None,
+                "reversion": None,
             },
             "selector_select":  {
                 "function": ipyw.Dropdown,
@@ -469,6 +497,7 @@ class IndexSubIndexSelectorSelect(FullSelector):
                 "result_function": parent.set_selector,
                 "display_when_function": parent.get_select_selector,
                 "conversion": None,
+                "reversion": None,
             },
             "subindex_select": {
                 "function" : ipyw.Dropdown,
@@ -477,6 +506,7 @@ class IndexSubIndexSelectorSelect(FullSelector):
                 "result_function" : parent.set_subindex,
                 "display_when_function": parent.get_select_subindex,
                 "conversion": None,
+                "reversion": None,
             },
             "select_subindex_checkbox": {
                 "function" : ipyw.Checkbox,
@@ -484,6 +514,7 @@ class IndexSubIndexSelectorSelect(FullSelector):
                 "result_function": parent.set_select_subindex,
                 "conversion": bool,
                 "description": "Select Subindex",
+                "reversion": None,
             },
             "select_selector_checkbox": {
                 "function" : ipyw.Checkbox,
@@ -491,6 +522,7 @@ class IndexSubIndexSelectorSelect(FullSelector):
                 "result_function": parent.set_select_selector,
                 "conversion": bool,
                 "description": "Select Selector",
+                "reversion": None,
             }
         }
         stateless_args = {
@@ -570,7 +602,7 @@ def gwu_(key, item, obj, docstr=None):
         on_other_widgets_change.__docstr__ = docstr
     return on_other_widgets_change
 
-def gwf_(name, function, conversion=None, default_args={}, docstr=None):
+def gwf_(name, function, conversion=None, reversion=None, default_args={}, docstr=None):
     """This function wraps the widget function and calls it with any additional default arguments as specified."""
     def widget_function(**args):
         all_args = default_args.copy()
@@ -578,6 +610,7 @@ def gwf_(name, function, conversion=None, default_args={}, docstr=None):
         return FieldWidget(
             function=function,
             conversion=conversion,
+            reversion=reversion,
             **all_args,
         )
     widget_function.__name__ = name

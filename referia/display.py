@@ -123,6 +123,7 @@ class Scorer:
         self._column_names_dict = {}
         # Store the map between valid python varliable names and their boxed widgets.
         self._widget_dict = {}
+        self._view_list = []
         self._selector_widget = None
         self._downstream_displays = []
         self._default_field_vals = pd.Series(dtype=object)
@@ -152,8 +153,10 @@ class Scorer:
 
         # Process the different scorers in from the _referia.yml file
         if "scored" in self._config:
-            _progress_label = Markdown(description=" ", field_name="_progress_label")
+            label = "_progress_label"
+            _progress_label = Markdown(description=" ", field_name=label)
             self.add_widgets(_progress_label=_progress_label)
+            self.add_views(label)
 
         if "viewer" in self._config:
             # TK need to add in viewer arguments for display etc here.
@@ -171,6 +174,7 @@ class Scorer:
                     "parent": self,
                 }
                 self.add_widgets(**{label: Markdown(**args)})
+                self.add_views(label)
 
         if "scorer" in self._config:
             for score in self._config["scorer"]:
@@ -216,6 +220,10 @@ class Scorer:
 
     def add_widgets(self, **kwargs):
         self._widget_dict = {**self._widget_dict, **kwargs}
+
+    def add_views(self, label):
+        """Maintain a list of widgets that stem from views"""
+        self._view_list.append(label)
 
     def add_downstream_display(self, display):
         """Add a display that is downstream of this one to be updated"""
@@ -630,17 +638,18 @@ class Scorer:
                     string += "\n\n"
                 return string
             elif template["use"] == "scorer":
-                return self.widgets_to_value()
+                return self.widgets_to_value(skip=self._view_list)
         else:
             return self._data.view_to_value(template)
         
-    def widgets_to_value(self):
+    def widgets_to_value(self,skip=[]):
         """Convert the widget outputs into text."""
         value = ""
         for key, widget in self.widgets().items():
-            value += widget.to_markdown()
-            if value != "":
-                value+= "\n\n"
+            if key not in skip:
+                value += widget.to_markdown()
+                if value != "":
+                    value+= "\n\n"
         return value
 
     def view_scorer(self):

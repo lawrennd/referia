@@ -34,6 +34,7 @@ REQUIRED = [
     "python-liquid",
     "matplotlib",
     "markdown",
+    "markdownify",
     "unidecode",
     "python-frontmatter",
     "google-api-python-client", # for loading from google spreadsheets

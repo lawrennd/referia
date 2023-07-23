@@ -34,7 +34,6 @@ def nodes(user_file="_referia.yml", directory="."):
     
 
 def load_user_config(user_file="_referia.yml", directory=".", append=[], ignore=[]):
-    #log.info(f"Loading in configuration from \"{directory}\"")
     filename = os.path.join(os.path.expandvars(directory), user_file)
     conf = {}
     if not os.path.exists(filename):

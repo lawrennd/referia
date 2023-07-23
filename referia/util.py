@@ -6,6 +6,7 @@ from pandas.api.types import is_bool_dtype, is_integer_dtype, is_float_dtype, is
 
 import pandas as pd
 import markdown
+import markdownify
 import os
 
 """Utility functions for helping, e.g. to create the relevant yaml files quickly."""
@@ -14,12 +15,16 @@ def filename_to_binary(filename):
     """Convert a filename to a binary by loading it"""
     return open(filename, 'rb').read()
 
-def yyyymmddToDatetime(date):
+def yyyymmddToDatetime(string):
     """Convert from YYYY-MM-DD string to a datetime.datetime object."""
-    if type(date) is str: 
-        return datetime.strptime(date, "%Y-%m-%d")
+    if type(string) is str: 
+        return datetime.strptime(string, "%Y-%m-%d")
     else:
         return date
+
+def datetimeToYyyymmdd(date):
+    """Convert from YYYY-MM-DD string to a datetime.datetime object."""
+    return datetime.strftime(date, "%Y-%m-%d")
 
 def add_one_to_max(values=None):
 
@@ -33,6 +38,9 @@ def add_one_to_max(values=None):
 
 def markdown2html(text):
     return markdown.markdown(text)
+
+def html2markdown(text, **args):
+    return markdownify.markdownify(text, **args)
 
 def extract_full_filename(details):
     """Return the filename from the details of directory and filename"""
