@@ -31,6 +31,7 @@ REQUIRED = [
     "pandas",
     "numpy",
     "jupyter",
+    "nltk", 
     "python-liquid",
     "matplotlib",
     "markdown",

@@ -10,6 +10,8 @@ import datetime
 from liquid.filter import string_filter
 import urllib.parse
 
+import nltk
+
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .log import Logger
@@ -156,10 +158,39 @@ class Data(data.DataObject):
                 },
                 "docstr" : "Return today's date as a string.",
             },
+            {
+                "name" : "word_count",
+                "function" : lambda text: len(nltk.word_tokenize(text)),
+                "default_args": {
+                },
+                "docstr" : "Return word count for a given text.",
+            },
+            {
+                "name" : "paragraph_split",
+                "function" : lambda x, sep: x.split(sep=sep),
+                "default_args": {
+                    "sep": "\n\n",
+                },
+                "docstr" : "Return a list from a text split into paragraphs.",
+            },
+            {
+                "name" : "list_lengths",
+                "function" : lambda entries: [len(entry) for entry in entries],
+                "default_args": {
+                },
+                "docstr" : "Return the a list of lengths for each item in a list.",
+            },
+            {
+                "name" : "map",
+                "function" : lambda entries, function: map(function, entries),
+                "default_args": {
+                },
+                "docstr" : "Run map on a list for a given function",
+            },
         ]
 
 
-    def gca_(self, field, function, args={}, row_args={}, subseries_args={}, column_args={}):
+    def gca_(self, field, function, args={}, row_args={}, function_args={}, subseries_args={}, column_args={}):
         """Args generator for compute functions."""
 
         found_function = False
@@ -173,6 +204,7 @@ class Data(data.DataObject):
             "subseries_args" : subseries_args,
             "column_args" : column_args,
             "row_args" : row_args,
+            "function_args" : function_args,
             "args" : args,
             "default_args" : list_function["default_args"],
         }
@@ -189,11 +221,13 @@ class Data(data.DataObject):
         if not found_function:
             raise ValueError("Function \"{function}\" not found in list_functions.")
 
-        def compute_function(args={}, subseries_args={}, column_args={}, row_args={}, default_args={}):
-            """Compute a function using arguments found in subseries (column of sub-series specified by value in dictionary), or columns (full column specified by value in dictionary) or the same row (value from row specified value from dictionary)."""
+        def compute_function(args={}, subseries_args={}, column_args={}, row_args={}, function_args = {}, default_args={}):
+            """Compute a function using arguments found in subseries (column of sub-series specified by value in dictionary), or columns (full column specified by value in dictionary) or the same row (value from row as specified in the dictionary)."""
 
             kwargs = default_args.copy()
             kwargs.update(args)
+            for key, value in function_args.items():
+                kwargs[key] = self.gcf_(value)
             for key, value in column_args.items():
                 self.set_column(value)
                 if key in kwargs:
@@ -205,11 +239,12 @@ class Data(data.DataObject):
                     self._log.warning(f"No key \"{key}\" from subseries_args already found in kwargs.")   
                 kwargs[key] = self.get_subseries_values()
             for key, value in row_args.items():
+                col = self.get_column()
                 self.set_column(value)
                 if key in kwargs:
                     self._log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
-
                 kwargs[key] = self.get_value()
+                self.set_column(col)
             # kwargs.update(remove_nan(self.mapping(args)))
 
             return list_function["function"](**kwargs)
@@ -592,7 +627,7 @@ class Data(data.DataObject):
         subindex = self.get_subindex()
         # If trying to set a numeric valued column's entry to a string, set the type of column to object.
         if column in self._data.columns:
-            self._log.warning(f"Warning attempting to write to {column} in self._data.")
+            raise KeyError(f"Attempting to write to column \"{column}\" in self._data (which is read only).")
 
         if self._writedata is not None and column in self._writedata.columns:
             self._update_type(self._writedata, column, value)
@@ -1096,9 +1131,11 @@ class Data(data.DataObject):
         """Extract a series from data frame field and regular expression."""
         series = pd.Series(index=df.index, dtype="object")
         for index in series.index:
-            try:
+            if source in df.columns:
                 sourcetext = df.at[index, source]
-            except KeyError as err:
+            elif df.index.name == source:
+                sourcetext = index
+            else:
                 raise KeyError(f"Could not find the source field, \"{err}\", listed in _referia.yml under name: \"{name}\" in the DataFrame.")
             match = re.match(
                 regexp,
