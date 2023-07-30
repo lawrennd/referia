@@ -18,7 +18,7 @@ from ipywidgets import jslink, jsdlink, Layout
 
 from .log import Logger
 from .util import remove_nan
-from .widgets import IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture
+from .widgets import IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton
 
 from . import config
 from . import access
@@ -686,9 +686,6 @@ class Scorer:
             ds.set_index(self.get_index())
             ds.populate_widgets()
 
-    def load_flows(self):
-        self._data.load_flows()
-        self.populate_widgets()
         
     def load_input_flows(self):
         self._data.load_input_flows()
@@ -751,12 +748,16 @@ class Scorer:
                     args["entries"].append(val)
         self._system.create_summary(details, **args)
 
+    def compute(self, compute):
+        """Perform a computation as specified in the associated details."""
+        self._data.compute(compute)
+        
     def value_updated(self):
         """If a value in a row has been updated, modify other values"""
 
         # If index has changed, run computes.
         for compute in self._postcompute:
-            assess.run_compute(compute)
+            self.run_compute(compute)
 
         # Need to determine if these should update series or data.
         # Update timestamp fields.

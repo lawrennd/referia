@@ -214,7 +214,7 @@ def remove_empty(row_dict):
     """Remove any empty fields in the dictionary to tidy up saved files."""
     delete_keys = []
     for key, item in row_dict.items():
-        if pd.isnull(item):
+        if type(item) is not list and pd.isna(item):
             delete_keys.append(key)
 
     for key in delete_keys:

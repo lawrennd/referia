@@ -74,6 +74,14 @@ list_stateful_widgets = [
         "reversion" : None,
     },
     {
+        "name" : "IntText",
+        "function" : ipyw.IntText,
+        "default_args" : {},
+        "docstr" : None,
+        "conversion" : None,
+        "reversion" : None,
+    },
+    {
         "name" : "BoundedFloatText",
         "function" : ipyw.BoundedFloatText,
         "default_args" : {},
@@ -722,6 +730,26 @@ class ReloadButton(ReferiaWidget):
     def on_click(self, b):
         self._parent.load_flows(reload=True)
 
+class PopulateButton(ReferiaWidget):
+    def __init__(self, **args):
+        if "target" in args:
+            args["description"] = "Populate " + args["target"]
+        else:
+            args["description"] = "Populate"
+        if type(args["compute"]) is list:
+            self._compute = args["compute"]
+        else:
+            self._compute = [args["compute"]]
+            
+        super().__init__(**args)
+
+    def on_click(self, b):
+        for compute in self._compute:
+            compute["refresh"] = True
+            self._parent.compute(self._parent._data._compute_prep(compute))
+        self._parent.populate_widgets()
+
+        
     
 populate_widgets(list_stateful_widgets)
 

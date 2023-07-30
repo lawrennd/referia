@@ -10,12 +10,12 @@ import datetime
 from liquid.filter import string_filter
 import urllib.parse
 
-import nltk
-
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .log import Logger
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max
+
+from .textutil import word_count, paragraph_count, paragraph_split, list_lengths, named_entities
 
 from . import config
 from . import access
@@ -102,17 +102,23 @@ class Data(data.DataObject):
                 computes = [self._config["compute"]]
 
             for compute in computes:
-                self._computes.append({
-                    "function": self.gcf_(function=compute["function"]),
-                    "args" : self.gca_(**compute),
-                    "field" : compute["field"],
-                    "refresh" : "refresh" in compute and compute["refresh"],
-                })
+                self._computes.append(
+                    self._compute_prep(compute)
+                )
 
         self.load_liquid()
         self.add_liquid_filters()
         self.load_flows()
 
+    def _compute_prep(self, compute):
+        compute_prep = {
+            "function": self.gcf_(function=compute["function"]),
+            "args" : self.gca_(**compute),
+            "field" : compute["field"],
+            "refresh" : "refresh" in compute and compute["refresh"],
+        }
+        return compute_prep
+            
     def _compute_functions_list(self):
         return  [
             {
@@ -159,15 +165,29 @@ class Data(data.DataObject):
                 "docstr" : "Return today's date as a string.",
             },
             {
+                "name" : "named_entities",
+                "function" : named_entities,
+                "default_args": {
+                },
+                "docstr" : "Return named entities from a given text.",
+            },
+            {
                 "name" : "word_count",
-                "function" : lambda text: len(nltk.word_tokenize(text)),
+                "function" : word_count,
                 "default_args": {
                 },
                 "docstr" : "Return word count for a given text.",
             },
             {
+                "name" : "paragraph_count",
+                "function" : paragraph_count,
+                "default_args": {
+                },
+                "docstr" : "Return word count for each paragraph in a list.",
+            },
+            {
                 "name" : "paragraph_split",
-                "function" : lambda x, sep: x.split(sep=sep),
+                "function" : paragraph_split,
                 "default_args": {
                     "sep": "\n\n",
                 },
@@ -175,14 +195,14 @@ class Data(data.DataObject):
             },
             {
                 "name" : "list_lengths",
-                "function" : lambda entries: [len(entry) for entry in entries],
+                "function" : list_lengths,
                 "default_args": {
                 },
                 "docstr" : "Return the a list of lengths for each item in a list.",
             },
             {
                 "name" : "map",
-                "function" : lambda entries, function: map(function, entries),
+                "function" : lambda entries, function: list(map(function, entries)),
                 "default_args": {
                 },
                 "docstr" : "Run map on a list for a given function",
@@ -190,7 +210,7 @@ class Data(data.DataObject):
         ]
 
 
-    def gca_(self, field, function, args={}, row_args={}, function_args={}, subseries_args={}, column_args={}):
+    def gca_(self, field, function, refresh=False, args={}, row_args={}, function_args={}, subseries_args={}, column_args={}):
         """Args generator for compute functions."""
 
         found_function = False
@@ -228,23 +248,26 @@ class Data(data.DataObject):
             kwargs.update(args)
             for key, value in function_args.items():
                 kwargs[key] = self.gcf_(value)
-            for key, value in column_args.items():
-                self.set_column(value)
+            for key, column in column_args.items():
+                orig_col = self.get_column()
+                self.set_column(column)
                 if key in kwargs:
                     self._log.warning(f"No key \"{key}\" already column_args found in kwargs.")
                 kwargs[key] = self.get_column_values()
-            for key, value in subseries_args.items():
-                self.set_column(value)
+                self.set_column(orig_col)
+                
+            for key, column in subseries_args.items():
+                orig_col = self.get_column()
+                self.set_column(column)
                 if key in kwargs:
                     self._log.warning(f"No key \"{key}\" from subseries_args already found in kwargs.")   
                 kwargs[key] = self.get_subseries_values()
-            for key, value in row_args.items():
-                col = self.get_column()
-                self.set_column(value)
+                self.set_column(orig_col)
+                
+            for key, column in row_args.items():
                 if key in kwargs:
                     self._log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
-                kwargs[key] = self.get_value()
-                self.set_column(col)
+                kwargs[key] = self.get_value_column(column)
             # kwargs.update(remove_nan(self.mapping(args)))
 
             return list_function["function"](**kwargs)
@@ -466,22 +489,30 @@ class Data(data.DataObject):
             else:
                 self.add_series_row(self._index)
 
+    def compute(self, compute, df=None, refresh=True):
+        if df is None:
+            val = self.get_value()
+        else:
+            val = df.at[index, compute["field"]]
+        if refresh or val is None:
+            new_val = compute["function"](**compute["args"])
+        else:
+            return
+        if df is None:
+            self.set_value_column(new_val, compute["field"])
+        else:
+            if compute["field"] in df.columns:
+                for index in df.index:
+                    df.at[index, compute["field"]] = compute["function"](**compute["args"])
+  
     def run_compute(self, df=None):
         """Run any computation elements on the data frame."""
         for compute in self._computes:
-            # Run compute
-            if df is None:
-                for compute in self._computes:
-                    self.set_column(compute["field"])
-                    if self.get_column() is not None: # check that it set column
-                        val = self.get_value()
-                        if pd.isna(val) or compute["refresh"]:
-                            self.set_value(compute["function"](**compute["args"]))
+            if compute["refresh"]:
+                self.compute(compute, refresh=True)
             else:
-                if compute["field"] in df.columns:
-                    for index in df.index:
-                        if pd.isna(df.at[index, compute["field"]]) or compute["refresh"]:
-                            df.at[index, compute["field"]] = compute["function"](**compute["args"])
+                self.compute(compute, refresh=False)
+
 
 
     def set_subindex(self, subindex):
@@ -608,14 +639,21 @@ class Data(data.DataObject):
         self._update_type(self._writeseries, column, value)
 
     def set_value_column(self, value, column):
-        """Set a value to the write data frame"""
+        """Set a value to a column in the write data frame"""
+        orig_col = self.get_column()
         self.set_column(column)
         self.set_value(value)
+        self.set_column(orig_col)
 
     def get_value_column(self, column):
-        """Get a value from the data frame(s)"""
+        """Get a value from a column in the data frame(s)"""
+        orig_col = self.get_column()
         self.set_column(column)
-        return self.get_value()
+        value = self.get_value()
+        self.set_column(orig_col)
+        return value
+    
+    
 
     def set_value(self, value):
         """Set the value of the current cell under focus."""
