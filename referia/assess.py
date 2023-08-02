@@ -15,7 +15,7 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 from .log import Logger
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max
 
-from .textutil import word_count, paragraph_count, paragraph_split, list_lengths, named_entities
+from .textutil import word_count, text_summarizer, paragraph_count, paragraph_split, list_lengths, named_entities
 
 from . import config
 from . import access
@@ -177,6 +177,13 @@ class Data(data.DataObject):
                 "default_args": {
                 },
                 "docstr" : "Return word count for a given text.",
+            },
+            {
+                "name" : "text_summarizer",
+                "function" : text_summarizer,
+                "default_args": {
+                },
+                "docstr" : "Return a summary of given text.",
             },
             {
                 "name" : "paragraph_count",
