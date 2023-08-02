@@ -16,6 +16,8 @@ from .log import Logger
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max
 
 from .textutil import word_count, text_summarizer, paragraph_count, paragraph_split, list_lengths, named_entities
+from .sysutil import most_recent_screen_shot
+from .plotutil import bar_plot
 
 from . import config
 from . import access
@@ -177,6 +179,13 @@ class Data(data.DataObject):
                 "default_args": {
                 },
                 "docstr" : "Return word count for a given text.",
+            },
+            {
+                "name" : "most_recent_screen_shot",
+                "function" : most_recent_screen_shot,
+                "default_args": {
+                },
+                "docstr" : "Most recent screenshot's filename.",
             },
             {
                 "name" : "text_summarizer",
