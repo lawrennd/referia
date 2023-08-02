@@ -1,6 +1,5 @@
 import nltk
 import spacy
-from matplotlib import pyplot as plt
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -27,7 +26,5 @@ def named_entities(text, ent_type="PERSON"):
 def paragraph_count(paragraphs):
     return [word_count(paragraph) for paragraph in paragraphs]
 
-def bar_plot(values):
-    pass
 
     
