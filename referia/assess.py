@@ -938,6 +938,9 @@ class Data(data.DataObject):
             self._log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
     def update_name_column_map(self, name, column):
+        if column in self._column_name_map and self._column_name_map[column] != name:
+            original_name = self._column_name_map[column]
+            raise ValueError(f"Column \"{column}\" already exists in the name-column map and there's an attempt to update its value to \"{name}\" when it's original value was \"{original_name}\" and that would lead to unexpected behaviours. Try looking to see if you're setting column values to different names across different files and/or file loaders.")
         self._name_column_map[name] = column
         self._column_name_map[column] = name
         
