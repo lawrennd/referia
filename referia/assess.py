@@ -15,15 +15,22 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 from .log import Logger
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max
 
-from .textutil import word_count, text_summarizer, paragraph_count, paragraph_split, list_lengths, named_entities
+from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split
 from .sysutil import most_recent_screen_shot
-from .plotutil import bar_plot
+from .plotutil import bar_plot, histogram
 
 from . import config
 from . import access
 from . import data
 
+from keyword import iskeyword
 
+def is_valid_variable_name(name):
+    return name.isidentifier() and not iskeyword(name)
+
+# Identity function for testing 
+def identity(input):
+    return input
 
 @string_filter
 def url_escape(string):
@@ -71,7 +78,13 @@ class Data(data.DataObject):
 
         self._directory = directory
         self._config = config.load_config(directory)
-        
+        self._name_column_map = {}
+        self._column_name_map = {}
+        if "mapping" in self._config:
+            for name, column in self._config["mapping"].items():
+                self.update_name_column_map(column=column, name=name)
+            
+            
         self._log = Logger(
             name=__name__,
             level=self._config["logging"]["level"],
@@ -87,6 +100,8 @@ class Data(data.DataObject):
         self._index = None
         # Data for writing outputs to.
         self._writedata = None
+        # Data for caching outputs.
+        self._cache = None
         # Which column is the current focus in the data.
         self._column = None
         # Which subindex is the current focus in the data.
@@ -181,6 +196,20 @@ class Data(data.DataObject):
                 "docstr" : "Return word count for a given text.",
             },
             {
+                "name" : "histogram",
+                "function" : histogram,
+                "default_args": {
+                },
+                "docstr" : "Create a histogram of a vector..",
+            },
+            {
+                "name" : "identity",
+                "function" : identity,
+                "default_args": {
+                },
+                "docstr" : "Identity function for testing.",
+            },
+            {
                 "name" : "most_recent_screen_shot",
                 "function" : most_recent_screen_shot,
                 "default_args": {
@@ -195,19 +224,19 @@ class Data(data.DataObject):
                 "docstr" : "Return a summary of given text.",
             },
             {
-                "name" : "paragraph_count",
-                "function" : paragraph_count,
-                "default_args": {
-                },
-                "docstr" : "Return word count for each paragraph in a list.",
-            },
-            {
                 "name" : "paragraph_split",
                 "function" : paragraph_split,
                 "default_args": {
                     "sep": "\n\n",
                 },
                 "docstr" : "Return a list from a text split into paragraphs.",
+            },
+            {
+                "name" : "sentence_split",
+                "function" : sentence_split,
+                "default_args": {
+                },
+                "docstr" : "Return a list from a text split into sentences.",
             },
             {
                 "name" : "list_lengths",
@@ -226,7 +255,7 @@ class Data(data.DataObject):
         ]
 
 
-    def gca_(self, field, function, refresh=False, args={}, row_args={}, function_args={}, subseries_args={}, column_args={}):
+    def gca_(self, field, function, refresh=False, args={}, row_args={}, view_args={}, function_args={}, subseries_args={}, column_args={}):
         """Args generator for compute functions."""
 
         found_function = False
@@ -240,6 +269,7 @@ class Data(data.DataObject):
             "subseries_args" : subseries_args,
             "column_args" : column_args,
             "row_args" : row_args,
+            "view_args" : view_args,
             "function_args" : function_args,
             "args" : args,
             "default_args" : list_function["default_args"],
@@ -248,16 +278,15 @@ class Data(data.DataObject):
 
     def gcf_(self, function):
         """Function generator for compute functions."""
-
         found_function = False
         for list_function in self._list_functions:
             if list_function["name"] == function:
                 found_function = True
                 break
         if not found_function:
-            raise ValueError("Function \"{function}\" not found in list_functions.")
+            raise ValueError(f"Function \"{function}\" not found in list_functions.")
 
-        def compute_function(args={}, subseries_args={}, column_args={}, row_args={}, function_args = {}, default_args={}):
+        def compute_function(args={}, subseries_args={}, column_args={}, row_args={}, view_args={}, function_args = {}, default_args={}):
             """Compute a function using arguments found in subseries (column of sub-series specified by value in dictionary), or columns (full column specified by value in dictionary) or the same row (value from row as specified in the dictionary)."""
 
             kwargs = default_args.copy()
@@ -278,6 +307,12 @@ class Data(data.DataObject):
                 if key in kwargs:
                     self._log.warning(f"No key \"{key}\" from subseries_args already found in kwargs.")   
                 kwargs[key] = self.get_subseries_values()
+                self.set_column(orig_col)
+
+            ## Arguments based on liquid, or format, or join.
+            for key, view in view_args.items():
+                orig_col = self.get_column()
+                kwargs[key] = self.view_to_value(view)
                 self.set_column(orig_col)
                 
             for key, column in row_args.items():
@@ -310,6 +345,8 @@ class Data(data.DataObject):
             columns += list(self._writedata.columns)
         if self._writeseries is not None:
             columns += list(self._writeseries.columns)
+        if self._cache is not None:
+            columns += list(self._cache.columns)
         # Should perhaps make this unique column list? As in practice it behaves that way.
         return pd.Index(columns)
 
@@ -355,7 +392,7 @@ class Data(data.DataObject):
                 indseries.at[i] = str(ind) + "_" + str(count)
         self._data.index = indseries
 
-    def _allocation(self):
+    def _load_allocation(self):
         """Load in the allocation spread sheet to data frames."""
         # Augment the data with default augmentation as "outer"
         if "allocation" in self._config:
@@ -364,7 +401,7 @@ class Data(data.DataObject):
         else:
             self._log.error(f"No \"allocation\" field in config file.")
             
-    def _additional(self):
+    def _load_additional(self):
         """Load in the allocation spread sheet to data frames."""
         # Augment the data with default augmentation as "inner"
         if "additional" in self._config:
@@ -372,7 +409,7 @@ class Data(data.DataObject):
         else:
             self._log.error(f"No \"additional\" field in config file.")
 
-    def _scores(self):
+    def _load_scores(self):
         """Load in the score data to data frames."""
         df = self._finalize_df(*access.scores(self._config["scores"], self.index))
         if df.index.is_unique:
@@ -382,6 +419,16 @@ class Data(data.DataObject):
             duplicates = ', '.join(strindex[df.index.duplicated()])
             raise ValueError(f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated.")
 
+    def _load_cache(self):
+        """Load in the score data to data frames."""
+        df = self._finalize_df(*access.scores(self._config["cache"], self.index))
+        if df.index.is_unique:
+            self._writedata = df
+        else:
+            strindex = pd.Series([str(ind) for ind in df.index])
+            duplicates = ', '.join(strindex[df.index.duplicated()])
+            raise ValueError(f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated.")
+        
 
     def _series(self):
         """Load in the series data to data frames."""
@@ -412,10 +459,10 @@ class Data(data.DataObject):
     def load_input_flows(self):
         """Load the input flows specified in the _referia.yml file."""
         self._data = None
-        self._allocation()
+        self._load_allocation()
         if "additional" in self._config:
             self._log.info("Joining allocation and additional information.")
-            self._additional()
+            self._load_additional()
 
         # If sorting is requested do it here.
         self.sort_data()
@@ -434,10 +481,13 @@ class Data(data.DataObject):
         """Load the output flows data specified in the _referia.yml file."""
         if "scores" in self._config:
             self._writedata = None
-            self._scores()
+            self._load_scores()
+        if "cache" in self._config:
+            self._cache = None
+            self._load_cache()
         if "series" in self._config:
             self._writeseries = None
-            self._series()
+            self._load_series()
 
     def load_flows(self):
         self.load_input_flows()
@@ -686,6 +736,9 @@ class Data(data.DataObject):
         if self._writedata is not None and column in self._writedata.columns:
             self._update_type(self._writedata, column, value)
             self._writedata.at[index, column] = value
+        elif self._cache is not None and column in self._cache.columns:
+            self._update_type(self._cache, column, value)
+            self._cache.at[index, column] = value
         elif self._writeseries is None or selector is None:
             self.add_column(column)
             self.set_column(column)
@@ -728,8 +781,13 @@ class Data(data.DataObject):
                 return self._writedata[column]
             except KeyError as err:
                 raise KeyError(f"Cannot find column: \"{column}\" in _writedata.") from err
+        elif self._cache is not None and column in self._cache.columns:
+            try:
+                return self._cache[column]
+            except KeyError as err:
+                raise KeyError(f"Cannot find column: \"{column}\" in _cache.") from err
         else:
-            self._log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
+            self._log.warning(f"\"{column}\" not selected in self._cache, self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
 
     def get_subseries_values(self):
@@ -780,6 +838,14 @@ class Data(data.DataObject):
                 return self._writedata.at[index, column]
             except KeyError as err:
                 raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _writedata.") from err
+        elif self._cache is not None and column in self._cache.columns:
+            if index in self._data.index and not index in self._cache.index:
+                # If index isn't created in write data yet, return None.
+                return None
+            try:
+                return self._cache.at[index, column]
+            except KeyError as err:
+                raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _cache.") from err
         elif self._data is not None and column in self._data.columns:
             try:
                 return self._data.at[index, column]
@@ -788,7 +854,7 @@ class Data(data.DataObject):
         elif self._data is not None and column==self._data.index.name:
             return index
         else:
-            self._log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
+            self._log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._cache or in self._data returning \"None\"")
             return None
 
     def add_column(self, column):
@@ -871,14 +937,17 @@ class Data(data.DataObject):
         else:
             self._log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
+    def update_name_column_map(self, name, column):
+        self._name_column_map[name] = column
+        self._column_name_map[column] = name
+        
     def _default_mapping(self):
         """Generate the default mapping from config or from columns"""
         # If a mapping is provided in _referia.yml use it, otherwise generate
-        if "mapping" in self._config:
-            mapping = self._config["mapping"]
-        else:
-            mapping = automapping(self.columns)
-        return mapping
+        #if self._name_column_map is None:
+        #    for name, column in  automapping(self.columns).items():
+        #        self.update_name_column_map(name=name, column=column)
+        return self._name_column_map
 
     def mapping(self, mapping=None, series=None):
         """Generate dictionary of mapping between variable names and column values."""
@@ -1212,6 +1281,18 @@ class Data(data.DataObject):
         if "index" not in details:
             raise ValueError("Missing index field in data frame specification in _referia.yml")
 
+        # If column title is valid variable name, add it to the column name map
+        if "mapping" in details:
+            for name, column in details["mapping"].items():
+                self.update_name_column_map(column=column, name=name)
+                
+        for column in df.columns:
+            if column not in self._column_name_map:
+                if is_valid_variable_name(column):
+                    self.update_name_column_map(column=column, name=column)
+                else:
+                    raise ValueError(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{column}\".")
+
         if "selector" in details:
             field = details["selector"]
             if type(field) is str:
@@ -1229,8 +1310,14 @@ class Data(data.DataObject):
                     elif "source" in field and "regexp" in field:
                         column = self._series_from_regexp_of_field(df, **field)
 
-                    df[field["name"]] = column
-                    self._selector = field["name"]
+                    cname = field["name"]
+                    df[cname] = column
+                    if cname not in self._column_name_map:
+                        if is_valid_variable_name(cname):
+                            self.update_name_column_map(column=cname, name=cname)
+                        else:
+                            raise ValueError(f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\".")
+                    self._selector = cname
                 else:
                     self._log.warning(f"No \"name\" associated with selector entry.")
         
@@ -1246,7 +1333,14 @@ class Data(data.DataObject):
                     column = self._index_from_renderable(df, **field)
                 elif "source" in field and "regexp" in field:
                     column = self._series_from_regexp_of_field(df, **field)
-                df[field["name"]] = column
+
+                cname = field["name"]
+                df[cname] = column
+                if cname not in self._column_name_map:
+                    if is_valid_variable_name(cname):
+                        self.update_name_column_map(column=cname, name=cname)
+                    else:
+                        raise ValueError(f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\".")
                 index_column_name = field["name"]
 
             
@@ -1267,11 +1361,17 @@ class Data(data.DataObject):
                         column = self._series_from_value(df, **field)
                     else:
                         self._log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\", \"liquid\", \"display\", (for renderable fields) in fields.")
-                    df[field["name"]] = column
+                        
+                    cname = field["name"]
+                    df[cname] = column
+                    if cname not in self._column_name_map:
+                        if is_valid_variable_name(cname):
+                            self.update_name_column_map(column=cname, name=cname)
+                        else:
+                            raise ValueError(f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\".")
+                    
                 else:
                     self._log.warning(f"No \"name\" associated with field entry.")
-
-
 
         # If it's a series post-process by creating entries field.
         if "series" in details and details["series"]:
@@ -1328,7 +1428,7 @@ class Data(data.DataObject):
                 
             newdetails["index"] = index_column_name
             return self._finalize_df(newdf, newdetails)
-        
+                    
         return df
 
     def to_score(self):

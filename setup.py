@@ -31,15 +31,17 @@ REQUIRED = [
     "pandas",
     "numpy",
     "jupyter",
-    "nltk",
-    "thinc",
-    "spacy",
     "python-liquid",
     "matplotlib",
     "markdown",
     "markdownify",
     "unidecode",
     "python-frontmatter",
+    "nltk", # For tokenization
+    "thinc",
+    "spacy", # for parsing and tokenization
+    "pillow", # for wordcloud
+    #"wordcloud", # for wordcloud
     "google-api-python-client", # for loading from google spreadsheets
     "google-auth-httplib2",
     "google-auth-oauthlib",

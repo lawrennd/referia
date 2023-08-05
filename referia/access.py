@@ -741,7 +741,7 @@ def data_exists(details):
             return True
         else:
             return False
-    if details["type"] in "gsheet":
+    if details["type"] == "gsheet":
         raise NotImplementedError("Haven't yet implemented check for existence fo particular google sheets.")
 
     if "source" in details:
