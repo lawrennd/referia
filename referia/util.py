@@ -197,3 +197,8 @@ def draft_skills(dtypes, width="800px"):
 
 
         
+def return_longest(lst):
+    return max(lst, key=len)
+
+def return_shortest(lst):
+    return min(lst, key=len)

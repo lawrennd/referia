@@ -13,7 +13,7 @@ import urllib.parse
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .log import Logger
-from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max
+from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max, return_shortest, return_longest
 
 from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split
 from .sysutil import most_recent_screen_shot
@@ -194,6 +194,20 @@ class Data(data.DataObject):
                 "default_args": {
                 },
                 "docstr" : "Return word count for a given text.",
+            },
+            {
+                "name" : "return_longest",
+                "function" : return_longest,
+                "default_args": {
+                },
+                "docstr" : "Return the longest item in a list.",
+            },
+            {
+                "name" : "return_shortest",
+                "function" : return_shortest,
+                "default_args": {
+                },
+                "docstr" : "Return the shortest item in a list.",
             },
             {
                 "name" : "histogram",

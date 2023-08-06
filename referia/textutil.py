@@ -51,6 +51,7 @@ def split_into_sentences(text: str) -> list[str]:
     text = re.sub(" " + alphabets + "[.]"," \\1<prd>",text)
     if "”" in text: text = text.replace(".”","”.")
     if "\"" in text: text = text.replace(".\"","\".")
+    if "\\\"" in text: text = text.replace(".\\\"","\\\".")
     if "!" in text: text = text.replace("!\"","\"!")
     if "?" in text: text = text.replace("?\"","\"?")
     text = text.replace(".",".<stop>")
