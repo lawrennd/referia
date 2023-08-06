@@ -1292,9 +1292,18 @@ class Data(data.DataObject):
         for column in df.columns:
             if column not in self._column_name_map:
                 if is_valid_variable_name(column):
-                    self.update_name_column_map(column=column, name=column)
+                    self.update_name_column_map(name=column, column=column)
                 else:
-                    raise ValueError(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{column}\".")
+                    name = to_camel_case(column)
+                    # Keep variable names as private
+                    if column[0] == "_":
+                        name = "_" + name
+
+                    self._log.warning(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Auto-generating a mapping entry \"{name}\" to provide a valid variable name to use as proxy for \"{column}\".")
+                    if is_valid_variable_name(name):
+                        self.update_name_column_map(name=name, column=column)
+                    else:
+                        raise ValueError(f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\".")
 
         if "selector" in details:
             field = details["selector"]
