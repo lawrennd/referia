@@ -760,18 +760,30 @@ def data_exists(details):
         log.error("Unhandled data source availability type.")
         return False
 
-def scores(details, index=None):
-    """Load in the scoring spread sheet to data frames."""
+def load_or_create_df(details, index):
     if data_exists(details):
         return read_data(details)
     elif index is not None:
-        log.info(f"Creating new DataFrame for write data from index as \"{details}\" is not found.")
-        return finalize_data(pd.DataFrame(index=index, data=index), details)
+        log.info(f"Creating new DataFrame from index as \"{details}\" is not found.")
+        if "columns" in details:
+            df = pd.DataFrame(index=index, columns=[index.name] + details["columns"])
+            df[index.name] = index
+        else:
+            df = pd.DataFrame(index=index, data=index)
+        return finalize_data(df, details)
     else:
         raise FileNotFoundError(
             errno.ENOENT,
             os.strerror(errno.ENOENT), filename
             )
+    
+def cache(details, index=None):
+    """Load in the cache data to a data frame."""
+    return load_or_create_df(details, index)
+    
+def scores(details, index=None):
+    """Load in the score data to data frames."""
+    return load_or_create_df(details, index)
 
 
 def series(details, index=None):
@@ -830,11 +842,16 @@ def convert_datetime_to_str(df):
         write_df[col] = date_series
     return write_df
 
+def write_cache(df, config):
+    """Write the scoring spread sheet to data frames."""
+    write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
+    write_data(write_df, config["cache"])
+
 def write_scores(df, config):
     """Write the scoring spread sheet to data frames."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["scores"])
-
+    
 def write_series(df, config):
     """Load in the series spread sheet to data frames."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    

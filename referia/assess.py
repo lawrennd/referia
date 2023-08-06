@@ -341,12 +341,12 @@ class Data(data.DataObject):
         columns = []
         if self._data is not None:
             columns += list(self._data.columns)
+        if self._cache is not None:
+            columns += list(self._cache.columns)
         if self._writedata is not None:
             columns += list(self._writedata.columns)
         if self._writeseries is not None:
             columns += list(self._writeseries.columns)
-        if self._cache is not None:
-            columns += list(self._cache.columns)
         # Should perhaps make this unique column list? As in practice it behaves that way.
         return pd.Index(columns)
 
@@ -409,6 +409,16 @@ class Data(data.DataObject):
         else:
             self._log.error(f"No \"additional\" field in config file.")
 
+    def _load_cache(self):
+        """Load in any cached data to data frames."""
+        df = self._finalize_df(*access.cache(self._config["cache"], self.index), strict_columns=True)
+        if df.index.is_unique:
+            self._cache = df
+        else:
+            strindex = pd.Series([str(ind) for ind in df.index])
+            duplicates = ', '.join(strindex[df.index.duplicated()])
+            raise ValueError(f"The index for the cache must be unique. Index \"{duplicates}\" is/are duplicated.")
+            
     def _load_scores(self):
         """Load in the score data to data frames."""
         df = self._finalize_df(*access.scores(self._config["scores"], self.index))
@@ -419,18 +429,9 @@ class Data(data.DataObject):
             duplicates = ', '.join(strindex[df.index.duplicated()])
             raise ValueError(f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated.")
 
-    def _load_cache(self):
-        """Load in the score data to data frames."""
-        df = self._finalize_df(*access.scores(self._config["cache"], self.index))
-        if df.index.is_unique:
-            self._writedata = df
-        else:
-            strindex = pd.Series([str(ind) for ind in df.index])
-            duplicates = ', '.join(strindex[df.index.duplicated()])
-            raise ValueError(f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated.")
         
 
-    def _series(self):
+    def _load_series(self):
         """Load in the series data to data frames."""
         if "selector" not in self._config["series"]:
             raise ValueError(f"A series entry must have a \"selector\" column.")
@@ -495,6 +496,9 @@ class Data(data.DataObject):
 
     def save_flows(self):
         """Save the output flows."""
+        if self._cache is not None:
+            self._log.info(f"Writing _cache.")
+            access.write_cache(self._cache, self._config)
         if self._writedata is not None:
             self._log.info(f"Writing _writedata.")
             access.write_scores(self._writedata, self._config)
@@ -768,26 +772,31 @@ class Data(data.DataObject):
                 return self._data[column]
             except KeyError as err:
                 raise KeyError(f"Cannot find column: \"{column}\" in _data.") from err
+        # Double check whether it's the index.
         elif self._data is not None and column==self._data.index.name:
             return self._data.index
+
+        # Return from the cache columns
+        elif self._cache is not None and column in self._cache.columns:
+            try:
+                return self._cache[column]
+            except KeyError as err:
+                raise KeyError(f"Cannot find column: \"{column}\" in _cache.") from err
+        # Return from the series columns
         elif self._writeseries is not None and column in self._writeseries.columns:
             try:
                 return self._writeseries[column]
             except KeyError as err:
                 raise KeyError(f"Cannot find column: \"{column}\" in _writeseries.") from err
 
+        # Return from the write data columns
         elif self._writedata is not None and column in self._writedata.columns:
             try:
                 return self._writedata[column]
             except KeyError as err:
                 raise KeyError(f"Cannot find column: \"{column}\" in _writedata.") from err
-        elif self._cache is not None and column in self._cache.columns:
-            try:
-                return self._cache[column]
-            except KeyError as err:
-                raise KeyError(f"Cannot find column: \"{column}\" in _cache.") from err
         else:
-            self._log.warning(f"\"{column}\" not selected in self._cache, self._writeseries or in self._writedata or in self._data returning \"None\"")
+            self._log.warning(f"\"{column}\" not selected in self._data, self._cache, self._writeseries or in self._writedata returning \"None\"")
             return None
 
     def get_subseries_values(self):
@@ -1276,7 +1285,7 @@ class Data(data.DataObject):
         return series
 
 
-    def _finalize_df(self, df, details):
+    def _finalize_df(self, df, details, strict_columns=False):
         """This function augments the raw data and sets the index of the data frame."""
         """for field in dtypes:
             if dtypes[field] is str_type:
@@ -1284,12 +1293,36 @@ class Data(data.DataObject):
         if "index" not in details:
             raise ValueError("Missing index field in data frame specification in _referia.yml")
 
-        # If column title is valid variable name, add it to the column name map
+        if "columns" in details:
+            # Make sure the listed columns are present.
+            for column in details["columns"]:
+                if column not in df.columns:
+                    df[column] = None
+            if strict_columns or ("strict_columns" in self._config and self._config["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
+                if "columns" not in details:
+                    raise ValueError(f"You can't have strict_columns set to True and not list the columns in the details structure.")
+                if type(details["index"]) is str:
+                    index_column_name = details["index"]
+                elif type(details["index"]) is dict:
+                    if "name" in details["index"]:
+                        index_column_name = details["index"]["name"]
+                    else:
+                        raise ValueError(f"Missing name in index dictionary.")
+                else:
+                    raise ValueError(f"Incorrect form of index.")
+                    
+                for column in df.columns:
+                    if column not in details["columns"] and column!=index_column_name:
+                        raise ValueError(f"DataFrame contains column: \"{column}\" which is not in the columns list of the specification and strict_columns is set to True.")
+                    
+
         if "mapping" in details:
             for name, column in details["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
                 
+
         for column in df.columns:
+            # If column title is valid variable name, add it to the column name map
             if column not in self._column_name_map:
                 if is_valid_variable_name(column):
                     self.update_name_column_map(name=column, column=column)
@@ -1305,6 +1338,8 @@ class Data(data.DataObject):
                     else:
                         raise ValueError(f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\".")
 
+                    
+                
         if "selector" in details:
             field = details["selector"]
             if type(field) is str:
