@@ -777,6 +777,32 @@ def load_or_create_df(details, index):
             os.strerror(errno.ENOENT), filename
             )
     
+def globals(details, index=None):
+    """Load in the globals data to a data frame."""
+    # don't do it in the standard way as we don't want the index to be a column
+    if "index" in details:
+        index_column_name = details["index"]
+    else:
+        index_column_name = "index"
+    if data_exists(details):
+        df, details = read_data(details)
+        df.set_index(index_column_name, inplace=True)
+        return df, details
+    elif index is not None:
+        log.info(f"Creating new globals DataFrame from index as \"{details}\" is not found.")
+        if "columns" in details:
+            df = pd.DataFrame(index=pd.Index(data=index, name=index_column_name), columns=details["columns"])
+        else:
+            raise ValueError(f"Field \"columns\" must be provided in globals.")
+        return finalize_data(df, details)
+    else:
+        raise FileNotFoundError(
+            errno.ENOENT,
+            os.strerror(errno.ENOENT), filename
+            )
+        
+    return load_or_create_df(details, index)
+
 def cache(details, index=None):
     """Load in the cache data to a data frame."""
     return load_or_create_df(details, index)
@@ -842,18 +868,24 @@ def convert_datetime_to_str(df):
         write_df[col] = date_series
     return write_df
 
+
+def write_globals(df, config):
+    """Write the globals to a file."""
+    write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
+    write_data(write_df, config["globals"])
+
 def write_cache(df, config):
-    """Write the scoring spread sheet to data frames."""
+    """Write the cache to a file."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["cache"])
-
+    
 def write_scores(df, config):
-    """Write the scoring spread sheet to data frames."""
+    """Write the scoring data frame to a file."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["scores"])
     
 def write_series(df, config):
-    """Load in the series spread sheet to data frames."""
+    """Load in the series data to a file."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["series"])
 

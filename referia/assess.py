@@ -102,6 +102,10 @@ class Data(data.DataObject):
         self._writedata = None
         # Data for caching outputs.
         self._cache = None
+        # Global constant variables
+        self._global_consts = None
+        # Global variables
+        self._globals = None
         # Which column is the current focus in the data.
         self._column = None
         # Which subindex is the current focus in the data.
@@ -278,7 +282,7 @@ class Data(data.DataObject):
                 found_function = True
                 break
         if not found_function:
-            raise ValueError("Function \"{function}\" not found in list_functions.")
+            raise ValueError(f"Function \"{function}\" not found in list_functions.")
         return {
             "subseries_args" : subseries_args,
             "column_args" : column_args,
@@ -353,8 +357,12 @@ class Data(data.DataObject):
     @property
     def columns(self):
         columns = []
+        if self._global_consts is not None:
+            columns += list(self._global_consts.index)
         if self._data is not None:
             columns += list(self._data.columns)
+        if self._globals is not None:
+            columns += list(self._globals.columns)
         if self._cache is not None:
             columns += list(self._cache.columns)
         if self._writedata is not None:
@@ -423,6 +431,17 @@ class Data(data.DataObject):
         else:
             self._log.error(f"No \"additional\" field in config file.")
 
+    def _load_globals(self):
+        """Load in any global variables to a data series."""
+        if "select" in self._config["globals"]:
+            index_row = self._config["globals"]["select"]
+        else:
+            index_row = "globals"
+            
+        df = self._finalize_df(*access.globals(self._config["globals"], pd.Index([index_row], name="index")), strict_columns=True)
+        self._globals = df
+        self._globals_index = index_row
+
     def _load_cache(self):
         """Load in any cached data to data frames."""
         df = self._finalize_df(*access.cache(self._config["cache"], self.index), strict_columns=True)
@@ -432,7 +451,7 @@ class Data(data.DataObject):
             strindex = pd.Series([str(ind) for ind in df.index])
             duplicates = ', '.join(strindex[df.index.duplicated()])
             raise ValueError(f"The index for the cache must be unique. Index \"{duplicates}\" is/are duplicated.")
-            
+        
     def _load_scores(self):
         """Load in the score data to data frames."""
         df = self._finalize_df(*access.scores(self._config["scores"], self.index))
@@ -481,7 +500,15 @@ class Data(data.DataObject):
 
         # If sorting is requested do it here.
         self.sort_data()
+        self._load_global_consts()
 
+    def _load_global_consts(self):
+        """Load constants from the _referia.yml file."""
+        if "global_consts" in self._config:
+            if type(self._config["global_consts"]) is not dict:
+                raise ValueError("global_consts entry in _referia.yml should be a dictionary containing the values of the global constants.")
+            self._global_consts = pd.Series(self._config["global_consts"])
+        
     def sort_data(self):
         if "sortby" in self._config and "field" in self._config["sortby"] and self._config["sortby"]["field"] in self._data:
             if "ascending" in self._config["sortby"]:
@@ -494,12 +521,15 @@ class Data(data.DataObject):
 
     def load_output_flows(self):
         """Load the output flows data specified in the _referia.yml file."""
-        if "scores" in self._config:
-            self._writedata = None
-            self._load_scores()
+        if "globals" in self._config:
+            self._globals = None
+            self._load_globals()
         if "cache" in self._config:
             self._cache = None
             self._load_cache()
+        if "scores" in self._config:
+            self._writedata = None
+            self._load_scores()
         if "series" in self._config:
             self._writeseries = None
             self._load_series()
@@ -510,6 +540,9 @@ class Data(data.DataObject):
 
     def save_flows(self):
         """Save the output flows."""
+        if self._globals is not None:
+            self._log.info(f"Writing _globals.")
+            access.write_globals(self._globals, self._config)
         if self._cache is not None:
             self._log.info(f"Writing _cache.")
             access.write_cache(self._cache, self._config)
@@ -620,21 +653,28 @@ class Data(data.DataObject):
             self.set_index(self._data.index[0])
         return self._index
 
+    def _strict_columns(self, group):
+        if "strict_columns" in self._config:
+            return self._config["strict_columns"]
+        elif "strict_columns" in self._config[group]:
+            return self._config[group]["strict_columns"]
+        elif group=="cache" or group=="globals":
+            return True
+        else:
+            return False # historic default, should shift this to True.
+
     def set_column(self, column):
         """Set the current column focus."""
-        if column not in self.columns and (self.index is not None and column != self.index.name) or self.index is None:
-            # If column isn't present add it
-            if self._writeseries is not None:
-                self.add_series_column(column)
-            elif self._writedata is not None:
-                self.add_column(column)
-            else: 
-                self._log.warning(f"No write data/series to add column \"{column}\" to.")
+        if column is None:
+            self._log.warning(f"Was asked to set column to None.")
+            return
+        if column not in self.columns and column!=self.index.name:
+            self._log.warning(f"Attempting to add column \"{column}\" as a set request has been given to non existent column.")
+            self.add_column(column)
 
-        if column not in self.columns and (self.index is not None and column != self.index.name) or self.index is None:
-            self._column = None
-        else:
-            self._column = column
+        if column not in self.columns and column != self.index.name:
+            raise ValueError(f"Cannot set column \"{column}\"  as it does not exist.")
+        self._column = column
 
     def get_column(self):
         """Get the current column focus."""
@@ -727,14 +767,16 @@ class Data(data.DataObject):
         orig_col = self.get_column()
         self.set_column(column)
         self.set_value(value)
-        self.set_column(orig_col)
+        if orig_col is not None:
+            self.set_column(orig_col)
 
     def get_value_column(self, column):
         """Get a value from a column in the data frame(s)"""
         orig_col = self.get_column()
         self.set_column(column)
         value = self.get_value()
-        self.set_column(orig_col)
+        if orig_col is not None:
+            self.set_column(orig_col)
         return value
     
     
@@ -744,11 +786,15 @@ class Data(data.DataObject):
         column = self.get_column()
         if column is None:
             raise KeyError(f"Warning attempting to write a value {value} when column is not set.")
+        if self._globals is not None and column in self._globals.index:
+            self._globals.at[self._globals_index, column] = value
+            return
+        
         index = self.get_index()
         selector = self.get_selector()
         subindex = self.get_subindex()
         # If trying to set a numeric valued column's entry to a string, set the type of column to object.
-        if column in self._data.columns:
+        if column in self._data.columns or column in self._global_consts.index:
             raise KeyError(f"Attempting to write to column \"{column}\" in self._data (which is read only).")
 
         if self._writedata is not None and column in self._writedata.columns:
@@ -757,8 +803,10 @@ class Data(data.DataObject):
         elif self._cache is not None and column in self._cache.columns:
             self._update_type(self._cache, column, value)
             self._cache.at[index, column] = value
+        elif self._globals is not None and column in self._globals.columns:
+            self._update_type(self._globals, column, value)
+            self._globals.at[self._globals_index, column] = value
         elif self._writeseries is None or selector is None:
-            self.add_column(column)
             self.set_column(column)
             self.set_value(value)
         elif column in self._writeseries.columns:
@@ -833,10 +881,16 @@ class Data(data.DataObject):
 
     def get_value(self):
         """Return the value of the current cell under focus."""
-        # Ordering here dictates the priority of selection, first series, then writedata, then data.
+        # Ordering here dictates the priority of selection, global constants, then globals, then series, then writedata, then cache then data.
         column = self.get_column()
         if column == None:
             return None
+        if self._global_consts is not None and column in self._global_consts.index:
+            return self._global_consts[column]
+
+        if self._globals is not None and column in self._globals.index:
+            return self._globals.at[self._globals_index, column]
+        
         index = self.get_index()
         if index == None:
             return None
@@ -881,6 +935,8 @@ class Data(data.DataObject):
             return None
 
     def add_column(self, column):
+        if column in self.columns:
+            raise ValueError(f"Was requested to add column \"{column}\" but it already exists in data.")
         if self._writedata is None and self._writeseries is None:
             raise ValueError(f"There is no _writedata or _writeseries loaded to add the column \"{column}\" to.")
 
@@ -893,14 +949,17 @@ class Data(data.DataObject):
             return
         
         if self._writeseries is not None and column not in self._writeseries.columns:
-            self._log.info(f"\"{column}\" not in writeseries columns ... adding.")
-            self._writeseries[column] = None
-            return
+            if not self._strict_columns("series"):
+                self._log.info(f"\"{column}\" not in writeseries columns ... adding.")
+                self._writeseries[column] = None
+                return
         
         if self._writedata is not None and column not in self._writedata.columns:
-            self._log.info(f"\"{column}\" not in write columns ... adding.")
-            self._writedata[column] = None
-            return
+            if not self._strict_columns("scores"):
+                self._log.info(f"\"{column}\" not in write columns ... adding.")
+                self._writedata[column] = None
+                return
+        raise ValueError(f"Cannot add column \"{column}\" to either scores or series due to strict_columns being set and/or series or scores not being present.")
 
     def set_dtype(self, column, dtype):
         """Set a Data._writedata column to the given data type."""
@@ -961,6 +1020,8 @@ class Data(data.DataObject):
             self._log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
     def update_name_column_map(self, name, column):
+        if name=="index":
+            raise ValueError("Look out they are trying to set index!")
         if column in self._column_name_map and self._column_name_map[column] != name:
             original_name = self._column_name_map[column]
             raise ValueError(f"Column \"{column}\" already exists in the name-column map and there's an attempt to update its value to \"{name}\" when it's original value was \"{original_name}\" and that would lead to unexpected behaviours. Try looking to see if you're setting column values to different names across different files and/or file loaders.")
