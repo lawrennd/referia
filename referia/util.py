@@ -19,8 +19,8 @@ def yyyymmddToDatetime(string):
     """Convert from YYYY-MM-DD string to a datetime.datetime object."""
     if type(string) is str: 
         return datetime.strptime(string, "%Y-%m-%d")
-    else:
-        return date
+    elif type(string) is pd.Timestamp:
+        return string.date()
 
 def datetimeToYyyymmdd(date):
     """Convert from YYYY-MM-DD string to a datetime.datetime object."""

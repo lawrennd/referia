@@ -74,6 +74,7 @@ def load_user_config(user_file="_referia.yml", directory=".", append=[], ignore=
     if parent is not None:
         # Place loaded conf under the parent conf.
         additional = []
+        global_consts = []
         for key, item in parent.items():
             if key in inherit["ignore"]:
                 # Ignore this key when inheriting
@@ -105,12 +106,16 @@ def load_user_config(user_file="_referia.yml", directory=".", append=[], ignore=
             if key == "scores" and not writable:
                 additional = [item] + additional
                 continue
-
+            
             if key == "series" and not writable:
                 item["series"] = True # Convert series to be readable only
                 additional = [item] + additional
                 continue
 
+            if key == "globals" and not writable:
+                global_consts = [item] + global_consts
+                continue
+            
             if key not in conf:
                 # Augment the configuration with the parent key.
                 conf[key] = parent[key]
@@ -123,6 +128,15 @@ def load_user_config(user_file="_referia.yml", directory=".", append=[], ignore=
                 conf["additional"] = [conf["additional"]] + additional
         elif len(additional)>0:
             conf["additional"] = additional
+
+        if "global_consts" in conf:
+            if type(conf["global_consts"]) is list:
+                conf["global_consts"] = conf["global_consts"] + global_consts
+            else:
+                conf["global_consts"] = [conf["global_consts"]] + global_consts
+        elif len(global_consts)>0:
+            conf["global_consts"] = global_consts
+            
     return conf
 
 def load_config(directory=".", append=[], ignore=[]):

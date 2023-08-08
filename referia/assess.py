@@ -372,6 +372,38 @@ class Data(data.DataObject):
         # Should perhaps make this unique column list? As in practice it behaves that way.
         return pd.Index(columns)
 
+    def _augment_global_consts(self, configs, suffix=''):
+        """Augment the globals by joining the two series together."""
+        if type(configs) is not list:
+            configs = [configs]
+            for i, conf in enumerate(configs):
+                if "select" in conf:
+                    index_row = conf["select"]
+                else:
+                    index_row = "globals"
+                if "local" in conf:
+                    if type(conf["local"]) is dict:
+                        ds = pd.Series(conf["local"], name=index_row)
+                        for cname in ds.index:
+                            if cname not in self._column_name_map:
+                                if is_valid_variable_name(cname):
+                                    self.update_name_column_map(column=cname, name=cname)
+                    else:
+                        raise ValueError(f"In global_consts a \"local\" specification must contain a dictionary of fields and values.")
+                else:
+                    if "rsuffix" in conf:
+                        rsuffix = conf["rsuffix"]
+                    else:
+                        rsuffix = suffix.format(joinNo=i)
+
+                    df = self._finalize_df(*access.globals(self._config["globals"], pd.Index([index_row], name="index")), strict_columns=True)
+                    ds = df.loc[index_row]
+
+                if self._global_consts is None:
+                    self._global_consts = ds
+                else:
+                    self._global_consts = pd.DataFrame(self._global_consts, columns=[index_row]).T.join(pd.DataFrame(ds, columns=[index_row]).T, rsuffix=rsuffix).loc[index_row]                    
+                    
     def _augment_data(self, configs, how="left", suffix='', concat=False, axis=0):
         """Augment the data by joining or concatenating the new values."""
         if type(configs) is not list:
@@ -505,9 +537,8 @@ class Data(data.DataObject):
     def _load_global_consts(self):
         """Load constants from the _referia.yml file."""
         if "global_consts" in self._config:
-            if type(self._config["global_consts"]) is not dict:
-                raise ValueError("global_consts entry in _referia.yml should be a dictionary containing the values of the global constants.")
-            self._global_consts = pd.Series(self._config["global_consts"])
+            self._augment_global_consts(self._config["global_consts"])
+                    
         
     def sort_data(self):
         if "sortby" in self._config and "field" in self._config["sortby"] and self._config["sortby"]["field"] in self._data:
@@ -794,7 +825,7 @@ class Data(data.DataObject):
         selector = self.get_selector()
         subindex = self.get_subindex()
         # If trying to set a numeric valued column's entry to a string, set the type of column to object.
-        if column in self._data.columns or column in self._global_consts.index:
+        if column in self._data.columns or (self._global_consts is not None and column in self._global_consts.index):
             raise KeyError(f"Attempting to write to column \"{column}\" in self._data (which is read only).")
 
         if self._writedata is not None and column in self._writedata.columns:
@@ -1020,8 +1051,7 @@ class Data(data.DataObject):
             self._log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
     def update_name_column_map(self, name, column):
-        if name=="index":
-            raise ValueError("Look out they are trying to set index!")
+        """Update the map from valid variable names to columns in the data frame. Valid variable names are needed e.g. for Liquid filters."""
         if column in self._column_name_map and self._column_name_map[column] != name:
             original_name = self._column_name_map[column]
             raise ValueError(f"Column \"{column}\" already exists in the name-column map and there's an attempt to update its value to \"{name}\" when it's original value was \"{original_name}\" and that would lead to unexpected behaviours. Try looking to see if you're setting column values to different names across different files and/or file loaders.")
@@ -1034,21 +1064,26 @@ class Data(data.DataObject):
         #if self._name_column_map is None:
         #    for name, column in  automapping(self.columns).items():
         #        self.update_name_column_map(name=name, column=column)
+
         return self._name_column_map
 
     def mapping(self, mapping=None, series=None):
         """Generate dictionary of mapping between variable names and column values."""
+            
         if mapping is None:
-            mapping = self._default_mapping()
+            if series is None: # remove any columns not in self.columns
+                mapping = {name: column for name, column in self._default_mapping().items() if column in self.columns}
+            else: # remove any columns not in provided series
+                mapping = {name: column for name, column in self._default_mapping().items() if column in series.index}
 
         format = {}
-        for key, column in mapping.items():
+        for name, column in mapping.items():
             if series is not None:
                 if column in series:
-                    format[key] = series[column]                    
+                    format[name] = series[column]                    
             else:
                 self.set_column(column)
-                format[key] = self.get_value()
+                format[name] = self.get_value()
 
         return remove_nan(format)
 
