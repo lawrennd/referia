@@ -392,11 +392,11 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
         self._parent = parent
         self._ipywidgets = {}
 
-        # Create widget, set the values and set update changes.
+        # Create the widgets that have state.
         for key, item in stateful_args.items():
             self.add_stateful(key, item)
             
-        # Create the generator functions for when widget is clicked.
+        # Create the widgets that are stateless (such as buttons)
         for key, item in stateless_args.items():
             self.add_stateless(key, item)
 
@@ -569,7 +569,8 @@ def gocf_(key, item, obj, docstr=None):
             if other_key == key:
                 pass
             elif "update" in widget:
-                    widget["update"]()
+                widget["update"]()
+    on_click.__docstr__ = docstr
     return on_click
             
 def gsv_(key, item, obj, docstr=None):
