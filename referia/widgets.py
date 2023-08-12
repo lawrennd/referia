@@ -396,11 +396,6 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
         for key, item in stateful_args.items():
             self.add_stateful(key, item)
             
-        # Create the generator functions for when widgets change.
-        for key, item in self._ipywidgets.items():
-            self._ipywidgets[key]["on_change"] = gwc_(key, item, self)            
-            self._ipywidgets[key]["widget"].observe(self._ipywidgets[key]["on_change"], names="value")
-
         # Create the generator functions for when widget is clicked.
         for key, item in stateless_args.items():
             self.add_stateless(key, item)
@@ -420,7 +415,11 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
         
         self._ipywidgets[key]["widget"] = self._ipywidgets[key]["function"](**kwargs)
         self._ipywidgets[key]["update"] = gwu_(key, kwargs, self)
-            
+
+        # Create the generator functions for when widgets change.
+        self._ipywidgets[key]["on_change"] = gwc_(key, item, self)            
+        self._ipywidgets[key]["widget"].observe(self._ipywidgets[key]["on_change"], names="value")
+        
     def add_stateless(self, key, item):
         """Add a stateless widget to the multiwidget display."""
         self._ipywidgets[key] = {
