@@ -54,7 +54,17 @@ def load_user_config(user_file="_referia.yml", directory=".", append=[], ignore=
             inherit["append"] = [] 
 
         del conf["inherit"]
-        parent = load_user_config(user_file, inherit["directory"])
+        
+        if "directory" not in inherit:
+            raise ValueError(f"Inherit specified in config file {user_file} in directory {directory} but no directory to inherit from is specified.")
+
+        inherit_directory=inherit["directory"]
+        if "filename" in inherit:
+            inherit_user_file = inherit["filename"]
+        else:
+            inherit_user_file = "_referia.yml"
+        parent = load_user_config(user_file=inherit_user_file,
+                                  directory=inherit_directory)
         viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(inherit["directory"], "assessment.ipynb") + '" target="_blank">here</a>.'}
 
         # Add links to parent assessment by placing in viewer.
@@ -139,10 +149,9 @@ def load_user_config(user_file="_referia.yml", directory=".", append=[], ignore=
             
     return conf
 
-def load_config(directory=".", append=[], ignore=[]):
+def load_config(user_file="_referia.yml", directory=".", append=[], ignore=[]):
     default_file = os.path.join(os.path.dirname(__file__), "defaults.yml")
     local_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "machine.yml"))
-    user_file = '_referia.yml'
 
     conf = {}
 
@@ -154,7 +163,10 @@ def load_config(directory=".", append=[], ignore=[]):
         with open(local_file) as file:
             conf.update(yaml.load(file, Loader=yaml.FullLoader))
 
-    conf.update(load_user_config(user_file, directory, append, ignore))
+    conf.update(load_user_config(user_file=user_file,
+                                 directory=directory,
+                                 append=append,
+                                 ignore=ignore))
 
     if conf=={}:
         raise ValueError(
@@ -181,7 +193,7 @@ def load_config(directory=".", append=[], ignore=[]):
         conf["logging"] = {"level": 20, "filename": "referia.log"}
     return conf
 
-config = load_config(".")
+config = load_config(user_file="_referia.yml", directory=".")
 
 conf_dir = None
 file_name = "google_secret.json"

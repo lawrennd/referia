@@ -74,10 +74,10 @@ def render_liquid(data, template, **kwargs):
     return data.liquid_to_value(template, kwargs)
         
 class Data(data.DataObject):
-    def __init__(self, directory="."):
+    def __init__(self, user_file="_referia.yml", directory="."):
 
         self._directory = directory
-        self._config = config.load_config(directory)
+        self._config = config.load_config(user_file=user_file, directory=directory)
         self._name_column_map = {}
         self._column_name_map = {}
         if "mapping" in self._config:
@@ -312,8 +312,9 @@ class Data(data.DataObject):
             for key, value in function_args.items():
                 kwargs[key] = self.gcf_(value)
             for key, column in column_args.items():
-                orig_col = self.get_column()
-                self.set_column(column)
+                if otherdf is None:
+                    orig_col = self.get_column()
+                    self.set_column(column)
                 if key in kwargs:
                     self._log.warning(f"No key \"{key}\" already column_args found in kwargs.")
                 kwargs[key] = self.get_column_values()
@@ -388,6 +389,7 @@ class Data(data.DataObject):
                             if cname not in self._column_name_map:
                                 if is_valid_variable_name(cname):
                                     self.update_name_column_map(column=cname, name=cname)
+                        print(ds)
                     else:
                         raise ValueError(f"In global_consts a \"local\" specification must contain a dictionary of fields and values.")
                 else:
@@ -637,12 +639,13 @@ class Data(data.DataObject):
             else:
                 self.add_series_row(self._index)
 
-    def compute(self, compute, df=None, refresh=True):
+    def compute(self, compute, df=None, index=None, refresh=True):
+        """Run the computation given in compute."""
         if df is None:
             val = self.get_value()
         else:
             val = df.at[index, compute["field"]]
-        if refresh or val is None:
+        if refresh or pd.isna(val):
             new_val = compute["function"](**compute["args"])
         else:
             return
@@ -650,17 +653,17 @@ class Data(data.DataObject):
             self.set_value_column(new_val, compute["field"])
         else:
             if compute["field"] in df.columns:
-                for index in df.index:
-                    df.at[index, compute["field"]] = compute["function"](**compute["args"])
+                df.at[index, compute["field"]] = compute["function"](**compute["args"])
   
-    def run_compute(self, df=None):
+    def run_compute(self, df=None, index=None):
         """Run any computation elements on the data frame."""
+        
         for compute in self._computes:
             if compute["refresh"]:
-                self.compute(compute, refresh=True)
+                self.compute(compute, df, index, refresh=True)
             else:
-                self.compute(compute, refresh=False)
-
+                self.compute(compute, df, index, refresh=False)
+                
 
 
     def set_subindex(self, subindex):
@@ -857,8 +860,6 @@ class Data(data.DataObject):
         column = self.get_column()
         if column == None:
             return None
-        selector = self.get_selector()
-        subindex = self.get_subindex()
         # Prioritise returning from the _data structure first.
         if self._data is not None and column in self._data.columns:
             try:
@@ -898,7 +899,7 @@ class Data(data.DataObject):
         if column == None:
             return None
         index = self.get_index()
-        # Prioritise returning from the _data structure first.
+
         if self._writeseries is not None and column in self._writeseries.columns:
             indexer = self._writeseries.index.isin([index])
             if indexer.sum()>0:
@@ -1006,7 +1007,7 @@ class Data(data.DataObject):
         # Handle the fact that the index is stored as a column also
         if df.index.name in row:
             row[df.index.name] = index
-        self.run_compute(row)
+        self.run_compute(df=row, index=index)
         # was return df.append(row) before append deprecation
         return pd.concat([df, row])
 
@@ -1033,12 +1034,9 @@ class Data(data.DataObject):
 
     def add_series_row(self, index=None):
         """Add a row to the series."""
-
-
         if index is None:
             index = self.get_index()
         self._writeseries = self._append_row(self._writeseries, index)
-        selector = self.get_selector()
         self._log.info(f"\"{index}\" added subseries row in Data._writeseries.")
 
 

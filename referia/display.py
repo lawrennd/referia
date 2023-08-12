@@ -100,7 +100,7 @@ def nodes(chain, index=None):
         oldkey = key
 
 class Scorer:
-    def __init__(self, index=None, data=None, directory=".", viewer_inherit=True):
+    def __init__(self, index=None, data=None, user_file="_referia.yml", directory=".", viewer_inherit=True):
         self._directory = directory
         if viewer_inherit:
             append = ["viewer"]
@@ -109,7 +109,7 @@ class Scorer:
             append = []
             ignore = ["viewer"]
             
-        self._config = config.load_config(directory, append=append, ignore=ignore)
+        self._config = config.load_config(user_file=user_file, directory=directory, append=append, ignore=ignore)
 
         self._log = Logger(
             name=__name__,
@@ -117,7 +117,8 @@ class Scorer:
             filename=self._config["logging"]["filename"],
             directory=directory,
         )
-        self._system = system.Sys(directory)
+        self._system = system.Sys(user_file=user_file,
+                                  directory=directory)
         
         # Store the map between valid python variable names and data column names
         self._column_names_dict = {}

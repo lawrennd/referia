@@ -40,58 +40,59 @@ if OSX:
         def __init__(self):
             self.client = ap.app("Google Chrome")
 
-    if OSX:
-        class Message(object):
+if OSX:
+    class Message(object):
 
-            def __init__(self, parent=None, subject="", body="", to_recip=[], cc_recip=[], bcc_recip=[], show_=False):
+        def __init__(self, parent=None, subject="", body="", to_recip=[], cc_recip=[], bcc_recip=[], show_=False):
 
-                if parent is None: parent = Outlook()
-                client = parent.client
+            if parent is None: parent = Outlook()
+            client = parent.client
 
-                self.msg = client.make(
-                    new=ap.k.outgoing_message,
-                    with_properties={ap.k.subject: subject, ap.k.content: body})
+            self.msg = client.make(
+                new=ap.k.outgoing_message,
+                with_properties={ap.k.subject: subject, ap.k.content: body})
 
-                if len(to_recip)>0:
-                    self.add_recipients(emails=to_recip, type_='to')
-                if len(cc_recip)>0:
-                    self.add_recipients(emails=cc_recip, type_='cc')
-                if len(bcc_recip)>0:
-                    self.add_recipients(emails=bcc_recip, type_='bcc')
-                if show_: self.show()
+            if len(to_recip)>0:
+                self.add_recipients(emails=to_recip, type_='to')
+            if len(cc_recip)>0:
+                self.add_recipients(emails=cc_recip, type_='cc')
+            if len(bcc_recip)>0:
+                self.add_recipients(emails=bcc_recip, type_='bcc')
+            if show_: self.show()
 
-            def show(self):
-                self.msg.open()
-                self.msg.activate()
+        def show(self):
+            self.msg.open()
+            self.msg.activate()
 
-            def add_attachment(self, p):
-                # p is a pl.Path() obj, could also pass string
+        def add_attachment(self, p):
+            # p is a pl.Path() obj, could also pass string
 
-                p = mt.Alias(str(p)) # convert string/path obj to POSIX/mactypes path
+            p = mt.Alias(str(p)) # convert string/path obj to POSIX/mactypes path
 
-                attach = self.msg.make(new=ap.k.attachment, with_properties={ap.k.file: p})
+            attach = self.msg.make(new=ap.k.attachment, with_properties={ap.k.file: p})
 
-            def add_recipients(self, emails, type_='to'):
-                if not isinstance(emails, list): emails = [emails]
-                for email in emails:
-                    self.add_recipient(email=email, type_=type_)
+        def add_recipients(self, emails, type_='to'):
+            if not isinstance(emails, list): emails = [emails]
+            for email in emails:
+                self.add_recipient(email=email, type_=type_)
 
-            def add_recipient(self, email, type_='to'):
-                msg = self.msg
+        def add_recipient(self, email, type_='to'):
+            msg = self.msg
 
-                if type_ == 'to':
-                    recipient = ap.k.to_recipient
-                elif type_ == 'cc':
-                    recipient = ap.k.cc_recipient
+            if type_ == 'to':
+                recipient = ap.k.to_recipient
+            elif type_ == 'cc':
+                recipient = ap.k.cc_recipient
 
-                msg.make(new=recipient,
-                         with_properties={ap.k.email_address: {ap.k.address: email}})
+            msg.make(new=recipient,
+                     with_properties={ap.k.email_address: {ap.k.address: email}})
 
 
 class Sys():
-    def __init__(self, directory="."):
+    def __init__(self, user_file="_referia.yml", directory="."):
         self._directory = directory
-        self._config = config.load_config(directory)
+        self._config = config.load_config(user_file=user_file,
+                                          directory=directory)
 
         self._log = Logger(
             name=__name__,
