@@ -394,19 +394,8 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
 
         # Create widget, set the values and set update changes.
         for key, item in stateful_args.items():
-            self._ipywidgets[key] = {
-                "function": item["function"],
-                "result_function": item["result_function"],
-                "conversion": item["conversion"],
-                "reversion": item["reversion"],
-                }
-            del item["function"]
-            del item["result_function"]
-            self._ipywidgets[key]["set_value"] = gsv_(key, item, self)
+            self.add_stateful(key, item)
             
-            self._ipywidgets[key]["widget"] = self._ipywidgets[key]["function"](**item)
-            self._ipywidgets[key]["update"] = gwu_(key, item, self)
-
         # Create the generator functions for when widgets change.
         for key, item in self._ipywidgets.items():
             self._ipywidgets[key]["on_change"] = gwc_(key, item, self)            
@@ -414,14 +403,7 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
 
         # Create the generator functions for when widget is clicked.
         for key, item in stateless_args.items():
-            self._ipywidgets[key] = {
-                "function": item["function"],
-                "on_click_function": item["on_click_function"],
-            }
-            del item["function"]
-            del item["on_click_function"]
-            self._ipywidgets[key]['widget'] = self._ipywidgets[key]["function"](**item)
-            self._ipywidgets[key]["widget"].on_click(gocf_(key, item, self))
+            self.add_stateless(key, item)
 
     def add_stateful(self, key, item):
         """Add a stateful widget to the multiwidget display."""
