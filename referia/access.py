@@ -761,6 +761,7 @@ def data_exists(details):
         return False
 
 def load_or_create_df(details, index):
+    """Load in a data frame or create it if it doesn't exist yet."""
     if data_exists(details):
         return read_data(details)
     elif index is not None:
@@ -776,7 +777,8 @@ def load_or_create_df(details, index):
             errno.ENOENT,
             os.strerror(errno.ENOENT), filename
             )
-    
+
+
 def globals(details, index=None):
     """Load in the globals data to a data frame."""
     # don't do it in the standard way as we don't want the index to be a column
