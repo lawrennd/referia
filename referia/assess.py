@@ -339,7 +339,6 @@ class Data(data.DataObject):
                     self._log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
                 kwargs[key] = self.get_value_column(column)
             # kwargs.update(remove_nan(self.mapping(args)))
-
             return list_function["function"](**kwargs)
 
         compute_function.__name__ = list_function["name"]
@@ -389,7 +388,6 @@ class Data(data.DataObject):
                             if cname not in self._column_name_map:
                                 if is_valid_variable_name(cname):
                                     self.update_name_column_map(column=cname, name=cname)
-                        print(ds)
                     else:
                         raise ValueError(f"In global_consts a \"local\" specification must contain a dictionary of fields and values.")
                 else:
@@ -641,16 +639,19 @@ class Data(data.DataObject):
 
     def compute(self, compute, df=None, index=None, refresh=True):
         """Run the computation given in compute."""
+        column = compute["field"]
+        if index is None:
+            index = self.get_index()
         if df is None:
-            val = self.get_value()
+            val = self.get_value_column(column)
         else:
-            val = df.at[index, compute["field"]]
+            val = df.at[index, column]
         if refresh or pd.isna(val):
             new_val = compute["function"](**compute["args"])
         else:
             return
         if df is None:
-            self.set_value_column(new_val, compute["field"])
+            self.set_value_column(new_val, column)
         else:
             if compute["field"] in df.columns:
                 df.at[index, compute["field"]] = compute["function"](**compute["args"])
@@ -782,7 +783,8 @@ class Data(data.DataObject):
         if self._selector is None:
             return []
         try:
-            return pd.Index(self.get_subseries()[self._selector].values, name=self._selector)
+            subseries = self.get_subseries()[self._selector]
+            return pd.Index(subseries.values, name=self._selector, dtype=subseries.dtype)
         except KeyError as err:
             raise KeyError(f"Could not find index \"{err}\" in the subseries when using it as a selector.")
 
@@ -1295,24 +1297,24 @@ class Data(data.DataObject):
             orig_subindex = subindices[0]
         def subind_val(ind):
             try:
-                return pd.Index([subindices[ind]])
+                return pd.Index([subindices[ind]], dtype=subindices.dtypegg)
             except IndexError as e:
                 self._log.info(f"Requested invalid index in Data.tally_series()")
-                return pd.Index([subindices[cur_loc]])
+                return pd.Index([subindices[cur_loc]], dtype=subindices.dtype)
 
         def subind_series(ind, starter=True, reverse=False):
             try:
                 if starter:
-                    return pd.Index(subindices[ind:])
+                    return pd.Index(subindices[ind:], dtype=subindices.dtype)
                 else:
-                    return pd.Index(subindices[:ind])
+                    return pd.Index(subindices[:ind], dtype=subindices.dtype)
 
             except IndexError as e:
                 self._log.info(f"Requested invalid index in Data.tally_series()")
                 if starter:
-                    return pd.Index(subindices[cur_loc:])
+                    return pd.Index(subindices[cur_loc:], dtype=subindices.dtype)
                 else:
-                    return pd.Index(subindices[:cur_loc])
+                    return pd.Index(subindices[:cur_loc], dtype=subindices.dtype)
 
         if "reverse" not in tally or not tally["reverse"]:
             reverse=False

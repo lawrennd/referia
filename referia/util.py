@@ -27,7 +27,7 @@ def datetimeToYyyymmdd(date):
     return datetime.strftime(date, "%Y-%m-%d")
 
 def add_one_to_max(values=None):
-
+    """Add one to the maximum value of a column."""
     if values is None:
         return 1
     mv=values.max()
