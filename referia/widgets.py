@@ -395,6 +395,10 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
         # Create the widgets that have state.
         for key, item in stateful_args.items():
             self.add_stateful(key, item)
+
+        # Create the widgets that have state.
+        for key, item in stateful_args.items():
+            self.update_side_effects(key, item)
             
         # Create the widgets that are stateless (such as buttons)
         for key, item in stateless_args.items():
@@ -407,6 +411,7 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
             "result_function": item["result_function"],
             "conversion": item["conversion"],
             "reversion": item["reversion"],
+            "stateful": True,
         }
         kwargs = item.copy()
         del kwargs["function"]
@@ -416,6 +421,7 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
         self._ipywidgets[key]["widget"] = self._ipywidgets[key]["function"](**kwargs)
         self._ipywidgets[key]["update"] = gwu_(key, kwargs, self)
 
+    def update_side_effects(self, key, item):
         # Create the generator functions for when widgets change.
         self._ipywidgets[key]["on_change"] = gwc_(key, item, self)            
         self._ipywidgets[key]["widget"].observe(self._ipywidgets[key]["on_change"], names="value")
@@ -425,6 +431,7 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
         self._ipywidgets[key] = {
             "function": item["function"],
             "on_click_function": item["on_click_function"],
+            "stateful": False,
         }
         kwargs = item.copy()
         del kwargs["function"]
