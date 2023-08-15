@@ -101,7 +101,7 @@ def nodes(chain, index=None):
         oldkey = key
 
 class WidgetCluster():
-    def __init__(self, name, viewer=False, dynamic=False, **kwargs):
+    def __init__(self, name, viewer=False, **kwargs):
         self._widget_dict = {}
         self._widget_list = []
         self._name = name
@@ -139,6 +139,17 @@ class WidgetCluster():
                     for key in entry:
                         widgets[key] = self._widget_dict[key]
         return widgets
+
+    def display(self):
+        """Display the widgets"""
+        for key, widget in self.to_dict().items():
+            widget.display()
+
+class DynamicWidgetCluster(WidgetCluster):
+    def __init__(self, details, **kwargs):
+        self._details = details
+        super().__init__(**kwargs)
+
     
 class Scorer:
     def __init__(self, index=None, data=None, user_file="_referia.yml", directory=".", viewer_inherit=True):
@@ -646,7 +657,7 @@ class Scorer:
             return
 
         if details["type"] == "loop":
-            loop_widgets = WidgetCluster(name="loop", dynamic=True, details=details)
+            loop_widgets = DynamicWidgetCluster(name="loop", details=details)
             widgets.add(loop_widgets)
             if "start" not in details:
                 raise ValueError("Missing start entry in loop")
@@ -755,8 +766,7 @@ class Scorer:
 
     def display_widgets(self):
         """Display the field entry widgets"""
-        for key, widget in self.widgets().items():
-            widget.display()
+        self._widgets.display()
 
     def template_to_value(self, template):
         """Convert a template to values."""
