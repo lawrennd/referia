@@ -51,7 +51,7 @@ class TestData(unittest.TestCase):
     def test_global_consts_one(self):
         """Test loading of global constants."""
         directory = "."
-        data = rf.assess.Data(user_file="global_consts_one.yml", directory=directory)
+        data = rf.assess.Data(user_file="referia/tests/assess/global_consts_one.yml", directory=directory)
         columns = data.columns
 
         global_variable_one = rf.fake.row()
@@ -71,6 +71,7 @@ class TestData(unittest.TestCase):
             self.assertEqual(data.get_value(), value)
         
 
+            
     # def run_allocation_tests_in_directory(self, dir_path):
     #     # Change the working directory to the directory with the test config and data
     #     print(dir_path)

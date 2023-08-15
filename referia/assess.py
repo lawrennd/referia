@@ -57,6 +57,11 @@ def absolute_url(string):
        string = string[1:]
     return os.path.join("http://localhost:8888/notebooks/", string)
 
+def to_i(string):
+    """Filter to convert the liquid entry to an integer under liquid."""
+    if type(string) is str and len(string) == 0:
+        return 0
+    return int(float(string))
 
 def empty(val):
     return pd.isna(val) or val==""
@@ -135,9 +140,10 @@ class Data(data.DataObject):
         compute_prep = {
             "function": self.gcf_(function=compute["function"]),
             "args" : self.gca_(**compute),
-            "field" : compute["field"],
             "refresh" : "refresh" in compute and compute["refresh"],
         }
+        if "field" in compute:
+            compute_prep["field"] = compute["field"]
         return compute_prep
             
     def _compute_functions_list(self):
@@ -164,7 +170,12 @@ class Data(data.DataObject):
             },
             {
                 "name" : "max",
-                "function" : lambda x: x.max(),
+                "function" : lambda values: max(values),
+                "default_args" : {},
+            },
+            {
+                "name" : "len",
+                "function" : lambda values: len(values),
                 "default_args" : {},
             },
             {
@@ -272,8 +283,14 @@ class Data(data.DataObject):
             },
         ]
 
+    def copy_screen_capture(self):
+        """Return an image of the most recent screenshot."""
+        filename = most_recent_screen_shot()
+        with open(filename, rb):
+            image = file.read()
+        return image
 
-    def gca_(self, field, function, refresh=False, args={}, row_args={}, view_args={}, function_args={}, subseries_args={}, column_args={}):
+    def gca_(self, function, field=None, refresh=False, args={}, row_args={}, view_args={}, function_args={}, subseries_args={}, column_args={}):
         """Args generator for compute functions."""
 
         found_function = False
@@ -409,7 +426,27 @@ class Data(data.DataObject):
         if type(configs) is not list:
             configs = [configs]
         for i, conf in enumerate(configs):
-            df = self._finalize_df(*access.read_data(conf))
+            if "local" in conf:
+                if type(conf["local"]) is dict:
+                    try:
+                        df = pd.DataFrame(**conf["local"])
+                        if df.index.name is None:
+                            df.index.name = "index"
+                    except:
+                        if "data" not in conf["local"]:
+                            print("Missing data entry in local dataframe specification.")
+                        if "index" not in conf["local"]:
+                            print("Missing index entry in local dataframe specification.")
+                        print("Could not create data frame from details specified in \"local\" entry.")
+                        raise
+                    for cname in df.columns:
+                        if cname not in self._column_name_map:
+                            if is_valid_variable_name(cname):
+                                self.update_name_column_map(column=cname, name=cname)
+                else:
+                    raise ValueError("\"local\" specified in config but not in form of a dictionary.")
+            else:
+                df = self._finalize_df(*access.read_data(conf))
             if df.index.is_unique:
                 if "join" in conf:
                     join = conf["join"]
@@ -611,6 +648,7 @@ class Data(data.DataObject):
         self._liquid_env.add_filter("markdownify", markdownify)
         self._liquid_env.add_filter("relative_url", relative_url)
         self._liquid_env.add_filter("absolute_url", absolute_url)
+        self._liquid_env.add_filter("to_i", to_i)
         
     def set_index(self, index):
         """Index setter"""
@@ -639,17 +677,23 @@ class Data(data.DataObject):
 
     def compute(self, compute, df=None, index=None, refresh=True):
         """Run the computation given in compute."""
-        column = compute["field"]
+        if "field" in compute:
+            column = compute["field"]
+        else:
+            column = None
         if index is None:
             index = self.get_index()
-        if df is None:
-            val = self.get_value_column(column)
-        else:
-            val = df.at[index, column]
-        if refresh or pd.isna(val):
+        if column is not None:
+            if df is None:
+                val = self.get_value_column(column)
+            else:
+                val = df.at[index, column]
+        if refresh or pd.isna(val) or column is None:
             new_val = compute["function"](**compute["args"])
         else:
             return
+        if column is None:
+            return new_val
         if df is None:
             self.set_value_column(new_val, column)
         else:
@@ -857,6 +901,37 @@ class Data(data.DataObject):
             self.add_series_column(column)
             self.set_series_value(value, column)
 
+    def get_value_by_element(self, element):
+        value = self.get_value()
+        if type(element) is int and type(value) is not list:
+            self._log.warning(f"Attempt to get element of a non list entry with an element \"{element}\" that is an integer.")
+            return None
+        elif type(element) is str and type(value) is not dict:
+            self._log.warning(f"Attempt to get element of a non dictionary entry with an element \"{element}\" that is a string.")
+            return None
+        else:
+            if type(element) is int and not len(value)>element:
+                return None
+            if type(element) is str and element not in value:
+                return None
+            return value[element]
+
+    def set_value_by_element(self, value, element):
+        orig_value = self.get_value()
+        if type(element) is int and type(orig_value) is not list:
+            self._log.warning("Value wasn't a list and element was set as integer, so converting to a list.")
+            orig_value = [orig_value]
+            
+        elif type(element) is str and type(orig_value) is not dict:
+            self._log.warning("Value wasn't a dictionary and element was set as string, so converting to a dictionary.")
+            orig_value = {"original": orig_value}
+
+        if type(element) is int and not len(orig_value)>element:
+            while not len(orig_value)>element:
+                orig_value.append(None)
+        orig_value[element] = value
+        self.set_value(orig_value)
+        
     def get_column_values(self):
         """Return a pd.Series containing all the values in a column."""
         column = self.get_column()
@@ -1119,6 +1194,11 @@ class Data(data.DataObject):
                     else:
                         sep = "\n\n"
                     return sep.join(elements)
+                if "compute" in view:
+                    compute = self._compute_prep(view["compute"])
+                    print(compute["args"])
+                    print(compute["function"])
+                    return self.compute(compute)
                 if "liquid" in view:
                     value += self.liquid_to_value(view["liquid"], kwargs)
                 if "tally" in view:

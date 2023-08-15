@@ -18,7 +18,8 @@ from ipywidgets import jslink, jsdlink, Layout
 
 from .log import Logger
 from .util import remove_nan
-from .widgets import IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton
+from .widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton,
+                      ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
 
 from . import config
 from . import access
@@ -124,7 +125,9 @@ class Scorer:
         self._column_names_dict = {}
         # Store the map between valid python varliable names and their boxed widgets.
         self._widget_dict = {}
+        self._widget_list = []
         self._view_list = []
+        self._dynamic_list = []
         self._selector_widget = None
         self._downstream_displays = []
         self._default_field_vals = pd.Series(dtype=object)
@@ -145,66 +148,63 @@ class Scorer:
         if index is not None:
             self.set_index(index)
 
-        self._create_widgets()
+        self._create_widgets(self._config)
 
-    def _create_widgets(self):
-        """Create the widgets to be used for display."""
+    def _create_reload_button(self, config):
+        """Create the reload button."""
         _reload_button = ReloadButton(parent=self)
         self.add_widgets(_reload_button=_reload_button)
 
-        # Process the different scorers in from the _referia.yml file
-        if "scored" in self._config:
-            label = "_progress_label"
-            _progress_label = Markdown(description=" ", field_name=label)
-            self.add_widgets(_progress_label=_progress_label)
+    def _create_progress_bar(self, label):
+        """Create the progress bar."""
+        _progress_label = Markdown(description=" ", field_name=label)
+        self.add_widgets(_progress_label=_progress_label)
+        self.add_views(label)
+
+    def _create_viewer(self, views):
+        """Create the viewer."""
+        if type(views) is not list:
+            views = [views]
+
+        for count, view in enumerate(views):
+            label = "_viewer_label" + str(count)
+            args = {
+                "description": " ",
+                "field_name": label,
+                "column_name": label,
+                **view,
+                "parent": self,
+            }
+            self.add_widgets(**{label: Markdown(**args)})
             self.add_views(label)
 
-        if "viewer" in self._config:
-            # TK need to add in viewer arguments for display etc here.
-            views = self._config["viewer"]
-            if type(views) is not list:
-                views = [views]
+    def _create_scorer(self, scorers):
+        """Create the scorers from the config file."""
+        for scorer in scorers:
+            self.extract_scorer(scorer)
 
-            for count, view in enumerate(views):
-                label = "_viewer_label" + str(count)
-                args = {
-                    "description": " ",
-                    "field_name": label,
-                    "column_name": label,
-                    **view,
-                    "parent": self,
-                }
-                self.add_widgets(**{label: Markdown(**args)})
-                self.add_views(label)
+    def _create_documents(self, documents):
+        """Process the document creators from the config file."""
+        for count, document in enumerate(documents):
+            label = "_doc_button" + str(count)
+            args = {
+                "document": document,
+                "type": document["type"],
+                "parent": self,
+            }
+            self.add_widgets(**{label: CreateDocButton(**args)})
 
-        if "scorer" in self._config:
-            for score in self._config["scorer"]:
-                self.extract_scorer(score)
+    def _create_summary(self, summaries):
+        for count, summary in enumerate(summaries):
+            label = "_summary_button" + str(count)
+            args = {
+                "details": summary,
+                "type": summary["type"],
+                "parent": self,
+            }
+            self.add_widgets(**{label: CreateSummaryButton(**args)})
 
-        if "documents" in self._config:
-            documents = self._config["documents"]
-            for count, document in enumerate(documents):
-                label = "_doc_button" + str(count)
-                args = {
-                    "document": document,
-                    "type": document["type"],
-                    "parent": self,
-                }
-                self.add_widgets(**{label: CreateDocButton(**args)})
-
-        if "summary" in self._config:
-            summaries = self._config["summary"]
-            for count, summary in enumerate(summaries):
-                label = "_summary_button" + str(count)
-                args = {
-                    "details": summary,
-                    "type": summary["type"],
-                    "parent": self,
-                }
-                self.add_widgets(**{label: CreateSummaryButton(**args)})
-
-        if "summary_documents" in self._config:
-            documents = self._config["summary_documents"]
+    def _create_summary_documents(self, documents):
             for count, document in enumerate(documents):
                 label = "_summary_doc_button" + str(count)
                 args = {
@@ -216,16 +216,62 @@ class Scorer:
 
 
 
+    def _update_widgets(self, config):
+        """Update the widgets to be used for display."""
+        pass
+        
+    def _create_widgets(self, config):
+        """Create the widgets to be used for display."""
+        self._create_reload_button(config)
+        if "scored" in config:
+            self._create_progress_bar(label="_progress_label")
+
+        # Process the viewer from the config file.
+        if "viewer" in config:
+            self._create_viewer(config["viewer"])
+
+        # Process the scorer from the config file.
+        if "scorer" in config:
+            self._create_scorer(config["scorer"])
+
+        # Process the document creators from the config file.
+        if "documents" in config:
+            documents = config["documents"]
+            self._create_documents(documents)
+
+        # Process the summaries from the config file.
+        if "summary" in config:
+            summaries = config["summary"]
+            self._create_summary(summaries)
+
+        # Process the summary document creators from the config file.
+        if "summary_documents" in config:
+            documents = config["summary_documents"]
+            self._create_summary_documents(documents)
+
         _save_button = SaveButton(parent=self)
         self.add_widgets(_save_button=_save_button)
 
+    def update_widgets(self, **kwargs):
+        for key, item in kwargs.items():
+            if key in self._widget_dict:
+                self._widget_dict[key] = item
+            else:
+                raise ValueError(f"Attempt to update widget \"{key}\" when it doesn't exist.")
+            
+        
     def add_widgets(self, **kwargs):
+        self._widget_list.append(kwargs.keys())
         self._widget_dict = {**self._widget_dict, **kwargs}
 
     def add_views(self, label):
         """Maintain a list of widgets that stem from views"""
         self._view_list.append(label)
 
+    def add_dynamic(self, label):
+        """Maintain a list of widgets that are dynamically reconstructed."""
+        self._dynamic_list.append(label)
+        
     def add_downstream_display(self, display):
         """Add a display that is downstream of this one to be updated"""
         self._downstream_displays.append(display)
@@ -252,6 +298,20 @@ class Scorer:
     def get_value(self):
         return self._data.get_value()
 
+    def get_value_by_element(self, element):
+        """Get an element of the value."""
+        return self._data.get_value_by_element(element)
+    
+    def set_value_by_element(self, value, element, trigger_update=True):
+        """Set an element of the value."""
+        old_value = self.get_value_by_element(element)
+        column = self.get_column()
+        if value != old_value:
+            self._log.debug(f"Column is \"{column}\" and element is \"{element}\". Old value is  \"{old_value}\" and new value is \"{value}\".")
+            self._data.set_value_by_element(value, element)
+            if trigger_update:
+                self.value_updated()                            
+        
     def set_value(self, value, trigger_update=True):
         """Update a value in one of the output flows."""
         old_value = self.get_value()
@@ -348,7 +408,7 @@ class Scorer:
 
         
     
-    def extract_scorer(self, details):
+    def extract_scorer(self, details, dynamic=False):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
         if details["type"] == "load":
@@ -549,6 +609,28 @@ class Scorer:
                 self.extract_scorer(sub_score)
             return
 
+        if details["type"] == "loop":
+            
+            if "start" not in details:
+                raise ValueError("Missing start entry in loop")
+            if "stop" not in details:
+                raise ValueError("Missing stop entry in loop")
+            loop = []
+            for ent in ["start", "stop", "step"]:
+                if ent in details:
+                    if type(details[ent]) is dict:
+                        loop.append(int(self._data.view_to_value(details[ent])))
+                    else:
+                        loop.append(int(details[ent]))
+            for element in range(*loop):
+                sub_scores = details["body"]
+                if type(sub_scores) is not list:
+                    sub_scores = [sub_scores]
+                for sub_score in sub_scores:
+                    sub_score["element"] = element
+                    self.extract_scorer(sub_score, dynamic=True)
+            return
+                    
         # Get the widget type from the global variables list
         global_variables = globals()        
         if details["type"] in global_variables:
@@ -581,14 +663,13 @@ class Scorer:
 
             # Deep copy of details so we don't change it globally.
             process_details = json.loads(json.dumps(details))
+            if "args" not in process_details:
+                process_details["args"] = {}
 
             # Deal with HTML descriptions (setting them to blank if not set)
             if process_details["type"] in ["HTML", "HTMLMath", "Markdown"]:
-                if "args" not in process_details:
-                    process_details["args"] = {"description": " "}
-                else:
-                    if "description" not in process_details:
-                        process_details["args"]["description"] = " "
+                if "description" not in process_details["args"]:
+                    process_details["args"]["description"] = " "
 
             if "source" in process_details:
                 # Set arguments of widget from data fields if source is given
@@ -597,7 +678,21 @@ class Scorer:
                         if arg not in process_details["args"]:
                             self.set_column(field)
                             process_details["args"][arg] = self.get_value()
+                            
+            if "refresh_display" in process_details:
+                refresh_display = process_details["refresh_display"]
+                if type(refresh_display) is not bool:
+                    ValueError(f"\"refresh_display\" entry should be either True or False.")
+                else:
+                    process_details["args"]["refresh_display"] = refresh_display
+                    
+            widget_key = field_name
+            if "element" in process_details:
+                element = process_details["element"]
+                process_details["args"]["element"] = element
+                widget_key = widget_key + str(element)
 
+                
             # Set up arguments for the widget
             args = process_details["args"]
             try:
@@ -616,7 +711,9 @@ class Scorer:
                 args["layout"] = Layout(**args["layout"])
             args["parent"] = self
             # Add the widget
-            self.add_widgets(**{field_name: widget_type(**args)})
+            self.add_widgets(**{widget_key: widget_type(**args)})
+            if dynamic:
+                self.add_dynamic(widget_key)
         else:
             raise Exception("Cannot find " + details["type"] + " interaction type.")
 
@@ -802,11 +899,15 @@ class Scorer:
 
     def widgets(self):
         """Return the widgets associated with the display"""
-        return self._widget_dict
+        widgets = {}
+        for entry in self._widget_list:
+            for key in entry:
+                widgets[key] = self._widget_dict[key]
+        return widgets
 
     def last_widget(self):
         """Return the most recently added widget"""
-        key = self._widget_dict.keys[-1] # Relying on ordered dictionaries here
+        key = self._widget_list[-1][-1]
         widget = self._widget_dict[key]
         return key, widget
     

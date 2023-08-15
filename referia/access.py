@@ -321,16 +321,20 @@ def write_url_file(data, filename, content, include_content=True):
     # This is with writing links to prefilled google forms in mind.
     raise NotImplemented("The write url file function has not been implemented.")
 
-def write_markdown_file(data, filename, content, include_content=True):
+def write_markdown_file(data, filename, content=None, include_content=True):
     """Write a markdown file from a python dictionary"""
-    if include_content and content in data:
-        write_data = {key: item for (key, item) in data.items() if key != "content"}
-        content = data[content]
+    if content is None:
+        if include_content and "content" in data:
+            write_data = {key: item for (key, item) in data.items() if key != "content"}
+            content = data["content"]
+        else:
+            if not include_content:
+                content = ""
+            write_data = data
     else:
-        if not include_content:
-            content = ""
-        write_data = data
-
+        write_data = data.copy()
+        if "content" in data:
+            del write_data["content"]
     log.info(f"Writing markdown file \"{filename}\"")
     post = frontmatter.Post(content, **write_data)
     with open(filename, "wb") as stream:
