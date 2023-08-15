@@ -106,9 +106,21 @@ class WidgetCluster():
         self._widget_list = []
         self._name = name
         self._viewer = viewer
-        self._dynamic = dynamic
         self.add(**kwargs)
 
+    def has(self, key):
+        if key in self._widget_dict:
+            return True
+        else:
+            return False
+
+    def get(self, key):
+        return self._widget_dict(key)
+
+    def refresh(self):
+        for key, entry in self.to_dict().items():
+            entry.refresh()
+        
     def add(self, cluster=None, **kwargs):
         if cluster is not None:
             cluster.add(**kwargs)
@@ -117,8 +129,6 @@ class WidgetCluster():
             if kwargs != {}:
                 self._widget_list += list(kwargs.keys())
                 self._widget_dict = {**self._widget_dict, **kwargs}
-            
-        
         
     def update(self, **kwargs):
         for key, item in kwargs.items():
@@ -126,6 +136,22 @@ class WidgetCluster():
                 self._widget_dict[key] = item
             else:
                 raise ValueError(f"Attempt to update widget \"{key}\" when it doesn't exist.")
+
+    def to_markdown(self,skip=[]):
+        """Convert the widget outputs into text."""
+        text = ""
+        for entry in self._widget_list:
+            if type(entry) is WidgetCluster:
+                text += entry.to_markdown(skip=skip)
+            else:
+                if type(entry) is str:
+                    entry = [entry]
+                for key in entry:
+                    if key not in skip:
+                        text += self._widget_dict[key].to_markdown()
+                        if text != "":
+                            text+= "\n\n"
+        return text
             
     def to_dict(self):
         widgets = {}
@@ -198,7 +224,7 @@ class Scorer:
         if index is not None:
             self.set_index(index)
 
-        self._create_widgets(self._config)
+        self._create_widgets(self._config, self._widgets)
 
     def _create_reload_button(self, config):
         """Create the reload button."""
@@ -271,41 +297,38 @@ class Scorer:
         return widgets
 
         
-    def _create_widgets(self, config):
+    def _create_widgets(self, config, widgets):
         """Create the widgets to be used for display."""
-        self._widgets.add(self._create_reload_button(config))
+        widgets.add(self._create_reload_button(config))
         if "scored" in config:
-            self._widgets.add(cluster=self._create_progress_bar(label="_progress_label"))
+            widgets.add(cluster=self._create_progress_bar(label="_progress_label"))
 
         # Process the viewer from the config file.
         if "viewer" in config:
-            self._widgets.add(cluster=self._create_viewer(config["viewer"]))
+            widgets.add(cluster=self._create_viewer(config["viewer"]))
 
         # Process the scorer from the config file.
         if "scorer" in config:
-            self._widgets.add(self._create_scorer(config["scorer"]))
+            widgets.add(self._create_scorer(config["scorer"]))
 
         # Process the document creators from the config file.
         if "documents" in config:
             documents = config["documents"]
-            self._widgets.add(cluster=self._create_documents(documents))
+            widgets.add(cluster=self._create_documents(documents))
 
         # Process the summaries from the config file.
         if "summary" in config:
             summaries = config["summary"]
-            self._widgets.add(cluster=self._create_summary(summaries))
+            widgets.add(cluster=self._create_summary(summaries))
 
         # Process the summary document creators from the config file.
         if "summary_documents" in config:
             documents = config["summary_documents"]
-            self._widgets.add(cluster=self._create_summary_documents(documents))
+            widgets.add(cluster=self._create_summary_documents(documents))
 
         _save_button = SaveButton(parent=self)
-        self._widgets.add(cluster=WidgetCluster(name="save_button"), _save_button=_save_button)
+        widgets.add(cluster=WidgetCluster(name="save_button"), _save_button=_save_button)
 
-    def update_widgets(self, **kwargs):
-        self._widgets.update()
-        
     def add_views(self, label):
         """Maintain a list of widgets that stem from views"""
         self._view_list.append(label)
@@ -781,25 +804,17 @@ class Scorer:
                     string += "\n\n"
                 return string
             elif template["use"] == "scorer":
-                return self.widgets_to_value(skip=self._view_list)
+                return self._widgets.to_markdown()
         else:
             return self._data.view_to_value(template)
         
-    def widgets_to_value(self,skip=[]):
-        """Convert the widget outputs into text."""
-        value = ""
-        for key, widget in self.widgets().items():
-            if key not in skip:
-                value += widget.to_markdown()
-                if value != "":
-                    value+= "\n\n"
-        return value
-
-    def view_scorer(self):
-        text = ""
-        for key, widget in self.widgets().items():
-            text += widget.to_markdown()
-        return text
+    # Seems redundant, schedule for remove.
+        # def view_scorer(self):
+    #     text = ""
+    #     return 
+    #     for key, widget in self.widgets().items():
+    #         text += widget.to_markdown()
+    #     return text
 
 
     def load_flows(self, reload=False):
@@ -952,19 +967,16 @@ class Scorer:
     
     def populate_widgets(self):
         """Update the widgets with defaults or values from the data"""
-        for key, widget in self.widgets().items():
+        if self._widgets.has("_progress_label"):
+            total = self._data.to_score()
+            if total > 0:
+                scored = self._data.scored()
+                remain = total - scored
+                perc=scored/total*100
+            
+            self._widgets.get("_progress_label").set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
 
-            if key == "_progress_label":
-                total = self._data.to_score()
-                if total > 0:
-                    scored = self._data.scored()
-                    remain = total - scored
-                    perc=scored/total*100
-                    if "_progress_label" in self.widgets():
-                        widget.set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
-                continue
-
-            widget.refresh()
+        self._widgets.refresh()
 
     def view_series(self):
         self._system.clear_temp_files()
