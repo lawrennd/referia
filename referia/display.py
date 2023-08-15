@@ -356,7 +356,7 @@ class Scorer:
         
             if self._selector_widget is not None:
                 self._selector_widget.set_index(value)
-            self.populate_widgets()
+            self.populate_display()
             for ds in self._downstream_displays:
                 ds.set_index(value)
             
@@ -413,7 +413,7 @@ class Scorer:
 
     def set_subindex(self, value):
         self._data.set_subindex(value)
-        self.populate_widgets()
+        self.populate_display()
 
     def add_series_row(self):
         """Add a row with a generated subindex to the series."""
@@ -468,7 +468,7 @@ class Scorer:
         else:
             self.select_index()
         self.display_widgets()
-        self.populate_widgets()
+        self.populate_display()
         self.view_series()
 
         
@@ -834,7 +834,7 @@ class Scorer:
                 self.set_selector(selector)
             if subindex is not None:
                 self.set_subindex(subindex)
-        self.populate_widgets()
+        self.populate_display()
 
     def save_flows(self):
         """Save output flows and reload inputs for any downstream displays."""
@@ -842,7 +842,7 @@ class Scorer:
         for ds in self._downstream_displays:
             ds.load_input_flows()
             ds.set_index(self.get_index())
-            ds.populate_widgets()
+            ds.populate_display()
 
         
     def load_input_flows(self):
@@ -957,15 +957,9 @@ class Scorer:
                     self._log.error("Missing key 'field' in combinator view.")
 
 
-    def widgets(self):
-        """Return the widgets associated with the display"""
-        return self._widgets.to_dict()
 
-    def last_widget(self):
-        """Return the most recently added widget"""
-        return self._widgets.last()
     
-    def populate_widgets(self):
+    def populate_display(self):
         """Update the widgets with defaults or values from the data"""
         if self._widgets.has("_progress_label"):
             total = self._data.to_score()
