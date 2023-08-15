@@ -467,7 +467,7 @@ class Scorer:
             self.full_selector()
         else:
             self.select_index()
-        self.display_widgets()
+        self._widgets.display()
         self.populate_display()
         self.view_series()
 
@@ -787,10 +787,6 @@ class Scorer:
             raise Exception("Cannot find " + details["type"] + " interaction type.")
 
 
-    def display_widgets(self):
-        """Display the field entry widgets"""
-        self._widgets.display()
-
     def template_to_value(self, template):
         """Convert a template to values."""
         if "use" in template:
@@ -809,7 +805,7 @@ class Scorer:
             return self._data.view_to_value(template)
         
     # Seems redundant, schedule for remove.
-        # def view_scorer(self):
+    # def view_scorer(self):
     #     text = ""
     #     return 
     #     for key, widget in self.widgets().items():
