@@ -101,14 +101,25 @@ def nodes(chain, index=None):
         oldkey = key
 
 class WidgetCluster():
-    def __init__(self):
+    def __init__(self, name, viewer=False, dynamic=False, **kwargs):
         self._widget_dict = {}
         self._widget_list = []
+        self._name = name
+        self._viewer = viewer
+        self._dynamic = dynamic
+        self.add(**kwargs)
 
-    def add(self, **kwargs):
-        self._widget_list.append(kwargs.keys())
-        self._widget_dict = {**self._widget_dict, **kwargs}
-
+    def add(self, cluster=None, **kwargs):
+        if cluster is not None:
+            cluster.add(**kwargs)
+            self._widget_list.append(cluster)
+        else:
+            if kwargs != {}:
+                self._widget_list += list(kwargs.keys())
+                self._widget_dict = {**self._widget_dict, **kwargs}
+            
+        
+        
     def update(self, **kwargs):
         for key, item in kwargs.items():
             if key in self._widget_dict:
@@ -119,14 +130,15 @@ class WidgetCluster():
     def to_dict(self):
         widgets = {}
         for entry in self._widget_list:
-            for key in entry:
-                widgets[key] = self._widget_dict[key]
+            if type(entry) is WidgetCluster:
+                widgets = {**widgets, **entry.to_dict()}
+            else:
+                if type(entry) is str:
+                    widgets[entry] = self._widget_dict[entry]
+                else:
+                    for key in entry:
+                        widgets[key] = self._widget_dict[key]
         return widgets
-
-    def last(self):
-        key = self._widget_list[-1][-1]
-        widget = self._widget_dict[key]
-        return key, widget
     
 class Scorer:
     def __init__(self, index=None, data=None, user_file="_referia.yml", directory=".", viewer_inherit=True):
@@ -152,7 +164,7 @@ class Scorer:
         # Store the map between valid python variable names and data column names
         self._column_names_dict = {}
         # Store the map between valid python varliable names and their boxed widgets.
-        self._widgets = WidgetCluster()
+        self._widgets = WidgetCluster(name="parent")
         self._view_list = []
         self._dynamic_list = []
         self._selector_widget = None
@@ -180,16 +192,16 @@ class Scorer:
     def _create_reload_button(self, config):
         """Create the reload button."""
         _reload_button = ReloadButton(parent=self)
-        self._widgets.add(_reload_button=_reload_button)
+        return WidgetCluster(name="reload_button", _reload_button=_reload_button)
 
     def _create_progress_bar(self, label):
         """Create the progress bar."""
         _progress_label = Markdown(description=" ", field_name=label)
-        self._widgets.add(_progress_label=_progress_label)
-        self.add_views(label)
+        return WidgetCluster(name="progress_bar", viewer = True, _progress_label=_progress_label)
 
     def _create_viewer(self, views):
         """Create the viewer."""
+        widgets = WidgetCluster(name="viewer", viewer=True)
         if type(views) is not list:
             views = [views]
 
@@ -202,16 +214,17 @@ class Scorer:
                 **view,
                 "parent": self,
             }
-            self._widgets.add(**{label: Markdown(**args)})
-            self.add_views(label)
+            widgets.add(**{label: Markdown(**args)})
+        return widgets
 
     def _create_scorer(self, scorers):
         """Create the scorers from the config file."""
         for scorer in scorers:
-            self.extract_scorer(scorer)
+            self.extract_scorer(scorer, self._widgets)
 
     def _create_documents(self, documents):
         """Process the document creators from the config file."""
+        widgets = WidgetCluster(name="documents")
         for count, document in enumerate(documents):
             label = "_doc_button" + str(count)
             args = {
@@ -219,9 +232,11 @@ class Scorer:
                 "type": document["type"],
                 "parent": self,
             }
-            self._widgets.add(**{label: CreateDocButton(**args)})
+            widgets.add(**{label: CreateDocButton(**args)})
+        return widgets
 
     def _create_summary(self, summaries):
+        widgets = WidgetCluster(name="summaries")
         for count, summary in enumerate(summaries):
             label = "_summary_button" + str(count)
             args = {
@@ -229,55 +244,53 @@ class Scorer:
                 "type": summary["type"],
                 "parent": self,
             }
-            self._widgets.add(**{label: CreateSummaryButton(**args)})
-
+            widgets.add(**{label: CreateSummaryButton(**args)})
+        return widgets
+    
     def _create_summary_documents(self, documents):
-            for count, document in enumerate(documents):
-                label = "_summary_doc_button" + str(count)
-                args = {
-                    "document": document,
-                    "type": document["type"],
-                    "parent": self,
-                }
-                self._widgets.add(**{label: CreateSummaryDocButton(**args)})
+        widgets = WidgetCluster(name="documents")
+        for count, document in enumerate(documents):
+            label = "_summary_doc_button" + str(count)
+            args = {
+                "document": document,
+                "type": document["type"],
+                "parent": self,
+            }
+            widgets.add(**{label: CreateSummaryDocButton(**args)})
+        return widgets
 
-
-
-    def _update_widgets(self, config):
-        """Update the widgets to be used for display."""
-        pass
         
     def _create_widgets(self, config):
         """Create the widgets to be used for display."""
-        self._create_reload_button(config)
+        self._widgets.add(self._create_reload_button(config))
         if "scored" in config:
-            self._create_progress_bar(label="_progress_label")
+            self._widgets.add(cluster=self._create_progress_bar(label="_progress_label"))
 
         # Process the viewer from the config file.
         if "viewer" in config:
-            self._create_viewer(config["viewer"])
+            self._widgets.add(cluster=self._create_viewer(config["viewer"]))
 
         # Process the scorer from the config file.
         if "scorer" in config:
-            self._create_scorer(config["scorer"])
+            self._widgets.add(self._create_scorer(config["scorer"]))
 
         # Process the document creators from the config file.
         if "documents" in config:
             documents = config["documents"]
-            self._create_documents(documents)
+            self._widgets.add(cluster=self._create_documents(documents))
 
         # Process the summaries from the config file.
         if "summary" in config:
             summaries = config["summary"]
-            self._create_summary(summaries)
+            self._widgets.add(cluster=self._create_summary(summaries))
 
         # Process the summary document creators from the config file.
         if "summary_documents" in config:
             documents = config["summary_documents"]
-            self._create_summary_documents(documents)
+            self._widgets.add(cluster=self._create_summary_documents(documents))
 
         _save_button = SaveButton(parent=self)
-        self._widgets.add(_save_button=_save_button)
+        self._widgets.add(cluster=WidgetCluster(name="save_button"), _save_button=_save_button)
 
     def update_widgets(self, **kwargs):
         self._widgets.update()
@@ -426,19 +439,24 @@ class Scorer:
 
         
     
-    def extract_scorer(self, details, dynamic=False):
+    def extract_scorer(self, details, widgets):
         """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
+            
         if details["type"] == "load":
             # This is a link to a widget specificaiton stored in a file
             if "details" not in details:
                 raise ValueError("Load scorer needs to provide load details as entry under \"details\"")
             df,  newdetails = access.read_data(details["details"])
             for ind, series in df.iterrows():
-                self.extract_scorer(remove_nan(series.to_dict()))
+                load_widgets=WidgetCluster(name="load")
+                widgets.add(load_widgets)
+                self.extract_scorer(remove_nan(series.to_dict()), load_widgets)
             return
 
         if details["type"] == "group":
+            group_widgets = WidgetCluster(name="group")
+            widgets.add(group_widgets)
             if "children" not in details:
                 raise ValueError("group scorer needs to provide a list of children under \"children\"")
             for child in details["children"]:
@@ -449,7 +467,7 @@ class Scorer:
                         child["prefix"] = details["prefix"] + child["prefix"]
                     if "field" in child:
                         child["field"] = details["prefix"] + child["field"]
-                self.extract_scorer(child)
+                self.extract_scorer(child, group_widgets)
             return
             
         if details["type"] == "precompute":
@@ -505,7 +523,7 @@ class Scorer:
                 criterion["args"]["join"] = join
             if lis is not None:
                 criterion["args"]["list"] = lis
-            self.extract_scorer(criterion)
+            self.extract_scorer(criterion, widgets)
             return
             
         if details["type"] == "CriterionComment":
@@ -526,7 +544,7 @@ class Scorer:
                     }
                 }
             for sub_score in [criterion, comment]:
-                self.extract_scorer(sub_score)
+                self.extract_scorer(sub_score, widgets)
             return
 
         if details["type"] == "CriterionCommentDate":
@@ -541,7 +559,7 @@ class Scorer:
                 }
             }
             for sub_score in [criterion, date]:
-                self.extract_scorer(sub_score)
+                self.extract_scorer(sub_score, widgets)
             return
 
 
@@ -565,7 +583,7 @@ class Scorer:
                 }
             }
             for sub_score in [criterioncomment, expectation]:
-                self.extract_scorer(sub_score)
+                self.extract_scorer(sub_score, widgets)
             return
 
         if details["type"] == "CriterionCommentRaisesMeetsLowersFlag":
@@ -582,7 +600,7 @@ class Scorer:
                 }
             }
             for sub_score in [criterioncommentraisesmeetslowers, flag]:
-                self.extract_scorer(sub_score)
+                self.extract_scorer(sub_score, widgets)
             return
 
         if details["type"] == "CriterionCommentScore":
@@ -624,11 +642,12 @@ class Scorer:
                 }
             }
             for sub_score in [criterioncomment, slider]:
-                self.extract_scorer(sub_score)
+                self.extract_scorer(sub_score, widgets)
             return
 
         if details["type"] == "loop":
-            
+            loop_widgets = WidgetCluster(name="loop", dynamic=True, details=details)
+            widgets.add(loop_widgets)
             if "start" not in details:
                 raise ValueError("Missing start entry in loop")
             if "stop" not in details:
@@ -646,7 +665,7 @@ class Scorer:
                     sub_scores = [sub_scores]
                 for sub_score in sub_scores:
                     sub_score["element"] = element
-                    self.extract_scorer(sub_score, dynamic=True)
+                    self.extract_scorer(sub_score, loop_widgets)
             return
                     
         # Get the widget type from the global variables list
@@ -729,9 +748,7 @@ class Scorer:
                 args["layout"] = Layout(**args["layout"])
             args["parent"] = self
             # Add the widget
-            self._widgets.add(**{widget_key: widget_type(**args)})
-            if dynamic:
-                self.add_dynamic(widget_key)
+            widgets.add(**{widget_key: widget_type(**args)})
         else:
             raise Exception("Cannot find " + details["type"] + " interaction type.")
 
