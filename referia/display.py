@@ -100,6 +100,34 @@ def nodes(chain, index=None):
         scorer[key].run()
         oldkey = key
 
+class WidgetCluster():
+    def __init__(self):
+        self._widget_dict = {}
+        self._widget_list = []
+
+    def add(self, **kwargs):
+        self._widget_list.append(kwargs.keys())
+        self._widget_dict = {**self._widget_dict, **kwargs}
+
+    def update(self, **kwargs):
+        for key, item in kwargs.items():
+            if key in self._widget_dict:
+                self._widget_dict[key] = item
+            else:
+                raise ValueError(f"Attempt to update widget \"{key}\" when it doesn't exist.")
+            
+    def to_dict(self):
+        widgets = {}
+        for entry in self._widget_list:
+            for key in entry:
+                widgets[key] = self._widget_dict[key]
+        return widgets
+
+    def last(self):
+        key = self._widget_list[-1][-1]
+        widget = self._widget_dict[key]
+        return key, widget
+    
 class Scorer:
     def __init__(self, index=None, data=None, user_file="_referia.yml", directory=".", viewer_inherit=True):
         self._directory = directory
@@ -124,8 +152,7 @@ class Scorer:
         # Store the map between valid python variable names and data column names
         self._column_names_dict = {}
         # Store the map between valid python varliable names and their boxed widgets.
-        self._widget_dict = {}
-        self._widget_list = []
+        self._widgets = WidgetCluster()
         self._view_list = []
         self._dynamic_list = []
         self._selector_widget = None
@@ -153,12 +180,12 @@ class Scorer:
     def _create_reload_button(self, config):
         """Create the reload button."""
         _reload_button = ReloadButton(parent=self)
-        self.add_widgets(_reload_button=_reload_button)
+        self._widgets.add(_reload_button=_reload_button)
 
     def _create_progress_bar(self, label):
         """Create the progress bar."""
         _progress_label = Markdown(description=" ", field_name=label)
-        self.add_widgets(_progress_label=_progress_label)
+        self._widgets.add(_progress_label=_progress_label)
         self.add_views(label)
 
     def _create_viewer(self, views):
@@ -175,7 +202,7 @@ class Scorer:
                 **view,
                 "parent": self,
             }
-            self.add_widgets(**{label: Markdown(**args)})
+            self._widgets.add(**{label: Markdown(**args)})
             self.add_views(label)
 
     def _create_scorer(self, scorers):
@@ -192,7 +219,7 @@ class Scorer:
                 "type": document["type"],
                 "parent": self,
             }
-            self.add_widgets(**{label: CreateDocButton(**args)})
+            self._widgets.add(**{label: CreateDocButton(**args)})
 
     def _create_summary(self, summaries):
         for count, summary in enumerate(summaries):
@@ -202,7 +229,7 @@ class Scorer:
                 "type": summary["type"],
                 "parent": self,
             }
-            self.add_widgets(**{label: CreateSummaryButton(**args)})
+            self._widgets.add(**{label: CreateSummaryButton(**args)})
 
     def _create_summary_documents(self, documents):
             for count, document in enumerate(documents):
@@ -212,7 +239,7 @@ class Scorer:
                     "type": document["type"],
                     "parent": self,
                 }
-                self.add_widgets(**{label: CreateSummaryDocButton(**args)})
+                self._widgets.add(**{label: CreateSummaryDocButton(**args)})
 
 
 
@@ -250,20 +277,11 @@ class Scorer:
             self._create_summary_documents(documents)
 
         _save_button = SaveButton(parent=self)
-        self.add_widgets(_save_button=_save_button)
+        self._widgets.add(_save_button=_save_button)
 
     def update_widgets(self, **kwargs):
-        for key, item in kwargs.items():
-            if key in self._widget_dict:
-                self._widget_dict[key] = item
-            else:
-                raise ValueError(f"Attempt to update widget \"{key}\" when it doesn't exist.")
-            
+        self._widgets.update()
         
-    def add_widgets(self, **kwargs):
-        self._widget_list.append(kwargs.keys())
-        self._widget_dict = {**self._widget_dict, **kwargs}
-
     def add_views(self, label):
         """Maintain a list of widgets that stem from views"""
         self._view_list.append(label)
@@ -711,7 +729,7 @@ class Scorer:
                 args["layout"] = Layout(**args["layout"])
             args["parent"] = self
             # Add the widget
-            self.add_widgets(**{widget_key: widget_type(**args)})
+            self._widgets.add(**{widget_key: widget_type(**args)})
             if dynamic:
                 self.add_dynamic(widget_key)
         else:
@@ -899,17 +917,11 @@ class Scorer:
 
     def widgets(self):
         """Return the widgets associated with the display"""
-        widgets = {}
-        for entry in self._widget_list:
-            for key in entry:
-                widgets[key] = self._widget_dict[key]
-        return widgets
+        return self._widgets.to_dict()
 
     def last_widget(self):
         """Return the most recently added widget"""
-        key = self._widget_list[-1][-1]
-        widget = self._widget_dict[key]
-        return key, widget
+        return self._widgets.last()
     
     def populate_widgets(self):
         """Update the widgets with defaults or values from the data"""
