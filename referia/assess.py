@@ -281,8 +281,8 @@ class Data(data.DataObject):
                 },
                 "docstr" : "Run map on a list for a given function",
             },
-        ]
-
+        ]            
+            
     def copy_screen_capture(self):
         """Return an image of the most recent screenshot."""
         filename = most_recent_screen_shot()
@@ -869,6 +869,7 @@ class Data(data.DataObject):
         if self._globals is not None and column in self._globals.index:
             self._globals.at[self._globals_index, column] = value
             return
+
         
         index = self.get_index()
         selector = self.get_selector()
@@ -997,9 +998,9 @@ class Data(data.DataObject):
         if self._global_consts is not None and column in self._global_consts.index:
             return self._global_consts[column]
 
-        if self._globals is not None and column in self._globals.index:
+        if self._globals is not None and column in self._globals.columns:
             return self._globals.at[self._globals_index, column]
-        
+
         index = self.get_index()
         if index == None:
             return None
@@ -1174,21 +1175,23 @@ class Data(data.DataObject):
                 value += "\n\n"
         return value
 
-    def view_to_value(self, view, kwargs=None):
+    def view_to_value(self, view, kwargs=None, local={}):
         """Create the text of the view."""
         value = ""
 
         if self.conditions(view):
             if type(view) is dict:
+                if "local" in view:
+                    local.update(view["local"])
                 if "list" in view:
                     values = []
                     for v in view["list"]:
-                        values.append(self.view_to_value(v, kwargs))
+                        values.append(self.view_to_value(v, kwargs, local))
                     return values
                 if "join" in view:
                     if "list" not in view["join"]:
                         self._log.warning("No field \"list\" in \"concat\" viewer.")
-                    elements = self.view_to_value(view["join"], kwargs)
+                    elements = self.view_to_value(view["join"], kwargs, local)
                     if "separator" in view["join"]:
                         sep = view["join"]["separator"]
                     else:
@@ -1200,11 +1203,11 @@ class Data(data.DataObject):
                     print(compute["function"])
                     return self.compute(compute)
                 if "liquid" in view:
-                    value += self.liquid_to_value(view["liquid"], kwargs)
+                    value += self.liquid_to_value(view["liquid"], kwargs, local)
                 if "tally" in view:
-                    value += self.tally_to_value(view["tally"], kwargs)
+                    value += self.tally_to_value(view["tally"], kwargs, local)
                 if "display" in view:
-                    value += self.display_to_value(view["display"], kwargs)
+                    value += self.display_to_value(view["display"], kwargs, local)
                 return value
             else:
                 raise TypeError("View should be a \"dict\".")
@@ -1275,9 +1278,9 @@ class Data(data.DataObject):
             name = self.display_to_tmpname(view["display"])
             return name
 
-    def tally_to_value(self, tally, kwargs=None):
+    def tally_to_value(self, tally, kwargs=None, local={}):
         """Create the text of the view."""
-        return self.tally_values(tally, kwargs)
+        return self.tally_values(tally, kwargs, local)
 
     def tally_to_tmpname(self, tally):
         """Convert a view to a temporary name"""
@@ -1312,9 +1315,10 @@ class Data(data.DataObject):
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", ""))
 
 
-    def display_to_value(self, display, kwargs=None):
+    def display_to_value(self, display, kwargs=None, local={}):
         if kwargs is None:
             kwargs = self.mapping()
+        kwargs.update(local)
         try:
             return display.format(**kwargs)
         except KeyError as err:
@@ -1324,9 +1328,10 @@ class Data(data.DataObject):
         """Convert a display string to a temp name"""
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
 
-    def liquid_to_value(self, display, kwargs=None):
+    def liquid_to_value(self, display, kwargs=None, local={}):
         if kwargs is None:
             kwargs = self.mapping()
+        kwargs.update(local)
         try:
             return self._liquid_env.from_string(display).render(**remove_nan(kwargs))
         except Exception as err:
@@ -1345,7 +1350,7 @@ class Data(data.DataObject):
             tmpname += self.view_to_tmpname(tally["end"])
         return tmpname
 
-    def tally_values(self, tally, kwargs=None):
+    def tally_values(self, tally, kwargs=None, local={}):
         value = ""
         if "begin" in tally:
             value += tally["begin"]
@@ -1355,7 +1360,7 @@ class Data(data.DataObject):
         subindices = self.tally_series(tally)
         for subindex in subindices:
             self.set_subindex(subindex)
-            value += self.view_to_value(tally, kwargs)
+            value += self.view_to_value(tally, kwargs, local)
             if value != "":
                 value += "\n\n"
         self.set_subindex(orig_subindex)

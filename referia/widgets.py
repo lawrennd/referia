@@ -202,6 +202,9 @@ class ReferiaWidget():
     def _widget_events(self):
         self._ipywidget.on_click(self.on_click)
 
+    def close(self):
+        self._ipywidget.close()
+        
     def on_click(self, b):
         pass
 
@@ -259,6 +262,9 @@ class ReferiaStatefulWidget(ReferiaWidget):
         if "liquid" in args:
             self._viewer["liquid"] = args["liquid"]
             del args["liquid"]
+        if "local" in args:
+            self._viewer["local"] = args["local"]
+            del args["local"]
         if "conditions" in args:
             self._viewer["conditions"] = args["conditions"]
             del args["conditions"]

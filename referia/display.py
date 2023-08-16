@@ -282,11 +282,16 @@ def extract_loop_scorer(details, scorer, widgets):
                 loop.append(int(scorer._data.view_to_value(details[ent])))
             else:
                 loop.append(int(details[ent]))
+
     for element in range(*loop):
+        
         sub_scores = details["body"]
         if type(sub_scores) is not list:
             sub_scores = [sub_scores]
         for sub_score in sub_scores:
+            if not "local" in sub_score:
+                sub_score["local"] = {}
+            sub_score["local"]["element"] = element
             sub_score["element"] = element
             extract_scorer(sub_score, scorer, widgets)
 
@@ -353,7 +358,6 @@ def extract_widget(details, scorer, widgets):
             process_details["args"]["element"] = element
             widget_key = widget_key + str(element)
 
-
         # Set up arguments for the widget
         args = process_details["args"]
         try:
@@ -362,9 +366,11 @@ def extract_widget(details, scorer, widgets):
             raise TypeError("The argument \"args\" in _referia.yml should be in the form of a mapping.") from err
         args["column_name"] = scorer._column_names_dict[field_name]
 
-        for field in ["display", "tally", "liquid"]:
+        for field in ["display", "tally", "liquid", "compute"]:
             if field in process_details and field not in args:
                 args[field] = process_details[field]
+        if "local" in process_details:
+            args["local"] = process_details["local"]
         # Layout descriptor can be in main structure, or in args.
         if "layout" in process_details and "layout" not in args:
             args["layout"] =  Layout(**process_details["layout"])
@@ -380,6 +386,7 @@ def extract_widget(details, scorer, widgets):
 def extract_scorer(details, scorer, widgets):
     """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
+        
     if details["type"] == "precompute":
         # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
         scorer._precompute.append(details)
@@ -447,9 +454,17 @@ class WidgetCluster():
         self.add(**kwargs)
 
     def clear_children(self):
+        self.close()
         self._widget_dict = {}
         self._widget_list = []
-        
+
+    def close(self):
+        for entry in self._widget_list:
+            if isinstance(entry, WidgetCluster):
+                entry.close()
+            else:
+                self._widget_dict[entry].close()
+                
     def has(self, key):
         if key in self.to_dict():
             return True
@@ -513,9 +528,12 @@ class WidgetCluster():
 
     def display(self):
         """Display the widgets"""
-        for key, widget in self.to_dict().items():
-            widget.display()
-
+        for entry in self._widget_list:
+            if isinstance(entry, WidgetCluster):
+                entry.display()
+            else:
+                self._widget_dict[entry].display()
+                
 class DynamicWidgetCluster(WidgetCluster):
     def __init__(self, details, **kwargs):
         self._details = details
@@ -528,6 +546,8 @@ class DynamicWidgetCluster(WidgetCluster):
                 entry.refresh()
             else:
                 self._widget_dict[entry].refresh()
+        self.display()
+                
 
     def from_details(self, details=None):
         if details is None:
