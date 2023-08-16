@@ -413,7 +413,7 @@ class Data(data.DataObject):
                     else:
                         rsuffix = suffix.format(joinNo=i)
 
-                    df = self._finalize_df(*access.globals(self._config["globals"], pd.Index([index_row], name="index")), strict_columns=True)
+                    df = self._finalize_df(*access.globals(self._config["global_consts"], pd.Index([index_row], name="index")), strict_columns=True)
                     ds = df.loc[index_row]
 
                 if self._global_consts is None:

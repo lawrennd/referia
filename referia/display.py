@@ -1041,7 +1041,12 @@ class Scorer:
                 scored = self._data.scored()
                 remain = total - scored
                 perc=scored/total*100
-            
+
+            else:
+                scored = 0
+                remain = total
+                perc=0
+                
             self._widgets.get("_progress_label").set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
 
         self._widgets.refresh()
