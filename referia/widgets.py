@@ -353,9 +353,10 @@ class FieldWidget(ReferiaStatefulWidget):
         if not self.private and self._parent is not None:
             self._parent.set_column(self.get_column())
             self._parent.set_value(self.get_value())
+
         if self._refresh_display:
             if self._parent is not None:
-                self._parent._create_widgets()
+                self._parent._widgets.refresh()
             
     def has_viewer(self):
         """Does the widget have a viewer structure for generating its values."""
@@ -398,7 +399,7 @@ class ElementWidget(FieldWidget):
             self._parent.set_value_by_element(self.get_value(), self.get_element())
         if self._refresh_display:
             if self._parent is not None:
-                self._parent._create_widgets()
+                self._parent.refresh()
 
     def has_viewer(self):
         """Does the widget have a viewer structure for generating its values."""
