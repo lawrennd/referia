@@ -58,7 +58,7 @@ def extract_abs_filename(details):
 
 def renderable(view):
     """Check if a field is rendarable"""
-    valid_views = ["display", "liquid", "join", "list"]
+    valid_views = ["display", "liquid", "join", "list", "compute"]
     for v in valid_views:
         if v in view:
             return True

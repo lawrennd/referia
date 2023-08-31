@@ -922,7 +922,7 @@ class PopulateButton(ReferiaWidget):
         for compute in self._compute:
             compute["refresh"] = True
             self._parent.compute(self._parent._data._compute_prep(compute))
-        self._parent.populate_widgets()
+        self._parent.populate_display()
 
         
     

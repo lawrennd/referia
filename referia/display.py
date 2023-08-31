@@ -301,7 +301,7 @@ def extract_widget(details, scorer, widgets):
     global_variables = globals()        
     if details["type"] in global_variables:
         widget_type = global_variables[details["type"]]
-
+        widget_key = None
         if "field" in details:
             field_name = clean_string(details["field"])
             scorer._column_names_dict[field_name] = details["field"]
@@ -324,8 +324,9 @@ def extract_widget(details, scorer, widgets):
 
         else:
             # Field field_name is missing, generate a random one.
-            field_name = "_" + "".join(random.choice(string.ascii_letters) for _ in range(39))
-            scorer._column_names_dict[field_name] = field_name
+            field_name = "_"
+            widget_key = "".join(random.choice(string.ascii_letters) for _ in range(39))
+            #scorer._column_names_dict[field_name] = field_name
 
         # Deep copy of details so we don't change it globally.
         process_details = json.loads(json.dumps(details))
@@ -352,7 +353,8 @@ def extract_widget(details, scorer, widgets):
             else:
                 process_details["args"]["refresh_display"] = refresh_display
 
-        widget_key = field_name
+        if widget_key is None:
+            widget_key = field_name
         if "element" in process_details:
             element = process_details["element"]
             process_details["args"]["element"] = element
@@ -436,7 +438,7 @@ def nodes(chain, index=None):
     while len(chain)>0:
         key, directory=chain.pop()
         data[key] = assess.Data(directory=directory)
-        if index is None:
+        if index is None and data[key].index is not None:
             index = data[key].index[0]
         scorer[key] = Scorer(index, data[key], directory=directory, viewer_inherit=False)
         if oldkey is not None:
@@ -593,7 +595,7 @@ class Scorer:
                                   directory=directory)
         
         # Store the map between valid python variable names and data column names
-        self._column_names_dict = {}
+        self._column_names_dict = {"_": "_"}
         # Store the map between valid python varliable names and their boxed widgets.
         self._widgets = WidgetCluster(name="parent", parent=self)
         self._view_list = []
@@ -857,10 +859,11 @@ class Scorer:
 
     def run(self):
         """Run the scorer to edit the data frame."""
-        if "series" in self._config:
-            self.full_selector()
-        else:
-            self.select_index()
+        if self._data.index is not None:
+            if "series" in self._config:
+                self.full_selector()
+            else:
+                self.select_index()
         self._widgets.display()
         self.populate_display()
         self.view_series()
@@ -988,8 +991,7 @@ class Scorer:
         """If a value in a row has been updated, modify other values"""
 
         # If index has changed, run computes.
-        for compute in self._postcompute:
-            self.run_compute(compute)
+        self._data.run_compute(post=True)
 
         # Need to determine if these should update series or data.
         # Update timestamp fields.
