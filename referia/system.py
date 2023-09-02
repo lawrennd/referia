@@ -16,6 +16,7 @@ import pypdftk as tk
 
 from .log import Logger
 from .util import to_camel_case, notempty, markdown2html, extract_full_filename, extract_abs_filename, renderable, tallyable
+from .fileutil import to_valid_file
 from . import config
 from . import access
 from . import assess
@@ -391,37 +392,48 @@ class Sys():
             displays += self._config["editpdf"]
 
         for view in displays:
-            if "field" in view:
-                field = view["field"]
-                val = data.get_value_column(field)
+            val = self.extract_field_value(view, data)
+            if "storedirectory" in view:
+                storeDirectory = os.path.expandvars(view["storedirectory"])
             else:
-                self._log.warning(f"Missing \"field\" in edit_files configuration.")
-                continue
-            if type(val) is str:
-                if "storedirectory" in view:
-                    storedirectory = os.path.expandvars(view["storedirectory"])
-                else:
-                    self._log.warning(f"Missing \"storedirectory\" in edit_files configuration.")
-                    continue
-                if "sourcedirectory" in view:
-                    origfile = os.path.join(os.path.expandvars(view["sourcedirectory"]),val)
-                else:
-                    self._log.warning(f"Missing \"sourcedirectory\" in edit_files configuration.")
-                    continue
+                raise ValueError(f"Missing \"storedirectory\" in edit_files configuration.")
+            if "sourcedirectory" in view:
+                sourceDirectory = os.path.expandvars(view["sourcedirectory"])
+            else:
+                raise ValueError(f"Missing \"sourcedirectory\" in edit_files configuration.")
+            if "name" in view:
+                filestub = view["name"] + ".pdf"
+            elif renderable(view):
+                filestub = data.view_to_tmpname(view) + ".pdf"
+            else:
+                print(view)
+                filestub = ''.join(random.choices(string.digits+string.ascii_letters, k=8)) + ".pdf"
 
-                if "name" in view:
-                    filestub = view["name"] + ".pdf"
-                else:
-                    filestub = to_camel_case(view["field"]) + ".pdf"
+            
+            if isinstance(val, list):
+                vals = val
+            else:
+                vals = [val]
+            for i, val in enumerate(vals):
+            
+                if type(val) is str:
 
-                # Filename to edit, based on index of the file plus the stub
-                editfilename = str(data.get_index()) + "_" + filestub
-                destfile = os.path.join(storedirectory, editfilename)
-                if not os.path.exists(storedirectory):
-                    os.makedirs(storedirectory)
-                if not os.path.exists(destfile):
-                    self.copy_file(origfile, destfile, view, data)
-                self.open_localfile(destfile)
+                    # Filename to edit, based on index of the file plus the stub
+                    editfilename = to_valid_file(str(data.get_index()))
+                    if len(vals)>1:
+                        editfilename += "_" + str(enumerate)
+                    editfilename += "_" + to_valid_file(filestub)
+                    destfile = os.path.join(storeDirectory, editfilename)
+                    if not os.path.exists(storeDirectory):
+                        os.makedirs(storeDirectory)
+                    origfile = os.path.join(sourceDirectory,val)
+                        
+                    if not os.path.exists(destfile):
+                        self.copy_file(origfile, destfile, view, data)
+                    self.open_localfile(destfile)
+                else:
+                    tyval = type(val)
+                    self._log.warning(f"Expected \"val\" to be of type str actual type is \"{tyval}\"")
 
     def view_directory(self, view):
         """View a directory containing relevant information to the assessment."""
@@ -439,13 +451,8 @@ class Sys():
                     return subprocess.run(["pdfannots", filename], capture_output=True)
         self._log.warning(f"Unknown extractor in {view}.")
 
-    def view_file(self, view, data):
-        """View a file containing relevant information to the assessment."""
-        filename = ""
-        tmpname = ''.join(random.choices(string.digits+string.ascii_letters, k=8))
-        temp_file = False
-        if "temp_file" in view:
-            temp_file = view["temp_file"]
+    def extract_field_value(self, view, data):
+        """Extract the field value """
         if renderable(view):
             val = data.view_to_value(view)
             tmpname = data.view_to_tmpname(view)
@@ -458,38 +465,51 @@ class Sys():
         elif "file" in view:
             val = view["file"]
         else:
-            self._log.warning(f"Missing \"field\", \"file\", renderable or tallyable section in the view file configuration.")
-            return
-
+            raise ValueError(f"Missing \"field\", \"file\", renderable or tallyable section in the extract field value configuration.")
+        return val
+        
+    def view_file(self, view, data):
+        """View a file containing relevant information to the assessment."""
+        filename = ""
+        tmpname = ''.join(random.choices(string.digits+string.ascii_letters, k=8))
+        temp_file = False
+        if "temp_file" in view:
+            temp_file = view["temp_file"]
+        val = self.extract_field_value(view, data)
 
         if "directory" in view:
             directory = view["directory"]
         else:
             directory = "" # If display is a full path, placing "." here messes it up
-
-        if type(val) is str:
-            filename = os.path.expandvars(os.path.join(directory,val))
+        # If it's a list view them all.
+        if isinstance(val, list):
+            vals = val
         else:
-            self._log.warning(f"Provided file {val} is not in string form.")
-
-        if os.path.exists(filename):
-            _, ext = os.path.splitext(filename)
-            if temp_file:
-                tmpdirectory = tempfile.gettempdir()
-                destfile = str(data.get_index()) + "_" + tmpname + ext
-                destname = os.path.join(tmpdirectory, destfile)
-                if not os.path.exists(destname):
-                    self._log.debug(f"Copying \"{filename}\" to \"{destname}\".")
-                    copy2(filename, destname)
-                self._tmp_pdf_files[destfile] = {
-                    "origfile": filename,
-                    "tmpdirectory": tmpdirectory,
-                }
-                self.open_localfile(destname)
+            vals = [val]
+        for val in vals:
+            if type(val) is str:
+                filename = os.path.expandvars(os.path.join(directory,val))
             else:
-                self.open_localfile(filename)
-        else:
-            self._log.warning(f"view_file \"{filename}\" does not exist.")
+                self._log.warning(f"Provided file {val} is not in string form.")
+
+            if os.path.exists(filename):
+                _, ext = os.path.splitext(filename)
+                if temp_file:
+                    tmpdirectory = tempfile.gettempdir()
+                    destfile = str(data.get_index()) + "_" + tmpname + ext
+                    destname = os.path.join(tmpdirectory, destfile)
+                    if not os.path.exists(destname):
+                        self._log.debug(f"Copying \"{filename}\" to \"{destname}\".")
+                        copy2(filename, destname)
+                    self._tmp_pdf_files[destfile] = {
+                        "origfile": filename,
+                        "tmpdirectory": tmpdirectory,
+                    }
+                    self.open_localfile(destname)
+                else:
+                    self.open_localfile(filename)
+            else:
+                self._log.warning(f"view_file \"{filename}\" does not exist.")
 
 
     def view_files(self, data):

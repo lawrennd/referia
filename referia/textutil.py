@@ -63,6 +63,40 @@ def split_into_sentences(text: str) -> list[str]:
     if sentences and not sentences[-1]: sentences = sentences[:-1]
     return sentences
 
+def comment_list(text):
+
+    pattern = re.compile(r'''
+    \[([^\[]*?)\]\{\.comment-start                     # comment-start tag
+    \s+id="(\d+)"                           # id
+    \s+author="(.*?)"                       # author
+    \s+date="(.*?)"\}                       # date
+    (.*?)                                   # content between
+    \[\]\{\.comment-end\s+id="\2"\}       # paired comment-end tag with the same id
+    ''', re.DOTALL | re.VERBOSE)
+    matches = pattern.finditer(text)
+
+    starts = []
+    finishes = []
+    comments = []
+    comment_ids = []
+    authors = []
+    dates = []
+    highlight_texts = [] 
+    for match in matches:
+        #initial_content, _, comment_id, author, date, content_after = match[:6]
+        start, finish = match.span()
+        comment, comment_id, author, date, highlight_text = match.groups()
+        starts.append(start)
+        finishes.append(finish)
+        comments.append(comment)
+        comment_ids.append(comment_id)
+        authors.append(author)
+        dates.append(date)
+        highlight_texts.append(highlight_text)
+
+    return comments, comment_ids, authors, dates, starts, finishes, highlight_texts
+        
+
 def word_count(text):
     tokenizer = nltk.RegexpTokenizer(r'\w+')
     if type(text) is list:

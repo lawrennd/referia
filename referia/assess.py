@@ -15,9 +15,10 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 from .log import Logger
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max, return_shortest, return_longest
 
-from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split
+from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list
 from .sysutil import most_recent_screen_shot
 from .plotutil import bar_plot, histogram
+from .fileutil import file_from_re, files_from_re
 
 from . import config
 from . import access
@@ -57,6 +58,11 @@ def absolute_url(string):
        string = string[1:]
     return os.path.join("http://localhost:8888/notebooks/", string)
 
+def to_i(string):
+    """Filter to convert the liquid entry to an integer under liquid."""
+    if type(string) is str and len(string) == 0:
+        return 0
+    return int(float(string))
 
 def empty(val):
     return pd.isna(val) or val==""
@@ -115,29 +121,32 @@ class Data(data.DataObject):
         # Which entry column in the series to disambiguate the selection of the focus.
         self._selector = None
         # The value in the selected entry column entry column value from the series to use
-        self._computes=[]
-        if "compute" in self._config:
-            if type(self._config["compute"]) is list:
-                computes = self._config["compute"]
-            else:
-                computes = [self._config["compute"]]
+        self._computes = {}
+        for comptype in ["precompute", "compute", "postcompute"]:
+            self._computes[comptype]=[]
+            if comptype in self._config:
+                if type(self._config[comptype]) is list:
+                    computes = self._config[comptype]
+                else:
+                    computes = [self._config[comptype]]
 
-            for compute in computes:
-                self._computes.append(
-                    self._compute_prep(compute)
-                )
-
+                for compute in computes:
+                    self._computes[comptype].append(
+                        self._compute_prep(compute)
+                    )
+                
         self.load_liquid()
         self.add_liquid_filters()
         self.load_flows()
-
+        
     def _compute_prep(self, compute):
         compute_prep = {
             "function": self.gcf_(function=compute["function"]),
             "args" : self.gca_(**compute),
-            "field" : compute["field"],
             "refresh" : "refresh" in compute and compute["refresh"],
         }
+        if "field" in compute:
+            compute_prep["field"] = compute["field"]
         return compute_prep
             
     def _compute_functions_list(self):
@@ -164,7 +173,12 @@ class Data(data.DataObject):
             },
             {
                 "name" : "max",
-                "function" : lambda x: x.max(),
+                "function" : lambda values: max(values),
+                "default_args" : {},
+            },
+            {
+                "name" : "len",
+                "function" : lambda values: len(values),
                 "default_args" : {},
             },
             {
@@ -184,6 +198,20 @@ class Data(data.DataObject):
                     "format": "%Y-%m-%d",
                 },
                 "docstr" : "Return today's date as a string.",
+            },
+            {
+                "name" : "file_from_re",
+                "function" : file_from_re,
+                "default_args": {
+                },
+                "docstr" : "Return the first file name that matches a given pattern.",
+            },
+            {
+                "name" : "files_from_re",
+                "function" : files_from_re,
+                "default_args": {
+                },
+                "docstr" : "Return the list of file names that matches a given pattern.",
             },
             {
                 "name" : "named_entities",
@@ -257,6 +285,13 @@ class Data(data.DataObject):
                 "docstr" : "Return a list from a text split into sentences.",
             },
             {
+                "name" : "comment_list",
+                "function" : comment_list,
+                "default_args": {
+                },
+                "docstr" : "Takes a list of paragraphs and returns comments  Return a list from a text split into sentences.",
+            },
+            {
                 "name" : "list_lengths",
                 "function" : list_lengths,
                 "default_args": {
@@ -270,10 +305,16 @@ class Data(data.DataObject):
                 },
                 "docstr" : "Run map on a list for a given function",
             },
-        ]
+        ]            
+            
+    def copy_screen_capture(self):
+        """Return an image of the most recent screenshot."""
+        filename = most_recent_screen_shot()
+        with open(filename, rb):
+            image = file.read()
+        return image
 
-
-    def gca_(self, field, function, refresh=False, args={}, row_args={}, view_args={}, function_args={}, subseries_args={}, column_args={}):
+    def gca_(self, function, field=None, refresh=False, args={}, row_args={}, view_args={}, function_args={}, subseries_args={}, column_args={}):
         """Args generator for compute functions."""
 
         found_function = False
@@ -376,40 +417,60 @@ class Data(data.DataObject):
         """Augment the globals by joining the two series together."""
         if type(configs) is not list:
             configs = [configs]
-            for i, conf in enumerate(configs):
-                if "select" in conf:
-                    index_row = conf["select"]
+        for i, conf in enumerate(configs):
+            if "select" in conf:
+                index_row = conf["select"]
+            else:
+                index_row = "globals"
+            if "local" in conf:
+                if type(conf["local"]) is dict:
+                    ds = pd.Series(conf["local"], name=index_row)
+                    for cname in ds.index:
+                        if cname not in self._column_name_map:
+                            if is_valid_variable_name(cname):
+                                self.update_name_column_map(column=cname, name=cname)
                 else:
-                    index_row = "globals"
-                if "local" in conf:
-                    if type(conf["local"]) is dict:
-                        ds = pd.Series(conf["local"], name=index_row)
-                        for cname in ds.index:
-                            if cname not in self._column_name_map:
-                                if is_valid_variable_name(cname):
-                                    self.update_name_column_map(column=cname, name=cname)
-                    else:
-                        raise ValueError(f"In global_consts a \"local\" specification must contain a dictionary of fields and values.")
+                    raise ValueError(f"In global_consts a \"local\" specification must contain a dictionary of fields and values.")
+            else:
+                if "rsuffix" in conf:
+                    rsuffix = conf["rsuffix"]
                 else:
-                    if "rsuffix" in conf:
-                        rsuffix = conf["rsuffix"]
-                    else:
-                        rsuffix = suffix.format(joinNo=i)
+                    rsuffix = suffix.format(joinNo=i)
 
-                    df = self._finalize_df(*access.globals(self._config["globals"], pd.Index([index_row], name="index")), strict_columns=True)
-                    ds = df.loc[index_row]
+                df = self._finalize_df(*access.globals(conf, pd.Index([index_row], name="index")), strict_columns=True)
+                ds = df.loc[index_row]
 
-                if self._global_consts is None:
-                    self._global_consts = ds
-                else:
-                    self._global_consts = pd.DataFrame(self._global_consts, columns=[index_row]).T.join(pd.DataFrame(ds, columns=[index_row]).T, rsuffix=rsuffix).loc[index_row]                    
+            if self._global_consts is None:
+                self._global_consts = ds
+            else:
+                self._global_consts = pd.DataFrame(self._global_consts, columns=[index_row]).T.join(pd.DataFrame(ds, columns=[index_row]).T, rsuffix=rsuffix).loc[index_row]                    
                     
     def _augment_data(self, configs, how="left", suffix='', concat=False, axis=0):
         """Augment the data by joining or concatenating the new values."""
         if type(configs) is not list:
             configs = [configs]
         for i, conf in enumerate(configs):
-            df = self._finalize_df(*access.read_data(conf))
+            if "local" in conf:
+                if type(conf["local"]) is dict:
+                    try:
+                        df = pd.DataFrame(**conf["local"])
+                        if df.index.name is None:
+                            df.index.name = "index"
+                    except:
+                        if "data" not in conf["local"]:
+                            print("Missing data entry in local dataframe specification.")
+                        if "index" not in conf["local"]:
+                            print("Missing index entry in local dataframe specification.")
+                        print("Could not create data frame from details specified in \"local\" entry.")
+                        raise
+                    for cname in df.columns:
+                        if cname not in self._column_name_map:
+                            if is_valid_variable_name(cname):
+                                self.update_name_column_map(column=cname, name=cname)
+                else:
+                    raise ValueError("\"local\" specified in config but not in form of a dictionary.")
+            else:
+                df = self._finalize_df(*access.read_data(conf))
             if df.index.is_unique:
                 if "join" in conf:
                     join = conf["join"]
@@ -611,10 +672,13 @@ class Data(data.DataObject):
         self._liquid_env.add_filter("markdownify", markdownify)
         self._liquid_env.add_filter("relative_url", relative_url)
         self._liquid_env.add_filter("absolute_url", absolute_url)
+        self._liquid_env.add_filter("to_i", to_i)
         
     def set_index(self, index):
         """Index setter"""
         orig_index = self._index
+        if orig_index is not None and index != orig_index:
+            self.run_compute(post=True)
         if self._data is not None and index not in self.index:
             raise ValueError(f"Index \"{index}\" not found in _data")
             self.add_row(index=index)
@@ -624,8 +688,8 @@ class Data(data.DataObject):
             self._log.info(f"Index \"{index}\" selected.")
             self.check_or_set_subseries()
         # If index has changed, run computes.
-        if self._index != orig_index:
-            self.run_compute()
+        if orig_index is None or self._index != orig_index:
+            self.run_compute(pre=True)
 
     def check_or_set_subseries(self):
         """Check if there is a sub-series if so, use top subindex, if not create a row."""
@@ -639,27 +703,71 @@ class Data(data.DataObject):
 
     def compute(self, compute, df=None, index=None, refresh=True):
         """Run the computation given in compute."""
-        column = compute["field"]
+        multi_output = False
+        if "field" in compute:
+            columns = compute["field"]
+            if type(columns) is list:
+                multi_output = True
+            else:
+                columns = [columns]
+        else:
+            columns = None
         if index is None:
             index = self.get_index()
-        if df is None:
-            val = self.get_value_column(column)
-        else:
-            val = df.at[index, column]
-        if refresh or pd.isna(val):
-            new_val = compute["function"](**compute["args"])
+        missing_vals = []
+        if columns is not None:
+            for column in columns:
+                if column == "_": # If the column is called "_" then ignore that argument
+                    missing_vals.append(False)
+                    continue
+                if df is None:
+                    val = self.get_value_column(column)
+                else:
+                    val = df.at[index, column]
+                if type(val) is not list and pd.isna(val):
+                    missing_vals.append(True)
+                else:
+                    missing_vals.append(False)
+                    
+        if refresh or any(missing_vals) or column is None:
+            new_vals = compute["function"](**compute["args"])
         else:
             return
-        if df is None:
-            self.set_value_column(new_val, column)
+
+        if multi_output and type(new_vals) is not tuple:
+            func = compute["function"].__name__
+            raise ValueError(f"Multiple columns provided for return values of \"{func}\" but return value given is not a tuple.")
+            
+        if columns is None:
+            return new_vals
         else:
-            if compute["field"] in df.columns:
-                df.at[index, compute["field"]] = compute["function"](**compute["args"])
+            if multi_output:
+                new_vals = [*new_vals]
+            else:
+                new_vals = [new_vals]
+            for column, new_val, missing_val in zip(columns, new_vals, missing_vals):
+                if column == "_":
+                    continue
+                if refresh or missing_val:
+                    if df is None:
+                        self.set_value_column(new_val, column)
+                    else:
+                        if column in df.columns:
+                            df.at[index, column] = new_val
+                        else:
+                            raise ValueError(f"The column \"{column}\" is not found in DataFrame's columns.")
   
-    def run_compute(self, df=None, index=None):
+    def run_compute(self, df=None, index=None, pre=False, post=False):
         """Run any computation elements on the data frame."""
-        
-        for compute in self._computes:
+
+        computes = []
+        if pre:
+            computes += self._computes["precompute"]
+        computes += self._computes["compute"]
+        if post:
+            computes += self._computes["postcompute"]
+            
+        for compute in computes:
             if compute["refresh"]:
                 self.compute(compute, df, index, refresh=True)
             else:
@@ -700,6 +808,10 @@ class Data(data.DataObject):
 
     def set_column(self, column):
         """Set the current column focus."""
+        if column == "_":
+            self._column = "_"
+            self._log.debug(f"Set column to \"_\".")
+            return
         if column is None:
             self._log.warning(f"Was asked to set column to None.")
             return
@@ -825,6 +937,7 @@ class Data(data.DataObject):
         if self._globals is not None and column in self._globals.index:
             self._globals.at[self._globals_index, column] = value
             return
+
         
         index = self.get_index()
         selector = self.get_selector()
@@ -857,6 +970,37 @@ class Data(data.DataObject):
             self.add_series_column(column)
             self.set_series_value(value, column)
 
+    def get_value_by_element(self, element):
+        value = self.get_value()
+        if type(element) is int and type(value) is not list:
+            self._log.warning(f"Attempt to get element of a non list entry with an element \"{element}\" that is an integer.")
+            return None
+        elif type(element) is str and type(value) is not dict:
+            self._log.warning(f"Attempt to get element of a non dictionary entry with an element \"{element}\" that is a string.")
+            return None
+        else:
+            if type(element) is int and not len(value)>element:
+                return None
+            if type(element) is str and element not in value:
+                return None
+            return value[element]
+
+    def set_value_by_element(self, value, element):
+        orig_value = self.get_value()
+        if type(element) is int and type(orig_value) is not list:
+            self._log.warning("Value wasn't a list and element was set as integer, so converting to a list.")
+            orig_value = [orig_value]
+            
+        elif type(element) is str and type(orig_value) is not dict:
+            self._log.warning("Value wasn't a dictionary and element was set as string, so converting to a dictionary.")
+            orig_value = {"original": orig_value}
+
+        if type(element) is int and not len(orig_value)>element:
+            while not len(orig_value)>element:
+                orig_value.append(None)
+        orig_value[element] = value
+        self.set_value(orig_value)
+        
     def get_column_values(self):
         """Return a pd.Series containing all the values in a column."""
         column = self.get_column()
@@ -917,14 +1061,16 @@ class Data(data.DataObject):
         """Return the value of the current cell under focus."""
         # Ordering here dictates the priority of selection, global constants, then globals, then series, then writedata, then cache then data.
         column = self.get_column()
+        if column == "_":
+            return None
         if column == None:
             return None
         if self._global_consts is not None and column in self._global_consts.index:
             return self._global_consts[column]
 
-        if self._globals is not None and column in self._globals.index:
+        if self._globals is not None and column in self._globals.columns:
             return self._globals.at[self._globals_index, column]
-        
+
         index = self.get_index()
         if index == None:
             return None
@@ -1009,7 +1155,7 @@ class Data(data.DataObject):
         # Handle the fact that the index is stored as a column also
         if df.index.name in row:
             row[df.index.name] = index
-        self.run_compute(df=row, index=index)
+        self.run_compute(df=row, index=index, pre=True)
         # was return df.append(row) before append deprecation
         return pd.concat([df, row])
 
@@ -1099,33 +1245,38 @@ class Data(data.DataObject):
                 value += "\n\n"
         return value
 
-    def view_to_value(self, view, kwargs=None):
+    def view_to_value(self, view, kwargs=None, local={}):
         """Create the text of the view."""
         value = ""
 
         if self.conditions(view):
             if type(view) is dict:
+                if "local" in view:
+                    local.update(view["local"])
                 if "list" in view:
                     values = []
                     for v in view["list"]:
-                        values.append(self.view_to_value(v, kwargs))
+                        values.append(self.view_to_value(v, kwargs, local))
                     return values
+                if "field" in view:
+                    return self.get_value_column(view["field"])
                 if "join" in view:
                     if "list" not in view["join"]:
                         self._log.warning("No field \"list\" in \"concat\" viewer.")
-                    elements = self.view_to_value(view["join"], kwargs)
+                    elements = self.view_to_value(view["join"], kwargs, local)
                     if "separator" in view["join"]:
                         sep = view["join"]["separator"]
                     else:
                         sep = "\n\n"
                     return sep.join(elements)
+                if "compute" in view:
+                    return self.compute_to_value(view["compute"])
                 if "liquid" in view:
-                    value += self.liquid_to_value(view["liquid"], kwargs)
+                    return self.liquid_to_value(view["liquid"], kwargs, local)
                 if "tally" in view:
-                    value += self.tally_to_value(view["tally"], kwargs)
+                    return self.tally_to_value(view["tally"], kwargs, local)
                 if "display" in view:
-                    value += self.display_to_value(view["display"], kwargs)
-                return value
+                    return self.display_to_value(view["display"], kwargs, local)
             else:
                 raise TypeError("View should be a \"dict\".")
         else:
@@ -1162,6 +1313,8 @@ class Data(data.DataObject):
                     else:
                         sep = "\n\n"
                     return sep.join(elements)
+                if "compute" in view:
+                    value += self.compute_to_value(view["compute"], kwargs)
                 if "liquid" in view:
                     value += self.liquid_to_value(view["liquid"], kwargs)
                 if "tally" in view:
@@ -1182,22 +1335,24 @@ class Data(data.DataObject):
                 name += self.view_to_tmpname(v)
                 name += "_"
             return name
+        elif "field" in view:
+            return to_camel_case(view["field"])
         elif "join" in view:
             name = "join_"
             if "list" not in view["join"]:
                 self._log.warning("No field \"list\" in \"concat\" viewer.")
             name += self.view_to_tmpname(view["join"])
             return name
+        elif "compute" in view:
+            return self.compute_to_tmpname(view["compute"])
         elif "liquid" in view:
-            name = self.liquid_to_tmpname(view["liquid"])
-            return name
+            return self.liquid_to_tmpname(view["liquid"])
         elif "display" in view:
-            name = self.display_to_tmpname(view["display"])
-            return name
+            return self.display_to_tmpname(view["display"])
 
-    def tally_to_value(self, tally, kwargs=None):
+    def tally_to_value(self, tally, kwargs=None, local={}):
         """Create the text of the view."""
-        return self.tally_values(tally, kwargs)
+        return self.tally_values(tally, kwargs, local)
 
     def tally_to_tmpname(self, tally):
         """Convert a view to a temporary name"""
@@ -1232,21 +1387,33 @@ class Data(data.DataObject):
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", ""))
 
 
-    def display_to_value(self, display, kwargs=None):
+    def display_to_value(self, display, kwargs=None, local={}):
         if kwargs is None:
             kwargs = self.mapping()
+        kwargs.update(local)
         try:
             return display.format(**kwargs)
         except KeyError as err:
             raise KeyError(f"The mapping doesn't contain the key {err} requested in \"{display}\". Set the mapping in \"_referia.yml\".") from err
 
+    def compute_to_value(self, compute):
+        """Extract a value from a computation"""
+        compute = self._compute_prep(compute)
+        return self.compute(compute)
+    
+    def compute_to_tmpname(self, compute):
+        """Convert a display string to a temp name"""
+        return to_camel_case(compute["function"].replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
+        
     def liquid_to_tmpname(self, display):
         """Convert a display string to a temp name"""
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
 
-    def liquid_to_value(self, display, kwargs=None):
+    
+    def liquid_to_value(self, display, kwargs=None, local={}):
         if kwargs is None:
             kwargs = self.mapping()
+        kwargs.update(local)
         try:
             return self._liquid_env.from_string(display).render(**remove_nan(kwargs))
         except Exception as err:
@@ -1265,7 +1432,7 @@ class Data(data.DataObject):
             tmpname += self.view_to_tmpname(tally["end"])
         return tmpname
 
-    def tally_values(self, tally, kwargs=None):
+    def tally_values(self, tally, kwargs=None, local={}):
         value = ""
         if "begin" in tally:
             value += tally["begin"]
@@ -1275,7 +1442,7 @@ class Data(data.DataObject):
         subindices = self.tally_series(tally)
         for subindex in subindices:
             self.set_subindex(subindex)
-            value += self.view_to_value(tally, kwargs)
+            value += self.view_to_value(tally, kwargs, local)
             if value != "":
                 value += "\n\n"
         self.set_subindex(orig_subindex)

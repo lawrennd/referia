@@ -179,6 +179,7 @@ list_stateful_widgets = [
 ]
 
 class ReferiaWidget():
+    """Base class for Referia widgets."""
     def __init__(self, **args):
         self._parent = None
         self.private = True
@@ -201,6 +202,9 @@ class ReferiaWidget():
     def _widget_events(self):
         self._ipywidget.on_click(self.on_click)
 
+    def close(self):
+        self._ipywidget.close()
+        
     def on_click(self, b):
         pass
 
@@ -258,6 +262,9 @@ class ReferiaStatefulWidget(ReferiaWidget):
         if "liquid" in args:
             self._viewer["liquid"] = args["liquid"]
             del args["liquid"]
+        if "local" in args:
+            self._viewer["local"] = args["local"]
+            del args["local"]
         if "conditions" in args:
             self._viewer["conditions"] = args["conditions"]
             del args["conditions"]
@@ -267,6 +274,12 @@ class ReferiaStatefulWidget(ReferiaWidget):
         if "field_name" in args:
             self._field_name = args["field_name"]
             del args["field_name"]
+        if "refresh_display" in args:
+            self._refresh_display = args["refresh_display"]
+            del args["refresh_display"]
+        else:
+            self._refresh_display = False
+        
         super().__init__(**args)
         if "value" in args:
             self._default_value = args["value"]
@@ -290,6 +303,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
         self._ipywidget.observe(self.on_value_change, names="value")
 
     def on_value_change(self, value):
+        """If display is refreshed then refresh it."""
         pass
     
     def get_value(self):
@@ -331,7 +345,10 @@ class ReferiaStatefulWidget(ReferiaWidget):
 class FieldWidget(ReferiaStatefulWidget):
     """Widget for editing field values in parent data."""
     def __init__(self, function=None, conversion=None, reversion=None, **args):
+        # This argument includes the ipywidgets function for creating the widget
         args["function"] = function
+
+        # These arguments are for any conversions for setting and retrieving the widget value.
         args["conversion"] = conversion
         args["reversion"] = reversion
         super().__init__(**args)
@@ -343,6 +360,10 @@ class FieldWidget(ReferiaStatefulWidget):
             self._parent.set_column(self.get_column())
             self._parent.set_value(self.get_value())
 
+        if self._refresh_display:
+            if self._parent is not None:
+                self._parent._widgets.refresh()
+            
     def has_viewer(self):
         """Does the widget have a viewer structure for generating its values."""
         return len(self._viewer)>0
@@ -353,11 +374,55 @@ class FieldWidget(ReferiaStatefulWidget):
         column = self.get_column()
         if column is not None and self._parent is not None:
             if self.has_viewer():
+                # Convert the result using viewer before setting value.
                 value = self._parent._data.viewer_to_value(self._viewer)
                 self.set_value(value)
             else:
                 self._parent.set_column(column)
                 self.set_value(self._parent.get_value())
+        else:
+            self.reset_value()
+        self._ipywidget.observe(self.on_value_change, names="value")
+
+class ElementWidget(FieldWidget):
+    """Widget for editing element of a given field value in parent data."""
+    def __init__(self, **args):
+        if "element" in args:
+            self.set_element(args["element"])
+        super().__init__(**args)
+
+    def get_element(self):
+        return self._element
+
+    def set_element(self, value):
+        self._element = value
+        
+    def on_value_change(self, change):
+        """When value of the widget changes update the relevant parent data structure."""
+        self.set_value(change.new)
+        if not self.private and self._parent is not None:
+            self._parent.set_column(self.get_column())
+            self._parent.set_value_by_element(self.get_value(), self.get_element())
+        if self._refresh_display:
+            if self._parent is not None:
+                self._parent.refresh()
+
+    def has_viewer(self):
+        """Does the widget have a viewer structure for generating its values."""
+        return len(self._viewer)>0
+    
+    def refresh(self):
+        """Update the widget value from the data."""
+        self._ipywidget.observe(self.null, names='value')
+        column = self.get_column()
+        if column is not None and self._parent is not None:
+            if self.has_viewer():
+                # Convert the result using viewer before setting value.
+                value = self._parent._data.viewer_to_value(self._viewer)
+                self.set_value(value)
+            else:
+                self._parent.set_column(column)
+                self.set_value(self._parent.get_value_by_element(self.get_element()))
         else:
             self.reset_value()
         self._ipywidget.observe(self.on_value_change, names="value")
@@ -445,6 +510,74 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
             objects.append(item["widget"])
         IPython.display.display(ipyw.VBox(objects))
 
+# class WidgetList(ReferiaMultiWidget):
+#     """This multi widget holds a list of widgets to provide a list entry in the data."""
+#     def __init__(self, parent):
+#         stateful_args = {
+#             "text_select1":  {
+#                     "value_function": parent.get_value,
+#                     "function": ipyw.Textarea,
+#                     "result_function" : parent.set_value,
+#                 "conversion": None,
+#                 "reversion": None,
+#             },
+#             "selector_select":  {
+#                 "function": ipyw.Dropdown,
+#                 "options_function": parent.get_selectors,
+#                 "value_function": parent.get_selector,
+#                 "result_function": parent.set_selector,
+#                 "display_when_function": parent.get_select_selector,
+#                 "conversion": None,
+#                 "reversion": None,
+#             },
+#             "subindex_select": {
+#                 "function" : ipyw.Dropdown,
+#                 "options_function": parent.get_subindices,
+#                 "value_function": parent.get_subindex,
+#                 "result_function" : parent.set_subindex,
+#                 "display_when_function": parent.get_select_subindex,
+#                 "conversion": None,
+#                 "reversion": None,
+#             },
+#             "select_subindex_checkbox": {
+#                 "function" : ipyw.Checkbox,
+#                 "value_function": parent.get_select_subindex,
+#                 "result_function": parent.set_select_subindex,
+#                 "conversion": bool,
+#                 "description": "Select Subindex",
+#                 "reversion": None,
+#             },
+#             "select_selector_checkbox": {
+#                 "function" : ipyw.Checkbox,
+#                 "value_function": parent.get_select_selector,
+#                 "result_function": parent.set_select_selector,
+#                 "conversion": bool,
+#                 "description": "Select Selector",
+#                 "reversion": None,
+#             }
+#         }
+#         stateless_args = {
+#             "generate_button" : {
+#                 "function": ipyw.Button,
+#                 "on_click_function": parent.add_series_row,
+#                 "description": "Add Row",
+#             }
+#         }
+#         super().__init__(parent, stateful_args, stateless_args)
+    
+#     def get_value(self):
+#         return [val for widget in self._ipywidgets if widget["stateful"]]
+
+#     def set_value(self, values):
+#         if type(values) is not list:
+#             raise ValueError(f"Attempt to set value of a WidgetList with a non-list value.")
+#         else:
+#             for i, val in enumerate(values):
+#                 if self._ipywidgets[i]
+#         val = []
+#         return [val for widget in self._ipywidgets if widget["stateful"]]
+    
+        
 class ActionExtractor(ReferiaMultiWidget):
     """This multi widget allows a box to be filled from an action taken by a button."""
     def __init__(self, parent, action_function, action_args):
@@ -642,16 +775,41 @@ def gwf_(name, function, conversion=None, reversion=None, default_args={}, docst
     widget_function.__docstr__ = docstr
     return widget_function
 
-def populate_widgets(list_stateful_widgets):
+def gwef_(name, function, conversion=None, reversion=None, default_args={}, docstr=None):
+    """This function wraps the widget function and calls it with any additional default arguments as specified."""
+    def widget_function(**args):
+        all_args = default_args.copy()
+        all_args.update(args)
+        return ElementWidget(
+            function=function,
+            conversion=conversion,
+            reversion=reversion,
+            **all_args,
+        )
+    widget_function.__name__ = name
+    widget_function.__docstr__ = docstr
+    return widget_function
+                
+def populate_widgets(widget_list):
     """populate_widgets: Automatically creates widget wrapper objects and adds them to the module."""
     this_module = sys.modules[__name__]
-    for widget in list_stateful_widgets:
+    for widget in widget_list:
         setattr(
             this_module,
             widget["name"],
             gwf_(**widget),
         )
 
+def populate_element_widgets(widget_list):
+    """populate_widgets: Automatically creates widget wrapper objects and adds them to the module."""
+    this_module = sys.modules[__name__]
+    for widget in widget_list:
+        setattr(
+            this_module,
+            "Element" + widget["name"],
+            gwef_(**widget),
+        )
+                
 def MyFileChooser(**args):
     """Create a simple Dropdown box to allow file selection from a given path."""
     if "directory" not in args:
@@ -764,9 +922,10 @@ class PopulateButton(ReferiaWidget):
         for compute in self._compute:
             compute["refresh"] = True
             self._parent.compute(self._parent._data._compute_prep(compute))
-        self._parent.populate_widgets()
+        self._parent.populate_display()
 
         
     
 populate_widgets(list_stateful_widgets)
+populate_element_widgets(list_stateful_widgets)
 

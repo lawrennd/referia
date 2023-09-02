@@ -312,8 +312,18 @@ def read_docx_file(filename, include_content=True):
     tmpfile = os.path.join(directory, "tmp.md")
     extra_args = []
     extra_args.append("--standalone")
+    extra_args.append("--track-change=all")    
     pypandoc.convert_file(filename, "markdown", outputfile=tmpfile, extra_args=extra_args)
     data = read_markdown_file(tmpfile, include_content)
+    return remove_nan(data)
+
+
+def read_talk_file(filename, include_content=True):
+    data = read_markdown_file(filename, include_content)
+    return remove_nan(data)
+
+def read_talk_include_file(filename, include_content=True):
+    data = read_markdown_file(filename, include_content)
     return remove_nan(data)
 
 def write_url_file(data, filename, content, include_content=True):
@@ -321,16 +331,20 @@ def write_url_file(data, filename, content, include_content=True):
     # This is with writing links to prefilled google forms in mind.
     raise NotImplemented("The write url file function has not been implemented.")
 
-def write_markdown_file(data, filename, content, include_content=True):
+def write_markdown_file(data, filename, content=None, include_content=True):
     """Write a markdown file from a python dictionary"""
-    if include_content and content in data:
-        write_data = {key: item for (key, item) in data.items() if key != "content"}
-        content = data[content]
+    if content is None:
+        if include_content and "content" in data:
+            write_data = {key: item for (key, item) in data.items() if key != "content"}
+            content = data["content"]
+        else:
+            if not include_content:
+                content = ""
+            write_data = data
     else:
-        if not include_content:
-            content = ""
-        write_data = data
-
+        write_data = data.copy()
+        if "content" in data:
+            del write_data["content"]
     log.info(f"Writing markdown file \"{filename}\"")
     post = frontmatter.Post(content, **write_data)
     with open(filename, "wb") as stream:
@@ -782,26 +796,26 @@ def load_or_create_df(details, index):
 def globals(details, index=None):
     """Load in the globals data to a data frame."""
     # don't do it in the standard way as we don't want the index to be a column
-    if "index" in details:
-        index_column_name = details["index"]
-    else:
-        index_column_name = "index"
-    if data_exists(details):
-        df, details = read_data(details)
-        df.set_index(index_column_name, inplace=True)
-        return df, details
-    elif index is not None:
-        log.info(f"Creating new globals DataFrame from index as \"{details}\" is not found.")
-        if "columns" in details:
-            df = pd.DataFrame(index=pd.Index(data=index, name=index_column_name), columns=details["columns"])
-        else:
-            raise ValueError(f"Field \"columns\" must be provided in globals.")
-        return finalize_data(df, details)
-    else:
-        raise FileNotFoundError(
-            errno.ENOENT,
-            os.strerror(errno.ENOENT), filename
-            )
+    # if "index" in details:
+    #     index_column_name = details["index"]
+    # else:
+    #     index_column_name = "index"
+    # if data_exists(details):
+    #     df, details = read_data(details)
+    #     df.set_index(index_column_name, inplace=True)
+    #     return df, details
+    # elif index is not None:
+    #     log.info(f"Creating new globals DataFrame from index as \"{details}\" is not found.")
+    #     if "columns" in details:
+    #         df = pd.DataFrame(index=pd.Index(data=index, name=index_column_name), columns=details["columns"])
+    #     else:
+    #         raise ValueError(f"Field \"columns\" must be provided in globals.")
+    #     return finalize_data(df, details)
+    # else:
+    #     raise FileNotFoundError(
+    #         errno.ENOENT,
+    #         os.strerror(errno.ENOENT), filename
+    #         )
         
     return load_or_create_df(details, index)
 
