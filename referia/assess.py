@@ -1403,6 +1403,7 @@ class Data(data.DataObject):
     
     def compute_to_tmpname(self, compute):
         """Convert a display string to a temp name"""
+        
         return to_camel_case(compute["function"].replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
         
     def liquid_to_tmpname(self, display):
