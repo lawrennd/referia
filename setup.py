@@ -32,25 +32,26 @@ REQUIRED = [
     "pandas",
     "numpy",
     "jupyter",
-    "python-liquid",
     "matplotlib",
     "markdown",
-    "markdownify",
     "unidecode",
-    "python-frontmatter",
     "nltk", # For tokenization
     "thinc",
     "spacy", # for parsing and tokenization
     "pillow", # for wordcloud
     #"wordcloud", # for wordcloud
+    "google-auth-oauthlib",
+    "pypandoc", # for calling pandoc
+    "pypdftk", # for pdftk
+    # up to here everything is also availble on conda, below needs pip
+    "python-liquid",
+    "markdownify",
+    "python-frontmatter",
     "google-api-python-client", # for loading from google spreadsheets
     "google-auth-httplib2",
-    "google-auth-oauthlib",
     "gspread",
     "mimesis", # for generating fake data for testing
     "pyminizip", # For storing files as zip
-    "pypandoc", # for calling pandoc
-    "pypdftk", # for pdftk
 ]
 
 OSX_REQUIRED = [

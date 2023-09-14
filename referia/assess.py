@@ -80,6 +80,7 @@ def render_liquid(data, template, **kwargs):
     return data.liquid_to_value(template, kwargs)
         
 class Data(data.DataObject):
+    """Class to hold merged data flows together perform operations on them."""
     def __init__(self, user_file="_referia.yml", directory="."):
 
         self._directory = directory
@@ -140,6 +141,7 @@ class Data(data.DataObject):
         self.load_flows()
         
     def _compute_prep(self, compute):
+        """Prepare a compute entry for use."""
         compute_prep = {
             "function": self.gcf_(function=compute["function"]),
             "args" : self.gca_(**compute),
@@ -150,6 +152,7 @@ class Data(data.DataObject):
         return compute_prep
             
     def _compute_functions_list(self):
+        """Return a list of compute functions."""
         return  [
             {
                 "name" : "liquid",
@@ -555,8 +558,6 @@ class Data(data.DataObject):
             duplicates = ', '.join(strindex[df.index.duplicated()])
             raise ValueError(f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated.")
 
-        
-
     def _load_series(self):
         """Load in the series data to data frames."""
         if "selector" not in self._config["series"]:
@@ -612,7 +613,12 @@ class Data(data.DataObject):
             self._data.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_output_flows(self):
-        """Load the output flows data specified in the _referia.yml file."""
+        """Load the output flows data specified in the _referia.yml file. 
+        Different output flows are listed in the configuration file under "globals", "cache", "scores", "series".
+        Those listed under "globals" are constants that don't change when the index changes. 
+        Those specified under "cache" are variables that can be cached and used in liquid templates or comptue functions but are assumed as not needed to be stored.
+        Those specified under "scores" are the variables that the user will want to store.
+        Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index."""
         if "globals" in self._config:
             self._globals = None
             self._load_globals()
@@ -627,6 +633,7 @@ class Data(data.DataObject):
             self._load_series()
 
     def load_flows(self):
+        """Load the input and output flows."""
         self.load_input_flows()
         self.load_output_flows()
 
@@ -668,6 +675,7 @@ class Data(data.DataObject):
 
 
     def add_liquid_filters(self):
+        """Add liquid filters to the liquid environment."""
         self._liquid_env.add_filter("url_escape", url_escape)
         self._liquid_env.add_filter("markdownify", markdownify)
         self._liquid_env.add_filter("relative_url", relative_url)
@@ -677,8 +685,10 @@ class Data(data.DataObject):
     def set_index(self, index):
         """Index setter"""
         orig_index = self._index
+        # If index has changed, run computes.
         if orig_index is not None and index != orig_index:
             self.run_compute(post=True)
+        # If 
         if self._data is not None and index not in self.index:
             raise ValueError(f"Index \"{index}\" not found in _data")
             self.add_row(index=index)
@@ -873,8 +883,6 @@ class Data(data.DataObject):
             self._log.info(f"No subindex available.")
             self.add_series_row()
 
-
-
     def generate_subindex(self):
         """Generate a new subindex for use."""
         # Store state
@@ -971,6 +979,7 @@ class Data(data.DataObject):
             self.set_series_value(value, column)
 
     def get_value_by_element(self, element):
+        """Return the value of an element from the under focus cell (e.g. a list entry or a dict entry)."""
         value = self.get_value()
         if type(element) is int and type(value) is not list:
             self._log.warning(f"Attempt to get element of a non list entry with an element \"{element}\" that is an integer.")
@@ -986,6 +995,7 @@ class Data(data.DataObject):
             return value[element]
 
     def set_value_by_element(self, value, element):
+        """Set the value of an element from the under focus cell (e.g. a list entry or a dict entry)."""
         orig_value = self.get_value()
         if type(element) is int and type(orig_value) is not list:
             self._log.warning("Value wasn't a list and element was set as integer, so converting to a list.")
@@ -1595,6 +1605,7 @@ class Data(data.DataObject):
                     
 
         if "mapping" in details:
+            
             for name, column in details["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
                 

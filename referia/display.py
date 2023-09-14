@@ -188,6 +188,29 @@ def extract_composite_scorer(details, scorer, widgets):
         return
 
 
+    if details["type"] == "CriterionCommentRedAmberGreen":
+        criterioncomment = json.loads(json.dumps(details))
+        criterioncomment["type"] = "CriterionComment"
+
+        prefix = details["prefix"]
+        expectation = {
+            "field": prefix + " Traffic",
+            "type": "Dropdown",
+            "args": {
+                "placeholder": "Traffic Signal",
+                "options": [
+                    "",
+                    "Red",
+                    "Amber",
+                    "Green",
+                ],
+                "description": "Traffic Signal",
+            }
+        }
+        for sub_score in [criterioncomment, expectation]:
+            extract_scorer(sub_score, scorer, widgets)
+        return
+    
     if details["type"] == "CriterionCommentRaisesMeetsLowers":
         criterioncomment = json.loads(json.dumps(details))
         criterioncomment["type"] = "CriterionComment"
@@ -228,6 +251,7 @@ def extract_composite_scorer(details, scorer, widgets):
             extract_scorer(sub_score, scorer, widgets)
         return
 
+    
     if details["type"] == "CriterionCommentScore":
         criterioncomment = json.loads(json.dumps(details))
         criterioncomment["type"] = "CriterionComment"
@@ -408,7 +432,7 @@ def extract_scorer(details, scorer, widgets):
         extract_group_scorer(details, scorer, group_widgets)
 
     
-    elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
+    elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
         if isinstance(widgets, CompositeWidgetCluster):
             extract_composite_scorer(details, scorer, widgets)
         else:
