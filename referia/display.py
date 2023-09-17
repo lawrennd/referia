@@ -654,7 +654,7 @@ class Scorer:
     def _create_progress_bar(self, label):
         """Create the progress bar."""
         _progress_label = Markdown(description=" ", field_name=label)
-        return WidgetCluster(name="progress_bar", parent=self,  viewer = True, _progress_label=_progress_label)
+        return WidgetCluster(name="progress_bar", parent=self,  viewer=True, _progress_label=_progress_label)
 
     def _create_viewer(self, views):
         """Create the viewer."""
@@ -719,7 +719,6 @@ class Scorer:
         
     def _create_widgets(self, config, widgets):
         """Create the widgets to be used for display."""
-        widgets.add(self._create_reload_button(config))
         if "scored" in config:
             widgets.add(cluster=self._create_progress_bar(label="_progress_label"))
 
@@ -727,6 +726,7 @@ class Scorer:
         if "viewer" in config:
             widgets.add(cluster=self._create_viewer(config["viewer"]))
 
+        widgets.add(self._create_reload_button(config))
         # Process the scorer from the config file.
         if "scorer" in config:
             widgets.add(self._create_scorer(config["scorer"]))
@@ -1061,6 +1061,7 @@ class Scorer:
     
     def populate_display(self):
         """Update the widgets with defaults or values from the data"""
+        self._widgets.refresh()
         if self._widgets.has("_progress_label"):
             total = self._data.to_score()
             if total > 0:
@@ -1072,10 +1073,9 @@ class Scorer:
                 scored = 0
                 remain = total
                 perc=0
-                
-            self._widgets.get("_progress_label").set_value(f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%")
+            message = f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%"
+            self._widgets.to_dict()["_progress_label"].set_value(message)
 
-        self._widgets.refresh()
 
     def view_series(self):
         self._system.clear_temp_files()
