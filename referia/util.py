@@ -26,13 +26,13 @@ def datetimeToYyyymmdd(date):
     """Convert from YYYY-MM-DD string to a datetime.datetime object."""
     return datetime.strftime(date, "%Y-%m-%d")
 
-def add_one_to_max(values=None):
+def add_one_to_max(values=None, default=1):
     """Add one to the maximum value of a column."""
     if values is None:
-        return 1
+        return default
     mv=values.max()
     if pd.isna(mv):
-        return 1
+        return default
     else:
         return values.max() + 1
 

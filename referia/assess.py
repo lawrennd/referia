@@ -706,8 +706,10 @@ class Data(data.DataObject):
         if self._writeseries is not None:
             subindices = self.get_subseries()
             if len(subindices) > 0:
-                if self.get_subindex() is None:
-                    self.set_subindex(subindices[self.get_selector()][0])
+                subindex = self.get_subindex()
+                selector = self.get_selector()
+                if subindex is None or not subindex in subindices[selector]:
+                    self.set_subindex(subindices[selector][0])
             else:
                 self.add_series_row(self._index)
 
