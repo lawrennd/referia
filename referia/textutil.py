@@ -208,7 +208,7 @@ def pdf_extract_comments(filename, directory="", start_page=1):
                 page = entry["page"] + start_page - 1
                 text = entry["text"]
                 contents = entry["contents"]
-                val += f"* Page {page}: \"{text}\" -- {contents}\n\n"
+                val += f"* Page {page}:\n\n  > {text}\n\n  {contents}\n\n"
         return val
     else:
         return ""

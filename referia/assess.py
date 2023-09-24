@@ -1234,10 +1234,10 @@ class Data(data.DataObject):
 
     def mapping(self, mapping=None, series=None):
         """Generate dictionary of mapping between variable names and column values."""
-            
+        
         if mapping is None:
             if series is None: # remove any columns not in self.columns
-                mapping = {name: column for name, column in self._default_mapping().items() if column in self.columns}
+                mapping = {name: column for name, column in self._default_mapping().items() if column in self.columns or column==self._data.index.name}
             else: # remove any columns not in provided series
                 mapping = {name: column for name, column in self._default_mapping().items() if column in series.index}
 
@@ -1249,7 +1249,7 @@ class Data(data.DataObject):
             else:
                 self.set_column(column)
                 format[name] = self.get_value()
-
+                
         return remove_nan(format)
 
 
@@ -1617,7 +1617,7 @@ class Data(data.DataObject):
             
             for name, column in details["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
-                
+
 
         for column in df.columns:
             # If column title is valid variable name, add it to the column name map
@@ -1636,7 +1636,7 @@ class Data(data.DataObject):
                     else:
                         raise ValueError(f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\".")
 
-                    
+
                 
         if "selector" in details:
             field = details["selector"]
@@ -1693,6 +1693,8 @@ class Data(data.DataObject):
             df.set_index(df[index_column_name], inplace=True)
             del df[index_column_name]
 
+
+            
         if "fields" in details and details["fields"] is not None:
             for field in details["fields"]:
                 if "name" in field:
