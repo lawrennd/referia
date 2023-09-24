@@ -3,6 +3,11 @@ import nltk
 from nltk.tokenize import sent_tokenize
 import spacy
 
+import json
+import tempfile
+import os
+import random
+import string
 #from wordcloud import WordCloud, STOPWORDS
 
 from spacy.lang.en.stop_words import STOP_WORDS
@@ -186,6 +191,25 @@ def text_summarizer(text, fraction=0.1):
     # Return final summary
     return summary
 
+def pdf_extract_comments(filename, directory="", start_page=1):
+    full_filename = os.path.join(directory, filename)
+    if os.path.exists(full_filename):
+        tmpdirectory = tempfile.gettempdir()
+        tmpname = ''.join(random.choices(string.digits+string.ascii_letters, k=8))
+        destfile = "_" + tmpname + ".json"
+        destname = os.path.join(tmpdirectory, destfile)
+        os.system(f"pdfannots {full_filename} -o {destname} -f json")
+        with open(destname, "r") as f:
+            data = json.load(f)
 
-
+        val = ""
+        for entry in data:
+            if entry["type"] == "Highlight":
+                page = entry["page"] + start_page - 1
+                text = entry["text"]
+                contents = entry["contents"]
+                val += f"* Page {page}: \"{text}\" -- {contents}\n\n"
+        return val
+    else:
+        return ""
     

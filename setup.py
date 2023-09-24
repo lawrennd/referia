@@ -43,6 +43,7 @@ REQUIRED = [
     "google-auth-oauthlib",
     "pypandoc", # for calling pandoc
     "pypdftk", # for pdftk
+    "pdfannots", # for pdf annotation extraction
     # up to here everything is also availble on conda, below needs pip
     "python-liquid",
     "markdownify",
