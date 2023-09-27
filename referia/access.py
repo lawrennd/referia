@@ -747,6 +747,12 @@ def read_data(details):
 
     return finalize_data(df, details)
 
+
+def convert_data(read_details, write_details):
+    """Convert a data set from one form to another."""
+    data, details = read_data(read_details)
+    write_data(data, write_details)
+    
 def data_exists(details):
     """Check if a particular data structure exists or needs to be created."""
     if "filename" in details:
