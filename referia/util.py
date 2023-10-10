@@ -9,6 +9,8 @@ import markdown
 import markdownify
 import os
 
+import wget
+
 """Utility functions for helping, e.g. to create the relevant yaml files quickly."""
 
 def filename_to_binary(filename):
@@ -147,8 +149,24 @@ def mapping(fieldname, columns):
         print("  {field}: {fieldContent}".format(field=to_camel_case(column), fieldContent=column))
 
         
-
-
+def get_url_file(url, directory=None, filename=None, ext=None):
+    """Download a file from a url and save it to disk."""
+    try:
+        dfilename = wget.download(url)
+    except:
+        return ""
+    if filename is None:
+        return dfilename
+    else:
+        if ext is None:
+            ext = os.path.splitext(dfilename)[1][1:]
+        filename+="." + ext
+        if directory is not None:
+            filename = os.path.join(directory,filename)
+        os.rename(dfilename, filename)
+        return filename
+                  
+    
 def draft_skills(dtypes, width="800px"):
     print("scorer:")
     for column, dtype in dtypes.items():

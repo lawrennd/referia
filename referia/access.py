@@ -208,6 +208,10 @@ def write_directory(df, details, write_file=None, write_file_args={}):
             fullfilename = os.path.join(directoryname, row[filename_field])
             row_dict = row.to_dict()
             row_dict = remove_empty(row_dict)
+            # Don't save the file information because that's situational.
+            del row_dict[filename_field]
+            del row_dict[root_field]
+            del row_dict[directory_field]
             write_file(row_dict, fullfilename, **write_file_args)
 
 def remove_empty(row_dict):
@@ -346,6 +350,8 @@ def write_markdown_file(data, filename, content=None, include_content=True):
         if "content" in data:
             del write_data["content"]
     log.info(f"Writing markdown file \"{filename}\"")
+    if pd.isna(content):
+        content = ""
     post = frontmatter.Post(content, **write_data)
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)

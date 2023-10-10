@@ -26,9 +26,9 @@ def url_escape(string):
 
 
 @string_filter
-def markdownify(string):
+def mymarkdownify(string):
     """Filter to convert markdown to html for liquid"""
-    return markdown2html(string.encode("utf8"))
+    return "Cat" #markdown2html(string.encode("utf8")).encode("utf8")
 
 @string_filter
 def relative_url(string):
