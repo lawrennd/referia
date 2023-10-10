@@ -208,16 +208,23 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
         for entry in data:
             if entry["type"] == "Highlight":
                 if entry["type"] in comment_types:
-                    page = entry["page"] + start_page - 1
-                    text = entry["text"]
-                    contents = entry["contents"]
-                    val += f"* Page {page}:\n\n  > {text}\n\n  {contents}\n\n"
+                    val += f"* "
+                    if "page" in entry:
+                        page = entry["page"] + start_page - 1
+                        val += f"Page {page}:\n\n  "
+                    if "text" in entry:
+                        text = entry["text"]
+                        val += f"> {text}\n\n  "
+                    if "contents" in entry:
+                        contents = entry["contents"]
+                        val += f"  {contents}\n\n"                    
         for entry in data:
             if entry["type"] == "FreeText":
                 if entry["type"] in comment_types:
-                    page = entry["page"] + start_page - 1
-                    contents = entry["contents"]
-                    val += f"{contents}\n\n"
+                    if "contents" in entry:
+                        page = entry["page"] + start_page - 1
+                        contents = entry["contents"]
+                        val += f"{contents}\n\n"
         return val
     else:
         return ""
