@@ -53,6 +53,7 @@ REQUIRED = [
     "gspread",
     "mimesis", # for generating fake data for testing
     "pyminizip", # For storing files as zip
+    "wget", # for downloading files
 ]
 
 OSX_REQUIRED = [

@@ -65,7 +65,7 @@ def load_user_config(user_file="_referia.yml", directory=".", append=[], ignore=
             inherit_user_file = "_referia.yml"
         parent = load_user_config(user_file=inherit_user_file,
                                   directory=inherit_directory)
-        viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(inherit["directory"], "assessment.ipynb") + '" target="_blank">here</a>.'}
+        viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(os.path.relpath(os.path.expandvars(inherit["directory"]), "assessment.ipynb")) + '" target="_blank">here</a>.'}
 
         # Add links to parent assessment by placing in viewer.
         if "viewer" in conf:

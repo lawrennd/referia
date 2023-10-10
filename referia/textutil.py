@@ -206,6 +206,12 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
 
         val = ""
         for entry in data:
+            if entry["type"] == "FreeText":
+                if entry["type"] in comment_types:
+                    page = entry["page"] + start_page - 1
+                    contents = entry["contents"]
+                    val += f"{contents}\n\n"
+        for entry in data:
             if entry["type"] == "Highlight":
                 if entry["type"] in comment_types:
                     val += f"* "
@@ -226,6 +232,7 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
                         contents = entry["contents"]
                         val += f"{contents}\n\n"
         return val
+
     else:
         return ""
 

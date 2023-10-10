@@ -13,7 +13,7 @@ import urllib.parse
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .log import Logger
-from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max, return_shortest, return_longest
+from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max, return_shortest, return_longest, get_url_file
 
 from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments
 from .sysutil import most_recent_screen_shot
@@ -42,7 +42,7 @@ def url_escape(string):
 @string_filter
 def markdownify(string):
     """Filter to convert markdown to html for liquid"""
-    return markdown2html(string.encode("utf8"))
+    return markdown2html(string)
 
 @string_filter
 def relative_url(string):
@@ -193,6 +193,13 @@ class Data(data.DataObject):
                 "name" : "next_integer",
                 "function" : add_one_to_max,
                 "default_args" : {},
+            },
+            {
+                "name" : "get_url_file",
+                "function" : get_url_file,
+                "default_args": {
+                },
+                "docstr" : "Download a file with the given name.",
             },
             {
                 "name" : "today",
@@ -694,7 +701,8 @@ class Data(data.DataObject):
         orig_index = self._index
         # If index has changed, run computes.
         if orig_index is not None and index != orig_index:
-            self.run_compute(post=True)
+            if orig_index in self.index:
+                self.run_compute(post=True)
         # If 
         if self._data is not None and index not in self.index:
             raise ValueError(f"Index \"{index}\" not found in _data")
