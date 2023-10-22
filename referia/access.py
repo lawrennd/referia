@@ -63,14 +63,18 @@ yaml.SafeDumper.add_multi_representer(EnvTag, EnvTag.to_yaml)
 def str_type():
     return str
 
+
 def bool_type():
     return pd.BooleanDtype()
+
 
 def int_type():
     return pd.Int32Dtype()
 
+
 def float_type():
     return pd.Float64Dtype()
+
 
 def extract_dtypes(details):
     """Extract dtypes from directory."""
@@ -80,6 +84,7 @@ def extract_dtypes(details):
             for dtype in details["dtypes"]:
                 dtypes[dtype["field"]] = globals()[dtype["type"]]()
     return dtypes
+
 
 def extract_sheet(details, gsheet=True):
     """Extract the sheet name from details"""
@@ -91,22 +96,26 @@ def extract_sheet(details, gsheet=True):
         else:
             return None
 
+
 def read_json(details):
     """Read data from a json file."""
     filename = extract_full_filename(details)
     data = read_json_file(filename)
     return pd.DataFrame(data)
 
+
 def write_json(df, details):
     """Write data to a json file."""
     filename = extract_full_filename(details)
     write_json_file(df.to_dict("records"), filename)
-    
+   
+
 def read_yaml(details):
     """Read data from a yaml file."""
     filename = extract_full_filename(details)
     data =  read_yaml_file(filename)
     return pd.DataFrame(data)
+
 
 def write_yaml(df, details):
     """Write data to a yaml file."""
@@ -114,7 +123,11 @@ def write_yaml(df, details):
     write_yaml_file(df.to_dict("records"), filename)
 
 
-def read_directory(details, read_file=None, read_file_args={}, default_glob="*", source=None):
+def read_directory(details,
+                   read_file=None,
+                   read_file_args={},
+                   default_glob="*",
+                   source=None):
     """Read scoring data from a directory of files."""
     filenames = []
     dirnames = []
@@ -161,7 +174,7 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*",
             log.warning(f"No files in \"{sources}\".")
     else:
         log.warning(f"No source in \"{details}\".")
-        
+       
     filenames.sort()
     data = []
     for filename, dirname in zip(filenames, dirnames):
@@ -186,6 +199,7 @@ def read_directory(details, read_file=None, read_file_args={}, default_glob="*",
             data[-1][filename_field] = split_path[1]
     return pd.json_normalize(data)
 
+
 def write_directory(df, details, write_file=None, write_file_args={}):
     """Write scoring data to a directory of files."""
     filename_field = details["store_fields"]["filename"]
@@ -195,7 +209,7 @@ def write_directory(df, details, write_file=None, write_file_args={}):
     for index, row in df.iterrows():
         # Don't write a file that contains only nulls
         if not row.isnull().values.all():
-            
+           
             directoryname = os.path.expandvars(
                 os.path.join(
                     row[root_field],
@@ -214,6 +228,7 @@ def write_directory(df, details, write_file=None, write_file_args={}):
             del row_dict[directory_field]
             write_file(row_dict, fullfilename, **write_file_args)
 
+
 def remove_empty(row_dict):
     """Remove any empty fields in the dictionary to tidy up saved files."""
     delete_keys = []
@@ -224,6 +239,7 @@ def remove_empty(row_dict):
     for key in delete_keys:
         del row_dict[key]
     return row_dict
+
 
 def read_json_file(filename):
     """Read a json file and return a python dictionary."""
@@ -236,6 +252,7 @@ def read_json_file(filename):
             data = {}
     return data
 
+
 def write_json_file(data, filename):
     """Write a json file from a python dicitonary."""
     with open(filename, "w") as stream:
@@ -244,7 +261,8 @@ def write_json_file(data, filename):
             json.dump(data, stream, sort_keys=False)
         except json.JSONDecodeError as exc:
             log.warning(exc)
-            
+
+
 def read_yaml_file(filename):
     """Read a yaml file and return a python dictionary."""
     with open(filename, "r") as stream:
@@ -256,6 +274,7 @@ def read_yaml_file(filename):
             data = {}
     return data
 
+
 def yaml_prep(data):
     """Prepare any fields for writing in yaml"""
     writedata = data.copy()
@@ -263,13 +282,13 @@ def yaml_prep(data):
         for num, el in enumerate(writedata):
             writedata[num] = yaml_prep(el)
         return writedata
-    
+   
     for key, item in writedata.items():
         if pd.api.types.is_datetime64_dtype(item) or type(item) is pd.Timestamp:
             writedata[key] = item.strftime("%Y-%m-%d %H:%M:%S.%f")
     return writedata
 
-    
+
 def write_yaml_file(data, filename):
     """Write a yaml file from a python dictionary."""
     writedata = yaml_prep(data)
@@ -280,8 +299,10 @@ def write_yaml_file(data, filename):
         except yaml.YAMLError as exc:
             log.warning(exc)
 
+
 def read_yaml_meta_file(filename):
-    """Read meta information associated with a file as a yaml and return a python dictionary if it exists."""
+    """Read meta information associated with a file as a yaml and return
+    a python dictionary if it exists."""
     metafile = filename + ".yml"
     if os.path.exists(metafile):
         data = read_yaml_file(metafile)
@@ -289,12 +310,13 @@ def read_yaml_meta_file(filename):
         data = {}
     return data
 
+
 def write_yaml_meta_file(data, filename):
     """Write meta information associated with a file to a yaml."""
     metafile = filename + ".yml"
     write_yaml_file(data, metafile)
 
-    
+   
 def read_markdown_file(filename, include_content=True):
     """Read a markdown file and return a python dictionary."""
     with open(filename, "r") as stream:
@@ -307,8 +329,9 @@ def read_markdown_file(filename, include_content=True):
         except yaml.YAMLError as exc:
             log.warning(exc)
             data = {}
-            
+
     return data
+
 
 def read_docx_file(filename, include_content=True):
     """Read information from a docx file."""
@@ -326,9 +349,11 @@ def read_talk_file(filename, include_content=True):
     data = read_markdown_file(filename, include_content)
     return remove_nan(data)
 
+
 def read_talk_include_file(filename, include_content=True):
     data = read_markdown_file(filename, include_content)
     return remove_nan(data)
+
 
 def write_url_file(data, filename, content, include_content=True):
     """Write a url to a file"""
@@ -356,31 +381,13 @@ def write_markdown_file(data, filename, content=None, include_content=True):
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)
 
-def create_letter(document, **args):
-    """Create a markdown letter."""
-    data, filename, content = create_document_content(document, **args)
-    access.write_letter_file(data=data, filename=filename, content=content)
-    open_localfile(filename)
-def write_letter_file(data, filename, content, include_content=True):
-    """Write a letter file from a python dictionary"""
-    if include_content and content in data:
-        write_data = {key: item for (key, item) in data.items() if key != "content"}
-        content = data[content]
-    else:
-        if not include_content:
-            content = ""
-        write_data = data
-        
-    log.info(f"Writing markdown letter file \"{filename}\"")
-    post = frontmatter.Post(content, **write_data)
-    with open(filename, "wb") as stream:
-        frontmatter.dump(post, stream, sort_keys=False)
 
 def create_letter(document, **args):
     """Create a markdown letter."""
     data, filename, content = create_document_content(document, **args)
     access.write_letter_file(data=data, filename=filename, content=content)
     open_localfile(filename)
+
 
 def write_letter_file(data, filename, content, include_content=True):
     """Write a letter file from a python dictionary"""
@@ -396,12 +403,36 @@ def write_letter_file(data, filename, content, include_content=True):
     post = frontmatter.Post(content, **write_data)
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)
-        
+
+
+def create_letter(document, **args):
+    """Create a markdown letter."""
+    data, filename, content = create_document_content(document, **args)
+    access.write_letter_file(data=data, filename=filename, content=content)
+    open_localfile(filename)
+
+
+def write_letter_file(data, filename, content, include_content=True):
+    """Write a letter file from a python dictionary"""
+    if include_content and content in data:
+        write_data = {key: item for (key, item) in data.items() if key != "content"}
+        content = data[content]
+    else:
+        if not include_content:
+            content = ""
+        write_data = data
+ 
+    log.info(f"Writing markdown letter file \"{filename}\"")
+    post = frontmatter.Post(content, **write_data)
+    with open(filename, "wb") as stream:
+        frontmatter.dump(post, stream, sort_keys=False)
+       
+
 def write_formlink(data, filename, content, include_content=True):
     """Write a url to prepopulate a Google form"""
     write_url_file(data, filename, content, include_content)
-    
-    
+   
+   
 def write_docx_file(data, filename, content, include_content=True):
     """Write a docx file from a python dictionary."""
     directory = tempfile.gettempdir()
@@ -413,7 +444,7 @@ def write_docx_file(data, filename, content, include_content=True):
         extra_args.append("--reference-doc=" + data["reference-doc"])
     pypandoc.convert_file(tmpfile, "docx", outputfile=filename, extra_args=extra_args)
 
-    
+   
 def write_tex_file(data, filename, content, include_content=True):
     """Write a docx file from a python dictionary."""
     directory = tempfile.gettempdir()
@@ -422,7 +453,8 @@ def write_tex_file(data, filename, content, include_content=True):
     log.info(f"Converting markdown file \"{tmpfile}\" to tex file \"{filename}\"")
     extra_args=[]
     pypandoc.convert_file(tmpfile, "tex", outputfile=filename, extra_args=extra_args)
-    
+   
+
 def read_csv(details):
     """Read data from a csv file."""
     dtypes = extract_dtypes(details)
@@ -442,7 +474,7 @@ def read_csv(details):
     else:
         quotechar = "\""
     log.info(f"Reading csv file \"{filename}\" from row \"{header}\" with quote character {quotechar} and delimiter \"{delimiter}\"")
-        
+  
     data = pd.read_csv(
         filename,
         dtype=dtypes,
@@ -451,7 +483,8 @@ def read_csv(details):
         quotechar=quotechar,
     )
     return data
-    
+   
+
 def read_excel(details):
     """Read data from an excel spreadsheet."""
     dtypes = extract_dtypes(details)
@@ -466,14 +499,14 @@ def read_excel(details):
     else:
         sheet_name = "Sheet1"
     log.info(f"Reading excel file \"{filename}\" sheet \"{sheet_name}\" from row \"{header}\"")
-        
+       
     data =  pd.read_excel(
         filename,
         sheet_name=sheet_name,
         dtype=dtypes,
         header=header,
     )
-    
+   
     return data
 
 if GSPREAD_AVAILABLE:
@@ -497,8 +530,7 @@ if GSPREAD_AVAILABLE:
             start_row=details["header"]+1,
         )
         return data
-    
-
+   
 
 def write_excel(df, details):
     """Write data to an excel spreadsheet."""
@@ -512,9 +544,9 @@ def write_excel(df, details):
         sheet_name = details["sheet"]
     else:
         sheet_name = "Sheet1"
-    
+   
     log.info(f"Writing excel file \"{filename}\" sheet \"{sheet_name}\" header at row \"{header}\".")
-    
+   
     writer = pd.ExcelWriter(
         filename,
         engine="xlsxwriter",
@@ -528,6 +560,7 @@ def write_excel(df, details):
         index=False
     )
     writer.close()
+
 
 def write_csv(df, details):
     """Write data to an csv spreadsheet."""
@@ -573,7 +606,6 @@ if GSPREAD_AVAILABLE:
             start=(details["header"]+1,1),
         )
 
-
 directory_readers = [
     {
         "default_glob": "*.yml",
@@ -613,6 +645,7 @@ directory_readers = [
     },
 ]
 
+
 directory_writers =[
     {
         "write_file": write_json_file,
@@ -635,6 +668,7 @@ directory_writers =[
         "docstr": "Write a directory of yaml meta files.",
     },
 ]
+
 
 def gdrf_(default_glob, read_file, name="", docstr=""):
     """Function generator for different directory readers."""
@@ -660,6 +694,7 @@ def gdrf_(default_glob, read_file, name="", docstr=""):
     directory_reader.__docstr__ = docstr
     return directory_reader
 
+
 def update_store_fields(details):
     """Add default store fields values"""
     # TK: Perhaps this should be set in config defaults somewhere.
@@ -679,6 +714,7 @@ def update_store_fields(details):
             details["store_fields"]["filename"] =  "sourceFilename"
     return details
     
+
 def gdwf_(write_file, name="", docstr=""):
     """Function generator for different directory writers."""
     def directory_writer(df, details):
@@ -692,6 +728,7 @@ def gdwf_(write_file, name="", docstr=""):
     directory_writer.__docstr__ = docstr
     return directory_writer
 
+
 def populate_directory_readers(readers):
     """populate_directory_readers: automatically create functions for reading directories."""
     this_module = sys.modules[__name__]
@@ -701,6 +738,7 @@ def populate_directory_readers(readers):
             reader["name"],
             gdrf_(**reader),
         )
+
 def populate_directory_writers(writers):
     """populate_directory_readers: automatically create functions for reading directories."""
     this_module = sys.modules[__name__]
@@ -714,12 +752,13 @@ def populate_directory_writers(writers):
 populate_directory_readers(directory_readers)
 populate_directory_writers(directory_writers)
 
+
 def finalize_data(df, details):
     """Finalize the data frame by augmenting with any columns. """
     """Eventually this should do any augmentation that isn't required by the series. The problem is at the moment the liquid rendering (and other renderings) are too integrated with assess. They need to be pulled out and not so dependent on the data structure."""
-    
+   
     return df, details
-    
+   
 
 def read_data(details):
     """Read in the data from the details given in configuration."""
@@ -727,7 +766,7 @@ def read_data(details):
         ftype = details["type"]
     else:
         raise ValueError("Field \"type\" missing in data source details for read_data.")
-    
+   
     if ftype == "excel":
         df = read_excel(details)
     elif ftype == "gsheet":
@@ -758,7 +797,8 @@ def convert_data(read_details, write_details):
     """Convert a data set from one form to another."""
     data, details = read_data(read_details)
     write_data(data, write_details)
-    
+   
+
 def data_exists(details):
     """Check if a particular data structure exists or needs to be created."""
     if "filename" in details:
@@ -785,6 +825,7 @@ def data_exists(details):
     else:
         log.error("Unhandled data source availability type.")
         return False
+
 
 def load_or_create_df(details, index):
     """Load in a data frame or create it if it doesn't exist yet."""
@@ -828,13 +869,15 @@ def globals(details, index=None):
     #         errno.ENOENT,
     #         os.strerror(errno.ENOENT), filename
     #         )
-        
+       
     return load_or_create_df(details, index)
+
 
 def cache(details, index=None):
     """Load in the cache data to a data frame."""
     return load_or_create_df(details, index)
-    
+   
+
 def scores(details, index=None):
     """Load in the score data to data frames."""
     return load_or_create_df(details, index)
@@ -851,7 +894,7 @@ def series(details, index=None):
         raise FileNotFoundError(
             errno.ENOENT,
             os.strerror(errno.ENOENT), details
-            )
+        )
 
 
 def write_data(df, details):
@@ -902,18 +945,20 @@ def write_globals(df, config):
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["globals"])
 
+
 def write_cache(df, config):
     """Write the cache to a file."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["cache"])
-    
+   
+
 def write_scores(df, config):
     """Write the scoring data frame to a file."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["scores"])
-    
+   
+
 def write_series(df, config):
     """Load in the series data to a file."""
     write_df = pd.concat([pd.Series(list(df.index), index=df.index, name=df.index.name), df], axis=1)    
     write_data(write_df, config["series"])
-

@@ -641,7 +641,8 @@ class Scorer:
             self._data = data
 
         if index is not None:
-            self.set_index(index)
+            # Widget isn't created yet so set index in data only.
+            self._data.set_index(index)
 
         self._create_widgets(self._config, self._widgets)
 
@@ -772,7 +773,6 @@ class Scorer:
         oldval = self.get_index()
         if oldval != value:
             self._data.set_index(value)
-        
             if self._selector_widget is not None:
                 self._selector_widget.set_index(value)
             self.populate_display()
@@ -882,7 +882,7 @@ class Scorer:
 
     def run(self):
         """Run the scorer to edit the data frame."""
-        if self._data.index is not None:
+        if self.index is not None:
             if "series" in self._config:
                 self.full_selector()
             else:
