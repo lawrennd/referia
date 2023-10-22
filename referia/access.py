@@ -761,13 +761,14 @@ def finalize_data(df, details):
             cols = df.columns
             if col not in cols:
                 raise ValueError(f"rename_columns contains key \"{col}\" which is not a column in the loaded DataFrame. Columns are \"{cols}\"")
-        df.rename(columns=details["rename_columns"])
+        df.rename(columns=details["rename_columns"], inplace=True)
+
     if "ignore_columns" in details:
         for col in details["ignore_columns"]:
             cols = df.columns
             if col not in cols:
                 raise ValueError(f"ignore_columns contains key \"{col}\" which is not a column in the loaded DataFrame. Columns are \"{cols}\"")
-        df.drop(columns=details["ignore_columns"]
+        df.drop(columns=details["ignore_columns"], inplace=True)
     return df, details
    
 
@@ -800,7 +801,6 @@ def read_data(details):
         df = read_docx_directory(details)
     else:
         raise ValueError("Unknown type \"{ftype}\" in read_data.")
-
     return finalize_data(df, details)
 
 
