@@ -31,9 +31,8 @@ except ImportError:
 log = Logger(
     name=__name__,
     level=config["logging"]["level"],
-    filename=config["logging"]["filename"]
+    filename=config["logging"]["filename"],
 )
-
 
 
 class EnvTag(yaml.YAMLObject):
@@ -108,7 +107,7 @@ def write_json(df, details):
     """Write data to a json file."""
     filename = extract_full_filename(details)
     write_json_file(df.to_dict("records"), filename)
-   
+  
 
 def read_yaml(details):
     """Read data from a yaml file."""
@@ -174,7 +173,7 @@ def read_directory(details,
             log.warning(f"No files in \"{sources}\".")
     else:
         log.warning(f"No source in \"{details}\".")
-       
+      
     filenames.sort()
     data = []
     for filename, dirname in zip(filenames, dirnames):
@@ -209,7 +208,7 @@ def write_directory(df, details, write_file=None, write_file_args={}):
     for index, row in df.iterrows():
         # Don't write a file that contains only nulls
         if not row.isnull().values.all():
-           
+          
             directoryname = os.path.expandvars(
                 os.path.join(
                     row[root_field],
@@ -756,7 +755,19 @@ populate_directory_writers(directory_writers)
 def finalize_data(df, details):
     """Finalize the data frame by augmenting with any columns. """
     """Eventually this should do any augmentation that isn't required by the series. The problem is at the moment the liquid rendering (and other renderings) are too integrated with assess. They need to be pulled out and not so dependent on the data structure."""
-   
+
+    if "rename_columns" in details:
+        for col in details["rename_columns"]:
+            cols = df.columns
+            if col not in cols:
+                raise ValueError(f"rename_columns contains key \"{col}\" which is not a column in the loaded DataFrame. Columns are \"{cols}\"")
+        df.rename(columns=details["rename_columns"])
+    if "ignore_columns" in details:
+        for col in details["ignore_columns"]:
+            cols = df.columns
+            if col not in cols:
+                raise ValueError(f"ignore_columns contains key \"{col}\" which is not a column in the loaded DataFrame. Columns are \"{cols}\"")
+        df.drop(columns=details["ignore_columns"]
     return df, details
    
 

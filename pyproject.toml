@@ -1,0 +1,59 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "referia"
+version = "0.1.0"
+description = "Template files for performing data analysis with python."
+authors = ["Neil D. Lawrence <email@domain.here>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/lawrennd/referia"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<4.0"
+XlsxWriter = "*"
+pandas = "*"
+numpy = "*"
+jupyter = "*"
+matplotlib = "*"
+markdown = "*"
+unidecode = "*"
+nltk = "*"
+thinc = "*"
+spacy = "*"
+pillow = "*"
+google-auth-oauthlib = "*"
+pypandoc = "*"
+pypdftk = "*"
+pdfannots = "*"
+python-liquid = "*"
+markdownify = "*"
+python-frontmatter = "*"
+google-api-python-client = "*"
+google-auth-httplib2 = "*"
+gspread = "*"
+mimesis = "*"
+pyminizip = "*"
+wget = "*"
+# You can include platform-specific dependencies like this:
+# Note: This is just an example, you might need to adjust for actual requirements.
+gspread_pandas = { version = "*", platform = "darwin" }
+appscript = { version = "*", platform = "darwin" }
+
+[tool.poetry.dev-dependencies]
+# Any development-only dependencies go here
+twine = "*"
+
+[build]
+# Include if you have any build scripts, though this is rare
+script = "path/to/script"

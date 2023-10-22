@@ -1,4 +1,43 @@
 #!/usr/bin/env python
+import os
+import sys
+import toml
+
+
+def get_version_from_toml(file_path='pyproject.toml'):
+    data = toml.load(file_path)
+    return data['tool']['poetry']['version']
+
+
+if __name__ == "__main__":
+    print("This project has transitioned to using Poetry for package management.")
+    print("setup.py is now just a wrapper for backwards compatibility.")    
+    print("Switching to Poetry for package management...")
+    
+    os.system("pip install poetry")
+    
+    if "install" in sys.argv:
+        print("Emulating setup.py with poetry. Try running poetry install instead.")
+        #os.system("poetry export -f requirements.txt > requirements.txt")
+        #os.system("python -m pip install -r requirements.txt")
+        os.system("poetry install")
+    elif "build" in sys.argv:
+        print("Emulating setup.py with poetry. Try running poetry build instead.")
+        os.system("poetry build")
+    elif "publish" in sys.argv:
+        print("Using twine to publish. Please consider switching to using poetry.")
+        os.system("poetry build")
+        os.system("twine upload dist/*")
+        print("Pushing git tags.")
+        version = get_version_from_toml()
+        os.system(f"git tag v{version}")
+        os.system("git push --tags")
+        #os.system("poetry publish")
+    else:
+        print("Unsupported command. Please use poetry directly or update this setup.py accordingly.")
+
+'''
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # This setup format based on that by Navdeep Gill <https://www.linkedin.com/in/navdeep-gill-b1729456/>
@@ -23,6 +62,7 @@ DESCRIPTION = "Template files for performing data analysis with python."
 URL = "https://github.com/lawrennd/referia"
 EMAIL = "email@domain.here"
 AUTHOR = "Neil D. Lawrence"
+
 REQUIRES_PYTHON = ">=3.6.0"
 VERSION = "0.1.0"
 
@@ -169,3 +209,4 @@ setup(
         "upload": UploadCommand,
     },
 )
+'''
