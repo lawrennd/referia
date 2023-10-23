@@ -14,14 +14,14 @@ class Logger():
         elif level == "critical":
             self.level = logging.CRITICAL
         else:
-            # For backwards compatability allowing direct specificaiton of a numeric level            
-            self.level = level 
+            # For backwards compatability allowing direct specificaiton of a numeric level
+            self.level = level
             
             
         self.filename = filename
         self.name = name
         format='%(levelname)s:%(name)s:%(asctime)s:%(message)s'
-        logging.basicConfig(level=level, filename=os.path.join(directory,filename), format=format)
+        logging.basicConfig(level=self.level, filename=os.path.join(directory,filename), format=format)
         self.logger = logging.getLogger(name)
 
     def debug(self, message):
