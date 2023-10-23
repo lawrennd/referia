@@ -136,43 +136,43 @@ class Sys():
         elif ext == ".md" or ext == ".markdown":
             self.open_markdown(filename)
         else:
-            self._log.info(f"Opening file \"{filename}\".")
+            self._log.debug(f"Opening file \"{filename}\".")
             os.system(f"open --background \"{filename}\"")
 
 
     def open_directory(self, filename):
         """Use the system viewer to open a directory.""" 
-        self._log.info(f"Opening file \"{filename}\".")
+        self._log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_markdown(self, filename):
         """Use the system viewer to open a markdown file."""
-        self._log.info(f"Opening file \"{filename}\".")
+        self._log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_python(self, filename):
         """Use the system viewer to open a python file."""
-        self._log.info(f"Opening file \"{filename}\".")
+        self._log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_docx(self, filename):
         """Use the system viewer to open a python file."""
-        self._log.info(f"Opening file \"{filename}\".")
+        self._log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_ipynb(self, filename):
         """Use the system viewer to open a python file."""
-        self._log.info(f"Opening file \"{filename}\".")
+        self._log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_pdf(self, filename):
         """Use the system viewer to open a PDF."""
-        self._log.info(f"Opening file \"{filename}\".")
+        self._log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_video(self, filename):
         """Use the system viewer to open a video."""
-        self._log.info(f"Opening file \"{filename}\".")
+        self._log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_url(self, urlname):
@@ -182,7 +182,7 @@ class Sys():
         else:
             browser="Google Chrome.app" 
 
-        self._log.info(f"Opening url \"{urlname}\".")
+        self._log.debug(f"Opening url \"{urlname}\".")
         os.system(f"open -a \"{browser}\" --background \"{urlname}\"")
 
 
@@ -254,7 +254,7 @@ class Sys():
             to = email_args["to"]
         else:
             to = "unknown address"
-        self._log.info(f"Drafting email to \"{to}\".")
+        self._log.debug(f"Drafting email to \"{to}\".")
         self.draft_email(**email_args)
 
 
@@ -330,7 +330,7 @@ class Sys():
     def move_file(self, origfile, destfile):
         """Move a file for editing or viewing."""
         if os.path.exists(origfile):
-            self._log.info(f"Moving \"{origfile}\" to \"{destfile}\"")
+            self._log.debug(f"Moving \"{origfile}\" to \"{destfile}\"")
             self.move(origfile, destfile)
         else:
             raise ValueError(f"\"{origfile}\" doesn't exist in move_file.")
@@ -348,7 +348,7 @@ class Sys():
                 if notempty(firstpage) and notempty(lastpage) and notempty(view["field"]):
                     firstpage = int(firstpage)
                     lastpage = int(lastpage)
-                    self._log.info(f"Extracting \"{destfile}\" from \"{origfile}\" pages {firstpage}-{lastpage}")
+                    self._log.debug(f"Extracting \"{destfile}\" from \"{origfile}\" pages {firstpage}-{lastpage}")
                     tk.get_pages(
                         pdf_path=origfile,
                         ranges=[[firstpage,
@@ -356,7 +356,7 @@ class Sys():
                         out_file=destfile,
                     )
             else:
-                self._log.info(f"Copying \"{origfile}\" to \"{destfile}\".")
+                self._log.debug(f"Copying \"{origfile}\" to \"{destfile}\".")
                 copy2(origfile, destfile)
         else:
             self._log.warning(f"Warning edit file \"{origfile}\" does not exist.")

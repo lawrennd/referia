@@ -33,6 +33,7 @@ def is_valid_variable_name(name):
 def identity(input):
     return input
 
+
 @string_filter
 def url_escape(string):
     """Filter to escape urls for liquid"""
@@ -44,11 +45,13 @@ def markdownify(string):
     """Filter to convert markdown to html for liquid"""
     return markdown2html(string)
 
+
 @string_filter
 def relative_url(string):
     """Filter to convert to a relative_url a jupyter notebook under liquid"""
     url = os.path.join("/notebooks", string)
     return url
+
 
 @string_filter
 def absolute_url(string):
@@ -58,14 +61,17 @@ def absolute_url(string):
        string = string[1:]
     return os.path.join("http://localhost:8888/notebooks/", string)
 
+
 def to_i(string):
     """Filter to convert the liquid entry to an integer under liquid."""
     if type(string) is str and len(string) == 0:
         return 0
     return int(float(string))
 
+
 def empty(val):
     return pd.isna(val) or val==""
+
 
 def automapping(columns):
     """Generate dictionary of mapping between variable names and column names."""
@@ -75,10 +81,12 @@ def automapping(columns):
         mapping[field] = column
     return mapping
 
+
 def render_liquid(data, template, **kwargs):
     """Wrapper to liquid renderer."""
     return data.liquid_to_value(template, kwargs)
         
+
 class Data(data.DataObject):
     """Class to hold merged data flows together perform operations on them."""
     def __init__(self, user_file="_referia.yml", directory="."):
@@ -731,6 +739,10 @@ class Data(data.DataObject):
     def compute(self, compute, df=None, index=None, refresh=True):
         """Run the computation given in compute."""
         multi_output = False
+        fname = compute["function"].__name__
+        fargs = compute["args"]
+        self._log.debug(f"Running compute function \"{fname}\" on index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+
         if "field" in compute:
             columns = compute["field"]
             if type(columns) is list:
@@ -757,13 +769,12 @@ class Data(data.DataObject):
                     missing_vals.append(False)
                     
         if refresh or any(missing_vals) or column is None:
-            new_vals = compute["function"](**compute["args"])
+            new_vals = compute["function"](**fargs)
         else:
             return
 
         if multi_output and type(new_vals) is not tuple:
-            func = compute["function"].__name__
-            raise ValueError(f"Multiple columns provided for return values of \"{func}\" but return value given is not a tuple.")
+            raise ValueError(f"Multiple columns provided for return values of \"{fname}\" but return value given is not a tuple.")
             
         if columns is None:
             return new_vals
@@ -787,6 +798,7 @@ class Data(data.DataObject):
     def run_compute(self, df=None, index=None, pre=False, post=False):
         """Run any computation elements on the data frame."""
 
+        self._log.debug(f"Running computes on index=\"{index}\" with pre=\"{pre}\" and post=\"{post}\"")
         computes = []
         if pre:
             computes += self._computes["precompute"]
