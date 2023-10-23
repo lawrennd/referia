@@ -3,7 +3,21 @@ import logging
 
 class Logger():
     def __init__(self, name=None, level=20, filename="referia.log", directory="."):
-        self.level = level
+        if level == "debug":
+            self.level = logging.DEBUG
+        elif level == "info":
+            self.level = logging.INFO
+        elif level == "warning":
+            self.level = logging.WARNING
+        elif level == "error":
+            self.level = logging.ERROR
+        elif level == "critical":
+            self.level = logging.CRITICAL
+        else:
+            # For backwards compatability allowing direct specificaiton of a numeric level            
+            self.level = level 
+            
+            
         self.filename = filename
         self.name = name
         format='%(levelname)s:%(name)s:%(asctime)s:%(message)s'
