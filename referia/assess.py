@@ -455,7 +455,9 @@ class Data(data.DataObject):
                             if is_valid_variable_name(cname):
                                 self.update_name_column_map(column=cname, name=cname)
                 else:
-                    raise ValueError(f"In global_consts a \"local\" specification must contain a dictionary of fields and values.")
+                    errmsg = f"In global_consts a \"local\" specification must contain a dictionary of fields and values."
+                    self._log.error(errmsg)
+                    raise ValueError(errmsg)
             else:
                 if "rsuffix" in conf:
                     rsuffix = conf["rsuffix"]
@@ -493,7 +495,9 @@ class Data(data.DataObject):
                             if is_valid_variable_name(cname):
                                 self.update_name_column_map(column=cname, name=cname)
                 else:
-                    raise ValueError("\"local\" specified in config but not in form of a dictionary.")
+                    errmsg = "\"local\" specified in config but not in form of a dictionary."
+                    self._log.error(errmsg)
+                    raise ValueError(errmsg)
             else:
                 df = self._finalize_df(*access.read_data(conf))
             if df.index.is_unique:
@@ -515,7 +519,9 @@ class Data(data.DataObject):
             else:
                 strindex = pd.Series([str(ind) for ind in df.index])
                 duplicates = ', '.join(strindex[df.index.duplicated()])
-                raise ValueError(f"The index for the incorporated data frame \"{i}\" must be unique. Index \"{duplicates}\" is/are duplicated.")
+                errmsg = f"The index for the incorporated data frame \"{i}\" must be unique. Index \"{duplicates}\" is/are duplicated."
+                self._log.error(errmsg)
+                raise ValueError(errmsg)
 
     def _remove_index_duplicates(self):
         """Rename the index of any duplicates"""
@@ -568,7 +574,9 @@ class Data(data.DataObject):
         else:
             strindex = pd.Series([str(ind) for ind in df.index])
             duplicates = ', '.join(strindex[df.index.duplicated()])
-            raise ValueError(f"The index for the cache must be unique. Index \"{duplicates}\" is/are duplicated.")
+            errmsg = f"The index for the cache must be unique. Index \"{duplicates}\" is/are duplicated."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
         
     def _load_scores(self):
         """Load in the score data to data frames."""
@@ -578,12 +586,16 @@ class Data(data.DataObject):
         else:
             strindex = pd.Series([str(ind) for ind in df.index])
             duplicates = ', '.join(strindex[df.index.duplicated()])
-            raise ValueError(f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated.")
+            errmsg = f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
 
     def _load_series(self):
         """Load in the series data to data frames."""
         if "selector" not in self._config["series"]:
-            raise ValueError(f"A series entry must have a \"selector\" column.")
+            self._log.error(errmsg)
+            errmsg = f"A series entry must have a \"selector\" column."
+            raise ValueError(errmsg)
         self._writeseries = self._finalize_df(*access.series(self._config["series"], self.index))
         selector = self._config["series"]["selector"]
         if selector not in self._writeseries.columns:
@@ -603,7 +615,7 @@ class Data(data.DataObject):
             else:
                 ascending=True
             field=series["sortby"]["field"]
-            self._log.info(f"Sorting series by \"{field}\"")
+            self._log.debug(f"Sorting series by \"{field}\"")
             self._writeseries.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_input_flows(self):
@@ -611,7 +623,7 @@ class Data(data.DataObject):
         self._data = None
         self._load_allocation()
         if "additional" in self._config:
-            self._log.info("Joining allocation and additional information.")
+            self._log.debug("Joining allocation and additional information.")
             self._load_additional()
 
         # If sorting is requested do it here.
@@ -631,7 +643,7 @@ class Data(data.DataObject):
             else:
                 ascending=True
             field=self._config["sortby"]["field"]
-            self._log.info(f"Sorting by \"{field}\"")
+            self._log.debug(f"Sorting by \"{field}\"")
             self._data.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_output_flows(self):
@@ -662,17 +674,17 @@ class Data(data.DataObject):
     def save_flows(self):
         """Save the output flows."""
         if self._globals is not None:
-            self._log.info(f"Writing _globals.")
+            self._log.debug(f"Writing _globals.")
             access.write_globals(self._globals, self._config)
         if self._cache is not None:
-            self._log.info(f"Writing _cache.")
+            self._log.debug(f"Writing _cache.")
             access.write_cache(self._cache, self._config)
         if self._writedata is not None:
-            self._log.info(f"Writing _writedata.")
+            self._log.debug(f"Writing _writedata.")
             access.write_scores(self._writedata, self._config)
         if self._writeseries is not None:
             access.write_series(self._writeseries, self._config)
-            self._log.info(f"Writing _writeseries.")
+            self._log.debug(f"Writing _writeseries.")
 
     def load_liquid(self):
         """Load the liquid environment."""
@@ -713,12 +725,14 @@ class Data(data.DataObject):
                 self.run_compute(post=True)
         # If 
         if self._data is not None and index not in self.index:
-            raise ValueError(f"Index \"{index}\" not found in _data")
+            errmsg = f"Index \"{index}\" not found in _data"
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
             self.add_row(index=index)
             self.set_index(index)
         else:
             self._index = index
-            self._log.info(f"Index \"{index}\" selected.")
+            self._log.debug(f"Index \"{index}\" selected.")
             self.check_or_set_subseries()
         # If index has changed, run computes.
         if orig_index is None or self._index != orig_index:
@@ -779,7 +793,9 @@ class Data(data.DataObject):
             return
 
         if multi_output and type(new_vals) is not tuple:
-            raise ValueError(f"Multiple columns provided for return values of \"{fname}\" but return value given is not a tuple.")
+            errmsg = f"Multiple columns provided for return values of \"{fname}\" but return value given is not a tuple."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
             
         if columns is None:
             return new_vals
@@ -798,7 +814,9 @@ class Data(data.DataObject):
                         if column in df.columns:
                             df.at[index, column] = new_val
                         else:
-                            raise ValueError(f"The column \"{column}\" is not found in DataFrame's columns.")
+                            errmsg = f"The column \"{column}\" is not found in DataFrame's columns."
+                            self._log.error(errmsg)
+                            raise ValueError(errmsg)
   
     def run_compute(self, df=None, index=None, pre=False, post=False):
         """Run any computation elements on the data frame."""
@@ -823,20 +841,22 @@ class Data(data.DataObject):
         """Subindex setter"""
         if subindex is None:
             self._subindex = None
-            self._log.info(f"Subindex set to None.")
+            self._log.debug(f"Subindex set to None.")
             return
 
         if self._writeseries is not None and subindex not in self.get_subindices():
             index = self.get_index()
-            raise ValueError(f"Subindex \"{subindex}\" under \"{index}\" not available in current series.")
+            errmsg = f"Subindex \"{subindex}\" under \"{index}\" not available in current series."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
         else:
             self._subindex=subindex
-            self._log.info(f"Subindex \"{subindex}\" selected.")
+            self._log.debug(f"Subindex \"{subindex}\" selected.")
 
 
     def get_index(self):
         if self._index is None and self._data is not None:
-            self._log.info(f"No index set, using first index of data.")
+            self._log.debug(f"No index set, using first index of data.")
             self.set_index(self._data.index[0])
         return self._index
 
@@ -864,7 +884,9 @@ class Data(data.DataObject):
             self.add_column(column)
 
         if column not in self.columns and column != self.index.name:
-            raise ValueError(f"Cannot set column \"{column}\"  as it does not exist.")
+            errmsg = f"Cannot set column \"{column}\"  as it does not exist."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
         self._column = column
 
     def get_column(self):
@@ -898,7 +920,7 @@ class Data(data.DataObject):
             self.set_selector(column)
         else:
             self._selector = column
-            self._log.info(f"Column \"{column}\" of Data._writeseries selected for selection.")
+            self._log.debug(f"Column \"{column}\" of Data._writeseries selected for selection.")
             if self.get_subindex() not in self._writeseries[column]:
                 self.set_subindex(None)
 
@@ -911,7 +933,7 @@ class Data(data.DataObject):
         subindices = self.get_subindices()
         if len(subindices)>0:
             index = self.get_index()
-            self._log.info(f"No subindex set, using first entry of portion of Data._writeseries indexed by \"{index}\".")
+            self._log.debug(f"No subindex set, using first entry of portion of Data._writeseries indexed by \"{index}\".")
             self.set_subindex(subindices[0])
         else:
             self._log.info(f"No subindex available.")
@@ -1160,9 +1182,13 @@ class Data(data.DataObject):
 
     def add_column(self, column):
         if column in self.columns:
-            raise ValueError(f"Was requested to add column \"{column}\" but it already exists in data.")
+            errmsg = f"Was requested to add column \"{column}\" but it already exists in data."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
         if self._writedata is None and self._writeseries is None:
-            raise ValueError(f"There is no _writedata or _writeseries loaded to add the column \"{column}\" to.")
+            errmsg = f"There is no _writedata or _writeseries loaded to add the column \"{column}\" to."
+            self._log.errof(errmsg)
+            raise ValueError(errmsg)
 
         if self._writeseries is not None and column in self._writeseries.columns:
             self._log.warning(f"\"{column}\" requested to be added but it already exists in _writeseries.")
@@ -1183,15 +1209,17 @@ class Data(data.DataObject):
                 self._log.info(f"\"{column}\" not in write columns ... adding.")
                 self._writedata[column] = None
                 return
-        raise ValueError(f"Cannot add column \"{column}\" to either scores or series due to strict_columns being set and/or series or scores not being present.")
+        errmsg = f"Cannot add column \"{column}\" to either scores or series due to strict_columns being set and/or series or scores not being present."
+        self._log.error(errmsg)
+        raise ValueError(errmsg)
 
     def set_dtype(self, column, dtype):
         """Set a Data._writedata column to the given data type."""
         if self._writedata is not None and column in self._writedata.columns:
-            self._log.info(f"\"{column}\" being set to \"{dtype}\".")
+            self._log.debug(f"\"{column}\" being set to \"{dtype}\".")
             self._writedata[column] = self._writedata[column].astype(dtype)
         if self._writeseries is not None and column in self._writeseries.columns:
-            self._log.info(f"\"{column}\" being set to \"{dtype}\".")
+            self._log.debug(f"\"{column}\" being set to \"{dtype}\".")
             self._writeseries[column] = self._writeseries[column].astype(dtype)
 
     def _append_row(self, df, index):
@@ -1244,7 +1272,9 @@ class Data(data.DataObject):
         """Update the map from valid variable names to columns in the data frame. Valid variable names are needed e.g. for Liquid filters."""
         if column in self._column_name_map and self._column_name_map[column] != name:
             original_name = self._column_name_map[column]
-            raise ValueError(f"Column \"{column}\" already exists in the name-column map and there's an attempt to update its value to \"{name}\" when it's original value was \"{original_name}\" and that would lead to unexpected behaviours. Try looking to see if you're setting column values to different names across different files and/or file loaders.")
+            errmsg = f"Column \"{column}\" already exists in the name-column map and there's an attempt to update its value to \"{name}\" when it's original value was \"{original_name}\" and that would lead to unexpected behaviours. Try looking to see if you're setting column values to different names across different files and/or file loaders."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
         self._name_column_map[name] = column
         self._column_name_map[column] = name
         
@@ -1511,7 +1541,7 @@ class Data(data.DataObject):
             try:
                 return pd.Index([subindices[ind]], dtype=subindices.dtypegg)
             except IndexError as e:
-                self._log.info(f"Requested invalid index in Data.tally_series()")
+                self._log.warning(f"Requested invalid index in Data.tally_series()")
                 return pd.Index([subindices[cur_loc]], dtype=subindices.dtype)
 
         def subind_series(ind, starter=True, reverse=False):
@@ -1522,7 +1552,7 @@ class Data(data.DataObject):
                     return pd.Index(subindices[:ind], dtype=subindices.dtype)
 
             except IndexError as e:
-                self._log.info(f"Requested invalid index in Data.tally_series()")
+                self._log.warning(f"Requested invalid index in Data.tally_series()")
                 if starter:
                     return pd.Index(subindices[cur_loc:], dtype=subindices.dtype)
                 else:
@@ -1552,7 +1582,9 @@ class Data(data.DataObject):
         elif tally["which"] == "all":
             return subindices
         else:
-            raise ValueError("Unrecognised subindices specifier in tally.")
+            errmsg = "Unrecognised subindices specifier in tally."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
 
     def _column_from_renderable(self, df, **kwargs):
         """Create a column from a renderable field."""
@@ -1578,7 +1610,10 @@ class Data(data.DataObject):
                 try:
                     self.set_index(index)
                 except ValueError as err:
-                    self._log.error(f"Could not set index, \"{index}\", likely due to allocation augmentation.")
+                    errmsg = f"Could not set index, \"{index}\", likely due to allocation augmentation."
+                    self._log.error(errmsg)
+                    raise ValueError(errmsg)
+                    
                     
             kwargs2 = self.mapping(series=df.loc[index])
             series[index] = self.view_to_value(kwargs, kwargs2)
@@ -1613,7 +1648,9 @@ class Data(data.DataObject):
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
         if "index" not in details:
-            raise ValueError("Missing index field in data frame specification in _referia.yml")
+            errmsg = "Missing index field in data frame specification in _referia.yml"
+            self._log.errmsg(errmsg)
+            raise ValueError(errmsg)
 
         if "columns" in details:
             # Make sure the listed columns are present.
@@ -1622,20 +1659,28 @@ class Data(data.DataObject):
                     df[column] = None
             if strict_columns or ("strict_columns" in self._config and self._config["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
                 if "columns" not in details:
-                    raise ValueError(f"You can't have strict_columns set to True and not list the columns in the details structure.")
+                    errmsg = f"You can't have strict_columns set to True and not list the columns in the details structure."
+                    self._log.error(errmsg)
+                    raise ValueError(errmsg)
                 if type(details["index"]) is str:
                     index_column_name = details["index"]
                 elif type(details["index"]) is dict:
                     if "name" in details["index"]:
                         index_column_name = details["index"]["name"]
                     else:
-                        raise ValueError(f"Missing name in index dictionary.")
+                        errmsg = f"Missing name in index dictionary."
+                        self._log.error(errmsg)
+                        raise ValueError(errmsg)
                 else:
-                    raise ValueError(f"Incorrect form of index.")
+                    errmsg = f"Incorrect form of index."
+                    self._log.error(errmsg)
+                    raise ValueError(errmsg)
                     
                 for column in df.columns:
                     if column not in details["columns"] and column!=index_column_name:
-                        raise ValueError(f"DataFrame contains column: \"{column}\" which is not in the columns list of the specification and strict_columns is set to True.")
+                        errmsg = f"DataFrame contains column: \"{column}\" which is not in the columns list of the specification and strict_columns is set to True."
+                        self._log.error(errmsg)
+                        raise ValueError(errmsg)
                     
 
         if "mapping" in details:
@@ -1659,7 +1704,9 @@ class Data(data.DataObject):
                     if is_valid_variable_name(name):
                         self.update_name_column_map(name=name, column=column)
                     else:
-                        raise ValueError(f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\".")
+                        errmsg = f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\"."
+                        self._log.error(errmsg)
+                        raise ValueError(errmsg)
 
 
                 
@@ -1686,7 +1733,9 @@ class Data(data.DataObject):
                         if is_valid_variable_name(cname):
                             self.update_name_column_map(column=cname, name=cname)
                         else:
-                            raise ValueError(f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\".")
+                            errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
+                            self._log.error(errmsg)
+                            raise ValueError(errmsg)
                     self._selector = cname
                 else:
                     self._log.warning(f"No \"name\" associated with selector entry.")
@@ -1710,7 +1759,9 @@ class Data(data.DataObject):
                     if is_valid_variable_name(cname):
                         self.update_name_column_map(column=cname, name=cname)
                     else:
-                        raise ValueError(f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\".")
+                        errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
+                        self._log.error(errmsg)
+                        raise ValueError(errmsg)
                 index_column_name = field["name"]
 
             
@@ -1740,7 +1791,9 @@ class Data(data.DataObject):
                         if is_valid_variable_name(cname):
                             self.update_name_column_map(column=cname, name=cname)
                         else:
-                            raise ValueError(f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\".")
+                            errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
+                            self._log.error(errmsg)
+                            raise ValueError(errmsg)
                     
                 else:
                     self._log.warning(f"No \"name\" associated with field entry.")
@@ -1821,10 +1874,10 @@ class Data(data.DataObject):
         """Update the type of a given column according to a value passed."""
         coltype = df.dtypes[column]
         if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
-            self._log.info(f"Changing column \"{column}\" type to 'object' due to string input.")
+            self._log.warning(f"Changing column \"{column}\" type to 'object' due to string input.")
             df[column] = df[column].astype("object")
         if is_numeric_dtype(coltype) and is_bool_dtype(type(value)):
-            self._log.info(f"Changing column \"{column}\" type to 'object' due to bool input.")
+            self._log.warning(f"Changing column \"{column}\" type to 'object' due to bool input.")
             df[column] = df[column].astype("boolean")
 
         
