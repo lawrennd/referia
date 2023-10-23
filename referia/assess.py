@@ -753,8 +753,11 @@ class Data(data.DataObject):
             columns = None
         if index is None:
             index = self.get_index()
+
+            
         missing_vals = []
         if columns is not None:
+            self._log.debug(f"Running compute function \"{fname}\" storing in field(s) \"{columns}\" with index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
             for column in columns:
                 if column == "_": # If the column is called "_" then ignore that argument
                     missing_vals.append(False)
@@ -767,7 +770,9 @@ class Data(data.DataObject):
                     missing_vals.append(True)
                 else:
                     missing_vals.append(False)
-                    
+        else:
+            self._log.debug(f"Running compute function \"{fname}\" with no field(s) stored for index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+            
         if refresh or any(missing_vals) or column is None:
             new_vals = compute["function"](**fargs)
         else:
