@@ -405,6 +405,7 @@ class Data(data.DataObject):
                     self._log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
                 kwargs[key] = self.get_value_column(column)
             # kwargs.update(remove_nan(self.mapping(args)))
+            self._log.debug(f"The keyword arguments for the compute function are {kwargs}.")
             return list_function["function"](**kwargs)
 
         compute_function.__name__ = list_function["name"]
@@ -809,9 +810,11 @@ class Data(data.DataObject):
                     continue
                 if refresh or missing_val:
                     if df is None:
+                        self._log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
                         self.set_value_column(new_val, column)
                     else:
                         if column in df.columns:
+                            self._log.debug(f"Setting column {column} in provided data frame to value {new_val} from compute.")
                             df.at[index, column] = new_val
                         else:
                             errmsg = f"The column \"{column}\" is not found in DataFrame's columns."
