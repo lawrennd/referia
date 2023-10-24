@@ -201,8 +201,14 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
         destfile = "_" + tmpname + ".json"
         destname = os.path.join(tmpdirectory, destfile)
         syscmd = f"pdfannots {full_filename} -o {destname} -f json"
-        self._log.debug(f"Running: {syscmd}")
-        os.system(syscmd)
+        self._log.debug(f"Running system command: {syscmd}")
+        try:
+            os.system(syscmd)
+        except OSError as err:
+            errmsg = f"OSError while running {syscmd} is {err}"
+            self._log.debug(errmsg)
+            raise OSError(errmsg)
+        
         with open(destname, "r") as f:
             data = json.load(f)
         

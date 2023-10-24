@@ -13,6 +13,8 @@ import urllib.parse
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from .log import Logger
+from .compute import Compute
+
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max, return_shortest, return_longest, get_url_file
 
 from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments
@@ -92,7 +94,8 @@ class Data(data.DataObject):
     def __init__(self, user_file="_referia.yml", directory="."):
 
         self._directory = directory
-        self._config = config.load_config(user_file=user_file, directory=directory)
+        self._directory = user_file
+        self._config = config.load_config(user_file=self.user_file, directory=self.directory)
         self._name_column_map = {}
         self._column_name_map = {}
         if "mapping" in self._config:
@@ -108,8 +111,8 @@ class Data(data.DataObject):
             
         )
 
-        # Data that is input (not for writing to)
         self._list_functions = self._compute_functions_list()
+        # Data that is input (not for writing to)
         self._data = None
         # Which index is the current focus in the data.
         self._index = None
@@ -147,7 +150,8 @@ class Data(data.DataObject):
         self.load_liquid()
         self.add_liquid_filters()
         self.load_flows()
-        
+
+    ######################## Move to Compute.py as new class #################
     def _compute_prep(self, compute):
         """Prepare a compute entry for use."""
         compute_prep = {
@@ -413,6 +417,7 @@ class Data(data.DataObject):
             compute_function.__docstr__ = list_function["docstr"]
         return compute_function
 
+    ##################################################################
 
     @property
     def index(self):
