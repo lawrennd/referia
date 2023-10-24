@@ -1,6 +1,6 @@
 import os
 from .log import Logger
-
+from .compute import Compute
 
 from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max, return_shortest, return_longest, get_url_file
 
@@ -34,8 +34,22 @@ class Compute():
         )
 
         self._list_functions = self._compute_functions_list()
+
+        self._computes = {}
+        for comptype in ["precompute", "compute", "postcompute"]:
+            self._computes[comptype]=[]
+            if comptype in self._config:
+                if type(self._config[comptype]) is list:
+                    computes = self._config[comptype]
+                else:
+                    computes = [self._config[comptype]]
+
+                for compute in computes:
+                    self._computes[comptype].append(
+                        self._compute_prep(compute)
+                    )
         
-        def _compute_prep(self, compute):
+    def _compute_prep(self, compute):
         """Prepare a compute entry for use."""
         compute_prep = {
             "function": self.gcf_(function=compute["function"]),
@@ -299,3 +313,91 @@ class Compute():
         if "docstr" in list_function:
             compute_function.__docstr__ = list_function["docstr"]
         return compute_function
+
+    def run(self, compute, df=None, index=None, refresh=True):
+        """Run the computation given in compute."""
+        multi_output = False
+        fname = compute["function"].__name__
+        fargs = compute["args"]
+        self._log.debug(f"Running compute function \"{fname}\" on index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+
+        if "field" in compute:
+            columns = compute["field"]
+            if type(columns) is list:
+                multi_output = True
+            else:
+                columns = [columns]
+        else:
+            columns = None
+        if index is None:
+            index = data.get_index()
+
+            
+        missing_vals = []
+        if columns is not None:
+            self._log.debug(f"Running compute function \"{fname}\" storing in field(s) \"{columns}\" with index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+            for column in columns:
+                if column == "_": # If the column is called "_" then ignore that argument
+                    missing_vals.append(False)
+                    continue
+                if df is None:
+                    val = data.get_value_column(column)
+                else:
+                    val = df.at[index, column]
+                if type(val) is not list and pd.isna(val):
+                    missing_vals.append(True)
+                else:
+                    missing_vals.append(False)
+        else:
+            self._log.debug(f"Running compute function \"{fname}\" with no field(s) stored for index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+            
+        if refresh or any(missing_vals) or column is None:
+            new_vals = compute["function"](**fargs)
+        else:
+            return
+
+        if multi_output and type(new_vals) is not tuple:
+            errmsg = f"Multiple columns provided for return values of \"{fname}\" but return value given is not a tuple."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
+            
+        if columns is None:
+            return new_vals
+        else:
+            if multi_output:
+                new_vals = [*new_vals]
+            else:
+                new_vals = [new_vals]
+            for column, new_val, missing_val in zip(columns, new_vals, missing_vals):
+                if column == "_":
+                    continue
+                if refresh or missing_val:
+                    if df is None:
+                        self._log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
+                        data.set_value_column(new_val, column)
+                    else:
+                        if column in df.columns:
+                            self._log.debug(f"Setting column {column} in provided data frame to value {new_val} from compute.")
+                            df.at[index, column] = new_val
+                        else:
+                            errmsg = f"The column \"{column}\" is not found in DataFrame's columns."
+                            self._log.error(errmsg)
+                            raise ValueError(errmsg)
+  
+    def run_all(self, df=None, index=None, pre=False, post=False):
+        """Run any computation elements on the data frame."""
+
+        self._log.debug(f"Running computes on index=\"{index}\" with pre=\"{pre}\" and post=\"{post}\"")
+        computes = []
+        if pre:
+            computes += self._computes["precompute"]
+        computes += self._computes["compute"]
+        if post:
+            computes += self._computes["postcompute"]
+            
+        for compute in computes:
+            if compute["refresh"]:
+                self.run(compute, df, index, refresh=True)
+            else:
+                self.run(compute, df, index, refresh=False)
+    
