@@ -85,23 +85,21 @@ class Data(data.DataObject):
 
         self._directory = directory
         self._user_file = user_file
-        self._config = config.load_config(user_file=self._user_file, directory=self._directory)
+        self._config = config.load_config(user_file=self._user_file,
+                                          directory=self._directory)
         self._name_column_map = {}
         self._column_name_map = {}
         if "mapping" in self._config:
             for name, column in self._config["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
-            
-            
+                      
         self._log = Logger(
             name=__name__,
             level=self._config["logging"]["level"],
             filename=self._config["logging"]["filename"],
-            directory = self._directory,
-            
+            directory = self._directory,            
         )
 
-        #C self._list_functions = self._compute_functions_list()
         # Data that is input (not for writing to)
         self._data = None
         # Which index is the current focus in the data.
@@ -118,15 +116,17 @@ class Data(data.DataObject):
         self._column = None
         # Which subindex is the current focus in the data.
         self._subindex = None
-        # The series data for writing to (where there may be multiple entries associated with one index)
+        # The series data for writing to (where there may be multiple entries
+        # associated with one index)
         self._writeseries = None
-        # Which entry column in the series to disambiguate the selection of the focus.
+        # Which entry column in the series to disambiguate the selection of
+        # the focus.
         self._selector = None
-        # The value in the selected entry column entry column value from the series to use
+        # The value in the selected entry column entry column value from the
+        # series to use
 
         # Load in compute function capability.
         self._compute = Compute(self)
-                
         self.load_liquid()
         self.add_liquid_filters()
         self.load_flows()
