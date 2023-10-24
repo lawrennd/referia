@@ -16,6 +16,8 @@ from heapq import nlargest
 
 nlp = spacy.load("en_core_web_sm")
 
+
+
 # -*- coding: utf-8 -*-
 import re
 alphabets= "([A-Za-z])"
@@ -67,6 +69,12 @@ def split_into_sentences(text: str) -> list[str]:
     sentences = [s.strip() for s in sentences]
     if sentences and not sentences[-1]: sentences = sentences[:-1]
     return sentences
+
+
+def render_liquid(data, template, **kwargs):
+    """Wrapper to liquid renderer."""
+    return data.liquid_to_value(template, kwargs)
+        
 
 def comment_list(text):
 
@@ -201,12 +209,12 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
         destfile = "_" + tmpname + ".json"
         destname = os.path.join(tmpdirectory, destfile)
         syscmd = f"pdfannots {full_filename} -o {destname} -f json"
-        self._log.debug(f"Running system command: {syscmd}")
+        #self._log.debug(f"Running system command: {syscmd}")
         try:
             os.system(syscmd)
         except OSError as err:
             errmsg = f"OSError while running {syscmd} is {err}"
-            self._log.debug(errmsg)
+            #self._log.debug(errmsg)
             raise OSError(errmsg)
         
         with open(destname, "r") as f:

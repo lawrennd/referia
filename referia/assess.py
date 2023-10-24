@@ -15,9 +15,9 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 from .log import Logger
 from .compute import Compute
 
-from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max, return_shortest, return_longest, get_url_file
+from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max, return_shortest, return_longest, get_url_file, identity
 
-from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments
+from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, render_liquid
 from .sysutil import most_recent_screen_shot
 from .plotutil import bar_plot, histogram
 from .fileutil import file_from_re, files_from_re
@@ -30,10 +30,6 @@ from keyword import iskeyword
 
 def is_valid_variable_name(name):
     return name.isidentifier() and not iskeyword(name)
-
-# Identity function for testing 
-def identity(input):
-    return input
 
 
 @string_filter
@@ -83,19 +79,13 @@ def automapping(columns):
         mapping[field] = column
     return mapping
 
-
-def render_liquid(data, template, **kwargs):
-    """Wrapper to liquid renderer."""
-    return data.liquid_to_value(template, kwargs)
-        
-
 class Data(data.DataObject):
     """Class to hold merged data flows together perform operations on them."""
     def __init__(self, user_file="_referia.yml", directory="."):
 
         self._directory = directory
-        self._directory = user_file
-        self._config = config.load_config(user_file=self.user_file, directory=self.directory)
+        self._user_file = user_file
+        self._config = config.load_config(user_file=self._user_file, directory=self._directory)
         self._name_column_map = {}
         self._column_name_map = {}
         if "mapping" in self._config:
@@ -107,7 +97,7 @@ class Data(data.DataObject):
             name=__name__,
             level=self._config["logging"]["level"],
             filename=self._config["logging"]["filename"],
-            directory = directory,
+            directory = self._directory,
             
         )
 
@@ -133,7 +123,7 @@ class Data(data.DataObject):
         # Which entry column in the series to disambiguate the selection of the focus.
         self._selector = None
         # The value in the selected entry column entry column value from the series to use
-        self._compute = Compute(data)
+        self._compute = Compute(self)
 
         # self._computes = {}
         # for comptype in ["precompute", "compute", "postcompute"]:

@@ -12,6 +12,9 @@ import os
 import wget
 
 """Utility functions for helping, e.g. to create the relevant yaml files quickly."""
+# Identity function for testing 
+def identity(input):
+    return input
 
 def filename_to_binary(filename):
     """Convert a filename to a binary by loading it"""
