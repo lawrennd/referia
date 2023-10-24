@@ -200,10 +200,12 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
         tmpname = ''.join(random.choices(string.digits+string.ascii_letters, k=8))
         destfile = "_" + tmpname + ".json"
         destname = os.path.join(tmpdirectory, destfile)
-        os.system(f"pdfannots {full_filename} -o {destname} -f json")
+        syscmd = f"pdfannots {full_filename} -o {destname} -f json"
+        self._log.debug(f"Running: {syscmd}")
+        os.system(syscmd)
         with open(destname, "r") as f:
             data = json.load(f)
-
+        
         val = ""
         for entry in data:
             if entry["type"] == "FreeText":
