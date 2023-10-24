@@ -632,6 +632,7 @@ class Scorer:
         self._select_subindex = False
         self._select_selector = False
 
+        # TK Not clear these are being used anywhere
         self._precompute = []
         self._postcompute = []
 
@@ -1008,13 +1009,13 @@ class Scorer:
 
     def compute(self, compute):
         """Perform a computation as specified in the associated details."""
-        self._data.compute(compute)
+        self._data._compute.run(compute)
         
     def value_updated(self):
         """If a value in a row has been updated, modify other values"""
 
         # If index has changed, run computes.
-        self._data.run_compute(post=True)
+        self._data._compute.run_all(post=True)
 
         # Need to determine if these should update series or data.
         # Update timestamp fields.

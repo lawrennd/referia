@@ -921,7 +921,7 @@ class PopulateButton(ReferiaWidget):
     def on_click(self, b):
         for compute in self._compute:
             compute["refresh"] = True
-            self._parent.compute(self._parent._data._compute_prep(compute))
+            self._parent._data._compute.run(self._parent._data._compute.prep(compute))
         self._parent.populate_display()
 
         

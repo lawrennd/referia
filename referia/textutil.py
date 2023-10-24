@@ -8,11 +8,15 @@ import tempfile
 import os
 import random
 import string
+import warnings
 #from wordcloud import WordCloud, STOPWORDS
 
 from spacy.lang.en.stop_words import STOP_WORDS
 from string import punctuation
 from heapq import nlargest
+
+from .exceptions import ComputeError
+
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -202,7 +206,9 @@ def text_summarizer(text, fraction=0.1):
 def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["Highlight"]):
     if type(comment_types) is not list:
         comment_types = [comment_types]
+    directory = os.path.expandvars(directory)
     full_filename = os.path.join(directory, filename)
+    
     if os.path.exists(full_filename):
         tmpdirectory = tempfile.gettempdir()
         tmpname = ''.join(random.choices(string.digits+string.ascii_letters, k=8))
@@ -214,12 +220,10 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
             os.system(syscmd)
         except OSError as err:
             errmsg = f"OSError while running {syscmd} is {err}"
-            #self._log.debug(errmsg)
-            raise OSError(errmsg)
+            raise ComputeError(errmsg)
         
         with open(destname, "r") as f:
             data = json.load(f)
-        
         val = ""
         for entry in data:
             if entry["type"] == "FreeText":
@@ -250,5 +254,6 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
         return val
 
     else:
+        warnings.warn(f"File: {full_filename} is missing in pdf_extract_comments.")
         return ""
 

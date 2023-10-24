@@ -1,5 +1,4 @@
 from datetime import datetime
-
 import re
 
 from pandas.api.types import is_bool_dtype, is_integer_dtype, is_float_dtype, is_string_dtype

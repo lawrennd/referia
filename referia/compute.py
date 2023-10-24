@@ -1,15 +1,18 @@
 import os
 import datetime
+import pandas as pd
 
 from .log import Logger
 from . import config
 
-from .util import to_camel_case, remove_nan, renderable, tallyable, markdown2html, add_one_to_max, return_shortest, return_longest, get_url_file, identity
+from .util import add_one_to_max, return_shortest, return_longest, get_url_file, identity
 
 from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, render_liquid
 from .sysutil import most_recent_screen_shot
 from .plotutil import bar_plot, histogram
 from .fileutil import file_from_re, files_from_re
+
+from .exceptions import ComputeError
 
 class Compute():
     def __init__(self, data, user_file=None, directory=None):
@@ -48,10 +51,10 @@ class Compute():
 
                 for compute in computes:
                     self._computes[comptype].append(
-                        self._compute_prep(compute)
+                        self.prep(compute)
                     )
         
-    def _compute_prep(self, compute):
+    def prep(self, compute):
         """Prepare a compute entry for use."""
         compute_prep = {
             "function": self.gcf_(function=compute["function"]),
@@ -251,7 +254,9 @@ class Compute():
                 found_function = True
                 break
         if not found_function:
-            raise ValueError(f"Function \"{function}\" not found in list_functions.")
+            errmsg = f"Function \"{function}\" not found in list_functions."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
         return {
             "subseries_args" : subseries_args,
             "column_args" : column_args,
@@ -321,7 +326,8 @@ class Compute():
         multi_output = False
         fname = compute["function"].__name__
         fargs = compute["args"]
-        self._log.debug(f"Running compute function \"{fname}\" on index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+        if index is None:
+            index = self._data.get_index()
 
         if "field" in compute:
             columns = compute["field"]
@@ -331,29 +337,28 @@ class Compute():
                 columns = [columns]
         else:
             columns = None
-        if index is None:
-            index = data.get_index()
-
             
         missing_vals = []
         if columns is not None:
-            self._log.debug(f"Running compute function \"{fname}\" storing in field(s) \"{columns}\" with index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
             for column in columns:
                 if column == "_": # If the column is called "_" then ignore that argument
                     missing_vals.append(False)
                     continue
                 if df is None:
-                    val = data.get_value_column(column)
+                    val = self._data.get_value_column(column)
                 else:
                     val = df.at[index, column]
                 if type(val) is not list and pd.isna(val):
                     missing_vals.append(True)
                 else:
                     missing_vals.append(False)
-        else:
-            self._log.debug(f"Running compute function \"{fname}\" with no field(s) stored for index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
-            
-        if refresh or any(missing_vals) or column is None:
+
+        if refresh or any(missing_vals) or columns is None:
+            if columns is not None:
+                self._log.debug(f"Running compute function \"{fname}\" storing in field(s) \"{columns}\" with index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+            else:
+                self._log.debug(f"Running compute function \"{fname}\" with no field(s) stored for index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+
             new_vals = compute["function"](**fargs)
         else:
             return
@@ -376,7 +381,7 @@ class Compute():
                 if refresh or missing_val:
                     if df is None:
                         self._log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
-                        data.set_value_column(new_val, column)
+                        self._data.set_value_column(new_val, column)
                     else:
                         if column in df.columns:
                             self._log.debug(f"Setting column {column} in provided data frame to value {new_val} from compute.")
