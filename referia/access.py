@@ -149,7 +149,7 @@ def read_directory(details,
                 directory,
                 glob_text,
             )
-            log.info(f"Reading directory \"{globname}\"")
+            log.debug(f"Reading directory \"{globname}\"")
             newfiles = glob.glob(globname)
             newdirs = [directory]*len(newfiles)
             if len(newfiles) == 0:
@@ -244,7 +244,7 @@ def read_json_file(filename):
     """Read a json file and return a python dictionary."""
     with open(filename, "r") as stream:
         try:
-            log.info(f"Reading json file \"{filename}\"")
+            log.debug(f"Reading json file \"{filename}\"")
             data = json.load(stream)
         except json.JSONDecodeError as exc:
             log.warning(exc)
@@ -256,7 +256,7 @@ def write_json_file(data, filename):
     """Write a json file from a python dicitonary."""
     with open(filename, "w") as stream:
         try:
-            log.info(f"Writing json file \"{filename}\".")
+            log.debug(f"Writing json file \"{filename}\".")
             json.dump(data, stream, sort_keys=False)
         except json.JSONDecodeError as exc:
             log.warning(exc)
@@ -266,7 +266,7 @@ def read_yaml_file(filename):
     """Read a yaml file and return a python dictionary."""
     with open(filename, "r") as stream:
         try:
-            log.info(f"Reading yaml file \"{filename}\"")
+            log.debug(f"Reading yaml file \"{filename}\"")
             data = yaml.safe_load(stream)
         except yaml.YAMLError as exc:
             log.warning(exc)
@@ -293,7 +293,7 @@ def write_yaml_file(data, filename):
     writedata = yaml_prep(data)
     with open(filename, "w") as stream:
         try:
-            log.info(f"Writing yaml file \"{filename}\".")
+            log.debug(f"Writing yaml file \"{filename}\".")
             yaml.dump(writedata, stream, sort_keys=False)
         except yaml.YAMLError as exc:
             log.warning(exc)
@@ -320,7 +320,7 @@ def read_markdown_file(filename, include_content=True):
     """Read a markdown file and return a python dictionary."""
     with open(filename, "r") as stream:
         try:
-            log.info(f"Reading markdown file {filename}")
+            log.debug(f"Reading markdown file {filename}")
             post = frontmatter.load(stream)
             data = post.metadata
             if include_content:
@@ -373,7 +373,7 @@ def write_markdown_file(data, filename, content=None, include_content=True):
         write_data = data.copy()
         if "content" in data:
             del write_data["content"]
-    log.info(f"Writing markdown file \"{filename}\"")
+    log.debug(f"Writing markdown file \"{filename}\"")
     if pd.isna(content):
         content = ""
     post = frontmatter.Post(content, **write_data)
@@ -398,7 +398,7 @@ def write_letter_file(data, filename, content, include_content=True):
             content = ""
         write_data = data
         
-    log.info(f"Writing markdown letter file \"{filename}\"")
+    log.debug(f"Writing markdown letter file \"{filename}\"")
     post = frontmatter.Post(content, **write_data)
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)
@@ -421,7 +421,7 @@ def write_letter_file(data, filename, content, include_content=True):
             content = ""
         write_data = data
  
-    log.info(f"Writing markdown letter file \"{filename}\"")
+    log.debug(f"Writing markdown letter file \"{filename}\"")
     post = frontmatter.Post(content, **write_data)
     with open(filename, "wb") as stream:
         frontmatter.dump(post, stream, sort_keys=False)
@@ -437,7 +437,7 @@ def write_docx_file(data, filename, content, include_content=True):
     directory = tempfile.gettempdir()
     tmpfile = os.path.join(directory, "tmp.md")
     write_markdown_file(data, tmpfile, content, include_content)
-    log.info(f"Converting markdown file \"{tmpfile}\" to docx file \"{filename}\"")
+    log.debug(f"Converting markdown file \"{tmpfile}\" to docx file \"{filename}\"")
     extra_args=[]
     if "reference-doc" in data:
         extra_args.append("--reference-doc=" + data["reference-doc"])
@@ -449,7 +449,7 @@ def write_tex_file(data, filename, content, include_content=True):
     directory = tempfile.gettempdir()
     tmpfile = os.path.join(directory, "tmp.md")
     write_markdown_file(data, tmpfile, content, include_content)
-    log.info(f"Converting markdown file \"{tmpfile}\" to tex file \"{filename}\"")
+    log.debug(f"Converting markdown file \"{tmpfile}\" to tex file \"{filename}\"")
     extra_args=[]
     pypandoc.convert_file(tmpfile, "tex", outputfile=filename, extra_args=extra_args)
    
@@ -472,7 +472,7 @@ def read_csv(details):
         quotechar = details["quotechar"]
     else:
         quotechar = "\""
-    log.info(f"Reading csv file \"{filename}\" from row \"{header}\" with quote character {quotechar} and delimiter \"{delimiter}\"")
+    log.debug(f"Reading csv file \"{filename}\" from row \"{header}\" with quote character {quotechar} and delimiter \"{delimiter}\"")
   
     data = pd.read_csv(
         filename,
@@ -497,7 +497,7 @@ def read_excel(details):
         sheet_name = details["sheet"]
     else:
         sheet_name = "Sheet1"
-    log.info(f"Reading excel file \"{filename}\" sheet \"{sheet_name}\" from row \"{header}\"")
+    log.debug(f"Reading excel file \"{filename}\" sheet \"{sheet_name}\" from row \"{header}\"")
        
     data =  pd.read_excel(
         filename,
@@ -513,7 +513,7 @@ if GSPREAD_AVAILABLE:
         """Read data from a Google sheet."""
         dtypes = extract_dtypes(details)
         filename = extract_full_filename(details)
-        log.info(f"Reading Google sheet named {filename}")
+        log.debug(f"Reading Google sheet named {filename}")
         sheet = extract_sheet(details)
         gconfig = {}
         for key, val in config["google_oauth"].items():
@@ -544,7 +544,7 @@ def write_excel(df, details):
     else:
         sheet_name = "Sheet1"
    
-    log.info(f"Writing excel file \"{filename}\" sheet \"{sheet_name}\" header at row \"{header}\".")
+    log.debug(f"Writing excel file \"{filename}\" sheet \"{sheet_name}\" header at row \"{header}\".")
    
     writer = pd.ExcelWriter(
         filename,
@@ -573,7 +573,7 @@ def write_csv(df, details):
         quotechar = details["quotechar"]
     else:
         quotechar = "\""
-    log.info(f"Writing csv file \"{filename}\" with quote character {quotechar} and delimiter \"{delimiter}\"")
+    log.debug(f"Writing csv file \"{filename}\" with quote character {quotechar} and delimiter \"{delimiter}\"")
 
     with open(filename, "w") as stream:
         df.to_csv(
@@ -589,7 +589,7 @@ if GSPREAD_AVAILABLE:
         """Read data from a Google sheet."""
         filename = extract_full_filename(details)
         sheet = extract_sheet(details)
-        log.info(f"Writing Google sheet named {filename}")
+        log.debug(f"Writing Google sheet named {filename}")
         gsheet = gspd.Spread(
             spread=filename,
             sheet=sheet,
@@ -843,7 +843,7 @@ def load_or_create_df(details, index):
     if data_exists(details):
         return read_data(details)
     elif index is not None:
-        log.info(f"Creating new DataFrame from index as \"{details}\" is not found.")
+        log.debug(f"Creating new DataFrame from index as \"{details}\" is not found.")
         if "columns" in details:
             df = pd.DataFrame(index=index, columns=[index.name] + details["columns"])
             df[index.name] = index
@@ -869,7 +869,7 @@ def globals(details, index=None):
     #     df.set_index(index_column_name, inplace=True)
     #     return df, details
     # elif index is not None:
-    #     log.info(f"Creating new globals DataFrame from index as \"{details}\" is not found.")
+    #     log.debug(f"Creating new globals DataFrame from index as \"{details}\" is not found.")
     #     if "columns" in details:
     #         df = pd.DataFrame(index=pd.Index(data=index, name=index_column_name), columns=details["columns"])
     #     else:
@@ -899,7 +899,7 @@ def series(details, index=None):
     if data_exists(details):
         return read_data(details)
     elif index is not None:
-        log.info(f"Creating new DataFrame for write data from index as \"{details}\" is not found.")
+        log.debug(f"Creating new DataFrame for write data from index as \"{details}\" is not found.")
         return finalize_data(pd.DataFrame(index=index, data=index), details)
     else:
         raise FileNotFoundError(

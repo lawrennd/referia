@@ -135,6 +135,13 @@ class Data(data.DataObject):
             return None
 
     @property
+    def writable(self):        
+        if self._writedata is not None or self._writeseries is not None:
+            return True
+        else:
+            return False
+        
+    @property
     def columns(self):
         columns = []
         if self._global_consts is not None:
@@ -439,9 +446,7 @@ class Data(data.DataObject):
                 self._compute.run_all(post=True)
         # If 
         if self._data is not None and index not in self.index:
-            errmsg = f"Index \"{index}\" not found in _data"
-            self._log.error(errmsg)
-            raise ValueError(errmsg)
+            self._log.warning(f"Index \"{index}\" not found in _data")
             self.add_row(index=index)
             self.set_index(index)
         else:
@@ -816,7 +821,7 @@ class Data(data.DataObject):
             raise ValueError(errmsg)
         if self._writedata is None and self._writeseries is None:
             errmsg = f"There is no _writedata or _writeseries loaded to add the column \"{column}\" to."
-            self._log.errof(errmsg)
+            self._log.error(errmsg)
             raise ValueError(errmsg)
 
         if self._writeseries is not None and column in self._writeseries.columns:
@@ -856,7 +861,9 @@ class Data(data.DataObject):
         # Handle the fact that the index is stored as a column also
         if df.index.name in row:
             row[df.index.name] = index
-        self._compute.run_all(df=row, index=index, pre=True)
+        if self.writable:
+            # Only precompute if something to write to
+            self._compute.run_all(df=row, index=index, pre=True)
         # was return df.append(row) before append deprecation
         return pd.concat([df, row])
 
@@ -1235,13 +1242,14 @@ class Data(data.DataObject):
         """Extract a series from a renderable dictionary."""
         series = pd.Series(index=df.index, dtype="object")
         for index in series.index:
+            
             if not is_index and len(self.columns)>0:
-                try:
-                    self.set_index(index)
-                except ValueError as err:
-                    errmsg = f"Could not set index, \"{index}\", likely due to allocation augmentation."
-                    self._log.error(errmsg)
-                    raise ValueError(errmsg)
+                #try:
+                self.set_index(index)
+                #except ValueError as err:
+                #    errmsg = f"Could not set index, \"{index}\", likely due to allocation augmentation."
+                #    self._log.error(errmsg)
+                #    raise ValueError(errmsg)
                     
                     
             kwargs2 = self.mapping(series=df.loc[index])

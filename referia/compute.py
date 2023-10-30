@@ -337,10 +337,19 @@ class Compute():
                 columns = [columns]
         else:
             columns = None
-            
+
+        # Determine which current values of field aren't set
         missing_vals = []
         if columns is not None:
             for column in columns:
+                if df is None:
+                    if column not in self._data.columns:
+                        missing_vals.append(True)
+                        continue
+                else:
+                    if column not in df.columns:
+                        missing_vals.append(True)
+                        continue
                 if column == "_": # If the column is called "_" then ignore that argument
                     missing_vals.append(False)
                     continue
@@ -378,18 +387,9 @@ class Compute():
             for column, new_val, missing_val in zip(columns, new_vals, missing_vals):
                 if column == "_":
                     continue
-                if refresh or missing_val:
-                    if df is None:
-                        self._log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
-                        self._data.set_value_column(new_val, column)
-                    else:
-                        if column in df.columns:
-                            self._log.debug(f"Setting column {column} in provided data frame to value {new_val} from compute.")
-                            df.at[index, column] = new_val
-                        else:
-                            errmsg = f"The column \"{column}\" is not found in DataFrame's columns."
-                            self._log.error(errmsg)
-                            raise ValueError(errmsg)
+                if refresh or missing_val and self._data.writable:
+                    self._log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
+                    self._data.set_value_column(new_val, column)
   
     def run_all(self, df=None, index=None, pre=False, post=False):
         """Run any computation elements on the data frame."""
@@ -405,6 +405,6 @@ class Compute():
         for compute in computes:
             if compute["refresh"]:
                 self.run(compute, df, index, refresh=True)
-            else:
+            else:                    
                 self.run(compute, df, index, refresh=False)
     
