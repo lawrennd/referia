@@ -14,11 +14,12 @@ import pyminizip as pz
 
 import pypdftk as tk
 
-from .log import Logger
-from .util import to_camel_case, notempty, markdown2html, extract_full_filename, extract_abs_filename, renderable, tallyable
+from ndlpy import log
+from ndlpy.util import to_camel_case, extract_full_filename, extract_abs_filename
+from .util import notempty, markdown2html, renderable, tallyable
 from .fileutil import to_valid_file
 from . import config
-from . import access
+from ndlpy import access
 from . import assess
 from . import display
 from . import util

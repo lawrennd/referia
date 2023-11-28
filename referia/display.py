@@ -16,12 +16,12 @@ import matplotlib.pyplot as plt
 
 from ipywidgets import jslink, jsdlink, Layout
 
-from .log import Logger
-from .util import remove_nan
+from ndlpy import log
+from ndlpy import access
+from ndlpy.util import remove_nan
 from .widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
 
 from . import config
-from . import access
 from . import assess
 from . import system
 
@@ -608,7 +608,7 @@ class Scorer:
             
         self._config = config.load_config(user_file=user_file, directory=directory, append=append, ignore=ignore)
 
-        self._log = Logger(
+        self._log = log.Logger(
             name=__name__,
             level=self._config["logging"]["level"],
             filename=self._config["logging"]["filename"],

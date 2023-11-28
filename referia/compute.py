@@ -2,10 +2,11 @@ import os
 import datetime
 import pandas as pd
 
-from .log import Logger
+from ndlpy import log
 from . import config
 
-from .util import add_one_to_max, return_shortest, return_longest, get_url_file, identity
+from ndlpy.util import get_url_file
+from .util import add_one_to_max, return_shortest, return_longest, identity
 
 from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, render_liquid
 from .sysutil import most_recent_screen_shot
@@ -30,7 +31,7 @@ class Compute():
             
         self._config = config.load_config(user_file=self._user_file, directory=self._directory)
            
-        self._log = Logger(
+        self._log = log.Logger(
             name=__name__,
             level=self._config["logging"]["level"],
             filename=self._config["logging"]["filename"],

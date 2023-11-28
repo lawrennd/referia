@@ -12,13 +12,15 @@ import urllib.parse
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
-from .log import Logger
+from ndlpy.log import Logger
 from .compute import Compute
 
-from .util import to_camel_case, remove_nan, renderable,  markdown2html
+from ndlpy import access
+from ndlpy.util import to_camel_case, remove_nan
+
+from .util import renderable,  markdown2html
 
 from . import config
-from . import access
 from . import data
 
 from keyword import iskeyword

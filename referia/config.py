@@ -3,7 +3,7 @@ import yaml
 import numpy as np
 
 
-from .util import to_valid_var
+from ndlpy.util import to_valid_var
 
 
 GSPREAD_AVAILABLE=True
