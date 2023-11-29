@@ -3,7 +3,8 @@ import datetime
 import pandas as pd
 
 from ndlpy import log
-from . import config
+from ndlpy.context import Context
+from .settings import Settings
 
 from ndlpy.util import get_url_file
 from .util import add_one_to_max, return_shortest, return_longest, identity
@@ -28,13 +29,14 @@ class Compute():
             self._directory = self._data._directory
         else:
             self._directory = directory
-            
-        self._config = config.load_config(user_file=self._user_file, directory=self._directory)
+
+        self._settings = Settings(user_file=self._user_file, directory=self._directory)
+        self._cntxt = Context(name="referia")
            
         self._log = log.Logger(
             name=__name__,
-            level=self._config["logging"]["level"],
-            filename=self._config["logging"]["filename"],
+            level=self._cntxt["logging"]["level"],
+            filename=self._cntxt["logging"]["filename"],
             directory = self._directory,
             
         )
@@ -44,11 +46,11 @@ class Compute():
         self._computes = {}
         for comptype in ["precompute", "compute", "postcompute"]:
             self._computes[comptype]=[]
-            if comptype in self._config:
-                if type(self._config[comptype]) is list:
-                    computes = self._config[comptype]
+            if comptype in self._settings:
+                if type(self._settings[comptype]) is list:
+                    computes = self._settings[comptype]
                 else:
-                    computes = [self._config[comptype]]
+                    computes = [self._settings[comptype]]
 
                 for compute in computes:
                     self._computes[comptype].append(

@@ -6,7 +6,6 @@ from pandas.api.types import is_bool_dtype, is_integer_dtype, is_float_dtype, is
 import pandas as pd
 import markdown
 import markdownify
-import os
 
 import wget
 
@@ -81,10 +80,7 @@ def draft_combinator(fieldname, columns):
 def mapping(fieldname, columns):
     print("mapping:")
     for column in columns:
-        print("  {field}: {fieldContent}".format(field=to_camel_case(column), fieldContent=column))
-
-        
-                  
+        print("  {field}: {fieldContent}".format(field=to_camel_case(column), fieldContent=column))          
     
 def draft_skills(dtypes, width="800px"):
     print("scorer:")
@@ -129,10 +125,6 @@ def draft_skills(dtypes, width="800px"):
   args:
     value: False
     description: "{column}" """.format(column=column))  
-
-          
-
-
         
 def return_longest(lst):
     return max(lst, key=len)

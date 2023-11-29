@@ -13,14 +13,17 @@ import urllib.parse
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from ndlpy.log import Logger
-from .compute import Compute
-
+from ndlpy.context import Context
 from ndlpy import access
 from ndlpy.util import to_camel_case, remove_nan
 
-from .util import renderable,  markdown2html
+from .settings import Settings
+from .compute import Compute
 
-from . import config
+
+from .util import renderable, markdown2html
+
+from . import settings
 from . import data
 
 from keyword import iskeyword
@@ -82,18 +85,19 @@ class Data(data.DataObject):
 
         self._directory = directory
         self._user_file = user_file
-        self._config = config.load_config(user_file=self._user_file,
-                                          directory=self._directory)
+        self._cntxt = Context(name="referia")
+        self._settings = settings.Settings(user_file=self._user_file,
+                                           directory=self._directory)
         self._name_column_map = {}
         self._column_name_map = {}
-        if "mapping" in self._config:
-            for name, column in self._config["mapping"].items():
+        if "mapping" in self._settings:
+            for name, column in self._settings["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
-                      
+        
         self._log = Logger(
             name=__name__,
-            level=self._config["logging"]["level"],
-            filename=self._config["logging"]["filename"],
+            level=self._cntxt["logging"]["level"],
+            filename=self._cntxt["logging"]["filename"],
             directory = self._directory,            
         )
 
@@ -264,8 +268,8 @@ class Data(data.DataObject):
     def _load_allocation(self):
         """Load in the allocation spread sheet to data frames."""
         # Augment the data with default augmentation as "outer"
-        if "allocation" in self._config:
-            self._augment_data(self._config["allocation"], how="outer", concat=True, axis=0)
+        if "allocation" in self._settings:
+            self._augment_data(self._settings["allocation"], how="outer", concat=True, axis=0)
             self._remove_index_duplicates()
         else:
             self._log.error(f"No \"allocation\" field in config file.")
@@ -273,25 +277,25 @@ class Data(data.DataObject):
     def _load_additional(self):
         """Load in the allocation spread sheet to data frames."""
         # Augment the data with default augmentation as "inner"
-        if "additional" in self._config:
-            self._augment_data(self._config["additional"], how="inner", concat=False, suffix="_{joinNo}")
+        if "additional" in self._settings:
+            self._augment_data(self._settings["additional"], how="inner", concat=False, suffix="_{joinNo}")
         else:
             self._log.error(f"No \"additional\" field in config file.")
 
     def _load_globals(self):
         """Load in any global variables to a data series."""
-        if "select" in self._config["globals"]:
-            index_row = self._config["globals"]["select"]
+        if "select" in self._settings["globals"]:
+            index_row = self._settings["globals"]["select"]
         else:
             index_row = "globals"
             
-        df = self._finalize_df(*access.globals(self._config["globals"], pd.Index([index_row], name="index")), strict_columns=True)
+        df = self._finalize_df(*access.globals(self._settings["globals"], pd.Index([index_row], name="index")), strict_columns=True)
         self._globals = df
         self._globals_index = index_row
 
     def _load_cache(self):
         """Load in any cached data to data frames."""
-        df = self._finalize_df(*access.cache(self._config["cache"], self.index), strict_columns=True)
+        df = self._finalize_df(*access.cache(self._settings["cache"], self.index), strict_columns=True)
         if df.index.is_unique:
             self._cache = df
         else:
@@ -303,7 +307,7 @@ class Data(data.DataObject):
         
     def _load_scores(self):
         """Load in the score data to data frames."""
-        df = self._finalize_df(*access.scores(self._config["scores"], self.index))
+        df = self._finalize_df(*access.scores(self._settings["scores"], self.index))
         if df.index.is_unique:
             self._writedata = df
         else:
@@ -315,12 +319,12 @@ class Data(data.DataObject):
 
     def _load_series(self):
         """Load in the series data to data frames."""
-        if "selector" not in self._config["series"]:
+        if "selector" not in self._settings["series"]:
             self._log.error(errmsg)
             errmsg = f"A series entry must have a \"selector\" column."
             raise ValueError(errmsg)
-        self._writeseries = self._finalize_df(*access.series(self._config["series"], self.index))
-        selector = self._config["series"]["selector"]
+        self._writeseries = self._finalize_df(*access.series(self._settings["series"], self.index))
+        selector = self._settings["series"]["selector"]
         if selector not in self._writeseries.columns:
             self._writeseries[selector] = None
             
@@ -328,8 +332,8 @@ class Data(data.DataObject):
 
     def sort_series(self):
         """Sort the series by the column specified."""
-        if "series" in self._config:
-            series = self._config["series"]
+        if "series" in self._settings:
+            series = self._settings["series"]
         else:
             return
         if "sortby" in series and "field" in series["sortby"] and series["sortby"]["field"] in self._writeseries:
@@ -345,7 +349,7 @@ class Data(data.DataObject):
         """Load the input flows specified in the _referia.yml file."""
         self._data = None
         self._load_allocation()
-        if "additional" in self._config:
+        if "additional" in self._settings:
             self._log.debug("Joining allocation and additional information.")
             self._load_additional()
 
@@ -355,17 +359,17 @@ class Data(data.DataObject):
 
     def _load_global_consts(self):
         """Load constants from the _referia.yml file."""
-        if "global_consts" in self._config:
-            self._augment_global_consts(self._config["global_consts"])
+        if "global_consts" in self._settings:
+            self._augment_global_consts(self._settings["global_consts"])
                     
         
     def sort_data(self):
-        if "sortby" in self._config and "field" in self._config["sortby"] and self._config["sortby"]["field"] in self._data:
-            if "ascending" in self._config["sortby"]:
-                ascending = self._config["sortby"]["ascending"]
+        if "sortby" in self._settings and "field" in self._settings["sortby"] and self._settings["sortby"]["field"] in self._data:
+            if "ascending" in self._settings["sortby"]:
+                ascending = self._settings["sortby"]["ascending"]
             else:
                 ascending=True
-            field=self._config["sortby"]["field"]
+            field=self._settings["sortby"]["field"]
             self._log.debug(f"Sorting by \"{field}\"")
             self._data.sort_values(by=field, ascending=ascending, inplace=True)
 
@@ -376,16 +380,16 @@ class Data(data.DataObject):
         Those specified under "cache" are variables that can be cached and used in liquid templates or comptue functions but are assumed as not needed to be stored.
         Those specified under "scores" are the variables that the user will want to store.
         Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index."""
-        if "globals" in self._config:
+        if "globals" in self._settings:
             self._globals = None
             self._load_globals()
-        if "cache" in self._config:
+        if "cache" in self._settings:
             self._cache = None
             self._load_cache()
-        if "scores" in self._config:
+        if "scores" in self._settings:
             self._writedata = None
             self._load_scores()
-        if "series" in self._config:
+        if "series" in self._settings:
             self._writeseries = None
             self._load_series()
 
@@ -398,36 +402,36 @@ class Data(data.DataObject):
         """Save the output flows."""
         if self._globals is not None:
             self._log.debug(f"Writing _globals.")
-            access.write_globals(self._globals, self._config)
+            access.write_globals(self._globals, self._settings)
         if self._cache is not None:
             self._log.debug(f"Writing _cache.")
-            access.write_cache(self._cache, self._config)
+            access.write_cache(self._cache, self._settings)
         if self._writedata is not None:
             self._log.debug(f"Writing _writedata.")
-            access.write_scores(self._writedata, self._config)
+            access.write_scores(self._writedata, self._settings)
         if self._writeseries is not None:
-            access.write_series(self._writeseries, self._config)
+            access.write_series(self._writeseries, self._settings)
             self._log.debug(f"Writing _writeseries.")
 
     def load_liquid(self):
         """Load the liquid environment."""
         loader = None
-        if "liquid" in self._config:
-            if "templates" in self._config["liquid"]:
-                if "dir" in self._config["liquid"]["templates"]:
-                    templates_path = [os.path.abspath(self._config["liquid"]["templates"])]
+        if "liquid" in self._settings:
+            if "templates" in self._settings["liquid"]:
+                if "dir" in self._settings["liquid"]["templates"]:
+                    templates_path = [os.path.abspath(self._settings["liquid"]["templates"])]
                 else:
                     template_path = [
                         os.path.join(os.path.dirname(__file__), "templates"),
                     ]
 
-                    if "ext" in self._config["liquid"]:
-                        ext = self._config["liquid"]["ext"]
+                    if "ext" in self._settings["liquid"]:
+                        ext = self._settings["liquid"]["ext"]
                         loader = lq.loaders.FileExtensionLoader(search_path=template_path, ext=ext)
                     else:
                         loader = lq.FileSystemLoader(template_path)
-            elif "dict" in self._config["liquid"]["templates"]:
-                loader = lq.loaders.DictLoader(self._config["liquid"]["templates"]["dict"])
+            elif "dict" in self._settings["liquid"]["templates"]:
+                loader = lq.loaders.DictLoader(self._settings["liquid"]["templates"]["dict"])
         self._liquid_env = lq.Environment(loader=loader)
 
 
@@ -497,10 +501,10 @@ class Data(data.DataObject):
         return self._index
 
     def _strict_columns(self, group):
-        if "strict_columns" in self._config:
-            return self._config["strict_columns"]
-        elif "strict_columns" in self._config[group]:
-            return self._config[group]["strict_columns"]
+        if "strict_columns" in self._settings:
+            return self._settings["strict_columns"]
+        elif "strict_columns" in self._settings[group]:
+            return self._settings[group]["strict_columns"]
         elif group=="cache" or group=="globals":
             return True
         else:
@@ -1296,7 +1300,7 @@ class Data(data.DataObject):
             for column in details["columns"]:
                 if column not in df.columns:
                     df[column] = None
-            if strict_columns or ("strict_columns" in self._config and self._config["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
+            if strict_columns or ("strict_columns" in self._settings and self._settings["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
                 if "columns" not in details:
                     errmsg = f"You can't have strict_columns set to True and not list the columns in the details structure."
                     self._log.error(errmsg)
@@ -1448,7 +1452,7 @@ class Data(data.DataObject):
                 self._log.warning(f"Existing \"entries\" field in default mapping when incorporating a series.")
                 
             self._log.info(f"Augmenting default mapping with an \"entries\" field for accessing series.")
-            self._config["mapping"] = mapping
+            self._settings["mapping"] = mapping
             
             df[index_column_name] = df.index
             indexcol = list(set(df[index_column_name]))
@@ -1502,9 +1506,9 @@ class Data(data.DataObject):
             return 0
 
     def scored(self):
-        if "scored" in self._config:
-            if self._writedata is not None and self._config["scored"]["field"] in self._writedata.columns:
-                return self._writedata[self._config["scored"]["field"]].count()
+        if "scored" in self._settings:
+            if self._writedata is not None and self._settings["scored"]["field"] in self._writedata.columns:
+                return self._writedata[self._settings["scored"]["field"]].count()
             else:
                 return 0
 

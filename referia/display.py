@@ -19,9 +19,10 @@ from ipywidgets import jslink, jsdlink, Layout
 from ndlpy import log
 from ndlpy import access
 from ndlpy.util import remove_nan
+from ndlpy.context import Context
 from .widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
 
-from . import config
+from . import settings
 from . import assess
 from . import system
 
@@ -606,12 +607,12 @@ class Scorer:
             append = []
             ignore = ["viewer"]
             
-        self._config = config.load_config(user_file=user_file, directory=directory, append=append, ignore=ignore)
-
+        self._settings = settings.Settings(user_file=user_file, directory=directory, append=append, ignore=ignore)
+        self._cntxt = Context(name="referia")
         self._log = log.Logger(
             name=__name__,
-            level=self._config["logging"]["level"],
-            filename=self._config["logging"]["filename"],
+            level=self._cntxt["logging"]["level"],
+            filename=self._cntxt["logging"]["filename"],
             directory=directory,
         )
         self._system = system.Sys(user_file=user_file,
@@ -645,7 +646,7 @@ class Scorer:
             # Widget isn't created yet so set index in data only.
             self._data.set_index(index)
 
-        self._create_widgets(self._config, self._widgets)
+        self._create_widgets(self._settings, self._widgets)
 
     def _create_reload_button(self, config):
         """Create the reload button."""
@@ -884,7 +885,7 @@ class Scorer:
     def run(self):
         """Run the scorer to edit the data frame."""
         if self.index is not None:
-            if "series" in self._config:
+            if "series" in self._settings:
                 self.full_selector()
             else:
                 self.select_index()
@@ -896,7 +897,7 @@ class Scorer:
         """Convert a template to values."""
         if "use" in template:
             if template["use"] == "viewer":
-                viewer = self._config["viewer"] 
+                viewer = self._settings["viewer"] 
                 if type(viewer) is not list:
                     viewer = [viewer]
                 string = ""
@@ -1020,8 +1021,8 @@ class Scorer:
         # Need to determine if these should update series or data.
         # Update timestamp fields.
         today_val = pd.to_datetime("today")
-        if "timestamp_field" in self._config:
-            timestamp_field = self._config["timestamp_field"]
+        if "timestamp_field" in self._settings:
+            timestamp_field = self._settings["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
         if timestamp_field not in self._data.columns:
@@ -1031,8 +1032,8 @@ class Scorer:
         self.set_column(timestamp_field)
         self.set_value(today_val,
                        trigger_update=False)
-        if "created_field" in self._config:
-            created_field = self._config["created_field"]
+        if "created_field" in self._settings:
+            created_field = self._settings["created_field"]
         else:
             created_field = "Created"
 
@@ -1046,8 +1047,8 @@ class Scorer:
                            trigger_update=False)
 
         # Combinator is a combined field based on others
-        if "combinator" in self._config:
-            for view in self._config["combinator"]:
+        if "combinator" in self._settings:
+            for view in self._settings["combinator"]:
                 if "field" in view:
                     combinator = self._data.viewer_to_value(view)
                     self.set_column(view["field"])
