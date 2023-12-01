@@ -406,8 +406,12 @@ class Compute():
             computes += self._computes["postcompute"]
             
         for compute in computes:
-            if compute["refresh"]:
-                self.run(compute, df, index, refresh=True)
-            else:                    
-                self.run(compute, df, index, refresh=False)
+            field = compute["field"]
+            if self._data.writable(field):
+                if compute["refresh"]:
+                    self.run(compute, df, index, refresh=True)
+                else:                    
+                    self.run(compute, df, index, refresh=False)
+            else:
+                self._log.warning(f"Attempted to write to unwritable field \"{field}\"")
     

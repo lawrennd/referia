@@ -266,21 +266,21 @@ class Data(data.DataObject):
         self._data.index = indseries
 
     def _load_allocation(self):
-        """Load in the allocation spread sheet to data frames."""
+        """Load in the primary data source as a data frame."""
         # Augment the data with default augmentation as "outer"
         if "allocation" in self._settings:
             self._augment_data(self._settings["allocation"], how="outer", concat=True, axis=0)
             self._remove_index_duplicates()
         else:
-            self._log.error(f"No \"allocation\" field in config file.")
+            errmsg = f"No \"allocation\" field in config file."
+            self._log.error(errmsg)
+            raise ValueError(f"No \"allocation\" field in config file.")
             
     def _load_additional(self):
-        """Load in the allocation spread sheet to data frames."""
+        """Load in the additional data sources as data frames."""
         # Augment the data with default augmentation as "inner"
         if "additional" in self._settings:
             self._augment_data(self._settings["additional"], how="inner", concat=False, suffix="_{joinNo}")
-        else:
-            self._log.error(f"No \"additional\" field in config file.")
 
     def _load_globals(self):
         """Load in any global variables to a data series."""
@@ -510,6 +510,24 @@ class Data(data.DataObject):
         else:
             return False # historic default, should shift this to True.
 
+    def writable(self, column):
+        """Test if the given column is writable"""
+        if column in self.columns:
+            if self._writedata is not None:
+                if column in self._writedata.columns:
+                    return True
+            if self._writeseries is not None:
+                if column in self._writeseries.columns:
+                    return True
+            if self._cache is not None:
+                if column in self._cache.columns:
+                    return True
+            if self._globals is not None:
+                if column in self._globals.index:
+                    return True
+        return False
+
+    
     def set_column(self, column):
         """Set the current column focus."""
         if column == "_":
@@ -1251,7 +1269,8 @@ class Data(data.DataObject):
             
             if not is_index and len(self.columns)>0:
                 #try:
-                self.set_index(index)
+                if index in self.index: # This prevents adding new indices.
+                    self.set_index(index)
                 #except ValueError as err:
                 #    errmsg = f"Could not set index, \"{index}\", likely due to allocation augmentation."
                 #    self._log.error(errmsg)
