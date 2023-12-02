@@ -191,7 +191,7 @@ class Data(data.DataObject):
                 else:
                     rsuffix = suffix.format(joinNo=i)
 
-                df = self._finalize_df(*access.globals(conf, pd.Index([index_row], name="index")), strict_columns=True)
+                df = self._finalize_df(*access.globals_data(conf, pd.Index([index_row], name="index")), strict_columns=True)
                 ds = df.loc[index_row]
 
             if self._global_consts is None:
@@ -289,7 +289,7 @@ class Data(data.DataObject):
         else:
             index_row = "globals"
             
-        df = self._finalize_df(*access.globals(self._settings["globals"], pd.Index([index_row], name="index")), strict_columns=True)
+        df = self._finalize_df(*access.globals_data(self._settings["globals"], pd.Index([index_row], name="index")), strict_columns=True)
         self._globals = df
         self._globals_index = index_row
 
