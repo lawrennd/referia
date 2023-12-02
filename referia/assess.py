@@ -174,6 +174,10 @@ class Data(data.DataObject):
                 index_row = conf["select"]
             else:
                 index_row = "globals"
+            if "rsuffix" in conf:
+                rsuffix = conf["rsuffix"]
+            else:
+                rsuffix = suffix.format(joinNo=i)
             if "local" in conf:
                 if type(conf["local"]) is dict:
                     ds = pd.Series(conf["local"], name=index_row)
@@ -186,10 +190,6 @@ class Data(data.DataObject):
                     self._log.error(errmsg)
                     raise ValueError(errmsg)
             else:
-                if "rsuffix" in conf:
-                    rsuffix = conf["rsuffix"]
-                else:
-                    rsuffix = suffix.format(joinNo=i)
 
                 df = self._finalize_df(*access.globals_data(conf, pd.Index([index_row], name="index")), strict_columns=True)
                 ds = df.loc[index_row]
@@ -197,7 +197,10 @@ class Data(data.DataObject):
             if self._global_consts is None:
                 self._global_consts = ds
             else:
-                self._global_consts = pd.DataFrame(self._global_consts, columns=[index_row]).T.join(pd.DataFrame(ds, columns=[index_row]).T, rsuffix=rsuffix).loc[index_row]                    
+                if self._global_consts.name != ds.name:
+                    self._global_consts.name += "_" + ds.name
+                    ds.name = self._global_consts.name
+                self._global_consts = pd.DataFrame(self._global_consts).T.join(pd.DataFrame(ds).T, rsuffix=rsuffix).loc[ds.name]
                     
     def _augment_data(self, configs, how="left", suffix='', concat=False, axis=0):
         """Augment the data by joining or concatenating the new values."""
