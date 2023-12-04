@@ -203,7 +203,7 @@ def text_summarizer(text, fraction=0.1):
     # Return final summary
     return summary
 
-def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["Highlight"]):
+def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["Highlight"], number=None):
     if type(comment_types) is not list:
         comment_types = [comment_types]
     directory = os.path.expandvars(directory)
@@ -225,6 +225,8 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
         with open(destname, "r") as f:
             data = json.load(f)
         val = ""
+        if number is not None:
+            data=[data[number]]
         for entry in data:
             if entry["type"] == "FreeText":
                 if entry["type"] in comment_types:

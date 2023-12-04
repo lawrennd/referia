@@ -1050,8 +1050,10 @@ class Scorer:
         if "combinator" in self._settings:
             for view in self._settings["combinator"]:
                 if "field" in view:
+                    col = view["field"]
+                    del view["field"] #Prevent data reviewer trying to return field
                     combinator = self._data.viewer_to_value(view)
-                    self.set_column(view["field"])
+                    self.set_column(col)
                     self.set_value(combinator,
                                    trigger_update=False)
                 else:
