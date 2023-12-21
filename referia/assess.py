@@ -31,6 +31,7 @@ from keyword import iskeyword
 def is_valid_variable_name(name):
     return name.isidentifier() and not iskeyword(name)
 
+    
 
 @string_filter
 def url_escape(string):
@@ -128,11 +129,134 @@ class Data(data.DataObject):
 
         # Load in compute function capability.
         self._compute = Compute(self)
+        self.autocache = True
         self.load_liquid()
         self.add_liquid_filters()
         self.load_flows()
+        self.preprocess()
 
+        self.at = self._AtAccessor(self)
 
+    class _AtAccessor:
+        def __init__(self, data):
+            self._data_object = data
+
+        def __getitem__(self, key):
+            if type(key) is tuple:
+                col = key[1]
+            else:
+                col = key
+            if col in self._data_object._data:
+                return self._data_object._data.at[key]
+            elif self._data_object._writedata is not None and col in self._data_object._writedata.columns:
+                return self._data_object._writedata.at[key]
+            elif self._data_object._global_consts is not None and col in self._data_object._global_consts.index:
+                return self._data_object._global_consts.at[col]
+            elif self._data_object._writeseries is not None and col in self._data_object._writeseries.columns:
+                return self._data_object._writeseries.at[key]
+            elif self._data_object._cache is not None and col in self._data_object._cache.columns:
+                return self._data_object._cache.at[key]
+            elif self._data_object._globals is not None and col in self._data_object._globals.index:
+                return self._data_object._globals.at[col]
+            else:
+                raise KeyError(f"Unknown key \"{col}\" in data object.")
+
+        def __setitem__(self, key, value):
+            if type(key) is tuple:
+                col = key[1]
+            else:
+                col = key
+            if col in self._data_object._data.columns:
+                return KeyError(f"Column \"{col}\" is not writable in data object.")
+            elif self._data_object._global_consts is not None and col in self._data_object._global_consts.index:
+                return KeyError(f"Global const \"{col}\" is not writable in data object.")
+            elif self._data_object._writedata is not None and col in self._data_object._writedata.columns:
+                self._data_object._writedata.at[key] = value
+            elif self._data_object._writeseries is not None and col in self._data_object._writeseries.columns:
+                self._data_object._writeseries.at[key] = value
+            elif self._data_object._cache is not None and col in self._data_object._cache.columns:
+                self._data_object._cache.at[key] = value
+            elif self._data_object._globals is not None and col in self._data_object._globals.index:
+                self._data_object._globals.at[col] = value
+            else:
+                if self._data_object.autocache:
+                    if self._data_object._cache is None:
+                        self._data_object._cache = pd.DataFrame(columns=[col], index=self._data_object.index)
+                    self._data_object._cache.at[key] = value
+                else:
+                    raise KeyError(f"Unknown key \"{key}\" in data object.")
+            
+
+    def __getitem__(self, keys):
+        result = pd.DataFrame()
+
+        if not isinstance(keys, list):
+            keys = [keys]  # Convert to list if a single column name is provided
+
+        for key in keys:
+            for attr in ['_data', '_writedata', '_writeseries', '_cache']:
+                if hasattr(self, attr) and getattr(self, attr) is not None and key in getattr(self, attr).columns:
+                    result[key] = getattr(self, attr)[key]
+                    break
+
+        return result
+
+    def __setitem__(self, keys, values):
+        if not isinstance(keys, list):
+            keys = [keys]  # Convert to list if a single column name is provided
+        if not isinstance(values, list):
+            values = [values]  # Convert to list if a single value is provided
+
+        if len(keys) != len(values):
+            raise ValueError(f"Key lengths and value lengths are not the same.")
+        for key, value in zip(keys, values):
+            # Immutable columns and constants
+            if key in self._data.columns:
+                raise KeyError(f"Cannot modify an immutable column or constant: \"{key}\"")
+            if self._global_consts is not None and key in self._global_consts.index:
+                raise KeyError(f"Cannot modify a constant: \"{key}\"")
+
+            if self._globals is not None:
+                # Check if the global column values are all the same
+                if key in self._globals.index and not all(v == value[0] for v in value):
+                    raise KeyError(f"All values for global column \"{key}\" must be the same.")
+
+            found = False
+            for attr in ['_writedata', '_writeseries', '_cache', '_globals']:
+                if hasattr(self, attr) and getattr(self, attr) is not None:
+                    if attr in ['_globals']:
+                        if key in getattr(self, attr).index:
+                            getattr(self, attr)[key] = value[0]  # Set only the first value for globals
+                            found = True
+                            break
+                    else:
+                        if key in getattr(self, attr).columns:
+                            getattr(self, attr)[key] = value
+                            found = True
+                            break
+
+            if not found:  # Initialize in _writedata if the key doesn't exist in any structure
+                if self.autocache:
+                    if self._cache is None :
+                        self._cache = pd.DataFrame({key: value}, index=self._data.index)
+                    else:
+                        self._cache[key] = value
+                else:
+                    raise KeyError(f"Unknown writable key \"{key}\" in data object.")
+
+    
+    @property
+    def autocache(self):
+        if self._autocache:
+            return True
+        else:
+            return False
+    @autocache.setter
+    def autocache(self, value):
+        if not isinstance(value, bool):
+            raise ValueError(f"autocache value must be boolean, set as \"{value}\"")
+        self._autocache = value
+        
     @property
     def index(self):
         if self._data is not None:
@@ -230,6 +354,7 @@ class Data(data.DataObject):
                     raise ValueError(errmsg)
             else:
                 df = self._finalize_df(*access.read_data(conf))
+                    
             if df.index.is_unique:
                 if "join" in conf:
                     join = conf["join"]
@@ -452,7 +577,7 @@ class Data(data.DataObject):
         # If index has changed, run computes.
         if orig_index is not None and index != orig_index:
             if orig_index in self.index:
-                self._compute.run_all(post=True)
+                self.compute_post()
         # If 
         if self._data is not None and index not in self.index:
             self._log.warning(f"Index \"{index}\" not found in _data")
@@ -464,7 +589,7 @@ class Data(data.DataObject):
             self.check_or_set_subseries()
         # If index has changed, run computes.
         if orig_index is None or self._index != orig_index:
-            self._compute.run_all(pre=True)
+            self.compute_pre()
 
     def check_or_set_subseries(self):
         """Check if there is a sub-series if so, use top subindex, if not create a row."""
@@ -530,7 +655,22 @@ class Data(data.DataObject):
                     return True
         return False
 
-    
+    def preprocess(self):
+        """Run any preprocessing computations."""
+        self._compute.preprocess()
+
+    def compute_pre(self):
+        """Run pre-computation on the index."""
+        self._compute.run_all(pre=True)
+        
+    def compute_post(self):
+        """Run post-computation on the index."""
+        self._compute.run_all(post=True)
+
+    def compute_append(index, row):
+        """Run computation for an appended row."""
+        self._compute.run_all(df=row, index=index, pre=True)
+        
     def set_column(self, column):
         """Set the current column focus."""
         if column == "_":
@@ -652,7 +792,6 @@ class Data(data.DataObject):
             self.set_column(orig_col)
         return value
     
-    
 
     def set_value(self, value):
         """Set the value of the current cell under focus."""
@@ -695,6 +834,69 @@ class Data(data.DataObject):
             self.add_series_column(column)
             self.set_series_value(value, column)
 
+    def head(self, n=5):
+        return self.to_df().head(n)
+
+    def tail(self, n=5):
+        return self.to_df().tail(n)
+
+    def drop_column(self, column_name):
+        if column_name in self._data:
+            raise KeyError(f"Attempting to drop column \"{column}\" in self._data (which is read only).")
+        elif self._writedata is not None and column_name in self._writedata:
+            self._log.debug(f"Dropping column \"{column_name}\" from _writedata.")
+            self._writedata.drop(column_name, axis=1, inplace=True)
+        elif self._writeseries is not None and column_name in self._writeseries:
+            self._log.debug(f"Dropping column \"{column_name}\" from _writeseries.")
+            self._writeseries.drop(column_name, axis=1, inplace=True)
+        elif self._cache is not None and column_name in self._cache:
+            self._log.debug(f"Dropping column \"{column_name}\" from _cache.")
+            self._cache.drop(column_name, axis=1, inplace=True)
+        elif self._globals is not None and column_name in self._globals:
+            self._log.debug(f"Dropping value \"{column_name}\" from _cache.")
+            self._globals.drop(column_name, inplace=True)
+        else:
+            raise KeyError(f"No column \"{column}\" in data object.")
+
+    def filter_rows(self, condition):
+        self._data = self._data[condition]
+        if self._writedata is not None:
+            self._writedata = self._writedata[condition]
+        if self._writeseries is not None:
+            self._writeseries = self._writeseries[condition]
+        if self._writeseries is not None:
+            self._cache = self._cache[condition]
+           
+    def get_shape(self):
+        return self.to_df().shape
+
+    def describe(self):
+        return self.to_df().describe()
+
+    def to_df(self):
+        df1 = self._data
+        joins = []
+        if self._global_consts is not None:
+            df1.assign(**self._global_consts)
+        if self._writedata is not None:
+            joins.append(self._writedata)
+        if self._writeseries is not None:
+            joins.append(self._writeseries)
+        if self._cache is not None:
+            joins.append(self._cache)
+        df1.join(joins, how="outer")
+        if self._globals is not None:
+            df1.assign(**self._globals)
+        return df1
+        
+
+    def __str__(self):
+        return str(self.to_df())
+
+    def __repr__(self):
+        return repr(self.to_df())
+    
+            
     def get_value_by_element(self, element):
         """Return the value of an element from the under focus cell (e.g. a list entry or a dict entry)."""
         value = self.get_value()
@@ -841,7 +1043,7 @@ class Data(data.DataObject):
             self._log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._cache or in self._data returning \"None\"")
             return None
 
-    def add_column(self, column):
+    def add_column(self, column, data=None):
         if column in self.columns:
             errmsg = f"Was requested to add column \"{column}\" but it already exists in data."
             self._log.error(errmsg)
@@ -862,13 +1064,13 @@ class Data(data.DataObject):
         if self._writeseries is not None and column not in self._writeseries.columns:
             if not self._strict_columns("series"):
                 self._log.info(f"\"{column}\" not in writeseries columns ... adding.")
-                self._writeseries[column] = None
+                self._writeseries[column] = data
                 return
         
         if self._writedata is not None and column not in self._writedata.columns:
             if not self._strict_columns("scores"):
                 self._log.info(f"\"{column}\" not in write columns ... adding.")
-                self._writedata[column] = None
+                self._writedata[column] = data
                 return
         errmsg = f"Cannot add column \"{column}\" to either scores or series due to strict_columns being set and/or series or scores not being present."
         self._log.error(errmsg)
@@ -890,7 +1092,7 @@ class Data(data.DataObject):
             row[df.index.name] = index
         if self.writable:
             # Only precompute if something to write to
-            self._compute.run_all(df=row, index=index, pre=True)
+            self.compute_append(index=index, row=row)
         # was return df.append(row) before append deprecation
         return pd.concat([df, row])
 
@@ -1135,12 +1337,11 @@ class Data(data.DataObject):
 
     def compute_to_value(self, compute):
         """Extract a value from a computation"""
-        compute = self._compute_prep(compute)
-        return self.compute(compute)
+        compute_prep = self._compute.prep(compute)
+        return self._compute.run(compute_prep)
     
     def compute_to_tmpname(self, compute):
         """Convert a display string to a temp name"""
-        
         return to_camel_case(compute["function"].replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
         
     def liquid_to_tmpname(self, display):

@@ -2,11 +2,10 @@ import os
 import datetime
 import pandas as pd
 
-from ndlpy import log
-from ndlpy.context import Context
 from .settings import Settings
 
-from ndlpy.util import get_url_file
+import ndlpy as ndl
+
 from .util import add_one_to_max, return_shortest, return_longest, identity
 
 from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, render_liquid
@@ -31,9 +30,9 @@ class Compute():
             self._directory = directory
 
         self._settings = Settings(user_file=self._user_file, directory=self._directory)
-        self._cntxt = Context(name="referia")
+        self._cntxt = ndl.context.Context(name="referia")
            
-        self._log = log.Logger(
+        self._log = ndl.log.Logger(
             name=__name__,
             level=self._cntxt["logging"]["level"],
             filename=self._cntxt["logging"]["filename"],
@@ -110,13 +109,6 @@ class Compute():
                 "name" : "next_integer",
                 "function" : add_one_to_max,
                 "default_args" : {},
-            },
-            {
-                "name" : "get_url_file",
-                "function" : get_url_file,
-                "default_args": {
-                },
-                "docstr" : "Download a file with the given name.",
             },
             {
                 "name" : "today",
@@ -238,6 +230,146 @@ class Compute():
                 "default_args": {
                 },
                 "docstr" : "Run map on a list for a given function",
+            },
+            {
+                "name" : "get_url_file",
+                "function" : ndl.util.get_url_file,
+                "default_args": {
+                },
+                "docstr" : "Download a file with the given name.",
+            },
+            {
+                "name" : "addmonth",
+                "function" : ndl.util.addmonth,
+                "default_args" : {
+                },
+                "docstr" : "Add month column based on source date field."
+            },
+            {
+                "name" : "addsupervisor",
+                "function" : ndl.util.addsupervisor,
+                "default_args" : {
+                },
+                "docstr" : "None"
+            },
+            {
+                "name" : "addyear",
+                "function" : ndl.util.addyear,
+                "default_args" : {
+                },
+                "docstr" : "Add year column and based on source date field."
+            },
+            {
+                "name" : "ascending",
+                "function" : ndl.util.ascending,
+                "default_args" : {
+                },
+                "docstr" : "Sort in ascending order"
+            },
+            {
+                "name" : "augmentcurrency",
+                "function" : ndl.util.augmentcurrency,
+                "default_args" : {
+                },
+                "docstr" : "Preprocessor to set integer type on columns."
+            },
+            {
+            "name" : "augmentmonth",
+                "function" : ndl.util.augmentmonth,
+                "default_args" : {
+                },
+                "docstr" : "Augment with a month column based on source date field."
+            },
+            {
+                "name" : "augmentyear",
+                "function" : ndl.util.augmentyear,
+                "default_args" : {
+                },
+                "docstr" : "Augment with a year column based on source date field."
+            },
+            {
+                "name" : "columncontains",
+                "function" : ndl.util.columncontains,
+                "default_args" : {
+                },
+                "docstr" : "Filter on whether column contains a given value"
+            },
+            {
+                "name" : "columnis",
+                "function" : ndl.util.columnis,
+                "default_args" : {
+                },
+                "docstr" : "Filter on whether item is equal to a given value"
+            },
+            {
+                "name" : "convert_datetime",
+                "function" : ndl.util.convert_datetime,
+                "default_args" : {
+                },
+                "docstr" : "Preprocessor to set datetime type on columns."
+            },
+            {
+                "name" : "convert_int",
+                "function" : ndl.util.convert_int,
+                "default_args" : {
+                },
+                "docstr" : "Preprocessor to set integer type on columns."
+            },
+            {
+                "name" : "convert_string",
+                "function" : ndl.util.convert_string,
+                "default_args" : {
+                },
+                "docstr" : "Preprocessor to set string type on columns."
+            },
+            {
+                "name" : "convert_year_iso",
+                "function" : ndl.util.convert_year_iso,
+                "default_args" : {
+                },
+                "docstr" : "Preprocessor to set string type on columns."
+            },
+            {
+                "name" : "current",
+                "function" : ndl.util.current,
+                "default_args" : {
+                },
+                "docstr" : "Filter on whether item is current"
+            },
+            {
+                "name" : "descending",
+                "function" : ndl.util.descending,
+                "default_args" : {
+                },
+                "docstr" : "Sort in descending order"
+            },
+            {
+                "name" : "former",
+                "function" : ndl.util.former,
+                "default_args" : {
+                },
+                "docstr" : "Filter on whether item is current"
+            },
+            {
+                "name" : "onbool",
+                "function" : ndl.util.onbool,
+                "default_args" : {
+                },
+                "docstr" : "Filter on whether column is positive (or negative if inverted)"
+            },
+            {
+                "name" : "recent",
+                "function" : ndl.util.recent,
+                "default_args" : {
+                },
+                "docstr" : "Filter on year of item"
+            },
+            {
+                "name" : "remove_nan",
+                "function" : ndl.util.remove_nan,
+                "default_args" : {
+                },
+                "docstr" : "Delete missing entries from dictionary"
             },
         ]            
             
@@ -394,6 +526,38 @@ class Compute():
                     self._log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
                     self._data.set_value_column(new_val, column)
   
+    def preprocess(self):
+        """Run all preprocess computations."""
+        ##### Copied raw need to run on all elements.
+        ## preprocess
+        for op in ["preprocessor", "augmentor", "sorter"]:
+            if op in self._settings["compute"]:
+                computes = self._settings["compute"][op]
+                if type(computes) is not list:
+                    computes = [computes]
+                for compute in computes:
+                    compute_prep = self.prep(compute)
+                    fargs = compute_prep["args"]
+                    if op == "augmentor":
+                        self._data[compute["field"]] = compute_prep["function"](self._data, **fargs)
+                    elif op == "sorter":
+                        compute_prep["function"](self._data, **fargs)
+                    elif op == "preprocessor":
+                        self._data[compute["field"]] = compute_prep["function"](self._data, **fargs)
+                        
+        # Filter
+        filt = pd.Series(True, index=self._data.index)
+        if "filter" in self._settings["compute"]:
+            computes = self._settings["compute"]["filter"]
+            if type(computes) is not list:
+                computes = [computes]    
+                for compute in computes:
+                    compute_prep = self.prep(compute)
+                    fargs = compute_prep["args"]
+                    newfilt = compute_prep["function"](self._data, **fargs)
+                    filt = (filt & newfilt)
+            self._data.filter_row(filt)
+    
     def run_all(self, df=None, index=None, pre=False, post=False):
         """Run any computation elements on the data frame."""
 
