@@ -15,6 +15,7 @@ from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 from ndlpy.log import Logger
 from ndlpy.context import Context
 from ndlpy import access
+from ndlpy import data
 from ndlpy.util import to_camel_case, remove_nan
 
 from .settings import Settings
@@ -24,7 +25,6 @@ from .compute import Compute
 from .util import renderable, markdown2html
 
 from . import settings
-from . import data
 
 from keyword import iskeyword
 
@@ -266,7 +266,7 @@ class Data(data.DataObject):
 
     @property
     def writable(self):        
-        if self._writedata is not None or self._writeseries is not None:
+        if self._writedata is not None or self._writeseries is not None or self._globals is not None:
             return True
         else:
             return False
