@@ -3,7 +3,7 @@ import yaml
 import numpy as np
 
 
-from ndlpy.util import to_valid_var
+from ndlpy.util.misc import to_valid_var
 import ndlpy
 
 
@@ -33,7 +33,7 @@ def nodes(user_file="_referia.yml", directory="."):
     return chain
 
     
-class Settings(ndlpy.settings.Settings):
+class Settings(ndlpy.config.settings.Settings):
     def __init__(self, user_file="_referia.yml", directory=".", field=None, append=[], ignore=[]):
         super().__init__(user_file=user_file, directory=directory, field=field)
 

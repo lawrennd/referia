@@ -15,18 +15,15 @@ import pyminizip as pz
 import pypdftk as tk
 
 from ndlpy import log
-from ndlpy.util import to_camel_case, extract_full_filename, extract_abs_filename
+from ndlpy.util.misc import to_camel_case, extract_full_filename, extract_abs_filename
 from ndlpy import access
-from ndlpy.context import Context
+from ndlpy.config.context import Context
 
-from .util import notempty, markdown2html, renderable, tallyable
-from .fileutil import to_valid_file
+from .util.misc import notempty, markdown2html, renderable, tallyable
+from .util.files import to_valid_file
 
-from . import settings
-
-from . import assess
+from .config import settings
 from . import display
-from . import util
 
 import platform
 OSX = False

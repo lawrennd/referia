@@ -17,13 +17,14 @@ import matplotlib.pyplot as plt
 from ipywidgets import jslink, jsdlink, Layout
 
 from ndlpy import log
-from ndlpy import access
-from ndlpy.util import remove_nan
-from ndlpy.context import Context
+from ndlpy.access import io as aio
+from ndlpy.util.misc import remove_nan
+from ndlpy.config.context import Context
+
 from .widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
 
-from . import settings
-from . import assess
+from .config import settings
+from . import assess 
 from . import system
 
 
@@ -85,7 +86,7 @@ def extract_load_scorer(details, scorer, widgets):
     # This is a link to a widget specificaiton stored in a file
     if "details" not in details:
         raise ValueError("Load scorer needs to provide load details as entry under \"details\"")
-    df,  newdetails = access.read_data(details["details"])
+    df,  newdetails = aio.read_data(details["details"])
     for ind, series in df.iterrows():
         extract_scorer(remove_nan(series.to_dict()), scorer, widgets)
 
@@ -461,7 +462,7 @@ def nodes(chain, index=None):
     oldkey=None
     while len(chain)>0:
         key, directory=chain.pop()
-        data[key] = assess.Data(directory=directory)
+        data[key] = assess.data.Data(directory=directory)
         if index is None and data[key].index is not None:
             index = data[key].index[0]
         scorer[key] = Scorer(index, data[key], directory=directory, viewer_inherit=False)
@@ -638,7 +639,7 @@ class Scorer:
         self._postcompute = []
 
         if data is None:
-            self._data = assess.Data()
+            self._data = assess.data.Data()
         else:
             self._data = data
 
@@ -1041,7 +1042,7 @@ class Scorer:
             self._data.add_column(created_field)
         self._data.set_dtype(created_field, "datetime64[ns]")
 
-        if created_field not in self._data.columns or assess.empty(self._data.get_value_column(created_field)):
+        if created_field not in self._data.columns or assess.data.empty(self._data.get_value_column(created_field)):
             self.set_column(created_field)
             self.set_value(today_val,
                            trigger_update=False)

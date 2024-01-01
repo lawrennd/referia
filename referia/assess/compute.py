@@ -2,18 +2,18 @@ import os
 import datetime
 import pandas as pd
 
-from .settings import Settings
+from ..config.settings import Settings
 
 import ndlpy as ndl
 
-from .util import add_one_to_max, return_shortest, return_longest, identity
+from ..util.misc import add_one_to_max, return_shortest, return_longest, identity
 
-from .textutil import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, render_liquid
-from .sysutil import most_recent_screen_shot
-from .plotutil import bar_plot, histogram
-from .fileutil import file_from_re, files_from_re
+from ..util.text import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, render_liquid
+from ..util.system import most_recent_screen_shot
+from ..util.plot import bar_plot, histogram
+from ..util.files import file_from_re, files_from_re
 
-from .exceptions import ComputeError
+from ..exceptions import ComputeError
 
 class Compute():
     def __init__(self, data, user_file=None, directory=None):
@@ -30,7 +30,7 @@ class Compute():
             self._directory = directory
 
         self._settings = Settings(user_file=self._user_file, directory=self._directory)
-        self._cntxt = ndl.context.Context(name="referia")
+        self._cntxt = ndl.config.context.Context(name="referia")
            
         self._log = ndl.log.Logger(
             name=__name__,
@@ -233,140 +233,140 @@ class Compute():
             },
             {
                 "name" : "get_url_file",
-                "function" : ndl.util.get_url_file,
+                "function" : ndl.util.misc.get_url_file,
                 "default_args": {
                 },
                 "docstr" : "Download a file with the given name.",
             },
             {
                 "name" : "addmonth",
-                "function" : ndl.util.addmonth,
+                "function" : ndl.util.misc.addmonth,
                 "default_args" : {
                 },
                 "docstr" : "Add month column based on source date field."
             },
             {
                 "name" : "addsupervisor",
-                "function" : ndl.util.addsupervisor,
+                "function" : ndl.util.misc.addsupervisor,
                 "default_args" : {
                 },
                 "docstr" : "None"
             },
             {
                 "name" : "addyear",
-                "function" : ndl.util.addyear,
+                "function" : ndl.util.misc.addyear,
                 "default_args" : {
                 },
                 "docstr" : "Add year column and based on source date field."
             },
             {
                 "name" : "ascending",
-                "function" : ndl.util.ascending,
+                "function" : ndl.util.misc.ascending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in ascending order"
             },
             {
                 "name" : "augmentcurrency",
-                "function" : ndl.util.augmentcurrency,
+                "function" : ndl.util.misc.augmentcurrency,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
             "name" : "augmentmonth",
-                "function" : ndl.util.augmentmonth,
+                "function" : ndl.util.misc.augmentmonth,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a month column based on source date field."
             },
             {
                 "name" : "augmentyear",
-                "function" : ndl.util.augmentyear,
+                "function" : ndl.util.misc.augmentyear,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a year column based on source date field."
             },
             {
                 "name" : "columncontains",
-                "function" : ndl.util.columncontains,
+                "function" : ndl.util.misc.columncontains,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column contains a given value"
             },
             {
                 "name" : "columnis",
-                "function" : ndl.util.columnis,
+                "function" : ndl.util.misc.columnis,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is equal to a given value"
             },
             {
                 "name" : "convert_datetime",
-                "function" : ndl.util.convert_datetime,
+                "function" : ndl.util.misc.convert_datetime,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set datetime type on columns."
             },
             {
                 "name" : "convert_int",
-                "function" : ndl.util.convert_int,
+                "function" : ndl.util.misc.convert_int,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
                 "name" : "convert_string",
-                "function" : ndl.util.convert_string,
+                "function" : ndl.util.misc.convert_string,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "convert_year_iso",
-                "function" : ndl.util.convert_year_iso,
+                "function" : ndl.util.misc.convert_year_iso,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "current",
-                "function" : ndl.util.current,
+                "function" : ndl.util.misc.current,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "descending",
-                "function" : ndl.util.descending,
+                "function" : ndl.util.misc.descending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in descending order"
             },
             {
                 "name" : "former",
-                "function" : ndl.util.former,
+                "function" : ndl.util.misc.former,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "onbool",
-                "function" : ndl.util.onbool,
+                "function" : ndl.util.misc.onbool,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column is positive (or negative if inverted)"
             },
             {
                 "name" : "recent",
-                "function" : ndl.util.recent,
+                "function" : ndl.util.misc.recent,
                 "default_args" : {
                 },
                 "docstr" : "Filter on year of item"
             },
             {
                 "name" : "remove_nan",
-                "function" : ndl.util.remove_nan,
+                "function" : ndl.util.misc.remove_nan,
                 "default_args" : {
                 },
                 "docstr" : "Delete missing entries from dictionary"

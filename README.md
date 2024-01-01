@@ -1,5 +1,11 @@
 # referia
 
+
+![Tests](https://github.com/lawrennd/referia/actions/workflows/python-tests.yml/badge.svg)
+
+[![codecov](https://codecov.io/gh/lawrennd/referia/branch/main/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/lawrennd/referia)
+
+
 The referia library provides tools for assisting with assessment, originally written as an aide for 2021 REF Assessment and adapted to make it configurable.
 
 The library uses jupyter notebook as an interface. 
