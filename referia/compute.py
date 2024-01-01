@@ -533,23 +533,21 @@ class Compute():
         for op in ["preprocessor", "augmentor", "sorter"]:
             if op in self._settings["compute"]:
                 computes = self._settings["compute"][op]
-                if type(computes) is not list:
+                if not isinstance(computes, list):
                     computes = [computes]
                 for compute in computes:
                     compute_prep = self.prep(compute)
                     fargs = compute_prep["args"]
-                    if op == "augmentor":
+                    if "field" in compute:
                         self._data[compute["field"]] = compute_prep["function"](self._data, **fargs)
-                    elif op == "sorter":
+                    else:
                         compute_prep["function"](self._data, **fargs)
-                    elif op == "preprocessor":
-                        self._data[compute["field"]] = compute_prep["function"](self._data, **fargs)
                         
         # Filter
         filt = pd.Series(True, index=self._data.index)
         if "filter" in self._settings["compute"]:
             computes = self._settings["compute"]["filter"]
-            if type(computes) is not list:
+            if not isinstance(computes, list):
                 computes = [computes]    
                 for compute in computes:
                     compute_prep = self.prep(compute)
@@ -571,7 +569,7 @@ class Compute():
             
         for compute in computes:
             field = compute["field"]
-            if self._data.writable(field):
+            if self._data.iswritable(field):
                 if compute["refresh"]:
                     self.run(compute, df, index, refresh=True)
                 else:                    

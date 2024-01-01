@@ -266,16 +266,7 @@ class Sys():
 
     def create_document_content(self, document, **args):
         """Create the content for the documents."""
-        filename = extract_full_filename(args)
-        if "content" in args:
-            content = args["content"]
-        else:
-            content = ""
-        data = {}
-        for key, item in args.items():
-            if key not in ["filename", "directory", "content"]:
-                data[key] = item
-        return data, filename, content
+        access.io.create_document_content(**args)
 
     def create_docx(self, document, **args):
         """Create a Microsoft word style document."""
