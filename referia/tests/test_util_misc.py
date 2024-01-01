@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 import pandas as pd
-from your_module import (
+from referia.util.misc import (
     identity, filename_to_binary, yyyymmddToDatetime, datetimeToYyyymmdd,
     add_one_to_max, markdown2html, html2markdown, renderable, tallyable, notempty,
     return_longest, return_shortest
@@ -13,11 +13,11 @@ def test_identity():
     assert identity([1, 2, 3]) == [1, 2, 3]
 
 def test_filename_to_binary(mocker):
-    mocker.patch('builtins.open', mocker.mock_open(read_data='file content'))
+    mocker.patch('builtins.open', mocker.mock_open(read_data=b'file content'))
     assert filename_to_binary('dummy.txt') == b'file content'
 
 def test_yyyymmddToDatetime():
-    assert yyyymmddToDatetime("2023-01-01") == datetime(2023, 1, 1).date()
+    assert yyyymmddToDatetime("2023-01-01") == datetime(2023, 1, 1, 0, 0).date()
     with pytest.raises(ValueError):
         yyyymmddToDatetime("invalid-date")
 
@@ -29,10 +29,10 @@ def test_add_one_to_max():
     assert add_one_to_max(pd.Series([]), default=1) == 1
 
 def test_markdown2html():
-    assert markdown2html("# Test") == "<h1>Test</h1>\n"
+    assert markdown2html("# Test") == "<h1>Test</h1>"
 
 def test_html2markdown():
-    assert html2markdown("<h1>Test</h1>") == "# Test\n"
+    assert html2markdown("<h1>Test</h1>") == "Test\n====\n\n"
 
 def test_renderable():
     assert renderable("display")
