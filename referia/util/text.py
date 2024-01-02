@@ -206,7 +206,7 @@ def named_entities(text, ent_type="PERSON"):
     """
     Extract named entities from a text string.
 
-    :param text: The text to be extracted from.
+    :param text: The text to be extracted from. Can be "PERSON", "ORG", "GPE", "LOC", "PRODUCT", "EVENT", "WORK_OF_ART", "LANGUAGE", "DATE", "TIME", "PERCENT", "MONEY", "QUANTITY", "ORDINAL", "CARDINAL".
     :type text: str
     :return: The named entities.
     :rtype: list

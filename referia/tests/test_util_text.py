@@ -79,9 +79,23 @@ def test_list_lengths():
     assert lengths == [6, 6]
 
 def test_named_entities():
-    text = "John Doe went to New York."
+    text = "John Doe went to New York. He bought some Nike shoes for 30 dollars. John spoke English when he was buying 15 shoes. This all happened on 3rd December, he thought he was overcharged by 20%"
     entities = named_entities(text, "PERSON")
     assert "John Doe" in entities
+    entities = named_entities(text, "GPE")
+    assert "New York" in entities
+    entities = named_entities(text, "ORG")
+    assert "Nike" in entities
+    entities = named_entities(text, "MONEY")
+    assert "30 dollars" in entities
+    entities = named_entities(text, "LANGUAGE")
+    assert "English" in entities
+    entities = named_entities(text, "CARDINAL")
+    assert "15" in entities
+    entities = named_entities(text, "DATE")
+    assert "3rd December" in entities
+    entities = named_entities(text, "PERCENT")
+    assert "20%" in entities
 
 def test_text_summarizer():
     text = "Machine learning (ML) is a field of study in artificial intelligence concerned with the development and study of statistical algorithms that can learn from data and generalize to unseen data, and thus perform tasks without explicit instructions. Recently, generative artificial neural networks have been able to surpass many previous approaches in performance. While machine learning algorithms have shown remarkable performances on various tasks, they are susceptible to inheriting and amplifying biases present in their training data. This can manifest in skewed representations or unfair treatment of different demographics, such as those based on race, gender, language, and cultural groups."
