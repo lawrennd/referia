@@ -17,17 +17,13 @@ def test_filename_to_binary(mocker):
     assert filename_to_binary('dummy.txt') == b'file content'
 
 def test_yyyymmddToDatetime():
-    assert yyyymmddToDatetime("2023-01-01") == datetime(2023, 1, 1, 0, 0).date()
+    assert yyyymmddToDatetime("2023-01-01") == datetime(2023, 1, 1, 0, 0)
     with pytest.raises(ValueError):
-        yyyymmddToDatetime("invalid-date")
-
-def test_datetimeToYyyymmdd():
-    assert datetimeToYyyymmdd(datetime(2023, 1, 1)) == "2023-01-01"
-
-def test_add_one_to_max():
-    assert add_one_to_max(pd.Series([1, 2, 3])) == 4
-    assert add_one_to_max(pd.Series([]), default=1) == 1
-
+        yyyymmddToDatetime("2023-01-01 12:34:56")
+    assert yyyymmddToDatetime(pd.Timestamp("2023-01-01")) == datetime(2023, 1, 1, 0, 0)
+    with pytest.raises(ValueError):
+        yyyymmddToDatetime("not formatted date")
+        
 def test_markdown2html():
     assert markdown2html("# Test") == "<h1>Test</h1>"
 

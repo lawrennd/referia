@@ -240,126 +240,126 @@ class Compute():
             },
             {
                 "name" : "addmonth",
-                "function" : ndl.util.misc.addmonth,
+                "function" : ndl.util.dataframe.addmonth,
                 "default_args" : {
                 },
                 "docstr" : "Add month column based on source date field."
             },
             {
                 "name" : "addsupervisor",
-                "function" : ndl.util.misc.addsupervisor,
+                "function" : ndl.util.dataframe.fillna, # was addsupervisor
                 "default_args" : {
                 },
                 "docstr" : "None"
             },
             {
                 "name" : "addyear",
-                "function" : ndl.util.misc.addyear,
+                "function" : ndl.util.dataframe.addyear,
                 "default_args" : {
                 },
                 "docstr" : "Add year column and based on source date field."
             },
             {
                 "name" : "ascending",
-                "function" : ndl.util.misc.ascending,
+                "function" : ndl.util.dataframe.ascending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in ascending order"
             },
             {
                 "name" : "augmentcurrency",
-                "function" : ndl.util.misc.augmentcurrency,
+                "function" : ndl.util.dataframe.augmentcurrency,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
             "name" : "augmentmonth",
-                "function" : ndl.util.misc.augmentmonth,
+                "function" : ndl.util.dataframe.augmentmonth,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a month column based on source date field."
             },
             {
                 "name" : "augmentyear",
-                "function" : ndl.util.misc.augmentyear,
+                "function" : ndl.util.dataframe.augmentyear,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a year column based on source date field."
             },
             {
                 "name" : "columncontains",
-                "function" : ndl.util.misc.columncontains,
+                "function" : ndl.util.dataframe.columncontains,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column contains a given value"
             },
             {
                 "name" : "columnis",
-                "function" : ndl.util.misc.columnis,
+                "function" : ndl.util.dataframe.columnis,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is equal to a given value"
             },
             {
                 "name" : "convert_datetime",
-                "function" : ndl.util.misc.convert_datetime,
+                "function" : ndl.util.dataframe.convert_datetime,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set datetime type on columns."
             },
             {
                 "name" : "convert_int",
-                "function" : ndl.util.misc.convert_int,
+                "function" : ndl.util.dataframe.convert_int,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
                 "name" : "convert_string",
-                "function" : ndl.util.misc.convert_string,
+                "function" : ndl.util.dataframe.convert_string,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "convert_year_iso",
-                "function" : ndl.util.misc.convert_year_iso,
+                "function" : ndl.util.dataframe.convert_year_iso,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "current",
-                "function" : ndl.util.misc.current,
+                "function" : ndl.util.dataframe.current,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "descending",
-                "function" : ndl.util.misc.descending,
+                "function" : ndl.util.dataframe.descending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in descending order"
             },
             {
                 "name" : "former",
-                "function" : ndl.util.misc.former,
+                "function" : ndl.util.dataframe.former,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "onbool",
-                "function" : ndl.util.misc.onbool,
+                "function" : ndl.util.dataframe.onbool,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column is positive (or negative if inverted)"
             },
             {
                 "name" : "recent",
-                "function" : ndl.util.misc.recent,
+                "function" : ndl.util.dataframe.recent,
                 "default_args" : {
                 },
                 "docstr" : "Filter on year of item"

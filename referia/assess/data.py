@@ -31,30 +31,57 @@ from keyword import iskeyword
 def is_valid_variable_name(name):
     return name.isidentifier() and not iskeyword(name)
 
-    
-
 @string_filter
 def url_escape(string):
-    """Filter to escape urls for liquid"""
+    """
+    Filter to escape urls for liquid
+
+    :param string: The string to be escaped.
+    :type string: str
+    :return: The escaped string.
+    :rtype: str
+    """
     return urllib.parse.quote(string.encode('utf8'))
 
 
 @string_filter
 def markdownify(string):
-    """Filter to convert markdown to html for liquid"""
+    """
+    Filter to convert markdown to html for liquid"
+
+    :param string: The string to be converted to html.
+    :type string: str
+    :return: The html.
+    :rtype: str
+    """
     return markdown2html(string)
 
 
 @string_filter
 def relative_url(string):
-    """Filter to convert to a relative_url a jupyter notebook under liquid"""
+    """
+    Filter to convert to a relative_url a jupyter notebook under liquid
+
+    :param string: The string to be converted to a relative url.
+
+    :type string: str
+    :return: The relative url.
+    :rtype: str
+    """
     url = os.path.join("/notebooks", string)
     return url
 
 
 @string_filter
 def absolute_url(string):
-    """Filter to convert to a absolute_url a jupyter notebook under liquid"""
+    """
+    Filter to convert to a absolute_url a jupyter notebook under liquid
+
+    :param string: The string to be converted to an absolute url.
+    :type string: str
+    :return: The absolute url.
+    :rtype: str
+    """
     # Remove the absolute url from beginning if it exists
     while string[0] == "/":
        string = string[1:]
@@ -62,18 +89,41 @@ def absolute_url(string):
 
 
 def to_i(string):
-    """Filter to convert the liquid entry to an integer under liquid."""
+    """
+    Filter to convert the liquid entry to an integer under liquid.
+
+    :param string: The string to be converted to an integer.
+    :type string: str
+    :return: The integer value.
+    :rtype: int
+    """
     if type(string) is str and len(string) == 0:
         return 0
     return int(float(string))
 
 
 def empty(val):
+    """
+    Is a value empty?
+
+    :param val: The value to be tested.
+    :type val: object
+    :return: True if the value is empty.
+    :rtype: bool
+    """
+    
     return pd.isna(val) or val==""
 
 
 def automapping(columns):
-    """Generate dictionary of mapping between variable names and column names."""
+    """
+    Generate dictionary of mapping between variable names and column names.
+
+    :param columns: The list of column names.
+    :type columns: list
+    :return: The dictionary of mapping between variable names and column names.
+    :rtype: dict
+    """
     mapping = {}
     for column in columns:
         field = to_camel_case(column)
@@ -95,7 +145,7 @@ class Data(data.CustomDataFrame):
             for name, column in self._settings["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
         
-        self._log = Logger(
+        self.log = Logger(
             name=__name__,
             level=self._cntxt["logging"]["level"],
             filename=self._cntxt["logging"]["filename"],
@@ -104,9 +154,9 @@ class Data(data.CustomDataFrame):
         if data is None:
             self._d = {}
         if isinstance(data, dict):
-            data = pd.DataFame(data)
+            data = pd.DataFrame(data)
         if isinstance(data, list):
-            data = pd.DataFame(data)
+            data = pd.DataFrame(data)
         if data is not None:
             if colspecs is not None:
                 self._d = {}
@@ -127,7 +177,9 @@ class Data(data.CustomDataFrame):
                             self._d[typ] = d[~d.index.duplicated(keep='first')]
             else:
                 self._d = {"data" : data}
-                
+            # Update the column name map
+            self._augment_column_names(data)
+
         # Which index is the current focus in the data.
         self._index = index
         # Which column is the current focus in the data.
@@ -1279,7 +1331,14 @@ class Data(data.CustomDataFrame):
             self._log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
     def update_name_column_map(self, name, column):
-        """Update the map from valid variable names to columns in the data frame. Valid variable names are needed e.g. for Liquid filters."""
+        """
+        Update the map from valid variable names to columns in the data frame. Valid variable names are needed e.g. for Liquid filters.
+
+        :param name: The name of the variable.
+        :type name: str
+        :param column: The column in the data frame.
+        :type column: str
+        """
         if column in self._column_name_map and self._column_name_map[column] != name:
             original_name = self._column_name_map[column]
             errmsg = f"Column \"{column}\" already exists in the name-column map and there's an attempt to update its value to \"{name}\" when it's original value was \"{original_name}\" and that would lead to unexpected behaviours. Try looking to see if you're setting column values to different names across different files and/or file loaders."
@@ -1289,16 +1348,23 @@ class Data(data.CustomDataFrame):
         self._column_name_map[column] = name
         
     def _default_mapping(self):
-        """Generate the default mapping from config or from columns"""
-        # If a mapping is provided in _referia.yml use it, otherwise generate
-        #if self._name_column_map is None:
-        #    for name, column in  automapping(self.columns).items():
-        #        self.update_name_column_map(name=name, column=column)
+        """
+        Generate the default mapping from config or from columns
 
+        :returns: dictionary of mapping between variable names and column values
+        :rtype: dict
+        """
         return self._name_column_map
 
     def mapping(self, mapping=None, series=None):
-        """Generate dictionary of mapping between variable names and column values."""
+        """
+        Generate dictionary of mapping between variable names and column values.
+
+        :param mapping: mapping to use, if None use default mapping
+        :param series: series to use, if None use current series
+        :returns: dictionary of mapping between variable names and column values
+        :rtype: dict
+        """
         
         if mapping is None:
             if series is None: # remove any columns not in self.columns
@@ -1308,12 +1374,12 @@ class Data(data.CustomDataFrame):
 
         format = {}
         for name, column in mapping.items():
-            if series is not None:
-                if column in series:
-                    format[name] = series[column]                    
-            else:
+            if series is None:
                 self.set_column(column)
                 format[name] = self.get_value()
+            else:
+                if column in series:
+                    format[name] = series[column]                    
                 
         return remove_nan(format)
 
@@ -1495,7 +1561,7 @@ class Data(data.CustomDataFrame):
 
     
     def liquid_to_value(self, display, kwargs=None, local={}):
-        if kwargs is None:
+        if kwargs is None or kwargs=={}:
             kwargs = self.mapping()
         kwargs.update(local)
         try:
@@ -1699,27 +1765,7 @@ class Data(data.CustomDataFrame):
             for name, column in details["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
 
-
-        for column in df.columns:
-            # If column title is valid variable name, add it to the column name map
-            if column not in self._column_name_map:
-                if is_valid_variable_name(column):
-                    self.update_name_column_map(name=column, column=column)
-                else:
-                    name = to_camel_case(column)
-                    # Keep variable names as private
-                    if column[0] == "_":
-                        name = "_" + name
-
-                    self._log.warning(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Auto-generating a mapping entry \"{name}\" to provide a valid variable name to use as proxy for \"{column}\".")
-                    if is_valid_variable_name(name):
-                        self.update_name_column_map(name=name, column=column)
-                    else:
-                        errmsg = f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\"."
-                        self._log.error(errmsg)
-                        raise ValueError(errmsg)
-
-
+        self._augment_column_names(df)
                 
         if "selector" in details:
             field = details["selector"]
@@ -1867,6 +1913,29 @@ class Data(data.CustomDataFrame):
                     
         return df
 
+    def _augment_column_names(self, data):
+        """
+        Add each column name to the column name map if not already there.
+        """
+        for column in data.columns:
+            # If column title is valid variable name, add it to the column name map
+            if column not in self._column_name_map:
+                if is_valid_variable_name(column):
+                    self.update_name_column_map(name=column, column=column)
+                else:
+                    name = to_camel_case(column)
+                    # Keep variable names as private
+                    if column[0] == "_":
+                        name = "_" + name
+
+                    self._log.warning(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Auto-generating a mapping entry \"{name}\" to provide a valid variable name to use as proxy for \"{column}\".")
+                    if is_valid_variable_name(name):
+                        self.update_name_column_map(name=name, column=column)
+                    else:
+                        errmsg = f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\"."
+                        self._log.error(errmsg)
+                        raise ValueError(errmsg)
+    
     def to_score(self):
         if self._writedata is not None:
             return len(self._writedata.index)

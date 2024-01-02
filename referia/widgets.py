@@ -194,6 +194,7 @@ class ReferiaWidget():
         self.private = True
         if "function" in args:
             self._ipywidget_function = args["function"]
+            del args["function"]
         else:
             self._ipywidget_function = self._default_widget()
 
@@ -519,6 +520,10 @@ class ElementWidget(FieldWidget):
         """
         if "element" in args:
             self.set_element(args["element"])
+            del args["element"]
+        else:
+            self.set_element(None)
+
         super().__init__(**args)
 
     def get_element(self):

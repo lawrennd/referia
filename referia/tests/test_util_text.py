@@ -1,4 +1,7 @@
 import pytest
+import ndlpy
+import referia
+
 from referia.util.text import (
     split_into_sentences, render_liquid, comment_list, word_count,
     paragraph_split, sentence_split, list_lengths, named_entities,
@@ -9,13 +12,29 @@ from unittest.mock import patch, mock_open
 # Mocking external dependencies
 @pytest.fixture(autouse=True)
 def mock_external_dependencies(mocker):
-    mocker.patch("referia.util.text.nlp", autospec=True)
     mocker.patch("referia.util.text.WordCloud", autospec=True)
-    mocker.patch("referia.util.text.nltk.RegexpTokenizer", autospec=True)
-    mocker.patch("referia.util.text.sent_tokenize", autospec=True)
-    mocker.patch("referia.util.text.os.path.exists", return_value=True)
-    mocker.patch("referia.util.text.open", mock_open(read_data="dummy data"), create=True)
 
+# Mocking path.exists for pdf_extract_comments
+@pytest.fixture
+def mock_path_exists(mocker):
+    return mocker.patch("referia.util.text.os.path.exists", return_value=True)
+
+# Mocking open for pdf_extract_comments
+@pytest.fixture
+def mock_text_open(mocker):
+    return mocker.patch("referia.util.text.open", mock_open(read_data="dummy data"), create=True)
+
+# Mocking json.load for pdf_extract_comments
+@pytest.fixture
+def mock_json_load(mocker):
+    return mocker.patch("referia.util.text.json.load", return_value=[{"type": "FreeText", "page": 12, "contents": "dummy data"}, {"type": "Highlight", "page": 12, "text" : "Some text", "contents": "A highlight"}])
+
+
+# Mocking spacy.load for a document summarisation.
+#@pytest.fixture
+#def mock_spacy_load(mocker):
+#    return mocker.patch("referia.util.text.spacy.load", return_value={"token" : ["a", "series", "of", "words", "which", "can", "be", "be", "repeated", ".", "Or", "maybe", "not", "."]})
+    
 # Tests for each function
 def test_split_into_sentences():
     text = "This is a sentence. This is another one."
@@ -25,11 +44,15 @@ def test_split_into_sentences():
 def test_render_liquid():
     # Assuming render_liquid function is calling data.liquid_to_value internally
     # Mock data object and its liquid_to_value method
-    data_mock = patch("referia.util.text.data")
-    with data_mock as mock_data:
-        mock_data.liquid_to_value.return_value = "rendered template"
-        result = render_liquid(data_mock, "template")
-        assert result == "rendered template"
+    values = {"key1" : "value1", "key2" : "value2"}
+    template = "{{key1}} {{key2}}"
+    data = referia.assess.data.Data(data=[values])
+    result = render_liquid(data, template)
+    assert result == "value1 value2"
+    mapping = {"key1" : "key1", "key2" : "key2"}
+    result = render_liquid(data, template, kwargs=mapping)
+    assert result == "value1 value2"
+    
 
 def test_comment_list():
     text = "[comment]{.comment-start id=\"1\" author=\"author\" date=\"date\"}text[]{.comment-end id=\"1\"}"
@@ -61,11 +84,17 @@ def test_named_entities():
     assert "John Doe" in entities
 
 def test_text_summarizer():
-    text = "This is a long text that needs summarization."
+    text = "Machine learning (ML) is a field of study in artificial intelligence concerned with the development and study of statistical algorithms that can learn from data and generalize to unseen data, and thus perform tasks without explicit instructions. Recently, generative artificial neural networks have been able to surpass many previous approaches in performance. While machine learning algorithms have shown remarkable performances on various tasks, they are susceptible to inheriting and amplifying biases present in their training data. This can manifest in skewed representations or unfair treatment of different demographics, such as those based on race, gender, language, and cultural groups."
     summary = text_summarizer(text, 0.5)
-    assert isinstance(summary, str)
+    assert summary == "Machine learning (ML) is a field of study in artificial intelligence concerned with the development and study of statistical algorithms that can learn from data and generalize to unseen data, and thus perform tasks without explicit instructions. While machine learning algorithms have shown remarkable performances on various tasks, they are susceptible to inheriting and amplifying biases present in their training data."
 
-def test_pdf_extract_comments():
-    comments = pdf_extract_comments("filename.pdf")
-    assert isinstance(comments, str)
+    summary = text_summarizer(text, 0.25)
+    assert summary == "Machine learning (ML) is a field of study in artificial intelligence concerned with the development and study of statistical algorithms that can learn from data and generalize to unseen data, and thus perform tasks without explicit instructions."
+    
+def test_pdf_extract_comments(mock_json_load, mock_text_open, mock_path_exists):
+    comments = pdf_extract_comments("filename.pdf", comment_types=["FreeText"])
+    assert comments == "dummy data\n\n"
 
+    comments = pdf_extract_comments("filename.pdf", comment_types=["Highlight"])
+    assert comments == "* Page 12:\n\n> Some text\n\nA highlight\n\n"
+    

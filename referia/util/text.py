@@ -9,7 +9,8 @@ import os
 import random
 import string
 import warnings
-#from wordcloud import WordCloud, STOPWORDS
+
+from wordcloud import WordCloud, STOPWORDS
 
 from spacy.lang.en.stop_words import STOP_WORDS
 from string import punctuation
@@ -85,7 +86,7 @@ def render_liquid(data, template, **kwargs):
     :return: The rendered template.
     :rtype: str
     """
-    return data.liquid_to_value(template, kwargs)
+    return data.liquid_to_value(template)
         
 
 def comment_list(text):
@@ -198,7 +199,7 @@ def list_lengths(entries):
     :rtype: list
     """
     
-    return lambda entries: [len(entry) for entry in entries]
+    return [len(entry) for entry in entries]
 
 
 def named_entities(text, ent_type="PERSON"):
@@ -329,20 +330,13 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
                     val += f"* "
                     if "page" in entry:
                         page = entry["page"] + start_page - 1
-                        val += f"Page {page}:\n\n  "
+                        val += f"Page {page}:\n\n"
                     if "text" in entry:
                         text = entry["text"]
-                        val += f"> {text}\n\n  "
+                        val += f"> {text}\n\n"
                     if "contents" in entry:
                         contents = entry["contents"]
-                        val += f"  {contents}\n\n"                    
-        for entry in data:
-            if entry["type"] == "FreeText":
-                if entry["type"] in comment_types:
-                    if "contents" in entry:
-                        page = entry["page"] + start_page - 1
-                        contents = entry["contents"]
-                        val += f"{contents}\n\n"
+                        val += f"{contents}\n\n"                    
         return val
 
     else:
