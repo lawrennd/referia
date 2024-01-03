@@ -15,9 +15,9 @@ import pyminizip as pz
 import pypdftk as tk
 
 from ndlpy import log
-from ndlpy.util import to_camel_case, extract_full_filename, extract_abs_filename
-from ndlpy import access
-from ndlpy.context import Context
+from ndlpy.util.misc import to_camel_case, extract_full_filename, extract_abs_filename
+from ndlpy.access import io
+from ndlpy.config.context import Context
 
 from .util import notempty, markdown2html, renderable, tallyable
 from .fileutil import to_valid_file
@@ -266,30 +266,30 @@ class Sys():
 
     def create_document_content(self, document, **args):
         """Create the content for the documents."""
-        access.io.create_document_content(**args)
+        io.create_document_content(**args)
 
     def create_docx(self, document, **args):
         """Create a Microsoft word style document."""
         data, filename, content = self.create_document_content(document, **args)
-        access.write_docx_file(data=data, filename=filename, content=content)
+        io.write_docx_file(data=data, filename=filename, content=content)
         self.open_localfile(filename)
 
     def create_markdown(self, document, **args):
         """Create a markdown document."""
         data, filename, content = self.create_document_content(document, **args)
-        access.write_markdown_file(data=data, filename=filename, content=content)
+        io.write_markdown_file(data=data, filename=filename, content=content)
         self.open_localfile(filename)
 
     def create_letter(self, document, **args):
         """Create a markdown letter."""
         data, filename, content = self.create_document_content(document, **args)
-        access.write_letter_file(data=data, filename=filename, content=content)
+        io.write_letter_file(data=data, filename=filename, content=content)
         self.open_localfile(filename)
 
     def create_formlink(self, document, **args):
         """Write a form link (url)."""
         data, filename, content = self.create_document_content(document, **args)
-        access.write_formlink(data=data, filename=filename, content=content)
+        io.write_formlink(data=data, filename=filename, content=content)
         self.open_localfile(filename)
 
 

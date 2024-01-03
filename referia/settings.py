@@ -3,7 +3,7 @@ import yaml
 import numpy as np
 
 
-from ndlpy.util import to_valid_var
+from ndlpy.util.misc import to_valid_var
 import ndlpy
 
 

@@ -17,9 +17,9 @@ import matplotlib.pyplot as plt
 from ipywidgets import jslink, jsdlink, Layout
 
 from ndlpy import log
-from ndlpy import access
-from ndlpy.util import remove_nan
-from ndlpy.context import Context
+from ndlpy.access import io
+from ndlpy.util.misc import remove_nan
+from ndlpy.config.context import Context
 from .widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
 
 from . import settings
@@ -85,7 +85,7 @@ def extract_load_scorer(details, scorer, widgets):
     # This is a link to a widget specificaiton stored in a file
     if "details" not in details:
         raise ValueError("Load scorer needs to provide load details as entry under \"details\"")
-    df,  newdetails = access.read_data(details["details"])
+    df,  newdetails = io.read_data(details["details"])
     for ind, series in df.iterrows():
         extract_scorer(remove_nan(series.to_dict()), scorer, widgets)
 

@@ -233,140 +233,140 @@ class Compute():
             },
             {
                 "name" : "get_url_file",
-                "function" : ndl.util.get_url_file,
+                "function" : ndl.util.misc.get_url_file,
                 "default_args": {
                 },
                 "docstr" : "Download a file with the given name.",
             },
             {
                 "name" : "addmonth",
-                "function" : ndl.util.addmonth,
+                "function" : ndl.util.dataframe.addmonth,
                 "default_args" : {
                 },
                 "docstr" : "Add month column based on source date field."
             },
             {
                 "name" : "addsupervisor",
-                "function" : ndl.util.addsupervisor,
+                "function" : ndl.util.dataframe.fillna, # FIXME: This is a hack
                 "default_args" : {
                 },
                 "docstr" : "None"
             },
             {
                 "name" : "addyear",
-                "function" : ndl.util.addyear,
+                "function" : ndl.util.dataframe.addyear,
                 "default_args" : {
                 },
                 "docstr" : "Add year column and based on source date field."
             },
             {
                 "name" : "ascending",
-                "function" : ndl.util.ascending,
+                "function" : ndl.util.dataframe.ascending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in ascending order"
             },
             {
                 "name" : "augmentcurrency",
-                "function" : ndl.util.augmentcurrency,
+                "function" : ndl.util.dataframe.augmentcurrency,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
             "name" : "augmentmonth",
-                "function" : ndl.util.augmentmonth,
+                "function" : ndl.util.dataframe.augmentmonth,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a month column based on source date field."
             },
             {
                 "name" : "augmentyear",
-                "function" : ndl.util.augmentyear,
+                "function" : ndl.util.dataframe.augmentyear,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a year column based on source date field."
             },
             {
                 "name" : "columncontains",
-                "function" : ndl.util.columncontains,
+                "function" : ndl.util.dataframe.columncontains,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column contains a given value"
             },
             {
                 "name" : "columnis",
-                "function" : ndl.util.columnis,
+                "function" : ndl.util.dataframe.columnis,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is equal to a given value"
             },
             {
                 "name" : "convert_datetime",
-                "function" : ndl.util.convert_datetime,
+                "function" : ndl.util.dataframe.convert_datetime,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set datetime type on columns."
             },
             {
                 "name" : "convert_int",
-                "function" : ndl.util.convert_int,
+                "function" : ndl.util.dataframe.convert_int,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
                 "name" : "convert_string",
-                "function" : ndl.util.convert_string,
+                "function" : ndl.util.dataframe.convert_string,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "convert_year_iso",
-                "function" : ndl.util.convert_year_iso,
+                "function" : ndl.util.dataframe.convert_year_iso,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "current",
-                "function" : ndl.util.current,
+                "function" : ndl.util.dataframe.current,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "descending",
-                "function" : ndl.util.descending,
+                "function" : ndl.util.dataframe.descending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in descending order"
             },
             {
                 "name" : "former",
-                "function" : ndl.util.former,
+                "function" : ndl.util.dataframe.former,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "onbool",
-                "function" : ndl.util.onbool,
+                "function" : ndl.util.dataframe.onbool,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column is positive (or negative if inverted)"
             },
             {
                 "name" : "recent",
-                "function" : ndl.util.recent,
+                "function" : ndl.util.dataframe.recent,
                 "default_args" : {
                 },
                 "docstr" : "Filter on year of item"
             },
             {
                 "name" : "remove_nan",
-                "function" : ndl.util.remove_nan,
+                "function" : ndl.util.misc.remove_nan,
                 "default_args" : {
                 },
                 "docstr" : "Delete missing entries from dictionary"

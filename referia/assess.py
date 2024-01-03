@@ -13,10 +13,10 @@ import urllib.parse
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from ndlpy.log import Logger
-from ndlpy.context import Context
-from ndlpy import access
-from ndlpy import data
-from ndlpy.util import to_camel_case, remove_nan
+from ndlpy.config.context import Context
+from ndlpy.access import io
+from ndlpy.assess import data
+from ndlpy.util.misc import to_camel_case, remove_nan
 
 from .settings import Settings
 from .compute import Compute
@@ -540,7 +540,7 @@ class Data(data.DataObject):
                     raise ValueError(errmsg)
             else:
 
-                df = self._finalize_df(*access.globals_data(conf, pd.Index([index_row], name="index")), strict_columns=True)
+                df = self._finalize_df(*io.globals_data(conf, pd.Index([index_row], name="index")), strict_columns=True)
                 ds = df.loc[index_row]
 
             if self._global_consts is None:
@@ -578,7 +578,7 @@ class Data(data.DataObject):
                     self._log.error(errmsg)
                     raise ValueError(errmsg)
             else:
-                df = self._finalize_df(*access.read_data(conf))
+                df = self._finalize_df(*io.read_data(conf))
                     
             if df.index.is_unique:
                 if "join" in conf:
@@ -642,13 +642,13 @@ class Data(data.DataObject):
         else:
             index_row = "globals"
             
-        df = self._finalize_df(*access.globals_data(self._settings["globals"], pd.Index([index_row], name="index")), strict_columns=True)
+        df = self._finalize_df(*io.globals_data(self._settings["globals"], pd.Index([index_row], name="index")), strict_columns=True)
         self._globals = df
         self._globals_index = index_row
 
     def _load_cache(self):
         """Load in any cached data to data frames."""
-        df = self._finalize_df(*access.cache(self._settings["cache"], self.index), strict_columns=True)
+        df = self._finalize_df(*io.cache(self._settings["cache"], self.index), strict_columns=True)
         if df.index.is_unique:
             self._cache = df
         else:
@@ -660,7 +660,7 @@ class Data(data.DataObject):
         
     def _load_scores(self):
         """Load in the score data to data frames."""
-        df = self._finalize_df(*access.scores(self._settings["scores"], self.index))
+        df = self._finalize_df(*io.scores(self._settings["scores"], self.index))
         if df.index.is_unique:
             self._writedata = df
         else:
@@ -676,7 +676,7 @@ class Data(data.DataObject):
             self._log.error(errmsg)
             errmsg = f"A series entry must have a \"selector\" column."
             raise ValueError(errmsg)
-        self._writeseries = self._finalize_df(*access.series(self._settings["series"], self.index))
+        self._writeseries = self._finalize_df(*io.series(self._settings["series"], self.index))
         selector = self._settings["series"]["selector"]
         if selector not in self._writeseries.columns:
             self._writeseries[selector] = None
@@ -760,15 +760,15 @@ class Data(data.DataObject):
         """Save the output flows."""
         if self._globals is not None:
             self._log.debug(f"Writing _globals.")
-            access.write_globals(self._globals, self._settings)
+            io.write_globals(self._globals, self._settings)
         if self._cache is not None:
             self._log.debug(f"Writing _cache.")
-            access.write_cache(self._cache, self._settings)
+            io.write_cache(self._cache, self._settings)
         if self._writedata is not None:
             self._log.debug(f"Writing _writedata.")
-            access.write_scores(self._writedata, self._settings)
+            io.write_scores(self._writedata, self._settings)
         if self._writeseries is not None:
-            access.write_series(self._writeseries, self._settings)
+            io.write_series(self._writeseries, self._settings)
             self._log.debug(f"Writing _writeseries.")
 
     def load_liquid(self):
