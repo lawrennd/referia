@@ -89,6 +89,11 @@ class Data(data.DataObject):
         self._cntxt = Context(name="referia")
         self._settings = settings.Settings(user_file=self._user_file,
                                            directory=self._directory)
+        if len(self._settings) == 0:
+            errmsg = f"No settings found in \"{self._user_file}\"."
+            self._log.error(errmsg)
+            raise ValueError(errmsg)
+        
         self._name_column_map = {}
         self._column_name_map = {}
         if "mapping" in self._settings:
@@ -835,10 +840,10 @@ class Data(data.DataObject):
             self.set_series_value(value, column)
 
     def head(self, n=5):
-        return self.to_df().head(n)
+        return self.to_pandas().head(n)
 
     def tail(self, n=5):
-        return self.to_df().tail(n)
+        return self.to_pandas().tail(n)
 
     def drop_column(self, column_name):
         if column_name in self._data:
@@ -868,12 +873,12 @@ class Data(data.DataObject):
             self._cache = self._cache[condition]
            
     def get_shape(self):
-        return self.to_df().shape
+        return self.to_pandas().shape
 
     def describe(self):
-        return self.to_df().describe()
+        return self.to_pandas().describe()
 
-    def to_df(self):
+    def to_pandas(self):
         df1 = self._data
         joins = []
         if self._global_consts is not None:
@@ -891,10 +896,10 @@ class Data(data.DataObject):
         
 
     def __str__(self):
-        return str(self.to_df())
+        return str(self.to_pandas())
 
     def __repr__(self):
-        return repr(self.to_df())
+        return repr(self.to_pandas())
     
             
     def get_value_by_element(self, element):
