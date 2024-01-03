@@ -151,46 +151,8 @@ class Data(data.CustomDataFrame):
             filename=self._cntxt["logging"]["filename"],
             directory = self._directory,            
         )
-        if data is None:
-            self._d = {}
-        if isinstance(data, dict):
-            data = pd.DataFrame(data)
-        if isinstance(data, list):
-            data = pd.DataFrame(data)
-        if data is not None:
-            if colspecs is not None:
-                self._d = {}
-                for typ, cols in colspecs.items():
-                    if typ in self._global_data:
-                        self._d[typ] = pd.Series(index=cols)
-                        for col in cols:
-                            if all(data[col]==data[col][0]):
-                                self._d[col] = data[col][0]
-                            else:
-                                raise ValueError(f"Column \"{col}\" does not contain values that are all the same, and it is being reset to a constant column.")
-                    else:
-                        d = data[cols]
-                        if typ in self._series_data:
-                            self._d[typ] = d
-                        else:
-                            # Drop duplicates created from series presence
-                            self._d[typ] = d[~d.index.duplicated(keep='first')]
-            else:
-                self._d = {"data" : data}
-            # Update the column name map
-            self._augment_column_names(data)
 
-        # Which index is the current focus in the data.
-        self._index = index
-        # Which column is the current focus in the data.
-        self._column = column
-        # Which entry column in the series to disambiguate the selection of
-        # the focus.
-        self._selector = selector
-        # The value in the selected entry column entry column value from the
-        # series to use
-        # Which subindex is the current focus in the data.
-        self._subindex = None
+        # Call the parent class with data, colspecs, index, column, selector
 
         # Load in compute function capability.
         self._compute = Compute(self)
@@ -201,10 +163,11 @@ class Data(data.CustomDataFrame):
 
         if data is None:
             self.load_flows()
+        else:
+            super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector)
+            
+            self._augment_column_names(data)
 
-        self.at = self._AtAccessor(self)
-        self.loc = self._LocAccessor(self)
-        self.iloc = self._IlocAccessor(self)
 
     @property
     def _readonly_data(self):
@@ -670,8 +633,24 @@ class Data(data.CustomDataFrame):
                 indseries.at[i] = str(ind) + "_" + str(count)
         self.index = indseries
 
+    @classmethod
+    def from_settings(cls, settings):
+        """
+        Read a data structure in from a settings object.
+
+        :param settings: The settings object.
+        :type settings: Settings
+        :return: A Data object.
+        :rtype: Data
+        """
+        return cls(data=pd.read_csv(*args, **kwargs))
+        
     def _load_allocation(self):
-        """Load in the primary data source as a data frame."""
+        """
+        Load in the primary data source as a data frame.
+
+        :return: None
+        """
         # Augment the data with default augmentation as "outer"
         if "allocation" in self._settings:
             self._augment_data(self._settings["allocation"], how="outer", concat=True, axis=0)
@@ -682,7 +661,11 @@ class Data(data.CustomDataFrame):
             raise ValueError(f"No \"allocation\" field in config file.")
             
     def _load_additional(self):
-        """Load in the additional data sources as data frames."""
+        """
+        Load in the additional data sources as data frames.
+
+        :return: None
+        """
         # Augment the data with default augmentation as "inner"
         if "additional" in self._settings:
             self._augment_data(self._settings["additional"], how="inner", concat=False, suffix="_{joinNo}")
@@ -751,7 +734,11 @@ class Data(data.CustomDataFrame):
             self._writeseries.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_input_flows(self):
-        """Load the input flows specified in the _referia.yml file."""
+        """
+        Load the input flows specified in the _referia.yml file.
+
+        :return: None
+        """
         self._load_allocation()
         if "additional" in self._settings:
             self._log.debug("Joining allocation and additional information.")
@@ -778,12 +765,15 @@ class Data(data.CustomDataFrame):
             self.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_output_flows(self):
-        """Load the output flows data specified in the _referia.yml file. 
+        """
+        Load the output flows data specified in the _referia.yml file. 
         Different output flows are listed in the configuration file under "globals", "cache", "scores", "series".
         Those listed under "globals" are constants that don't change when the index changes. 
         Those specified under "cache" are variables that can be cached and used in liquid templates or comptue functions but are assumed as not needed to be stored.
         Those specified under "scores" are the variables that the user will want to store.
-        Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index."""
+        Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index.
+
+        """
         if "globals" in self._settings:
             self._globals = None
             self._load_globals()
