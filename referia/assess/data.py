@@ -941,24 +941,6 @@ class Data(data.CustomDataFrame):
             raise ValueError(errmsg)
         self._column = column
 
-    def get_column(self):
-        """Get the current column focus."""
-        return self._column
-
-    def get_selector(self):
-        return self._selector
-
-    # Moved to ndlpy
-    # def get_selectors(self):
-    #     if self._writeseries is None:
-    #         return None
-    #     else:
-    #         selectors = list(self._writeseries.columns)
-    #         if self._selector is not None and self._selector in selectors:
-    #             # Return selectors with selector at front (to ensure it is default) for widgets)
-    #             selectors.insert(0, selectors.pop(selectors.index(self._selector)))
-    #         return selectors
-
     def set_selector(self, column):
         """Set which column of the series is to be used for selection."""
         # Set to None to indicate that self._writedata is correct place for recording.
