@@ -3,7 +3,6 @@ import os
 from ..util.misc import markdown2html
 from liquid.filter import string_filter
 
-
 @string_filter
 def url_escape(string):
     """
@@ -14,21 +13,25 @@ def url_escape(string):
     :return: The escaped string.
     :rtype: str
     """
-    return urllib.parse.quote(string.encode('utf8'))
-
+    try:
+        return urllib.parse.quote(string.encode('utf8'))
+    except UnicodeEncodeError:
+        raise ValueError("String encoding to UTF-8 failed")
 
 @string_filter
 def markdownify(string):
     """
-    Filter to convert markdown to html for liquid"
+    Filter to convert markdown to html for liquid
 
     :param string: The string to be converted to html.
     :type string: str
     :return: The html.
     :rtype: str
     """
-    return markdown2html(string)
-
+    try:
+        return markdown2html(string)
+    except Exception as e:
+        raise ValueError(f"Error converting markdown to HTML: {e}")
 
 @string_filter
 def relative_url(string):
@@ -36,30 +39,25 @@ def relative_url(string):
     Filter to convert to a relative_url a jupyter notebook under liquid
 
     :param string: The string to be converted to a relative url.
-
     :type string: str
     :return: The relative url.
     :rtype: str
     """
-    url = os.path.join("/notebooks", string)
-    return url
-
+    return urllib.parse.urljoin("/notebooks/", string.lstrip('/'))
 
 @string_filter
 def absolute_url(string):
     """
-    Filter to convert to a absolute_url a jupyter notebook under liquid
+    Filter to convert to an absolute_url a jupyter notebook under liquid
 
     :param string: The string to be converted to an absolute url.
     :type string: str
     :return: The absolute url.
     :rtype: str
     """
-    # Remove the absolute url from beginning if it exists
-    while string[0] == "/":
-       string = string[1:]
-    return os.path.join("http://localhost:8888/notebooks/", string)
-
+    base_url = "http://localhost:8888/notebooks/"
+    # Remove leading slashes to avoid urljoin treating the path as absolute
+    return urllib.parse.urljoin(base_url, string.lstrip('/'))
 
 @string_filter
 def to_i(string):
@@ -71,6 +69,9 @@ def to_i(string):
     :return: The integer value.
     :rtype: int
     """
-    if type(string) is str and len(string) == 0:
+    try:
+        if string:
+            return int(float(string))
         return 0
-    return int(float(string))
+    except ValueError:
+        raise ValueError(f"Invalid input for conversion to integer: '{string}'")
