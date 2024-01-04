@@ -144,7 +144,10 @@ class Data(data.CustomDataFrame):
         if "mapping" in self._settings:
             for name, column in self._settings["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
-        
+
+        self._index = index
+        self._column = column
+        self._selector = selector
         self.log = Logger(
             name=__name__,
             level=self._cntxt["logging"]["level"],
@@ -166,7 +169,8 @@ class Data(data.CustomDataFrame):
         else:
             super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector)
             
-            self._augment_column_names(data)
+            # Not needed if colspecs used? TK remove
+            # self._augment_column_names(data)
 
 
     @property
@@ -184,24 +188,25 @@ class Data(data.CustomDataFrame):
     def _series_data(self):
         return ["writeseries"]
     
-    @property
-    def _colspecs(self):
-        """Return the columns associated with different data types."""
-        val = {}
-        for typ, data in self._d.items():
-            if typ in self._global_data:
-                val[typ] = data.index
-            else:
-                val[typ] = data.columns
-        return val
+    # @property
+    # def colspecs(self):
+    #     """Return the columns associated with different data types."""
+    #     val = {}
+    #     for typ, data in self._d.items():
+    #         if typ in self._global_data:
+    #             val[typ] = data.index
+    #         else:
+    #             val[typ] = data.columns
+    #     return val
             
     @property
     def _data(self):
-        # Data that is input (not for writing to)
         if len(self._d)>0:
-            return self._d["data"]
-        else:
-            return None
+            if "data" in self._d:
+                # Data that is input (not for writing to)
+                return self._d["data"]
+            raise ValueError(f"There is no \"data\" key in self._d. Keys are \"{self._d.keys()}\"")
+        raise ValueError("There is no data in self._d when calling _data.")
 
     @_data.setter
     def _data(self, value):
@@ -264,169 +269,169 @@ class Data(data.CustomDataFrame):
         self._d["global_consts"] = value
 
             
-    class _AtAccessor:
-        def __init__(self, data):
-            self._data_object = data
+    # class _AtAccessor:
+    #     def __init__(self, data):
+    #         self._data_object = data
 
-        def __getitem__(self, key):
-            if type(key) is tuple:
-                col = key[1]
-            else:
-                col = key
-            for typ, data in self._data_object._d.items():
-                if self._data_object.isglobal(col):
-                    cols = data.index
-                else:
-                    cols = data.columns
-                if col in cols:
-                    return data.at[key]
-            raise KeyError(f"Unknown key \"{col}\" in data object.")
+    #     def __getitem__(self, key):
+    #         if type(key) is tuple:
+    #             col = key[1]
+    #         else:
+    #             col = key
+    #         for typ, data in self._data_object._d.items():
+    #             if self._data_object.isglobal(col):
+    #                 cols = data.index
+    #             else:
+    #                 cols = data.columns
+    #             if col in cols:
+    #                 return data.at[key]
+    #         raise KeyError(f"Unknown key \"{col}\" in data object.")
 
-        def __setitem__(self, key, value):
-            if type(key) is tuple:
-                col = key[1]
-            else:
-                col = key
-            for typ, data in self._data_object._d.items():
-                if self._data_object.isglobal(col):
-                    cols = data.index
-                else:
-                    cols = data.columns
-                if col in cols:
-                    if self._data_object.iswritable(col):
-                        data.at[key] = value
-                        return
-                    else:
-                        raise KeyError(f"Column \"{col}\" is not writable in data object.")
-            # Autocache allows new set values to be allocated to cache.
-            if self._data_object.autocache:
-                if self._data_object._cache is None:
-                    self._data_object._cache = pd.DataFrame(columns=[col], index=self._data_object.index)
-                self._data_object._cache[col] = None
-                self._data_object._cache.at[key] = value
-            else:
-                raise KeyError(f"Unknown key \"{key}\" in data object.")
+    #     def __setitem__(self, key, value):
+    #         if type(key) is tuple:
+    #             col = key[1]
+    #         else:
+    #             col = key
+    #         for typ, data in self._data_object._d.items():
+    #             if self._data_object.isglobal(col):
+    #                 cols = data.index
+    #             else:
+    #                 cols = data.columns
+    #             if col in cols:
+    #                 if self._data_object.iswritable(col):
+    #                     data.at[key] = value
+    #                     return
+    #                 else:
+    #                     raise KeyError(f"Column \"{col}\" is not writable in data object.")
+    #         # Autocache allows new set values to be allocated to cache.
+    #         if self._data_object.autocache:
+    #             if self._data_object._cache is None:
+    #                 self._data_object._cache = pd.DataFrame(columns=[col], index=self._data_object.index)
+    #             self._data_object._cache[col] = None
+    #             self._data_object._cache.at[key] = value
+    #         else:
+    #             raise KeyError(f"Unknown key \"{key}\" in data object.")
 
-    class _IlocAccessor:
-        def __init__(self, data):
-            self._data_object = data
+    # class _IlocAccessor:
+    #     def __init__(self, data):
+    #         self._data_object = data
 
-        def __getitem__(self, key):
-            label_key = self._convert_to_label_key(key)
-            return self._data_object.loc[label_key]
+    #     def __getitem__(self, key):
+    #         label_key = self._convert_to_label_key(key)
+    #         return self._data_object.loc[label_key]
 
-        def __setitem__(self, key, value):
-            label_key = self._convert_to_label_key(key)
-            self._data_object.loc[label_key] = value
+    #     def __setitem__(self, key, value):
+    #         label_key = self._convert_to_label_key(key)
+    #         self._data_object.loc[label_key] = value
 
-        def _convert_to_label_key(self, key):
-            if isinstance(key, tuple):
-                row_key, col_key = key
-                row_labels = self._get_row_labels(row_key)
-                col_labels = self._get_col_labels(col_key)
-                return (row_labels, col_labels)
-            elif isinstance(key, slice) or isinstance(key, int):
-                # Handle the case where only row indices are provided
-                row_labels = self._get_row_labels(key)
-                return row_labels
-            else:
-                raise TypeError("Invalid index type")
+    #     def _convert_to_label_key(self, key):
+    #         if isinstance(key, tuple):
+    #             row_key, col_key = key
+    #             row_labels = self._get_row_labels(row_key)
+    #             col_labels = self._get_col_labels(col_key)
+    #             return (row_labels, col_labels)
+    #         elif isinstance(key, slice) or isinstance(key, int):
+    #             # Handle the case where only row indices are provided
+    #             row_labels = self._get_row_labels(key)
+    #             return row_labels
+    #         else:
+    #             raise TypeError("Invalid index type")
 
-        def _get_row_labels(self, key):
-            # Assuming uniform row index across all DataFrames in _d
-            sample_df = next(iter(self._data_object._d.values()))
-            return sample_df.index[key]
+    #     def _get_row_labels(self, key):
+    #         # Assuming uniform row index across all DataFrames in _d
+    #         sample_df = next(iter(self._data_object._d.values()))
+    #         return sample_df.index[key]
 
-        def _get_col_labels(self, key):
-            # Assuming uniform column index across all DataFrames in _d
-            sample_df = next(iter(self._data_object._d.values()))
-            return sample_df.columns[key]
+    #     def _get_col_labels(self, key):
+    #         # Assuming uniform column index across all DataFrames in _d
+    #         sample_df = next(iter(self._data_object._d.values()))
+    #         return sample_df.columns[key]
 
-    class _LocAccessor:
-        def __init__(self, data):
-            self._data_object = data
+    # class _LocAccessor:
+    #     def __init__(self, data):
+    #         self._data_object = data
 
-        def __getitem__(self, key):
-            df1 = pd.DataFrame()
-            for typ, data in self._data_object._d.items():
-                if not data.empty:
-                    if isinstance(key, tuple):
-                        row_key, col_key = key
-                        # Apply key only to relevant columns for each DataFrame
-                        if typ in self._global_data:
-                            cols = data.index
-                        else:
-                            cols = data.columns
-                        if isinstance(col_key, (list, tuple, pd.Index)):
-                            col_key = [col for col in col_key if col in cols]
-                        if typ in self._global_data:
-                            df1 = df1.assign(**data[data.index.get_indexer_for(col_key)])
-                        else:
-                            sdata = data.loc[row_key, col_key]
-                            df1 = df1.join(sdata, how="outer")
-                            coplspecs[typ] = sdata.columns
-            return self.__class__(df1, colspecs)
+    #     def __getitem__(self, key):
+    #         df1 = pd.DataFrame()
+    #         for typ, data in self._data_object._d.items():
+    #             if not data.empty:
+    #                 if isinstance(key, tuple):
+    #                     row_key, col_key = key
+    #                     # Apply key only to relevant columns for each DataFrame
+    #                     if typ in self._global_data:
+    #                         cols = data.index
+    #                     else:
+    #                         cols = data.columns
+    #                     if isinstance(col_key, (list, tuple, pd.Index)):
+    #                         col_key = [col for col in col_key if col in cols]
+    #                     if typ in self._global_data:
+    #                         df1 = df1.assign(**data[data.index.get_indexer_for(col_key)])
+    #                     else:
+    #                         sdata = data.loc[row_key, col_key]
+    #                         df1 = df1.join(sdata, how="outer")
+    #                         coplspecs[typ] = sdata.columns
+    #         return self.__class__(df1, colspecs)
 
-        def __setitem__(self, key, value):
-            for k, df in self._data_object._d.items():
-                if not df.empty:
-                    # Apply key only to relevant columns for each DataFrame
-                    applicable_key = key
-                    if isinstance(key, (list, tuple, pd.Index)):
-                        applicable_key = [col for col in key if col in df.columns]
-                    df.loc[:, applicable_key] = value
+    #     def __setitem__(self, key, value):
+    #         for k, df in self._data_object._d.items():
+    #             if not df.empty:
+    #                 # Apply key only to relevant columns for each DataFrame
+    #                 applicable_key = key
+    #                 if isinstance(key, (list, tuple, pd.Index)):
+    #                     applicable_key = [col for col in key if col in df.columns]
+    #                 df.loc[:, applicable_key] = value
 
 
-    def __getitem__(self, keys):
-        result = pd.DataFrame()
+    # def __getitem__(self, keys):
+    #     result = pd.DataFrame()
 
-        if not isinstance(keys, list):
-            keys = [keys]  # Convert to list if a single column name is provided
+    #     if not isinstance(keys, list):
+    #         keys = [keys]  # Convert to list if a single column name is provided
 
-        for key in keys:
-            for attr in ['_data', '_writedata', '_writeseries', '_cache']:
-                if getattr(self, attr) is not None and key in getattr(self, attr).columns:
-                    result[key] = getattr(self, attr)[key]
-                    break
+    #     for key in keys:
+    #         for attr in ['_data', '_writedata', '_writeseries', '_cache']:
+    #             if getattr(self, attr) is not None and key in getattr(self, attr).columns:
+    #                 result[key] = getattr(self, attr)[key]
+    #                 break
 
-        return result
+    #     return result
 
-    def __setitem__(self, keys, values):
-        if not isinstance(keys, list):
-            keys = [keys]  # Convert to list if a single column name is provided
-        if not isinstance(values, list):
-            values = [values]  # Convert to list if a single value is provided
+    # def __setitem__(self, keys, values):
+    #     if not isinstance(keys, list):
+    #         keys = [keys]  # Convert to list if a single column name is provided
+    #     if not isinstance(values, list):
+    #         values = [values]  # Convert to list if a single value is provided
 
-        if len(keys) != len(values):
-            raise ValueError(f"Key lengths and value lengths are not the same.")
-        for key, value in zip(keys, values):
-            # Immutable columns and constants
-            if not self.iswritable(key):
-                raise KeyError(f"Cannot modify an immutable column or constant: \"{key}\"")
+    #     if len(keys) != len(values):
+    #         raise ValueError(f"Key lengths and value lengths are not the same.")
+    #     for key, value in zip(keys, values):
+    #         # Immutable columns and constants
+    #         if not self.iswritable(key):
+    #             raise KeyError(f"Cannot modify an immutable column or constant: \"{key}\"")
 
-            if self.isglobal(key):
-                if not all(v == value[0] for v in value):
-                    raise KeyError(f"All values for global column \"{key}\" must be the same.")
+    #         if self.isglobal(key):
+    #             if not all(v == value[0] for v in value):
+    #                 raise KeyError(f"All values for global column \"{key}\" must be the same.")
 
-            found = False
-            for typ in self._d:
-                if self.isglobal(key):
-                    self._d[typ][key] = value[0]  # Set only the first value for globals
-                    found = True
-                    break
-                else:
-                    self._d[typ][key] = value
-                    found = True
-                    break
+    #         found = False
+    #         for typ in self._d:
+    #             if self.isglobal(key):
+    #                 self._d[typ][key] = value[0]  # Set only the first value for globals
+    #                 found = True
+    #                 break
+    #             else:
+    #                 self._d[typ][key] = value
+    #                 found = True
+    #                 break
 
-            if not found:  # Initialize in _cache if the key doesn't exist in any structure
-                if self.autocache:
-                    if self._cache is None :
-                        self._cache = pd.DataFrame({key: value}, index=self._data.index)
-                    else:
-                        self._cache[key] = value
-                else:
-                    raise KeyError(f"Unknown writable key \"{key}\" in data object.")
+    #         if not found:  # Initialize in _cache if the key doesn't exist in any structure
+    #             if self.autocache:
+    #                 if self._cache is None :
+    #                     self._cache = pd.DataFrame({key: value}, index=self._data.index)
+    #                 else:
+    #                     self._cache[key] = value
+    #             else:
+    #                 raise KeyError(f"Unknown writable key \"{key}\" in data object.")
 
     
     @property
@@ -453,19 +458,19 @@ class Data(data.CustomDataFrame):
             raise ValueError(f"augment value must be boolean, set as \"{value}\"")
         self._augment = value
         
-    @property
-    def index(self):
-        if self._data is not None:
-            return self._data.index
-        else:
-            return None
+    # @property
+    # def index(self):
+    #     if self._data is not None:
+    #         return self._data.index
+    #     else:
+    #         return None
 
-    @index.setter
-    def index(self, values):
-        if self._data is not None:
-            self._data.index = values
-        else:
-            raise ValueError("There is no data value for index to be set to.")
+    # @index.setter
+    # def index(self, values):
+    #     if self._data is not None:
+    #         self._data.index = values
+    #     else:
+    #         raise ValueError("There is no data value for index to be set to.")
         
     @property
     def writable(self):
@@ -478,16 +483,16 @@ class Data(data.CustomDataFrame):
                 return True
         return False
         
-    @property
-    def columns(self):        
-        columns = []
-        for typ, data in self._d.items():
-            if typ in self._global_data:
-                columns += list(data.index)
-            else:
-                columns += list(data.columns)
-        # Should perhaps make this unique column list? As in practice it behaves that way.
-        return pd.Index(columns)
+    # @property
+    # def columns(self):        
+    #     columns = []
+    #     for typ, data in self._d.items():
+    #         if typ in self._global_data:
+    #             columns += list(data.index)
+    #         else:
+    #             columns += list(data.columns)
+    #     # Should perhaps make this unique column list? As in practice it behaves that way.
+    #     return pd.Index(columns)
 
     def _col_source(self, col):
         """Return the source of a column."""
@@ -633,18 +638,7 @@ class Data(data.CustomDataFrame):
                 indseries.at[i] = str(ind) + "_" + str(count)
         self.index = indseries
 
-    @classmethod
-    def from_settings(cls, settings):
-        """
-        Read a data structure in from a settings object.
-
-        :param settings: The settings object.
-        :type settings: Settings
-        :return: A Data object.
-        :rtype: Data
-        """
-        return cls(data=pd.read_csv(*args, **kwargs))
-        
+       
     def _load_allocation(self):
         """
         Load in the primary data source as a data frame.
@@ -843,21 +837,23 @@ class Data(data.CustomDataFrame):
         self._liquid_env.add_filter("absolute_url", absolute_url)
         self._liquid_env.add_filter("to_i", to_i)
         
-    def set_index(self, index):
+    def set_index(self, value):
         """Index setter"""
         orig_index = self._index
         # If index has changed, run computes.
-        if orig_index is not None and index != orig_index:
+        if orig_index is not None and value != orig_index:
             if orig_index in self.index:
                 self.compute_post()
-        # If 
-        if self._data is not None and index not in self.index:
-            self._log.warning(f"Index \"{index}\" not found in _data")
-            self.add_row(index=index)
-            self.set_index(index)
+        if value is None:
+            self._log.warning(f"Was asked to set index to None.")
+            return
+        if value not in self.index:
+            self._log.warning(f"Index \"{value}\" not found in _data")
+            self.add_row(index=value)
+            self.set_index(value)
         else:
-            self._index = index
-            self._log.debug(f"Index \"{index}\" selected.")
+            self._index = value
+            self._log.debug(f"Index \"{value}\" selected.")
             self.check_or_set_subseries()
         # If index has changed, run computes.
         if orig_index is None or self._index != orig_index:
@@ -895,9 +891,9 @@ class Data(data.CustomDataFrame):
 
 
     def get_index(self):
-        if self._index is None and self._data is not None:
+        if self._index is None and len(self.index)>0:
             self._log.debug(f"No index set, using first index of data.")
-            self.set_index(self._data.index[0])
+            self.set_index(self.index[0])
         return self._index
 
     def _strict_columns(self, group):
@@ -952,15 +948,16 @@ class Data(data.CustomDataFrame):
     def get_selector(self):
         return self._selector
 
-    def get_selectors(self):
-        if self._writeseries is None:
-            return None
-        else:
-            selectors = list(self._writeseries.columns)
-            if self._selector is not None and self._selector in selectors:
-                # Return selectors with selector at front (to ensure it is default) for widgets)
-                selectors.insert(0, selectors.pop(selectors.index(self._selector)))
-            return selectors
+    # Moved to ndlpy
+    # def get_selectors(self):
+    #     if self._writeseries is None:
+    #         return None
+    #     else:
+    #         selectors = list(self._writeseries.columns)
+    #         if self._selector is not None and self._selector in selectors:
+    #             # Return selectors with selector at front (to ensure it is default) for widgets)
+    #             selectors.insert(0, selectors.pop(selectors.index(self._selector)))
+    #         return selectors
 
     def set_selector(self, column):
         """Set which column of the series is to be used for selection."""
@@ -1104,14 +1101,14 @@ class Data(data.CustomDataFrame):
     def get_shape(self):
         return self.to_pandas().shape
 
-    def to_pandas(self):
-        df1 = pd.DataFrame()
-        for typ, data in self._d.items():
-            if typ in self._global_data:
-                df1 = df1.assign(**data)
-            else:
-                df1 = df1.join(data, how="outer")
-        return df1
+    # def to_pandas(self):
+    #     df1 = pd.DataFrame()
+    #     for typ, data in self._d.items():
+    #         if typ in self._global_data:
+    #             df1 = df1.assign(**data)
+    #         else:
+    #             df1 = df1.join(data, how="outer")
+    #     return df1
         
             
     def get_value_by_element(self, element):
@@ -1287,22 +1284,18 @@ class Data(data.CustomDataFrame):
         """Add a row with a given index (and optionally subindex) to the data structure."""
         if index is None:
             index = self.get_index()
-
+        if index is None:
+            self._log.warning("No index set to add row to.")
+            return
         selector = self.get_selector()
-        if self._data is not None and index not in self.index:
-            self._data = self._append_row(self._data, index)
-            self._log.info(f"\"{index}\" added as row in Data._data.")
-            self.set_index(index)
+        for typ, data in self._d.items():
+            if typ in self.types["output"] or typ in self.types["cache"]:
+                data = self._append_row(data, index)
+                self._log.info(f"\"{index}\" added as row in Data._writedata.")
+                self.set_index(index)
+                return
+        self._log.warning("No writable data found to add row with index \"{index}\" to.")
 
-        if self._writedata is not None and index not in self._writedata.index:
-            self._writedata = self._append_row(self._writedata, index)
-            self._log.info(f"\"{index}\" added as row in Data._writedata.")
-            self.set_index(index)
-
-        if self._writeseries is not None and index not in self._writeseries.index:
-            self._writeseries = self._append_row(self._writeseries, index)
-            self._log.info(f"\"{index}\" added as row in Data._writeseries.")
-            self.set_index(index)
 
     def add_series_row(self, index=None):
         """Add a row to the series."""
