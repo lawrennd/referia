@@ -1,6 +1,6 @@
 import urllib.parse
 import os
-from ..util.misc import markdown2html
+import referia.util.misc 
 from liquid.filter import string_filter
 
 @string_filter
@@ -29,7 +29,7 @@ def markdownify(string):
     :rtype: str
     """
     try:
-        return markdown2html(string)
+        return referia.util.misc.markdown2html(string)
     except Exception as e:
         raise ValueError(f"Error converting markdown to HTML: {e}")
 
