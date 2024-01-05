@@ -13,7 +13,7 @@ from ndlpy.log import Logger
 from ndlpy.config.context import Context
 from ndlpy import access
 from ndlpy.assess import data
-from ndlpy.util.misc import to_camel_case, remove_nan
+from ndlpy.util.misc import to_camel_case, remove_nan, is_valid_var
 
 from ..config.settings import Settings
 from .compute import Compute
@@ -24,10 +24,7 @@ from ..util.liquid import url_escape, markdownify, relative_url, absolute_url, t
 
 from ..config import settings
 
-from keyword import iskeyword
 
-def is_valid_variable_name(name):
-    return name.isidentifier() and not iskeyword(name)
 
 def empty(val):
     """
@@ -95,9 +92,10 @@ class Data(data.CustomDataFrame):
             self.load_flows()
         else:
             super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector)
-            
-            # Not needed if colspecs used? TK remove
-            # self._augment_column_names(data)
+            # Pass self to augment column names. This is needed for
+            # the liquid filters. May be removable if this can be set
+            # in _finalize_df
+            self._augment_column_names(self)
 
 
     @property
@@ -279,7 +277,7 @@ class Data(data.CustomDataFrame):
                     ds = pd.Series(conf["local"], name=index_row)
                     for cname in ds.index:
                         if cname not in self._column_name_map:
-                            if is_valid_variable_name(cname):
+                            if is_valid_var(cname):
                                 self.update_name_column_map(column=cname, name=cname)
                 else:
                     errmsg = f"In global_consts a \"local\" specification must contain a dictionary of fields and values."
@@ -318,7 +316,7 @@ class Data(data.CustomDataFrame):
                         raise
                     for cname in df.columns:
                         if cname not in self._column_name_map:
-                            if is_valid_variable_name(cname):
+                            if is_valid_var(cname):
                                 self.update_name_column_map(column=cname, name=cname)
                 else:
                     errmsg = "\"local\" specified in config but not in form of a dictionary."
@@ -1466,7 +1464,7 @@ class Data(data.CustomDataFrame):
                     cname = field["name"]
                     df[cname] = column
                     if cname not in self._column_name_map:
-                        if is_valid_variable_name(cname):
+                        if is_valid_var(cname):
                             self.update_name_column_map(column=cname, name=cname)
                         else:
                             errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
@@ -1492,7 +1490,7 @@ class Data(data.CustomDataFrame):
                 cname = field["name"]
                 df[cname] = column
                 if cname not in self._column_name_map:
-                    if is_valid_variable_name(cname):
+                    if is_valid_var(cname):
                         self.update_name_column_map(column=cname, name=cname)
                     else:
                         errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
@@ -1524,7 +1522,7 @@ class Data(data.CustomDataFrame):
                     cname = field["name"]
                     df[cname] = column
                     if cname not in self._column_name_map:
-                        if is_valid_variable_name(cname):
+                        if is_valid_var(cname):
                             self.update_name_column_map(column=cname, name=cname)
                         else:
                             errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
@@ -1599,16 +1597,16 @@ class Data(data.CustomDataFrame):
         for column in data.columns:
             # If column title is valid variable name, add it to the column name map
             if column not in self._column_name_map:
-                if is_valid_variable_name(column):
+                if is_valid_var(column):
                     self.update_name_column_map(name=column, column=column)
                 else:
                     name = to_camel_case(column)
                     # Keep variable names as private
-                    if column[0] == "_":
+                    if name == "_":
                         name = "_" + name
 
                     self._log.warning(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Auto-generating a mapping entry \"{name}\" to provide a valid variable name to use as proxy for \"{column}\".")
-                    if is_valid_variable_name(name):
+                    if is_valid_var(name):
                         self.update_name_column_map(name=name, column=column)
                     else:
                         errmsg = f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\"."

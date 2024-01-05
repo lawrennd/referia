@@ -108,7 +108,9 @@ def test_pivot_table():
                          'D': np.random.randn(6)})
     table = df.pivot_table(values='D', index=['A', 'B'], columns=['C'])
     assert isinstance(table, referia.assess.data.Data)
-
+    diff = DeepDiff(table.to_pandas(), df.to_pandas().pivot_table(values="D", index=["A", "B"], columns=["C"]))
+    assert not diff, "DataFrames don't match in pivot_table"
+    
 # Edge Cases and Error Handling
 def test_invalid_data_creation():
     with pytest.raises(ValueError):
