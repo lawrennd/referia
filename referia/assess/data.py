@@ -56,7 +56,7 @@ def automapping(columns):
 
 class Data(data.CustomDataFrame):
     """Class to hold merged data flows together perform operations on them."""
-    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, user_file="_referia.yml", directory="."):
+    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None, user_file="_referia.yml", directory="."):
 
         self._directory = directory
         self._user_file = user_file
@@ -91,7 +91,7 @@ class Data(data.CustomDataFrame):
         if data is None:
             self.load_flows()
         else:
-            super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector)
+            super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex)
             # Pass self to augment column names. This is needed for
             # the liquid filters. May be removable if this can be set
             # in _finalize_df
@@ -712,17 +712,6 @@ class Data(data.CustomDataFrame):
         self.set_selector(selector)
         self.set_column(col)
 
-    def get_subseries(self):
-        return self._writeseries[self._writeseries.index.isin([self.get_index()])]
-
-    def get_subindices(self):
-        if self._selector is None:
-            return []
-        try:
-            subseries = self.get_subseries()[self._selector]
-            return pd.Index(subseries.values, name=self._selector, dtype=subseries.dtype)
-        except KeyError as err:
-            raise KeyError(f"Could not find index \"{err}\" in the subseries when using it as a selector.")
 
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
