@@ -15,14 +15,14 @@ from ndlpy import access
 from ndlpy.assess import data
 from ndlpy.util.misc import to_camel_case, remove_nan, is_valid_var
 
-from ..config.settings import Settings
+from ..config.interface import Interface
 from .compute import Compute
 
 
 from ..util.misc import renderable
 from ..util.liquid import url_escape, markdownify, relative_url, absolute_url, to_i
 
-from ..config import settings
+from ..config import interface
 
 
 
@@ -61,12 +61,12 @@ class Data(data.CustomDataFrame):
         self._directory = directory
         self._user_file = user_file
         self._cntxt = Context(name="referia")
-        self._settings = settings.Settings(user_file=self._user_file,
+        self._interface = interface.Interface.from_file(user_file=self._user_file,
                                            directory=self._directory)
         self._name_column_map = {}
         self._column_name_map = {}
-        if "mapping" in self._settings:
-            for name, column in self._settings["mapping"].items():
+        if "mapping" in self._interface:
+            for name, column in self._interface["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
 
         self._index = index
@@ -371,8 +371,8 @@ class Data(data.CustomDataFrame):
         :return: None
         """
         # Augment the data with default augmentation as "outer"
-        if "allocation" in self._settings:
-            self._augment_data(self._settings["allocation"], how="outer", concat=True, axis=0)
+        if "allocation" in self._interface:
+            self._augment_data(self._interface["allocation"], how="outer", concat=True, axis=0)
             self._remove_index_duplicates()
         else:
             errmsg = f"No \"allocation\" field in config file."
@@ -386,23 +386,23 @@ class Data(data.CustomDataFrame):
         :return: None
         """
         # Augment the data with default augmentation as "inner"
-        if "additional" in self._settings:
-            self._augment_data(self._settings["additional"], how="inner", concat=False, suffix="_{joinNo}")
+        if "additional" in self._interface:
+            self._augment_data(self._interface["additional"], how="inner", concat=False, suffix="_{joinNo}")
 
     def _load_globals(self):
         """Load in any global variables to a data series."""
-        if "select" in self._settings["globals"]:
-            index_row = self._settings["globals"]["select"]
+        if "select" in self._interface["globals"]:
+            index_row = self._interface["globals"]["select"]
         else:
             index_row = "globals"
             
-        df = self._finalize_df(*access.io.globals_data(self._settings["globals"], pd.Index([index_row], name="index")), strict_columns=True)
+        df = self._finalize_df(*access.io.globals_data(self._interface["globals"], pd.Index([index_row], name="index")), strict_columns=True)
         self._globals = df
         self._globals_index = index_row
 
     def _load_cache(self):
         """Load in any cached data to data frames."""
-        df = self._finalize_df(*access.io.cache(self._settings["cache"], self.index), strict_columns=True)
+        df = self._finalize_df(*access.io.cache(self._interface["cache"], self.index), strict_columns=True)
         if df.index.is_unique:
             self._cache = df
         else:
@@ -414,7 +414,7 @@ class Data(data.CustomDataFrame):
         
     def _load_scores(self):
         """Load in the score data to data frames."""
-        df = self._finalize_df(*access.io.scores(self._settings["scores"], self.index))
+        df = self._finalize_df(*access.io.scores(self._interface["scores"], self.index))
         if df.index.is_unique:
             self._writedata = df
         else:
@@ -426,12 +426,12 @@ class Data(data.CustomDataFrame):
 
     def _load_series(self):
         """Load in the series data to data frames."""
-        if "selector" not in self._settings["series"]:
+        if "selector" not in self._interface["series"]:
             self._log.error(errmsg)
             errmsg = f"A series entry must have a \"selector\" column."
             raise ValueError(errmsg)
-        self._writeseries = self._finalize_df(*access.io.series(self._settings["series"], self.index))
-        selector = self._settings["series"]["selector"]
+        self._writeseries = self._finalize_df(*access.io.series(self._interface["series"], self.index))
+        selector = self._interface["series"]["selector"]
         if selector not in self._writeseries.columns:
             self._writeseries[selector] = None
             
@@ -439,8 +439,8 @@ class Data(data.CustomDataFrame):
 
     def sort_series(self):
         """Sort the series by the column specified."""
-        if "series" in self._settings:
-            series = self._settings["series"]
+        if "series" in self._interface:
+            series = self._interface["series"]
         else:
             return
         if "sortby" in series and "field" in series["sortby"] and series["sortby"]["field"] in self._writeseries:
@@ -459,7 +459,7 @@ class Data(data.CustomDataFrame):
         :return: None
         """
         self._load_allocation()
-        if "additional" in self._settings:
+        if "additional" in self._interface:
             self._log.debug("Joining allocation and additional information.")
             self._load_additional()
 
@@ -469,17 +469,17 @@ class Data(data.CustomDataFrame):
 
     def _load_global_consts(self):
         """Load constants from the _referia.yml file."""
-        if "global_consts" in self._settings:
-            self._augment_global_consts(self._settings["global_consts"])
+        if "global_consts" in self._interface:
+            self._augment_global_consts(self._interface["global_consts"])
                     
         
     def sort_data(self):
-        if "sortby" in self._settings and "field" in self._settings["sortby"] and self._settings["sortby"]["field"] in self.columns:
-            if "ascending" in self._settings["sortby"]:
-                ascending = self._settings["sortby"]["ascending"]
+        if "sortby" in self._interface and "field" in self._interface["sortby"] and self._interface["sortby"]["field"] in self.columns:
+            if "ascending" in self._interface["sortby"]:
+                ascending = self._interface["sortby"]["ascending"]
             else:
                 ascending=True
-            field=self._settings["sortby"]["field"]
+            field=self._interface["sortby"]["field"]
             self._log.debug(f"Sorting by \"{field}\"")
             self.sort_values(by=field, ascending=ascending, inplace=True)
 
@@ -493,16 +493,16 @@ class Data(data.CustomDataFrame):
         Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index.
 
         """
-        if "globals" in self._settings:
+        if "globals" in self._interface:
             self._globals = None
             self._load_globals()
-        if "cache" in self._settings:
+        if "cache" in self._interface:
             self._cache = None
             self._load_cache()
-        if "scores" in self._settings:
+        if "scores" in self._interface:
             self._writedata = None
             self._load_scores()
-        if "series" in self._settings:
+        if "series" in self._interface:
             self._writeseries = None
             self._load_series()
 
@@ -521,36 +521,36 @@ class Data(data.CustomDataFrame):
         """Save the output flows."""
         if self._globals is not None:
             self._log.debug(f"Writing _globals.")
-            access.io.write_globals(self._globals, self._settings)
+            access.io.write_globals(self._globals, self._interface)
         if self._cache is not None:
             self._log.debug(f"Writing _cache.")
-            access.io.write_cache(self._cache, self._settings)
+            access.io.write_cache(self._cache, self._interface)
         if self._writedata is not None:
             self._log.debug(f"Writing _writedata.")
-            access.io.write_scores(self._writedata, self._settings)
+            access.io.write_scores(self._writedata, self._interface)
         if self._writeseries is not None:
-            access.io.write_series(self._writeseries, self._settings)
+            access.io.write_series(self._writeseries, self._interface)
             self._log.debug(f"Writing _writeseries.")
 
     def load_liquid(self):
         """Load the liquid environment."""
         loader = None
-        if "liquid" in self._settings:
-            if "templates" in self._settings["liquid"]:
-                if "dir" in self._settings["liquid"]["templates"]:
-                    templates_path = [os.path.abspath(self._settings["liquid"]["templates"])]
+        if "liquid" in self._interface:
+            if "templates" in self._interface["liquid"]:
+                if "dir" in self._interface["liquid"]["templates"]:
+                    templates_path = [os.path.abspath(self._interface["liquid"]["templates"])]
                 else:
                     template_path = [
                         os.path.join(os.path.dirname(__file__), "templates"),
                     ]
 
-                    if "ext" in self._settings["liquid"]:
-                        ext = self._settings["liquid"]["ext"]
+                    if "ext" in self._interface["liquid"]:
+                        ext = self._interface["liquid"]["ext"]
                         loader = lq.loaders.FileExtensionLoader(search_path=template_path, ext=ext)
                     else:
                         loader = lq.FileSystemLoader(template_path)
-            elif "dict" in self._settings["liquid"]["templates"]:
-                loader = lq.loaders.DictLoader(self._settings["liquid"]["templates"]["dict"])
+            elif "dict" in self._interface["liquid"]["templates"]:
+                loader = lq.loaders.DictLoader(self._interface["liquid"]["templates"]["dict"])
         self._liquid_env = lq.Environment(loader=loader)
 
 
@@ -622,10 +622,10 @@ class Data(data.CustomDataFrame):
         return self._index
 
     def _strict_columns(self, group):
-        if "strict_columns" in self._settings:
-            return self._settings["strict_columns"]
-        elif "strict_columns" in self._settings[group]:
-            return self._settings[group]["strict_columns"]
+        if "strict_columns" in self._interface:
+            return self._interface["strict_columns"]
+        elif "strict_columns" in self._interface[group]:
+            return self._interface[group]["strict_columns"]
         elif group=="cache" or group=="globals":
             return True
         else:
@@ -1400,7 +1400,7 @@ class Data(data.CustomDataFrame):
             for column in details["columns"]:
                 if column not in df.columns:
                     df[column] = None
-            if strict_columns or ("strict_columns" in self._settings and self._settings["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
+            if strict_columns or ("strict_columns" in self._interface and self._interface["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
                 if "columns" not in details:
                     errmsg = f"You can't have strict_columns set to True and not list the columns in the details structure."
                     self._log.error(errmsg)
@@ -1532,7 +1532,7 @@ class Data(data.CustomDataFrame):
                 self._log.warning(f"Existing \"entries\" field in default mapping when incorporating a series.")
                 
             self._log.info(f"Augmenting default mapping with an \"entries\" field for accessing series.")
-            self._settings["mapping"] = mapping
+            self._interface["mapping"] = mapping
             
             df[index_column_name] = df.index
             indexcol = list(set(df[index_column_name]))
@@ -1609,9 +1609,9 @@ class Data(data.CustomDataFrame):
             return 0
 
     def scored(self):
-        if "scored" in self._settings:
-            if self._writedata is not None and self._settings["scored"]["field"] in self._writedata.columns:
-                return self._writedata[self._settings["scored"]["field"]].count()
+        if "scored" in self._interface:
+            if self._writedata is not None and self._interface["scored"]["field"] in self._writedata.columns:
+                return self._writedata[self._interface["scored"]["field"]].count()
             else:
                 return 0
 

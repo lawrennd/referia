@@ -22,7 +22,7 @@ from ndlpy.config.context import Context
 from .util.misc import notempty, markdown2html, renderable, tallyable
 from .util.files import to_valid_file
 
-from .config import settings
+from .config import interface
 from . import display
 
 import platform
@@ -94,7 +94,7 @@ if OSX:
 class Sys():
     def __init__(self, user_file="_referia.yml", directory="."):
         self._directory = directory
-        self._settings = settings.Settings(user_file=user_file,
+        self._interface = interface.Interface(user_file=user_file,
                                            directory=directory)
         self._cntxt = Context(name="referia")
         
@@ -180,8 +180,8 @@ class Sys():
 
     def open_url(self, urlname):
         """Use the browser to open URL."""
-        if "browser" in self._settings:
-            browser=self._settings["browser"]
+        if "browser" in self._interface:
+            browser=self._interface["browser"]
         else:
             browser="Google Chrome.app" 
 
@@ -357,13 +357,13 @@ class Sys():
 
     def move_screen_capture(self, filename, order=0):
         """Copy the most recent screen capture to a given location."""
-        if "capture_directory" in self._settings:
-            capture_directory = os.path.expandvars(self._settings["capture_directory"])
+        if "capture_directory" in self._interface:
+            capture_directory = os.path.expandvars(self._interface["capture_directory"])
         else:
             capture_directory = os.path.expandvars("$HOME/Desktop")
         # set the regular expression pattern
-        if "capture_pattern" in self._settings:
-            capture_pattern = self._settings["capture_pattern"]
+        if "capture_pattern" in self._interface:
+            capture_pattern = self._interface["capture_pattern"]
         else:    
             capture_pattern = r'^Screenshot \d{4}-\d{2}-\d{2} at \d{2}\.\d{2}\.\d{2}\.png$'
 
@@ -382,8 +382,8 @@ class Sys():
         """Use the system viewer to show a PDF containing relevant information to the assessment."""
 
         displays = []
-        if "editpdf" in self._settings:
-            displays += self._settings["editpdf"]
+        if "editpdf" in self._interface:
+            displays += self._interface["editpdf"]
 
         for view in displays:
             val = self.extract_field_value(view, data)
@@ -509,16 +509,16 @@ class Sys():
     def view_files(self, data):
         """Use the system viewer to show a PDF containing relevant information to the assessment."""
         displays = []
-        if "localpdf" in self._settings:
-            displays += self._settings["localpdf"]
-        if "localvideo" in self._settings:
-            displays += self._settings["localvideo"]
-        if "localipynb" in self._settings:
-            displays += self._settings["localipynb"]
-        if "localdocx" in self._settings:
-            displays += self._settings["localdocx"]
-        if "localdirectory" in self._settings:
-            displays += self._settings["localdirectory"]
+        if "localpdf" in self._interface:
+            displays += self._interface["localpdf"]
+        if "localvideo" in self._interface:
+            displays += self._interface["localvideo"]
+        if "localipynb" in self._interface:
+            displays += self._interface["localipynb"]
+        if "localdocx" in self._interface:
+            displays += self._interface["localdocx"]
+        if "localdirectory" in self._interface:
+            displays += self._interface["localdirectory"]
 
         for view in displays:
             self.view_file(view, data)
@@ -527,8 +527,8 @@ class Sys():
     def view_urls(self, data):
         """View any urls that are provided."""
         displays = []
-        if "urls" in self._settings:
-            displays += self._settings["urls"]
+        if "urls" in self._interface:
+            displays += self._interface["urls"]
 
         for view in displays:
             if "url" in view:

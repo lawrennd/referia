@@ -2,7 +2,7 @@ import os
 import datetime
 import pandas as pd
 
-from ..config.settings import Settings
+from ..config.interface import Interface
 
 import ndlpy as ndl
 
@@ -29,7 +29,7 @@ class Compute():
         else:
             self._directory = directory
 
-        self._settings = Settings(user_file=self._user_file, directory=self._directory)
+        self._interface = Interface.from_file(user_file=self._user_file, directory=self._directory)
         self._cntxt = ndl.config.context.Context(name="referia")
            
         self._log = ndl.log.Logger(
@@ -45,11 +45,11 @@ class Compute():
         self._computes = {}
         for comptype in ["precompute", "compute", "postcompute"]:
             self._computes[comptype]=[]
-            if comptype in self._settings:
-                if type(self._settings[comptype]) is list:
-                    computes = self._settings[comptype]
+            if comptype in self._interface:
+                if type(self._interface[comptype]) is list:
+                    computes = self._interface[comptype]
                 else:
-                    computes = [self._settings[comptype]]
+                    computes = [self._interface[comptype]]
 
                 for compute in computes:
                     self._computes[comptype].append(
@@ -531,8 +531,8 @@ class Compute():
         ##### Copied raw need to run on all elements.
         ## preprocess
         for op in ["preprocessor", "augmentor", "sorter"]:
-            if op in self._settings["compute"]:
-                computes = self._settings["compute"][op]
+            if op in self._interface["compute"]:
+                computes = self._interface["compute"][op]
                 if not isinstance(computes, list):
                     computes = [computes]
                 for compute in computes:
@@ -545,8 +545,8 @@ class Compute():
                         
         # Filter
         filt = pd.Series(True, index=self._data.index)
-        if "filter" in self._settings["compute"]:
-            computes = self._settings["compute"]["filter"]
+        if "filter" in self._interface["compute"]:
+            computes = self._interface["compute"]["filter"]
             if not isinstance(computes, list):
                 computes = [computes]    
                 for compute in computes:

@@ -33,9 +33,9 @@ def nodes(user_file="_referia.yml", directory="."):
     return chain
 
     
-class Settings(ndlpy.config.settings.Settings):
-    def __init__(self, user_file="_referia.yml", directory=".", field=None, append=[], ignore=[]):
-        super().__init__(user_file=user_file, directory=directory, field=field)
+class Interface(ndlpy.config.interface.Interface):
+    def __init__(self, data=None):
+        super().__init__(data)
 
     def __get_item__(self, key):
         """Return local value or inherit from parent"""
