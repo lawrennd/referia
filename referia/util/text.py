@@ -9,18 +9,17 @@ import os
 import random
 import string
 import warnings
-#from wordcloud import WordCloud, STOPWORDS
+
+from wordcloud import WordCloud, STOPWORDS
 
 from spacy.lang.en.stop_words import STOP_WORDS
 from string import punctuation
 from heapq import nlargest
 
-from .exceptions import ComputeError
-
+from ..exceptions import ComputeError
+from ..assess import data
 
 nlp = spacy.load("en_core_web_sm")
-
-
 
 # -*- coding: utf-8 -*-
 import re
@@ -33,6 +32,7 @@ websites = "[.](com|net|org|io|gov|edu|me)"
 digits = "([0-9])"
 multiple_dots = r'\.{2,}'
 # from https://stackoverflow.com/questions/4576077/how-can-i-split-a-text-into-sentences
+
 def split_into_sentences(text: str) -> list[str]:
     """
     Split the text into sentences.
@@ -76,12 +76,28 @@ def split_into_sentences(text: str) -> list[str]:
 
 
 def render_liquid(data, template, **kwargs):
-    """Wrapper to liquid renderer."""
-    return data.liquid_to_value(template, kwargs)
+    """
+    Wrapper to liquid renderer.
+
+    :param data: The data to be rendered.
+    :type data: dict
+    :param template: The template to be rendered.
+    :type template: str
+    :return: The rendered template.
+    :rtype: str
+    """
+    return data.liquid_to_value(template)
         
 
 def comment_list(text):
+    """
+    Extract comments from a text string.
 
+    :param text: The text to be extracted from.
+    :type text: str
+    :return: The comments.
+    :rtype: tuple
+    """
     pattern = re.compile(r'''
     \[([^\[]*?)\]\{\.comment-start                     # comment-start tag
     \s+id="(\d+)"                           # id
@@ -115,6 +131,14 @@ def comment_list(text):
         
 
 def word_count(text):
+    """
+    Count the number of words in a text string.
+
+    :param text: The text to be counted.
+    :type text: str
+    :return: The number of words.
+    :rtype: int
+    """
     tokenizer = nltk.RegexpTokenizer(r'\w+')
     if type(text) is list:
         return [len(tokenizer.tokenize(txt))
@@ -123,7 +147,16 @@ def word_count(text):
         return len(tokenizer.tokenize(text))
 
 def word_cloud(text, filename, **kwargs):
-    """Create a word cloud of the given text."""
+    """
+    Create a word cloud of the given text.
+
+    :param text: The text to be used.
+    :type text: str
+    :param filename: The filename to be used.
+    :type filename: str
+    :return: The word cloud.
+    :rtype: WordCloud
+    """
     stopwords = set(STOPWORDS)
     wordcloud = WordCloud(width=800, height=800,
                           background_color ='white',
@@ -133,25 +166,66 @@ def word_cloud(text, filename, **kwargs):
     
     
 def paragraph_split(text, sep):
+    """
+    Split a text string into paragraphs.
+
+    :param text: The text to be split.
+    :type text: str
+    :param sep: The separator to be used.
+    :type sep: str
+    :return: The split text.
+    :rtype: list
+    """
     return text.split(sep=sep)
 
 def sentence_split(text):
+    """
+    Split a text string into sentences.
+
+    :param text: The text to be split.
+    :type text: str
+    :return: The split text.
+    :rtype: list
+    """
     return sent_tokenize(text)
 
 def list_lengths(entries):
-    return lambda entries: [len(entry) for entry in entries]
+    """
+    Return the lengths of a list of entries.
+
+    :param entries: The list of entries.
+    :type entries: list
+    :return: The lengths of the entries.
+    :rtype: list
+    """
+    
+    return [len(entry) for entry in entries]
 
 
 def named_entities(text, ent_type="PERSON"):
+    """
+    Extract named entities from a text string.
+
+    :param text: The text to be extracted from. Can be "PERSON", "ORG", "GPE", "LOC", "PRODUCT", "EVENT", "WORK_OF_ART", "LANGUAGE", "DATE", "TIME", "PERCENT", "MONEY", "QUANTITY", "ORDINAL", "CARDINAL".
+    :type text: str
+    :return: The named entities.
+    :rtype: list
+    """
+    
     spacy_parser = nlp(text)
     return [entity.text for entity in spacy_parser.ents if entity.label_==ent_type]
-    #tokens = nltk.word_tokenize(text)
-    #pos_tags = nltk.pos_tag(tokens)
-    #return nltk.ne_chunk(pos_tags)    
 
 
     
 def text_summarizer(text, fraction=0.1):
+    """
+    Summarize a text string.
+
+    :param text: The text to be summarized.
+    :type text: str
+    :return: The summary.
+    :rtype: str
+    """
     # based on https://www.kaggle.com/code/itsmohammadshahid/nlp-text-summarizer-using-spacy
     
     # pass the text into the nlp function
@@ -204,6 +278,23 @@ def text_summarizer(text, fraction=0.1):
     return summary
 
 def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["Highlight"], number=None):
+    """
+    Extract comments from a pdf file.
+
+    :param filename: The filename of the pdf file.
+    :type filename: str
+    :param directory: The directory of the pdf file.
+    :type directory: str
+    :param start_page: The starting page.
+    :type start_page: int
+    :param comment_types: The comment types to be extracted.
+    :type comment_types: list
+    :param number: The number of the comment to be extracted.
+    :type number: int
+    :return: The comments.
+    :rtype: str
+    """
+    
     if type(comment_types) is not list:
         comment_types = [comment_types]
     directory = os.path.expandvars(directory)
@@ -239,20 +330,13 @@ def pdf_extract_comments(filename, directory="", start_page=1, comment_types=["H
                     val += f"* "
                     if "page" in entry:
                         page = entry["page"] + start_page - 1
-                        val += f"Page {page}:\n\n  "
+                        val += f"Page {page}:\n\n"
                     if "text" in entry:
                         text = entry["text"]
-                        val += f"> {text}\n\n  "
+                        val += f"> {text}\n\n"
                     if "contents" in entry:
                         contents = entry["contents"]
-                        val += f"  {contents}\n\n"                    
-        for entry in data:
-            if entry["type"] == "FreeText":
-                if entry["type"] in comment_types:
-                    if "contents" in entry:
-                        page = entry["page"] + start_page - 1
-                        contents = entry["contents"]
-                        val += f"{contents}\n\n"
+                        val += f"{contents}\n\n"                    
         return val
 
     else:

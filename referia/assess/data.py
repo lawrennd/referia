@@ -7,138 +7,79 @@ import liquid as lq
 
 import datetime
 
-from liquid.filter import string_filter
-import urllib.parse
-
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from ndlpy.log import Logger
 from ndlpy.config.context import Context
-from ndlpy.access import io
+from ndlpy import access
 from ndlpy.assess import data
-from ndlpy.util.misc import to_camel_case, remove_nan
+from ndlpy.util.misc import to_camel_case, remove_nan, is_valid_var
 
-from .settings import Settings
+from ..config.interface import Interface
 from .compute import Compute
 
 
-from .util import renderable, markdown2html
+from ..util.misc import renderable
+from ..util.liquid import url_escape, markdownify, relative_url, absolute_url, to_i
 
-from . import settings
+from ..config import interface
 
-from keyword import iskeyword
-
-def is_valid_variable_name(name):
-    return name.isidentifier() and not iskeyword(name)
-
-    
-
-@string_filter
-def url_escape(string):
-    """Filter to escape urls for liquid"""
-    return urllib.parse.quote(string.encode('utf8'))
-
-
-@string_filter
-def markdownify(string):
-    """Filter to convert markdown to html for liquid"""
-    return markdown2html(string)
-
-
-@string_filter
-def relative_url(string):
-    """Filter to convert to a relative_url a jupyter notebook under liquid"""
-    url = os.path.join("/notebooks", string)
-    return url
-
-
-@string_filter
-def absolute_url(string):
-    """Filter to convert to a absolute_url a jupyter notebook under liquid"""
-    # Remove the absolute url from beginning if it exists
-    while string[0] == "/":
-       string = string[1:]
-    return os.path.join("http://localhost:8888/notebooks/", string)
-
-
-def to_i(string):
-    """Filter to convert the liquid entry to an integer under liquid."""
-    if type(string) is str and len(string) == 0:
-        return 0
-    return int(float(string))
 
 
 def empty(val):
+    """
+    Is a value empty?
+
+    :param val: The value to be tested.
+    :type val: object
+    :return: True if the value is empty.
+    :rtype: bool
+    """
+    
     return pd.isna(val) or val==""
 
 
 def automapping(columns):
-    """Generate dictionary of mapping between variable names and column names."""
+    """
+    Generate dictionary of mapping between variable names and column names.
+
+    :param columns: The list of column names.
+    :type columns: list
+    :return: The dictionary of mapping between variable names and column names.
+    :rtype: dict
+    """
     mapping = {}
     for column in columns:
         field = to_camel_case(column)
         mapping[field] = column
     return mapping
 
-class Data(data.DataObject):
+class Data(data.CustomDataFrame):
     """Class to hold merged data flows together perform operations on them."""
-    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, user_file="_referia.yml", directory="."):
+    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None, user_file="_referia.yml", directory="."):
 
         self._directory = directory
         self._user_file = user_file
         self._cntxt = Context(name="referia")
-        self._settings = settings.Settings(user_file=self._user_file,
+        self._interface = interface.Interface.from_file(user_file=self._user_file,
                                            directory=self._directory)
         self._name_column_map = {}
         self._column_name_map = {}
-        if "mapping" in self._settings:
-            for name, column in self._settings["mapping"].items():
+        if "mapping" in self._interface:
+            for name, column in self._interface["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
-        
-        self._log = Logger(
+
+        self._index = index
+        self._column = column
+        self._selector = selector
+        self.log = Logger(
             name=__name__,
             level=self._cntxt["logging"]["level"],
             filename=self._cntxt["logging"]["filename"],
             directory = self._directory,            
         )
-        if data is None:
-            self._d = {}
-        if isinstance(data, dict):
-            data = pd.DataFame(data)
-        if isinstance(data, list):
-            data = pd.DataFame(data)
-        if data is not None:
-            if colspecs is not None:
-                self._d = {}
-                for typ, cols in colspecs.items():
-                    if typ in self._global_data:
-                        self._d[typ] = pd.Series(index=cols)
-                        for col in cols:
-                            if all(data[col]==data[col][0]):
-                                self._d[col] = data[col][0]
-                            else:
-                                raise ValueError(f"Column \"{col}\" does not contain values that are all the same, and it is being reset to a constant column.")
-                    else:
-                        d = data[cols]
-                        if typ in self._series_data:
-                            self._d[typ] = d
-                        else:
-                            # Drop duplicates created from series presence
-                            self._d[typ] = d[~d.index.duplicated(keep='first')]
-            else:
-                self._d = {"data" : data}
-                
-        # Which index is the current focus in the data.
-        self._index = index
-        # Which column is the current focus in the data.
-        self._column = column
-        # Which entry column in the series to disambiguate the selection of
-        # the focus.
-        self._selector = selector
-        # The value in the selected entry column entry column value from the
-        # series to use
-        # Which subindex is the current focus in the data.
-        self._subindex = None
+
+        # Call the parent class with data, colspecs, index, column, selector
 
         # Load in compute function capability.
         self._compute = Compute(self)
@@ -149,10 +90,13 @@ class Data(data.DataObject):
 
         if data is None:
             self.load_flows()
+        else:
+            super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex)
+            # Pass self to augment column names. This is needed for
+            # the liquid filters. May be removable if this can be set
+            # in _finalize_df
+            self._augment_column_names(self)
 
-        self.at = self._AtAccessor(self)
-        self.loc = self._LocAccessor(self)
-        self.iloc = self._IlocAccessor(self)
 
     @property
     def _readonly_data(self):
@@ -169,24 +113,15 @@ class Data(data.DataObject):
     def _series_data(self):
         return ["writeseries"]
     
-    @property
-    def _colspecs(self):
-        """Return the columns associated with different data types."""
-        val = {}
-        for typ, data in self._d.items():
-            if typ in self._global_data:
-                val[typ] = data.index
-            else:
-                val[typ] = data.columns
-        return val
             
     @property
     def _data(self):
-        # Data that is input (not for writing to)
         if len(self._d)>0:
-            return self._d["data"]
-        else:
-            return None
+            if "data" in self._d:
+                # Data that is input (not for writing to)
+                return self._d["data"]
+            raise ValueError(f"There is no \"data\" key in self._d. Keys are \"{self._d.keys()}\"")
+        raise ValueError("There is no data in self._d when calling _data.")
 
     @_data.setter
     def _data(self, value):
@@ -248,171 +183,6 @@ class Data(data.DataObject):
     def _global_consts(self, value):
         self._d["global_consts"] = value
 
-            
-    class _AtAccessor:
-        def __init__(self, data):
-            self._data_object = data
-
-        def __getitem__(self, key):
-            if type(key) is tuple:
-                col = key[1]
-            else:
-                col = key
-            for typ, data in self._data_object._d.items():
-                if self._data_object.isglobal(col):
-                    cols = data.index
-                else:
-                    cols = data.columns
-                if col in cols:
-                    return data.at[key]
-            raise KeyError(f"Unknown key \"{col}\" in data object.")
-
-        def __setitem__(self, key, value):
-            if type(key) is tuple:
-                col = key[1]
-            else:
-                col = key
-            for typ, data in self._data_object._d.items():
-                if self._data_object.isglobal(col):
-                    cols = data.index
-                else:
-                    cols = data.columns
-                if col in cols:
-                    if self._data_object.iswritable(col):
-                        data.at[key] = value
-                        return
-                    else:
-                        raise KeyError(f"Column \"{col}\" is not writable in data object.")
-            # Autocache allows new set values to be allocated to cache.
-            if self._data_object.autocache:
-                if self._data_object._cache is None:
-                    self._data_object._cache = pd.DataFrame(columns=[col], index=self._data_object.index)
-                self._data_object._cache[col] = None
-                self._data_object._cache.at[key] = value
-            else:
-                raise KeyError(f"Unknown key \"{key}\" in data object.")
-
-    class _IlocAccessor:
-        def __init__(self, data):
-            self._data_object = data
-
-        def __getitem__(self, key):
-            label_key = self._convert_to_label_key(key)
-            return self._data_object.loc[label_key]
-
-        def __setitem__(self, key, value):
-            label_key = self._convert_to_label_key(key)
-            self._data_object.loc[label_key] = value
-
-        def _convert_to_label_key(self, key):
-            if isinstance(key, tuple):
-                row_key, col_key = key
-                row_labels = self._get_row_labels(row_key)
-                col_labels = self._get_col_labels(col_key)
-                return (row_labels, col_labels)
-            elif isinstance(key, slice) or isinstance(key, int):
-                # Handle the case where only row indices are provided
-                row_labels = self._get_row_labels(key)
-                return row_labels
-            else:
-                raise TypeError("Invalid index type")
-
-        def _get_row_labels(self, key):
-            # Assuming uniform row index across all DataFrames in _d
-            sample_df = next(iter(self._data_object._d.values()))
-            return sample_df.index[key]
-
-        def _get_col_labels(self, key):
-            # Assuming uniform column index across all DataFrames in _d
-            sample_df = next(iter(self._data_object._d.values()))
-            return sample_df.columns[key]
-
-    class _LocAccessor:
-        def __init__(self, data):
-            self._data_object = data
-
-        def __getitem__(self, key):
-            df1 = pd.DataFrame()
-            for typ, data in self._data_object._d.items():
-                if not data.empty:
-                    if isinstance(key, tuple):
-                        row_key, col_key = key
-                        # Apply key only to relevant columns for each DataFrame
-                        if typ in self._global_data:
-                            cols = data.index
-                        else:
-                            cols = data.columns
-                        if isinstance(col_key, (list, tuple, pd.Index)):
-                            col_key = [col for col in col_key if col in cols]
-                        if typ in self._global_data:
-                            df1 = df1.assign(**data[data.index.get_indexer_for(col_key)])
-                        else:
-                            sdata = data.loc[row_key, col_key]
-                            df1 = df1.join(sdata, how="outer")
-                            coplspecs[typ] = sdata.columns
-            return self.__class__(df1, colspecs)
-
-        def __setitem__(self, key, value):
-            for k, df in self._data_object._d.items():
-                if not df.empty:
-                    # Apply key only to relevant columns for each DataFrame
-                    applicable_key = key
-                    if isinstance(key, (list, tuple, pd.Index)):
-                        applicable_key = [col for col in key if col in df.columns]
-                    df.loc[:, applicable_key] = value
-
-
-    def __getitem__(self, keys):
-        result = pd.DataFrame()
-
-        if not isinstance(keys, list):
-            keys = [keys]  # Convert to list if a single column name is provided
-
-        for key in keys:
-            for attr in ['_data', '_writedata', '_writeseries', '_cache']:
-                if getattr(self, attr) is not None and key in getattr(self, attr).columns:
-                    result[key] = getattr(self, attr)[key]
-                    break
-
-        return result
-
-    def __setitem__(self, keys, values):
-        if not isinstance(keys, list):
-            keys = [keys]  # Convert to list if a single column name is provided
-        if not isinstance(values, list):
-            values = [values]  # Convert to list if a single value is provided
-
-        if len(keys) != len(values):
-            raise ValueError(f"Key lengths and value lengths are not the same.")
-        for key, value in zip(keys, values):
-            # Immutable columns and constants
-            if not self.iswritable(key):
-                raise KeyError(f"Cannot modify an immutable column or constant: \"{key}\"")
-
-            if self.isglobal(key):
-                if not all(v == value[0] for v in value):
-                    raise KeyError(f"All values for global column \"{key}\" must be the same.")
-
-            found = False
-            for typ in self._d:
-                if self.isglobal(key):
-                    self._d[typ][key] = value[0]  # Set only the first value for globals
-                    found = True
-                    break
-                else:
-                    self._d[typ][key] = value
-                    found = True
-                    break
-
-            if not found:  # Initialize in _cache if the key doesn't exist in any structure
-                if self.autocache:
-                    if self._cache is None :
-                        self._cache = pd.DataFrame({key: value}, index=self._data.index)
-                    else:
-                        self._cache[key] = value
-                else:
-                    raise KeyError(f"Unknown writable key \"{key}\" in data object.")
-
     
     @property
     def autocache(self):
@@ -439,20 +209,6 @@ class Data(data.DataObject):
         self._augment = value
         
     @property
-    def index(self):
-        if self._data is not None:
-            return self._data.index
-        else:
-            return None
-
-    @index.setter
-    def index(self, values):
-        if self._data is not None:
-            self._data.index = values
-        else:
-            raise ValueError("There is no data value for index to be set to.")
-        
-    @property
     def writable(self):
         if self.augment:
             return True
@@ -463,17 +219,6 @@ class Data(data.DataObject):
                 return True
         return False
         
-    @property
-    def columns(self):        
-        columns = []
-        for typ, data in self._d.items():
-            if typ in self._global_data:
-                columns += list(data.index)
-            else:
-                columns += list(data.columns)
-        # Should perhaps make this unique column list? As in practice it behaves that way.
-        return pd.Index(columns)
-
     def _col_source(self, col):
         """Return the source of a column."""
         for typ, data in self._d.items():
@@ -532,7 +277,7 @@ class Data(data.DataObject):
                     ds = pd.Series(conf["local"], name=index_row)
                     for cname in ds.index:
                         if cname not in self._column_name_map:
-                            if is_valid_variable_name(cname):
+                            if is_valid_var(cname):
                                 self.update_name_column_map(column=cname, name=cname)
                 else:
                     errmsg = f"In global_consts a \"local\" specification must contain a dictionary of fields and values."
@@ -540,7 +285,7 @@ class Data(data.DataObject):
                     raise ValueError(errmsg)
             else:
 
-                df = self._finalize_df(*io.globals_data(conf, pd.Index([index_row], name="index")), strict_columns=True)
+                df = self._finalize_df(*access.io.globals_data(conf, pd.Index([index_row], name="index")), strict_columns=True)
                 ds = df.loc[index_row]
 
             if self._global_consts is None:
@@ -571,14 +316,14 @@ class Data(data.DataObject):
                         raise
                     for cname in df.columns:
                         if cname not in self._column_name_map:
-                            if is_valid_variable_name(cname):
+                            if is_valid_var(cname):
                                 self.update_name_column_map(column=cname, name=cname)
                 else:
                     errmsg = "\"local\" specified in config but not in form of a dictionary."
                     self._log.error(errmsg)
                     raise ValueError(errmsg)
             else:
-                df = self._finalize_df(*io.read_data(conf))
+                df = self._finalize_df(*access.io.read_data(conf))
                     
             if df.index.is_unique:
                 if "join" in conf:
@@ -618,11 +363,16 @@ class Data(data.DataObject):
                 indseries.at[i] = str(ind) + "_" + str(count)
         self.index = indseries
 
+       
     def _load_allocation(self):
-        """Load in the primary data source as a data frame."""
+        """
+        Load in the primary data source as a data frame.
+
+        :return: None
+        """
         # Augment the data with default augmentation as "outer"
-        if "allocation" in self._settings:
-            self._augment_data(self._settings["allocation"], how="outer", concat=True, axis=0)
+        if "allocation" in self._interface:
+            self._augment_data(self._interface["allocation"], how="outer", concat=True, axis=0)
             self._remove_index_duplicates()
         else:
             errmsg = f"No \"allocation\" field in config file."
@@ -630,25 +380,29 @@ class Data(data.DataObject):
             raise ValueError(f"No \"allocation\" field in config file.")
             
     def _load_additional(self):
-        """Load in the additional data sources as data frames."""
+        """
+        Load in the additional data sources as data frames.
+
+        :return: None
+        """
         # Augment the data with default augmentation as "inner"
-        if "additional" in self._settings:
-            self._augment_data(self._settings["additional"], how="inner", concat=False, suffix="_{joinNo}")
+        if "additional" in self._interface:
+            self._augment_data(self._interface["additional"], how="inner", concat=False, suffix="_{joinNo}")
 
     def _load_globals(self):
         """Load in any global variables to a data series."""
-        if "select" in self._settings["globals"]:
-            index_row = self._settings["globals"]["select"]
+        if "select" in self._interface["globals"]:
+            index_row = self._interface["globals"]["select"]
         else:
             index_row = "globals"
             
-        df = self._finalize_df(*io.globals_data(self._settings["globals"], pd.Index([index_row], name="index")), strict_columns=True)
+        df = self._finalize_df(*access.io.globals_data(self._interface["globals"], pd.Index([index_row], name="index")), strict_columns=True)
         self._globals = df
         self._globals_index = index_row
 
     def _load_cache(self):
         """Load in any cached data to data frames."""
-        df = self._finalize_df(*io.cache(self._settings["cache"], self.index), strict_columns=True)
+        df = self._finalize_df(*access.io.cache(self._interface["cache"], self.index), strict_columns=True)
         if df.index.is_unique:
             self._cache = df
         else:
@@ -660,7 +414,7 @@ class Data(data.DataObject):
         
     def _load_scores(self):
         """Load in the score data to data frames."""
-        df = self._finalize_df(*io.scores(self._settings["scores"], self.index))
+        df = self._finalize_df(*access.io.scores(self._interface["scores"], self.index))
         if df.index.is_unique:
             self._writedata = df
         else:
@@ -672,12 +426,12 @@ class Data(data.DataObject):
 
     def _load_series(self):
         """Load in the series data to data frames."""
-        if "selector" not in self._settings["series"]:
+        if "selector" not in self._interface["series"]:
             self._log.error(errmsg)
             errmsg = f"A series entry must have a \"selector\" column."
             raise ValueError(errmsg)
-        self._writeseries = self._finalize_df(*io.series(self._settings["series"], self.index))
-        selector = self._settings["series"]["selector"]
+        self._writeseries = self._finalize_df(*access.io.series(self._interface["series"], self.index))
+        selector = self._interface["series"]["selector"]
         if selector not in self._writeseries.columns:
             self._writeseries[selector] = None
             
@@ -685,8 +439,8 @@ class Data(data.DataObject):
 
     def sort_series(self):
         """Sort the series by the column specified."""
-        if "series" in self._settings:
-            series = self._settings["series"]
+        if "series" in self._interface:
+            series = self._interface["series"]
         else:
             return
         if "sortby" in series and "field" in series["sortby"] and series["sortby"]["field"] in self._writeseries:
@@ -699,9 +453,13 @@ class Data(data.DataObject):
             self._writeseries.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_input_flows(self):
-        """Load the input flows specified in the _referia.yml file."""
+        """
+        Load the input flows specified in the _referia.yml file.
+
+        :return: None
+        """
         self._load_allocation()
-        if "additional" in self._settings:
+        if "additional" in self._interface:
             self._log.debug("Joining allocation and additional information.")
             self._load_additional()
 
@@ -711,37 +469,40 @@ class Data(data.DataObject):
 
     def _load_global_consts(self):
         """Load constants from the _referia.yml file."""
-        if "global_consts" in self._settings:
-            self._augment_global_consts(self._settings["global_consts"])
+        if "global_consts" in self._interface:
+            self._augment_global_consts(self._interface["global_consts"])
                     
         
     def sort_data(self):
-        if "sortby" in self._settings and "field" in self._settings["sortby"] and self._settings["sortby"]["field"] in self.columns:
-            if "ascending" in self._settings["sortby"]:
-                ascending = self._settings["sortby"]["ascending"]
+        if "sortby" in self._interface and "field" in self._interface["sortby"] and self._interface["sortby"]["field"] in self.columns:
+            if "ascending" in self._interface["sortby"]:
+                ascending = self._interface["sortby"]["ascending"]
             else:
                 ascending=True
-            field=self._settings["sortby"]["field"]
+            field=self._interface["sortby"]["field"]
             self._log.debug(f"Sorting by \"{field}\"")
             self.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_output_flows(self):
-        """Load the output flows data specified in the _referia.yml file. 
+        """
+        Load the output flows data specified in the _referia.yml file. 
         Different output flows are listed in the configuration file under "globals", "cache", "scores", "series".
         Those listed under "globals" are constants that don't change when the index changes. 
         Those specified under "cache" are variables that can be cached and used in liquid templates or comptue functions but are assumed as not needed to be stored.
         Those specified under "scores" are the variables that the user will want to store.
-        Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index."""
-        if "globals" in self._settings:
+        Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index.
+
+        """
+        if "globals" in self._interface:
             self._globals = None
             self._load_globals()
-        if "cache" in self._settings:
+        if "cache" in self._interface:
             self._cache = None
             self._load_cache()
-        if "scores" in self._settings:
+        if "scores" in self._interface:
             self._writedata = None
             self._load_scores()
-        if "series" in self._settings:
+        if "series" in self._interface:
             self._writeseries = None
             self._load_series()
 
@@ -760,36 +521,36 @@ class Data(data.DataObject):
         """Save the output flows."""
         if self._globals is not None:
             self._log.debug(f"Writing _globals.")
-            io.write_globals(self._globals, self._settings)
+            access.io.write_globals(self._globals, self._interface)
         if self._cache is not None:
             self._log.debug(f"Writing _cache.")
-            io.write_cache(self._cache, self._settings)
+            access.io.write_cache(self._cache, self._interface)
         if self._writedata is not None:
             self._log.debug(f"Writing _writedata.")
-            io.write_scores(self._writedata, self._settings)
+            access.io.write_scores(self._writedata, self._interface)
         if self._writeseries is not None:
-            io.write_series(self._writeseries, self._settings)
+            access.io.write_series(self._writeseries, self._interface)
             self._log.debug(f"Writing _writeseries.")
 
     def load_liquid(self):
         """Load the liquid environment."""
         loader = None
-        if "liquid" in self._settings:
-            if "templates" in self._settings["liquid"]:
-                if "dir" in self._settings["liquid"]["templates"]:
-                    templates_path = [os.path.abspath(self._settings["liquid"]["templates"])]
+        if "liquid" in self._interface:
+            if "templates" in self._interface["liquid"]:
+                if "dir" in self._interface["liquid"]["templates"]:
+                    templates_path = [os.path.abspath(self._interface["liquid"]["templates"])]
                 else:
                     template_path = [
                         os.path.join(os.path.dirname(__file__), "templates"),
                     ]
 
-                    if "ext" in self._settings["liquid"]:
-                        ext = self._settings["liquid"]["ext"]
+                    if "ext" in self._interface["liquid"]:
+                        ext = self._interface["liquid"]["ext"]
                         loader = lq.loaders.FileExtensionLoader(search_path=template_path, ext=ext)
                     else:
                         loader = lq.FileSystemLoader(template_path)
-            elif "dict" in self._settings["liquid"]["templates"]:
-                loader = lq.loaders.DictLoader(self._settings["liquid"]["templates"]["dict"])
+            elif "dict" in self._interface["liquid"]["templates"]:
+                loader = lq.loaders.DictLoader(self._interface["liquid"]["templates"]["dict"])
         self._liquid_env = lq.Environment(loader=loader)
 
 
@@ -801,21 +562,23 @@ class Data(data.DataObject):
         self._liquid_env.add_filter("absolute_url", absolute_url)
         self._liquid_env.add_filter("to_i", to_i)
         
-    def set_index(self, index):
+    def set_index(self, value):
         """Index setter"""
         orig_index = self._index
         # If index has changed, run computes.
-        if orig_index is not None and index != orig_index:
+        if orig_index is not None and value != orig_index:
             if orig_index in self.index:
                 self.compute_post()
-        # If 
-        if self._data is not None and index not in self.index:
-            self._log.warning(f"Index \"{index}\" not found in _data")
-            self.add_row(index=index)
-            self.set_index(index)
+        if value is None:
+            self._log.warning(f"Was asked to set index to None.")
+            return
+        if value not in self.index:
+            self._log.warning(f"Index \"{value}\" not found in _data")
+            self.add_row(index=value)
+            self.set_index(value)
         else:
-            self._index = index
-            self._log.debug(f"Index \"{index}\" selected.")
+            self._index = value
+            self._log.debug(f"Index \"{value}\" selected.")
             self.check_or_set_subseries()
         # If index has changed, run computes.
         if orig_index is None or self._index != orig_index:
@@ -853,16 +616,16 @@ class Data(data.DataObject):
 
 
     def get_index(self):
-        if self._index is None and self._data is not None:
+        if self._index is None and len(self.index)>0:
             self._log.debug(f"No index set, using first index of data.")
-            self.set_index(self._data.index[0])
+            self.set_index(self.index[0])
         return self._index
 
     def _strict_columns(self, group):
-        if "strict_columns" in self._settings:
-            return self._settings["strict_columns"]
-        elif "strict_columns" in self._settings[group]:
-            return self._settings[group]["strict_columns"]
+        if "strict_columns" in self._interface:
+            return self._interface["strict_columns"]
+        elif "strict_columns" in self._interface[group]:
+            return self._interface[group]["strict_columns"]
         elif group=="cache" or group=="globals":
             return True
         else:
@@ -902,23 +665,6 @@ class Data(data.DataObject):
             self._log.error(errmsg)
             raise ValueError(errmsg)
         self._column = column
-
-    def get_column(self):
-        """Get the current column focus."""
-        return self._column
-
-    def get_selector(self):
-        return self._selector
-
-    def get_selectors(self):
-        if self._writeseries is None:
-            return None
-        else:
-            selectors = list(self._writeseries.columns)
-            if self._selector is not None and self._selector in selectors:
-                # Return selectors with selector at front (to ensure it is default) for widgets)
-                selectors.insert(0, selectors.pop(selectors.index(self._selector)))
-            return selectors
 
     def set_selector(self, column):
         """Set which column of the series is to be used for selection."""
@@ -966,17 +712,6 @@ class Data(data.DataObject):
         self.set_selector(selector)
         self.set_column(col)
 
-    def get_subseries(self):
-        return self._writeseries[self._writeseries.index.isin([self.get_index()])]
-
-    def get_subindices(self):
-        if self._selector is None:
-            return []
-        try:
-            subseries = self.get_subseries()[self._selector]
-            return pd.Index(subseries.values, name=self._selector, dtype=subseries.dtype)
-        except KeyError as err:
-            raise KeyError(f"Could not find index \"{err}\" in the subseries when using it as a selector.")
 
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
@@ -1035,9 +770,6 @@ class Data(data.DataObject):
                 & (self._d[col_source][selector]==subindex).values,
                 column
             ] = value
-        # else:
-        #     self.add_series_column(column)
-        #     self.set_series_value(value, column)
 
     def drop_column(self, column_name):
         if column_name not in self.columns:
@@ -1061,16 +793,6 @@ class Data(data.DataObject):
            
     def get_shape(self):
         return self.to_pandas().shape
-
-    def to_pandas(self):
-        df1 = pd.DataFrame()
-        for typ, data in self._d.items():
-            if typ in self._global_data:
-                df1 = df1.assign(**data)
-            else:
-                df1 = df1.join(data, how="outer")
-        return df1
-        
             
     def get_value_by_element(self, element):
         """Return the value of an element from the under focus cell (e.g. a list entry or a dict entry)."""
@@ -1245,22 +967,18 @@ class Data(data.DataObject):
         """Add a row with a given index (and optionally subindex) to the data structure."""
         if index is None:
             index = self.get_index()
-
+        if index is None:
+            self._log.warning("No index set to add row to.")
+            return
         selector = self.get_selector()
-        if self._data is not None and index not in self.index:
-            self._data = self._append_row(self._data, index)
-            self._log.info(f"\"{index}\" added as row in Data._data.")
-            self.set_index(index)
+        for typ, data in self._d.items():
+            if typ in self.types["output"] or typ in self.types["cache"]:
+                data = self._append_row(data, index)
+                self._log.info(f"\"{index}\" added as row in Data._writedata.")
+                self.set_index(index)
+                return
+        self._log.warning("No writable data found to add row with index \"{index}\" to.")
 
-        if self._writedata is not None and index not in self._writedata.index:
-            self._writedata = self._append_row(self._writedata, index)
-            self._log.info(f"\"{index}\" added as row in Data._writedata.")
-            self.set_index(index)
-
-        if self._writeseries is not None and index not in self._writeseries.index:
-            self._writeseries = self._append_row(self._writeseries, index)
-            self._log.info(f"\"{index}\" added as row in Data._writeseries.")
-            self.set_index(index)
 
     def add_series_row(self, index=None):
         """Add a row to the series."""
@@ -1279,7 +997,14 @@ class Data(data.DataObject):
             self._log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
     def update_name_column_map(self, name, column):
-        """Update the map from valid variable names to columns in the data frame. Valid variable names are needed e.g. for Liquid filters."""
+        """
+        Update the map from valid variable names to columns in the data frame. Valid variable names are needed e.g. for Liquid filters.
+
+        :param name: The name of the variable.
+        :type name: str
+        :param column: The column in the data frame.
+        :type column: str
+        """
         if column in self._column_name_map and self._column_name_map[column] != name:
             original_name = self._column_name_map[column]
             errmsg = f"Column \"{column}\" already exists in the name-column map and there's an attempt to update its value to \"{name}\" when it's original value was \"{original_name}\" and that would lead to unexpected behaviours. Try looking to see if you're setting column values to different names across different files and/or file loaders."
@@ -1289,16 +1014,23 @@ class Data(data.DataObject):
         self._column_name_map[column] = name
         
     def _default_mapping(self):
-        """Generate the default mapping from config or from columns"""
-        # If a mapping is provided in _referia.yml use it, otherwise generate
-        #if self._name_column_map is None:
-        #    for name, column in  automapping(self.columns).items():
-        #        self.update_name_column_map(name=name, column=column)
+        """
+        Generate the default mapping from config or from columns
 
+        :returns: dictionary of mapping between variable names and column values
+        :rtype: dict
+        """
         return self._name_column_map
 
     def mapping(self, mapping=None, series=None):
-        """Generate dictionary of mapping between variable names and column values."""
+        """
+        Generate dictionary of mapping between variable names and column values.
+
+        :param mapping: mapping to use, if None use default mapping
+        :param series: series to use, if None use current series
+        :returns: dictionary of mapping between variable names and column values
+        :rtype: dict
+        """
         
         if mapping is None:
             if series is None: # remove any columns not in self.columns
@@ -1308,12 +1040,12 @@ class Data(data.DataObject):
 
         format = {}
         for name, column in mapping.items():
-            if series is not None:
-                if column in series:
-                    format[name] = series[column]                    
-            else:
+            if series is None:
                 self.set_column(column)
                 format[name] = self.get_value()
+            else:
+                if column in series:
+                    format[name] = series[column]                    
                 
         return remove_nan(format)
 
@@ -1495,7 +1227,7 @@ class Data(data.DataObject):
 
     
     def liquid_to_value(self, display, kwargs=None, local={}):
-        if kwargs is None:
+        if kwargs is None or kwargs=={}:
             kwargs = self.mapping()
         kwargs.update(local)
         try:
@@ -1668,7 +1400,7 @@ class Data(data.DataObject):
             for column in details["columns"]:
                 if column not in df.columns:
                     df[column] = None
-            if strict_columns or ("strict_columns" in self._settings and self._settings["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
+            if strict_columns or ("strict_columns" in self._interface and self._interface["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
                 if "columns" not in details:
                     errmsg = f"You can't have strict_columns set to True and not list the columns in the details structure."
                     self._log.error(errmsg)
@@ -1699,27 +1431,7 @@ class Data(data.DataObject):
             for name, column in details["mapping"].items():
                 self.update_name_column_map(column=column, name=name)
 
-
-        for column in df.columns:
-            # If column title is valid variable name, add it to the column name map
-            if column not in self._column_name_map:
-                if is_valid_variable_name(column):
-                    self.update_name_column_map(name=column, column=column)
-                else:
-                    name = to_camel_case(column)
-                    # Keep variable names as private
-                    if column[0] == "_":
-                        name = "_" + name
-
-                    self._log.warning(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Auto-generating a mapping entry \"{name}\" to provide a valid variable name to use as proxy for \"{column}\".")
-                    if is_valid_variable_name(name):
-                        self.update_name_column_map(name=name, column=column)
-                    else:
-                        errmsg = f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\"."
-                        self._log.error(errmsg)
-                        raise ValueError(errmsg)
-
-
+        self._augment_column_names(df)
                 
         if "selector" in details:
             field = details["selector"]
@@ -1741,7 +1453,7 @@ class Data(data.DataObject):
                     cname = field["name"]
                     df[cname] = column
                     if cname not in self._column_name_map:
-                        if is_valid_variable_name(cname):
+                        if is_valid_var(cname):
                             self.update_name_column_map(column=cname, name=cname)
                         else:
                             errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
@@ -1767,7 +1479,7 @@ class Data(data.DataObject):
                 cname = field["name"]
                 df[cname] = column
                 if cname not in self._column_name_map:
-                    if is_valid_variable_name(cname):
+                    if is_valid_var(cname):
                         self.update_name_column_map(column=cname, name=cname)
                     else:
                         errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
@@ -1799,7 +1511,7 @@ class Data(data.DataObject):
                     cname = field["name"]
                     df[cname] = column
                     if cname not in self._column_name_map:
-                        if is_valid_variable_name(cname):
+                        if is_valid_var(cname):
                             self.update_name_column_map(column=cname, name=cname)
                         else:
                             errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
@@ -1820,7 +1532,7 @@ class Data(data.DataObject):
                 self._log.warning(f"Existing \"entries\" field in default mapping when incorporating a series.")
                 
             self._log.info(f"Augmenting default mapping with an \"entries\" field for accessing series.")
-            self._settings["mapping"] = mapping
+            self._interface["mapping"] = mapping
             
             df[index_column_name] = df.index
             indexcol = list(set(df[index_column_name]))
@@ -1867,6 +1579,29 @@ class Data(data.DataObject):
                     
         return df
 
+    def _augment_column_names(self, data):
+        """
+        Add each column name to the column name map if not already there.
+        """
+        for column in data.columns:
+            # If column title is valid variable name, add it to the column name map
+            if column not in self._column_name_map:
+                if is_valid_var(column):
+                    self.update_name_column_map(name=column, column=column)
+                else:
+                    name = to_camel_case(column)
+                    # Keep variable names as private
+                    if name == "_":
+                        name = "_" + name
+
+                    self._log.warning(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Auto-generating a mapping entry \"{name}\" to provide a valid variable name to use as proxy for \"{column}\".")
+                    if is_valid_var(name):
+                        self.update_name_column_map(name=name, column=column)
+                    else:
+                        errmsg = f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\"."
+                        self._log.error(errmsg)
+                        raise ValueError(errmsg)
+    
     def to_score(self):
         if self._writedata is not None:
             return len(self._writedata.index)
@@ -1874,9 +1609,9 @@ class Data(data.DataObject):
             return 0
 
     def scored(self):
-        if "scored" in self._settings:
-            if self._writedata is not None and self._settings["scored"]["field"] in self._writedata.columns:
-                return self._writedata[self._settings["scored"]["field"]].count()
+        if "scored" in self._interface:
+            if self._writedata is not None and self._interface["scored"]["field"] in self._writedata.columns:
+                return self._writedata[self._interface["scored"]["field"]].count()
             else:
                 return 0
 

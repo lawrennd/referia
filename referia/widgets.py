@@ -8,7 +8,7 @@ import ipywidgets as ipyw
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 
-from .util import notempty, markdown2html, html2markdown, yyyymmddToDatetime, datetimeToYyyymmdd, filename_to_binary
+from .util.misc import notempty, markdown2html, html2markdown, yyyymmddToDatetime, datetimeToYyyymmdd, filename_to_binary
 from . import display
 
 
@@ -179,12 +179,22 @@ list_stateful_widgets = [
 ]
 
 class ReferiaWidget():
-    """Base class for Referia widgets."""
+    """
+    Base class for Referia widgets.
+    """
     def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param args: The arguments for the widget.
+        :type args: dict
+        """
+        
         self._parent = None
         self.private = True
         if "function" in args:
             self._ipywidget_function = args["function"]
+            del args["function"]
         else:
             self._ipywidget_function = self._default_widget()
 
@@ -193,39 +203,81 @@ class ReferiaWidget():
         self._create_widget(args)
 
     def _default_widget(self):
+        """
+        Return the default widget function.
+
+        :return: The default widget function.
+        :rtype: function
+        """
         return ipyw.Button
 
     def _create_widget(self, args):
+        """
+        Create the widget.
+
+        :param args: The arguments for the widget.
+        :type args: dict
+        """
+        
         self._ipywidget = self._ipywidget_function(**args)
         self._widget_events()
 
     def _widget_events(self):
+        """
+        Create any relevant wiget event handlers.
+        """
         self._ipywidget.on_click(self.on_click)
 
     def close(self):
+        """
+        Close the widget.
+        """
         self._ipywidget.close()
         
     def on_click(self, b):
+        """
+        Handle the click event.
+
+        :param b: The widget.
+        """
         pass
 
     def refresh(self):
+        """
+        Refresh the widget.
+        """
         pass
 
     @property
     def widget(self):
+        """
+        Return the ipywidget.
+        """
         return self._ipywidget
     
     @property
     def private(self):
+        """
+        Return whether the widget is private.
+        """
         return self._private
 
     @private.setter
     def private(self, value):
         #if not is_bool_dtype(value):
         #    raise ValueError("Private must be set as bool (True/False)")
+        """
+        Set whether the widget is private.
+
+        :param value: The value to set.
+        :type value: bool
+        """
         self._private = value
 
     def display(self):
+        """
+        Display the widget.
+        """
         IPython.display.display(self._ipywidget)
 
     def null(self, void):
@@ -235,7 +287,30 @@ class ReferiaWidget():
         return ""
         
 class ReferiaStatefulWidget(ReferiaWidget):
+    """
+    Base class for Referia stateful widgets.
+    """
     def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param conversion: The conversion function for setting the widget value.
+        :type conversion: function
+        :param reversion: The reversion function for getting the widget value.
+        :type reversion: function
+        :param display: The display for the widget.
+        :type display: function
+        :param column_name: The column name for the widget.
+        :type column_name: str
+        :param field_name: The field name for the widget.
+        :type field_name: str
+        :param refresh_display: Whether to refresh the display when the widget value changes.
+        :type refresh_display: bool
+        :param value: The default value for the widget.
+        :type value: any
+        :param description: The description for the widget.
+        :type description: str
+        """
         self._conversion = None
         self._reversion = None
         self._viewer = {}
@@ -296,29 +371,51 @@ class ReferiaStatefulWidget(ReferiaWidget):
             args["descripton"] = " "
 
     def _default_widget(self):
+        """
+        Return the default widget function.
+        """
         return ipyw.Textarea
 
     def _widget_events(self):
-        """Create any relevant wiget event handlers."""
+        """
+        Create any relevant wiget event handlers.
+        """
         self._ipywidget.observe(self.on_value_change, names="value")
 
     def on_value_change(self, value):
-        """If display is refreshed then refresh it."""
+        """
+        If display is refreshed then refresh it.
+        """
         pass
     
     def get_value(self):
-        """Get the value of the widget."""
+        """
+        Get the value of the widget.
+
+        :return: The value of the widget.
+        :rtype: any
+        """
         if self._reversion is None:
             return self._ipywidget.value
         else:
             return self._reversion(self._ipywidget.value)
 
     def get_description(self):
-        """Get the value of the widget."""
+        """
+        Get the description of the widget.
+
+        :return: The description of the widget.
+        :rtype: str
+        """
         return self._ipywidget.description
     
     def set_value(self, value):
-        """Set the value of the widget."""
+        """
+        Set the value of the widget.
+
+        :param value: The value to set.
+        :type value: any
+        """
         if notempty(value):
             if self._conversion is None:
                 self._ipywidget.value = value
@@ -328,13 +425,27 @@ class ReferiaStatefulWidget(ReferiaWidget):
             self.reset_value()
 
     def reset_value(self):
-        """Reset value to default for widget."""  
+        """
+        Reset value to default for widget.
+        """  
         self._ipywidget.value = self._default_value
         
     def get_column(self):
+        """
+        Get the column name for the widget.
+
+        :return: The column name for the widget.
+        :rtype: str
+        """
         return self._column_name
     
     def to_markdown(self):
+        """
+        Return the widget value and description as markdown.
+
+        :return: The widget value and description as markdown.
+        :rtype: str
+        """
         description = self.get_description()
         value = self.get_value()
         if description is None or description.strip() == "":
@@ -343,7 +454,9 @@ class ReferiaStatefulWidget(ReferiaWidget):
             return f"#### {description}\n\n{value}"
     
 class FieldWidget(ReferiaStatefulWidget):
-    """Widget for editing field values in parent data."""
+    """
+    Widget for editing field values in parent data.
+    """
     def __init__(self, function=None, conversion=None, reversion=None, **args):
         # This argument includes the ipywidgets function for creating the widget
         args["function"] = function
@@ -354,7 +467,10 @@ class FieldWidget(ReferiaStatefulWidget):
         super().__init__(**args)
         
     def on_value_change(self, change):
-        """When value of the widget changes update the relevant parent data structure."""
+        """
+        When value of the widget changes update the relevant parent data structure.
+        :param change: The change event.
+        """
         self.set_value(change.new)
         if not self.private and self._parent is not None:
             self._parent.set_column(self.get_column())
@@ -365,11 +481,18 @@ class FieldWidget(ReferiaStatefulWidget):
                 self._parent._widgets.refresh()
             
     def has_viewer(self):
-        """Does the widget have a viewer structure for generating its values."""
+        """
+        Does the widget have a viewer structure for generating its values.
+
+        :return: True if the widget has a viewer structure, False otherwise.
+        :rtype: bool
+        """
         return len(self._viewer)>0
     
     def refresh(self):
-        """Update the widget value from the data."""
+        """
+        Update the widget value from the data.
+        """
         self._ipywidget.observe(self.null, names='value')
         column = self.get_column()
         if column is not None and self._parent is not None:
@@ -385,20 +508,45 @@ class FieldWidget(ReferiaStatefulWidget):
         self._ipywidget.observe(self.on_value_change, names="value")
 
 class ElementWidget(FieldWidget):
-    """Widget for editing element of a given field value in parent data."""
+    """
+    Widget for editing element of a given field value in parent data.
+    """
     def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param element: The element to edit.
+        :type element: int
+        """
         if "element" in args:
             self.set_element(args["element"])
+            del args["element"]
+        else:
+            self.set_element(None)
+
         super().__init__(**args)
 
     def get_element(self):
+        """
+        Get the element of the widget.
+
+        :return: The element of the widget.
+        """
         return self._element
 
     def set_element(self, value):
+        """
+        Set the element of the widget.
+
+        :param value: The value to set.
+        """
         self._element = value
         
     def on_value_change(self, change):
-        """When value of the widget changes update the relevant parent data structure."""
+        """
+        When value of the widget changes update the relevant parent data structure.
+        :param change: The change event.
+        """
         self.set_value(change.new)
         if not self.private and self._parent is not None:
             self._parent.set_column(self.get_column())
@@ -408,11 +556,18 @@ class ElementWidget(FieldWidget):
                 self._parent.refresh()
 
     def has_viewer(self):
-        """Does the widget have a viewer structure for generating its values."""
+        """
+        Does the widget have a viewer structure for generating its values
+
+        :return: True if the widget has a viewer structure, False otherwise.
+        :rtype: bool
+        """
         return len(self._viewer)>0
     
     def refresh(self):
-        """Update the widget value from the data."""
+        """
+        Update the widget value from the data.
+        """
         self._ipywidget.observe(self.null, names='value')
         column = self.get_column()
         if column is not None and self._parent is not None:
@@ -426,11 +581,19 @@ class ElementWidget(FieldWidget):
         else:
             self.reset_value()
         self._ipywidget.observe(self.on_value_change, names="value")
-            
 
-
+        
 class IndexSelector(ReferiaStatefulWidget):
+    """
+    Widget for selecting an index from a list of indices.
+    """
     def __init__(self, parent):
+        """
+        Initialise the widget.
+
+        :param parent: The parent widget.
+        :type parent: ReferiaWidget
+        """
         args = {
             "options": parent.index,
             "value": parent.get_index(),
@@ -440,12 +603,21 @@ class IndexSelector(ReferiaStatefulWidget):
         super().__init__(**args)
 
     def on_value_change(self, change):
+        """
+        When value of the widget changes update the relevant parent data structure.
+        :param change: The change event.
+        """
         self.set_value(change.new)
         if not self.private and self._parent is not None:
             self._parent.set_index(self.get_value())
             self._parent.view_series()
 
     def set_index(self, value):
+        """
+        Set the index of the widget.
+
+        :param value: The value to set.
+        """
         self.set_value(value)
         
     def refresh(self):
@@ -454,6 +626,16 @@ class IndexSelector(ReferiaStatefulWidget):
 class ReferiaMultiWidget(ReferiaStatefulWidget):
     """Class for forming a collection of widgets that interact."""
     def __init__(self, parent, stateful_args, stateless_args):
+        """
+        Initialise the widget.
+
+        :param parent: The parent widget.
+        :type parent: ReferiaWidget
+        :param stateful_args: The stateful arguments for the widget.
+        :type stateful_args: dict
+        :param stateless_args: The stateless arguments for the widget.
+        :type stateless_args: dict
+        """
         self._parent = parent
         self._ipywidgets = {}
 
@@ -470,7 +652,14 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
             self.add_stateless(key, item)
 
     def add_stateful(self, key, item):
-        """Add a stateful widget to the multiwidget display."""
+        """
+        Add a stateful widget to the multiwidget display.
+
+        :param key: The key for the widget.
+        :type key: str
+        :param item: The item for the widget.
+        :type item: dict
+        """
         self._ipywidgets[key] = {
             "function": item["function"],
             "result_function": item["result_function"],
@@ -487,12 +676,24 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
         self._ipywidgets[key]["update"] = gwu_(key, kwargs, self)
 
     def update_side_effects(self, key, item):
-        # Create the generator functions for when widgets change.
+        """
+        Create the generator functions for when widgets change.
+
+        :param key: The key for the widget.
+        :type key: str
+        :param item: The item for the widget.
+        :type item: dict
+        """
         self._ipywidgets[key]["on_change"] = gwc_(key, item, self)            
         self._ipywidgets[key]["widget"].observe(self._ipywidgets[key]["on_change"], names="value")
         
     def add_stateless(self, key, item):
-        """Add a stateless widget to the multiwidget display."""
+        """
+        Add a stateless widget to the multiwidget display.
+
+        :param key: The key for the widget.
+        :type key: str
+        """
         self._ipywidgets[key] = {
             "function": item["function"],
             "on_click_function": item["on_click_function"],
@@ -505,6 +706,9 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
         self._ipywidgets[key]["widget"].on_click(gocf_(key, kwargs, self))
 
     def display(self):
+        """
+        Display the widget.
+        """
         objects = []
         for key, item in self._ipywidgets.items():
             objects.append(item["widget"])
@@ -579,8 +783,20 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
     
         
 class ActionExtractor(ReferiaMultiWidget):
-    """This multi widget allows a box to be filled from an action taken by a button."""
+    """
+    This multi widget allows a box to be filled from an action taken by a button.
+    """
     def __init__(self, parent, action_function, action_args):
+        """
+        Initialise the widget.
+
+        :param parent: The parent widget.
+        :type parent: ReferiaWidget
+        :param action_function: The function to call when the button is clicked.
+        :type action_function: function
+        :param action_args: The arguments for the action function.
+        :type action_args: dict
+        """
         stateful_args = {
             "extract_information" : {
                 "function" : ipyw.Textarea,
@@ -596,8 +812,16 @@ class ActionExtractor(ReferiaMultiWidget):
         super().__init__(parent, stateful_args, stateless_args)
         
 class ScreenCapture(ReferiaMultiWidget):
-    """Take the most recent screen capture and display it """
+    """
+    Take the most recent screen capture and display it
+    """
     def __init__(self, parent):
+        """
+        Initialise the widget.
+
+        :param parent: The parent widget.
+        :type parent: ReferiaWidget
+        """
         stateful_args = {
             "image" : {
                 "function" : ipyw.Image,
@@ -616,8 +840,21 @@ class ScreenCapture(ReferiaMultiWidget):
         super().__init__(parent, stateful_args, stateless_args)
             
 class FullSelector(ReferiaMultiWidget):
-    """This multi widget allows a range of interacting selectors."""
+    """
+    This multi widget allows a range of interacting selectors.
+    """
     def __init__(self, parent, stateful_args, stateless_args):
+        """
+        Initialise the widget.
+
+        :param parent: The parent widget.
+        :type parent: ReferiaWidget
+        :param stateful_args: The stateful arguments for the widget.
+        :type stateful_args: dict
+        :param stateless_args: The stateless arguments for the widget.
+        :type stateless_args: dict
+        """
+        
         # Set the item values and option values from the functions.
         for key, item in stateful_args.items():
             item["value"] = item["value_function"]()
@@ -636,7 +873,21 @@ class FullSelector(ReferiaMultiWidget):
     
 
 class IndexSubIndexSelectorSelect(FullSelector):
+    """
+    This multi widget allows a range of interacting index selectors.
+
+    The index selector is a dropdown list of indices.
+    The subindex selector is a dropdown list of subindices.
+    The selector selector is a dropdown list of selectors.
+    """
     def __init__(self, parent):
+        """
+        Initialise the widget.
+
+        :param parent: The parent widget.
+        :type parent: ReferiaWidget
+        """
+        
         # Define the widgets to create
         stateful_args = {
             "index_select":  {
@@ -692,17 +943,39 @@ class IndexSubIndexSelectorSelect(FullSelector):
         super().__init__(parent, stateful_args, stateless_args)
 
     def on_value_change(self, change):
+        """
+        When value of the widget changes update the relevant parent data structure.
+        :param change: The change event.
+        """
         if not self.private and self._parent is not None:
             self._parent.set_index(self.get_value())
             self._parent.view_series()
 
     def set_index(self, value):
+        """
+        Set the index of the widget.
+
+        :param value: The value to set.
+        """
         self._ipywidgets["index_select"]["set_value"](value)
 
 
             
 def gocf_(key, item, obj, docstr=None):
-    """Generator function for on_click function for the button class."""
+    """
+    Generator function for on_click function for the button class.
+
+    :param key: The key for the widget.
+    :type key: str
+    :param item: The item for the widget.
+    :type item: dict
+    :param obj: The object for the widget.
+    :type obj: ReferiaMultiWidget
+    :param docstr: The docstring for the function.
+    :type docstr: str
+    :return: The on_click function.
+    :rtype: function
+    """
     def on_click(b):
         obj._ipywidgets[key]["on_click_function"]()
         for other_key, widget in obj._ipywidgets.items():
@@ -710,11 +983,24 @@ def gocf_(key, item, obj, docstr=None):
                 pass
             elif "update" in widget:
                 widget["update"]()
-    on_click.__docstr__ = docstr
+    on_click.__doc__ = docstr
     return on_click
             
 def gsv_(key, item, obj, docstr=None):
-    """Generator function for a set value function for the multiwidget class"""
+    """
+    Generator function for a set value function for the multiwidget class.
+
+    :param key: The key for the widget.
+    :type key: str
+    :param item: The item for the widget.
+    :type item: dict
+    :param obj: The object for the widget.
+    :type obj: ReferiaMultiWidget
+    :param docstr: The docstring for the function.
+    :type docstr: str
+    :return: The set value function.
+    :rtype: function
+    """
     def set_value(value):
         if notempty(value):
             if obj._ipywidgets[key]["conversion"] is None:
@@ -725,11 +1011,24 @@ def gsv_(key, item, obj, docstr=None):
             obj._ipywidgets[key]["widget"].value = self._ipywidgets[key]["function"]().value
         # Perform callback to set the result.
         obj._ipywidgets[key]["result_function"](obj._ipywidgets[key]["widget"].value)
-    set_value.__docstr__ = docstr
+    set_value.__doc__ = docstr
     return set_value
 
 def gwc_(key, item, obj, docstr=None):
-    """Generator functions for propagating changes to other widgets on this change."""
+    """
+    Generator functions for propagating changes to other widgets on this change.
+
+    :param key: The key for the widget.
+    :type key: str
+    :param item: The item for the widget.
+    :type item: dict
+    :param obj: The object for the widget.
+    :type obj: ReferiaMultiWidget
+    :param docstr: The docstring for the function.
+    :type docstr: str
+    :return: The on change function.
+    :rtype: function
+    """
     name = "on_" + key + "_change"
     def on_change(change):
         obj._ipywidgets[key]["set_value"](change.new)
@@ -740,11 +1039,24 @@ def gwc_(key, item, obj, docstr=None):
                 widget["update"]()
 
     on_change.__name__ = name
-    on_change.__docstr__ = docstr
+    on_change.__doc__ = docstr
     return on_change
                     
 def gwu_(key, item, obj, docstr=None):
-    """Generator function for making update calls for a given widget."""
+    """
+    Generator function for making update calls for a given widget.
+
+    :param key: The key for the widget.
+    :type key: str
+    :param item: The item for the widget.
+    :type item: dict
+    :param obj: The object for the widget.
+    :type obj: ReferiaMultiWidget
+    :param docstr: The docstring for the function.
+    :type docstr: str
+    :return: The update function.
+    :rtype: function
+    """
     def on_other_widgets_change():
         widg = obj._ipywidgets[key]["widget"]
         if "options_function" in item:
@@ -757,11 +1069,28 @@ def gwu_(key, item, obj, docstr=None):
             else:
                 widg.layout.display = "none"
         on_other_widgets_change.__name__ = key
-        on_other_widgets_change.__docstr__ = docstr
+        on_other_widgets_change.__doc__ = docstr
     return on_other_widgets_change
 
 def gwf_(name, function, conversion=None, reversion=None, default_args={}, docstr=None):
-    """This function wraps the widget function and calls it with any additional default arguments as specified."""
+    """
+    This function wraps the widget function and calls it with any additional default arguments as specified.
+
+    :param name: The name of the widget.
+    :type name: str
+    :param function: The function to call.
+    :type function: function
+    :param conversion: The conversion function to use.
+    :type conversion: function
+    :param reversion: The reversion function to use.
+    :type reversion: function
+    :param default_args: The default arguments to use.
+    :type default_args: dict
+    :param docstr: The docstring for the function.
+    :type docstr: str
+    :return: The widget function.
+    :rtype: function
+    """
     def widget_function(**args):
         all_args = default_args.copy()
         all_args.update(args)
@@ -772,11 +1101,28 @@ def gwf_(name, function, conversion=None, reversion=None, default_args={}, docst
             **all_args,
         )
     widget_function.__name__ = name
-    widget_function.__docstr__ = docstr
+    widget_function.__doc__ = docstr
     return widget_function
 
 def gwef_(name, function, conversion=None, reversion=None, default_args={}, docstr=None):
-    """This function wraps the widget function and calls it with any additional default arguments as specified."""
+    """
+    This function wraps the widget function and calls it with any additional default arguments as specified.
+
+    :param name: The name of the widget.
+    :type name: str
+    :param function: The function to call.
+    :type function: function
+    :param conversion: The conversion function to use.
+    :type conversion: function
+    :param reversion: The reversion function to use.
+    :type reversion: function
+    :param default_args: The default arguments to use.
+    :type default_args: dict
+    :param docstr: The docstring for the function.
+    :type docstr: str
+    :return: The widget function.
+    :rtype: function
+    """
     def widget_function(**args):
         all_args = default_args.copy()
         all_args.update(args)
@@ -787,11 +1133,16 @@ def gwef_(name, function, conversion=None, reversion=None, default_args={}, docs
             **all_args,
         )
     widget_function.__name__ = name
-    widget_function.__docstr__ = docstr
+    widget_function.__doc__ = docstr
     return widget_function
                 
 def populate_widgets(widget_list):
-    """populate_widgets: Automatically creates widget wrapper objects and adds them to the module."""
+    """
+    Automatically creates widget wrapper objects and adds them to the module.
+
+    :param widget_list: The list of widgets to create.
+    :type widget_list: list
+    """
     this_module = sys.modules[__name__]
     for widget in widget_list:
         setattr(
@@ -801,7 +1152,12 @@ def populate_widgets(widget_list):
         )
 
 def populate_element_widgets(widget_list):
-    """populate_widgets: Automatically creates widget wrapper objects and adds them to the module."""
+    """
+    Automatically creates element widget wrapper objects and adds them to the module.
+
+    :param widget_list: The list of widgets to create.
+    :type widget_list: list
+    """
     this_module = sys.modules[__name__]
     for widget in widget_list:
         setattr(
@@ -811,7 +1167,18 @@ def populate_element_widgets(widget_list):
         )
                 
 def MyFileChooser(**args):
-    """Create a simple Dropdown box to allow file selection from a given path."""
+    """
+    Create a simple Dropdown box to allow file selection from a given path.
+
+    :param directory: The directory to search for files.
+    :type directory: str
+    :param glob: The glob to use for file selection.
+    :type glob: str
+    :param path: The path to use for file selection.
+    :type path: str
+    :return: The widget.
+    :rtype: ipywidgets.Dropdown
+    """
     if "directory" not in args:
         directory = "."
     else:
@@ -833,52 +1200,106 @@ def MyFileChooser(**args):
     
     return ipyw.Dropdown(**args)
 
+def interact(function, **kwargs):
+    """
+    Create an interactive widget for a given function.
 
-
-def interact(function, **args):
+    :param function: The function to create the widget for.
+    :type function: function
+    :param **kwargs: The arguments for the function.
+    """
     newargs = {}
-    for key, widget in args.items():
+    for key, widget in kwargs.items():
         newargs[key] = widget.widget
     ipyw.interact(function, **newargs)
 
-def interact_manual(function, **args):
+def interact_manual(function, **kwargs):
+    """
+    Create an interactive widget for a given function.
+
+    :param function: The function to create the widget for.
+    :type function: function
+    :param **kwargs: The arguments for the function.
+    """
     newargs = {}
-    for key, widget in args.items():
+    for key, widget in kwargs.items():
         newargs[key] = widget.widget
     ipyw.interact_manual(function, **newargs)
 
-def interactive(function, **args):
+def interactive(function, **kwargs):
+    """
+    Create an interactive widget for a given function.
+
+    :param function: The function to create the widget for.
+    :type function: function
+    :param **kwargs: The arguments for the function.
+    """
     newargs = {}
-    for key, widget in args.items():
+    for key, widget in kwargs.items():
         newargs[key] = widget.widget
     ipyw.interactive(function, **newargs)
 
 
 class CreateDocButton(ReferiaWidget):
-    """Create a document for editing based on the information we have."""
+    """
+    Create a document for editing based on the information we have.
+    """
     def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param type: The type of document to create.
+        :type type: str
+        :param document: The document to create.
+        :type document: str
+        """
         args["description"] = "Create " + args["type"]
         super().__init__(**args)
         self.type = args["type"]
         self.document = args["document"]
         
     def on_click(self, b):
+        """
+        When the button is clicked create the document.
+        """
         self._parent.create_document(self.document, summary=False)
 
 class CreateSummaryDocButton(ReferiaWidget):
-    """Create a summary document based on all the entries."""
+    """
+    Create a summary document based on all the entries.
+    """
     def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param type: The type of document to create.
+        :type type: str
+        :param document: The document to create.
+        :type document: str
+        """
         args["description"] = "Create Summary " + args["type"]
         super().__init__(**args)
         self.type = args["type"]
         self.document = args["document"]
         
     def on_click(self, b):
+        """
+        When the button is clicked create the document.
+        """
         self._parent.create_document(self.document, summary=True)
 
 class CreateSummaryButton(ReferiaWidget):
     """Create a summary based on all the entries."""
     def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param type: The type of summary to create.
+        :type type: str
+        :param details: The details of the summary to create.
+        :type details: dict
+        """
+        
         args["description"] = "Create " + args["type"] + " Summary"
         super().__init__(**args)
         self.type = args["type"]
@@ -891,22 +1312,46 @@ class CreateSummaryButton(ReferiaWidget):
 class SaveButton(ReferiaWidget):
     """Write the data to the appropriate storage files."""
     def __init__(self, **args):
+        """
+        Initialise the widget.
+        """
         args["description"] = "Save Flows"
         super().__init__(**args)
 
     def on_click(self, b):
+        """
+        When the button is clicked save the flows.
+        """
         self._parent.save_flows()
 
 class ReloadButton(ReferiaWidget):
+    """Reload the data from the appropriate storage files."""
     def __init__(self, **args):
+        """
+        Initialise the widget.
+        """
         args["description"] = "Reload Flows"
         super().__init__(**args)
 
     def on_click(self, b):
+        """
+        When the button is clicked reload the flows.
+        """
         self._parent.load_flows(reload=True)
 
 class PopulateButton(ReferiaWidget):
+    """Populate the data from a compute."""
     def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param target: The target to populate.
+        :type target: str
+        :param compute: The compute to run.
+        :type compute: dict
+        :param description: The description of the widget.
+        :type description: str
+        """
         if "target" in args:
             args["description"] = "Populate " + args["target"]
         else:
@@ -919,6 +1364,9 @@ class PopulateButton(ReferiaWidget):
         super().__init__(**args)
 
     def on_click(self, b):
+        """
+        When the button is clicked populate the data.
+        """
         for compute in self._compute:
             compute["refresh"] = True
             self._parent._data._compute.run(self._parent._data._compute.prep(compute))

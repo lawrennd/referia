@@ -2,6 +2,11 @@
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+pytest-cov = "^3.0.0"
+pytest-mock = "^3.3.1"  
+
 [tool.poetry]
 name = "referia"
 version = "0.1.0"
@@ -28,6 +33,7 @@ jupyter = "*"
 matplotlib = "*"
 markdown = "*"
 unidecode = "*"
+wordcloud = "*"
 nltk = "*"
 thinc = "*"
 spacy = "*"
@@ -42,9 +48,6 @@ pdfannots = "*"
 gspread_pandas = { version = "*", platform = "darwin" }
 appscript = { version = "*", platform = "darwin" }
 
-[tool.poetry.dev-dependencies]
-# Any development-only dependencies go here
-twine = "*"
 
 [build]
 # Include if you have any build scripts, though this is rare

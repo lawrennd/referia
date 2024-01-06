@@ -17,13 +17,14 @@ import matplotlib.pyplot as plt
 from ipywidgets import jslink, jsdlink, Layout
 
 from ndlpy import log
-from ndlpy.access import io
+from ndlpy import access
 from ndlpy.util.misc import remove_nan
 from ndlpy.config.context import Context
+
 from .widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
 
-from . import settings
-from . import assess
+from .config import interface
+from . import assess 
 from . import system
 
 
@@ -85,7 +86,7 @@ def extract_load_scorer(details, scorer, widgets):
     # This is a link to a widget specificaiton stored in a file
     if "details" not in details:
         raise ValueError("Load scorer needs to provide load details as entry under \"details\"")
-    df,  newdetails = io.read_data(details["details"])
+    df,  newdetails = access.io.read_data(details["details"])
     for ind, series in df.iterrows():
         extract_scorer(remove_nan(series.to_dict()), scorer, widgets)
 
@@ -461,7 +462,7 @@ def nodes(chain, index=None):
     oldkey=None
     while len(chain)>0:
         key, directory=chain.pop()
-        data[key] = assess.Data(directory=directory)
+        data[key] = assess.data.Data(directory=directory)
         if index is None and data[key].index is not None:
             index = data[key].index[0]
         scorer[key] = Scorer(index, data[key], directory=directory, viewer_inherit=False)
@@ -607,7 +608,7 @@ class Scorer:
             append = []
             ignore = ["viewer"]
             
-        self._settings = settings.Settings(user_file=user_file, directory=directory, append=append, ignore=ignore)
+        self._interface = interface.Interface(user_file=user_file, directory=directory, append=append, ignore=ignore)
         self._cntxt = Context(name="referia")
         self._log = log.Logger(
             name=__name__,
@@ -638,7 +639,7 @@ class Scorer:
         self._postcompute = []
 
         if data is None:
-            self._data = assess.Data()
+            self._data = assess.data.Data()
         else:
             self._data = data
 
@@ -646,7 +647,7 @@ class Scorer:
             # Widget isn't created yet so set index in data only.
             self._data.set_index(index)
 
-        self._create_widgets(self._settings, self._widgets)
+        self._create_widgets(self._interface, self._widgets)
 
     def _create_reload_button(self, config):
         """Create the reload button."""
@@ -885,7 +886,7 @@ class Scorer:
     def run(self):
         """Run the scorer to edit the data frame."""
         if self.index is not None:
-            if "series" in self._settings:
+            if "series" in self._interface:
                 self.full_selector()
             else:
                 self.select_index()
@@ -897,7 +898,7 @@ class Scorer:
         """Convert a template to values."""
         if "use" in template:
             if template["use"] == "viewer":
-                viewer = self._settings["viewer"] 
+                viewer = self._interface["viewer"] 
                 if type(viewer) is not list:
                     viewer = [viewer]
                 string = ""
@@ -1021,8 +1022,8 @@ class Scorer:
         # Need to determine if these should update series or data.
         # Update timestamp fields.
         today_val = pd.to_datetime("today")
-        if "timestamp_field" in self._settings:
-            timestamp_field = self._settings["timestamp_field"]
+        if "timestamp_field" in self._interface:
+            timestamp_field = self._interface["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
         if timestamp_field not in self._data.columns:
@@ -1032,8 +1033,8 @@ class Scorer:
         self.set_column(timestamp_field)
         self.set_value(today_val,
                        trigger_update=False)
-        if "created_field" in self._settings:
-            created_field = self._settings["created_field"]
+        if "created_field" in self._interface:
+            created_field = self._interface["created_field"]
         else:
             created_field = "Created"
 
@@ -1041,14 +1042,14 @@ class Scorer:
             self._data.add_column(created_field)
         self._data.set_dtype(created_field, "datetime64[ns]")
 
-        if created_field not in self._data.columns or assess.empty(self._data.get_value_column(created_field)):
+        if created_field not in self._data.columns or assess.data.empty(self._data.get_value_column(created_field)):
             self.set_column(created_field)
             self.set_value(today_val,
                            trigger_update=False)
 
         # Combinator is a combined field based on others
-        if "combinator" in self._settings:
-            for view in self._settings["combinator"]:
+        if "combinator" in self._interface:
+            for view in self._interface["combinator"]:
                 if "field" in view:
                     col = view["field"]
                     del view["field"] #Prevent data reviewer trying to return field
