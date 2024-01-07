@@ -1,6 +1,3 @@
-import nltk
-
-from nltk.tokenize import sent_tokenize
 import spacy
 
 import json
@@ -129,22 +126,18 @@ def comment_list(text):
 
     return comments, comment_ids, authors, dates, starts, finishes, highlight_texts
         
-
 def word_count(text):
     """
-    Count the number of words in a text string.
+    Count the number of words in a text string using SpaCy, excluding punctuation.
 
     :param text: The text to be counted.
     :type text: str
     :return: The number of words.
     :rtype: int
     """
-    tokenizer = nltk.RegexpTokenizer(r'\w+')
-    if type(text) is list:
-        return [len(tokenizer.tokenize(txt))
-                for txt in text]
-    else:
-        return len(tokenizer.tokenize(text))
+    doc = nlp(text)
+    words = [token.text for token in doc if not token.is_punct and not token.is_space]
+    return len(words)
 
 def word_cloud(text, filename, **kwargs):
     """
@@ -180,14 +173,17 @@ def paragraph_split(text, sep):
 
 def sentence_split(text):
     """
-    Split a text string into sentences.
+    Split a text string into sentences using SpaCy.
 
     :param text: The text to be split.
     :type text: str
     :return: The split text.
-    :rtype: list
+    :rtype: list of str
     """
-    return sent_tokenize(text)
+    doc = nlp(text)
+    return [sent.text.strip() for sent in doc.sents]
+
+# Other SpaCy-related functions can be added here
 
 def list_lengths(entries):
     """

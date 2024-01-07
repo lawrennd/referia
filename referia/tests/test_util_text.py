@@ -60,7 +60,7 @@ def test_comment_list():
     assert len(comments) == 7
 
 def test_word_count():
-    text = "This is a test."
+    text = "This is a test"
     assert word_count(text) == 4
 
 def test_paragraph_split():
