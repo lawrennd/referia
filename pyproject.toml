@@ -48,7 +48,8 @@ ndlpy = "*"
 # Note: This is just an example, you might need to adjust for actual requirements.
 gspread_pandas = { version = "*", platform = "darwin" }
 appscript = { version = "*", platform = "darwin" }
-
+# spacy models, releases are found here: https://github.com/explosion/spacy-models/releases/. See also the poetry add command in the github workflow.
+en_core_web_sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz"}
 
 [build]
 # Include if you have any build scripts, though this is rare
