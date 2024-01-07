@@ -305,7 +305,7 @@ class Compute():
             for column, new_val, missing_val in zip(columns, new_vals, missing_vals):
                 if column == "_":
                     continue
-                if refresh or missing_val and self._data.writable:
+                if refresh or missing_val and self._data.mutable:
                     self._log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
                     self._data.set_value_column(new_val, column)
   
@@ -368,13 +368,13 @@ class Compute():
             
         for compute in computes:
             field = compute["field"]
-            if self._data.iswritable(field):
+            if self._data.ismutable(field):
                 if compute["refresh"]:
                     self.run(compute, df, index, refresh=True)
                 else:                    
                     self.run(compute, df, index, refresh=False)
             else:
-                self._log.warning(f"Attempted to write to unwritable field \"{field}\"")
+                self._log.warning(f"Attempted to write to unmutable field \"{field}\"")
     
 
     def _compute_functions_list(self) -> list[dict]:

@@ -46,7 +46,7 @@ def test_render_liquid():
     # Mock data object and its liquid_to_value method
     values = {"key1" : "value1", "key2" : "value2"}
     template = "{{key1}} {{key2}}"
-    data = referia.assess.data.Data(data=[values], colspecs="data")
+    data = referia.assess.data.CustomDataFrame(data=[values], colspecs="data")
     result = render_liquid(data, template)
     assert result == "value1 value2"
     mapping = {"key1" : "key1", "key2" : "key2"}
@@ -60,7 +60,7 @@ def test_comment_list():
     assert len(comments) == 7
 
 def test_word_count():
-    text = "This is a test"
+    text = "This is a test."
     assert word_count(text) == 4
 
 def test_paragraph_split():

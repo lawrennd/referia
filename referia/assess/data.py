@@ -54,7 +54,7 @@ def automapping(columns):
         mapping[field] = column
     return mapping
 
-class Data(data.CustomDataFrame):
+class CustomDataFrame(data.CustomDataFrame):
     """Class to hold merged data flows together perform operations on them."""
     def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None, user_file="_referia.yml", directory="."):
 
@@ -97,21 +97,6 @@ class Data(data.CustomDataFrame):
             # in _finalize_df
             self._augment_column_names(self)
 
-
-    @property
-    def _readonly_data(self):
-        if self.augment:
-            return []
-        else:
-            return ["data", "global_consts"]
-
-    @property
-    def _global_data(self):
-        return ["globals", "global_consts"]
-
-    @property
-    def _series_data(self):
-        return ["writeseries"]
     
             
     @property
@@ -207,58 +192,7 @@ class Data(data.CustomDataFrame):
         if not isinstance(value, bool):
             raise ValueError(f"augment value must be boolean, set as \"{value}\"")
         self._augment = value
-        
-    @property
-    def writable(self):
-        if self.augment:
-            return True
-        if self.autocache:
-            return True
-        for typ in self._d:
-            if typ not in self._readonly_data:
-                return True
-        return False
-        
-    def _col_source(self, col):
-        """Return the source of a column."""
-        for typ, data in self._d.items():
-            if col in data.columns:
-                return typ
-        if self.autocache:
-            return "cache"
-        else:
-            return None
-        
-    def iswritable(self, col):
-        """Is a given column writable?"""
-        if self.augment:
-            return True
-        
-        if col not in self.columns:
-            if self.autocache:
-                return True
-            else:
-                return False
-
-        if self._col_source(col) in self._readonly_data:
-            return False
-        else:
-            return True
-
-    def isglobal(self, col):
-        """Is a given column writable?"""
-        if self._col_source(col) in self._global_data:
-            return True
-        else:
-            return False
-        
-    def isseries(self, col):
-        """Is a given column a series column?"""
-        if self._col_source(col) in self._series_data:
-            return True
-        else:
-            return False
-        
+                
     def _augment_global_consts(self, configs, suffix=''):
         """Augment the globals by joining the two series together."""
         if type(configs) is not list:
@@ -647,24 +581,6 @@ class Data(data.CustomDataFrame):
         """Run computation for an appended row."""
         self._compute.run_all(df=row, index=index, pre=True)
         
-    def set_column(self, column):
-        """Set the current column focus."""
-        if column == "_":
-            self._column = "_"
-            self._log.debug(f"Set column to \"_\".")
-            return
-        if column is None:
-            self._log.warning(f"Was asked to set column to None.")
-            return
-        if column not in self.columns and column!=self.index.name:
-            self._log.warning(f"Attempting to add column \"{column}\" as a set request has been given to non existent column.")
-            self.add_column(column)
-
-        if column not in self.columns and column != self.index.name:
-            errmsg = f"Cannot set column \"{column}\"  as it does not exist."
-            self._log.error(errmsg)
-            raise ValueError(errmsg)
-        self._column = column
 
     def set_selector(self, column):
         """Set which column of the series is to be used for selection."""
@@ -715,8 +631,8 @@ class Data(data.CustomDataFrame):
 
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
-        if not self.iswritable(column):
-            self._log.warning(f"Warning attempting to write to non writable column \"{column}\".")
+        if not self.ismutable(column):
+            self._log.warning(f"Warning attempting to write to non mutable column \"{column}\".")
 
         if not self.isseries(column):
             self.add_series_column(column)
@@ -755,7 +671,7 @@ class Data(data.CustomDataFrame):
         selector = self.get_selector()
         subindex = self.get_subindex()
         # If trying to set a numeric valued column's entry to a string, set the type of column to object.
-        if not self.iswritable(column):
+        if not self.ismutable(column):
             raise KeyError(f"Attempting to write to column \"{column}\" which is read only.")
         
         col_source = self._col_source(column)
@@ -774,7 +690,7 @@ class Data(data.CustomDataFrame):
     def drop_column(self, column_name):
         if column_name not in self.columns:
             raise KeyError(f"No column \"{column}\" in data object.")           
-        elif not self.iswritable(column_name):
+        elif not self.ismutable(column_name):
             raise KeyError(f"Attempting to drop column \"{column}\" in which is read only.")
         for typ, data in self._d.items():
             if not self.isglobal(column_name):
@@ -957,7 +873,7 @@ class Data(data.CustomDataFrame):
         # Handle the fact that the index is stored as a column also
         if df.index.name in row:
             row[df.index.name] = index
-        if self.writable:
+        if self.mutable:
             # Only precompute if something to write to
             self.compute_append(index=index, row=row)
         # was return df.append(row) before append deprecation
@@ -977,7 +893,7 @@ class Data(data.CustomDataFrame):
                 self._log.info(f"\"{index}\" added as row in Data._writedata.")
                 self.set_index(index)
                 return
-        self._log.warning("No writable data found to add row with index \"{index}\" to.")
+        self._log.warning("No mutable data found to add row with index \"{index}\" to.")
 
 
     def add_series_row(self, index=None):
@@ -1045,8 +961,7 @@ class Data(data.CustomDataFrame):
                 format[name] = self.get_value()
             else:
                 if column in series:
-                    format[name] = series[column]                    
-                
+                    format[name] = series[column]
         return remove_nan(format)
 
 
