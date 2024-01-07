@@ -82,7 +82,7 @@ class Data(data.CustomDataFrame):
         # Call the parent class with data, colspecs, index, column, selector
 
         # Load in compute function capability.
-        self._compute = Compute(self)
+        self._compute = Compute(self._interface, self)
         self.autocache = True
         self.augment = False
         self.load_liquid()
