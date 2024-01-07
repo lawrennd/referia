@@ -23,8 +23,8 @@ def mock_data(mocker):
 @pytest.fixture
 def compute_instance(mocker, mock_interface, mock_data):
     # Ensure that Logger is also mocked if necessary
-    with mocker.patch('ndlpy.log.Logger') as mock_logger:
-        return Compute(mock_interface, mock_data)
+    mock_locker = mocker.patch('ndlpy.log.Logger')
+    return Compute(mock_interface, mock_data)
 
 
 # Test initialization
