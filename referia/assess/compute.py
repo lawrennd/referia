@@ -3,11 +3,16 @@ import datetime
 import pandas as pd
 import liquid as lq
 
+from ndlpy.config.context import Context
+from ndlpy.log import Logger
+
 from ..config.interface import Interface
-import ndlpy
 
 from ..util.misc import add_one_to_max, return_shortest, return_longest, identity
 
+from ndlpy.util.misc import get_url_file, remove_nan
+
+from ndlpy.util.dataframe import addmonth, fillna, addyear, ascending, augmentcurrency, augmentmonth, augmentyear, columncontains, columnis, convert_datetime, convert_int, convert_string, convert_year_iso, current, descending, former, onbool, recent
 from ..util.text import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, render_liquid
 from ..util.system import most_recent_screen_shot
 from ..util.plot import bar_plot, histogram
@@ -18,9 +23,9 @@ from ..util.liquid import url_escape, markdownify, relative_url, absolute_url, t
 from ..exceptions import ComputeError
 
 
-cntxt = ndlpy.config.context.Context(name="referia")
+cntxt = Context(name="referia")
            
-log = ndlpy.log.Logger(
+log = Logger(
     name=__name__,
     level=cntxt["logging"]["level"],
     filename=cntxt["logging"]["filename"],
@@ -568,140 +573,140 @@ class Compute():
             },
             {
                 "name" : "get_url_file",
-                "function" : ndlpy.util.misc.get_url_file,
+                "function" : get_url_file,
                 "default_args": {
                 },
                 "docstr" : "Download a file with the given name.",
             },
             {
                 "name" : "addmonth",
-                "function" : ndlpy.util.dataframe.addmonth,
+                "function" : addmonth,
                 "default_args" : {
                 },
                 "docstr" : "Add month column based on source date field."
             },
             {
                 "name" : "addsupervisor",
-                "function" : ndlpy.util.dataframe.fillna, # FIXME: This is a hack
+                "function" : fillna, # FIXME: This is a hack
                 "default_args" : {
                 },
                 "docstr" : "None"
             },
             {
                 "name" : "addyear",
-                "function" : ndlpy.util.dataframe.addyear,
+                "function" : addyear,
                 "default_args" : {
                 },
                 "docstr" : "Add year column and based on source date field."
             },
             {
                 "name" : "ascending",
-                "function" : ndlpy.util.dataframe.ascending,
+                "function" : ascending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in ascending order"
             },
             {
                 "name" : "augmentcurrency",
-                "function" : ndlpy.util.dataframe.augmentcurrency,
+                "function" : augmentcurrency,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
             "name" : "augmentmonth",
-                "function" : ndlpy.util.dataframe.augmentmonth,
+                "function" : augmentmonth,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a month column based on source date field."
             },
             {
                 "name" : "augmentyear",
-                "function" : ndlpy.util.dataframe.augmentyear,
+                "function" : augmentyear,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a year column based on source date field."
             },
             {
                 "name" : "columncontains",
-                "function" : ndlpy.util.dataframe.columncontains,
+                "function" : columncontains,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column contains a given value"
             },
             {
                 "name" : "columnis",
-                "function" : ndlpy.util.dataframe.columnis,
+                "function" : columnis,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is equal to a given value"
             },
             {
                 "name" : "convert_datetime",
-                "function" : ndlpy.util.dataframe.convert_datetime,
+                "function" : convert_datetime,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set datetime type on columns."
             },
             {
                 "name" : "convert_int",
-                "function" : ndlpy.util.dataframe.convert_int,
+                "function" : convert_int,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
                 "name" : "convert_string",
-                "function" : ndlpy.util.dataframe.convert_string,
+                "function" : convert_string,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "convert_year_iso",
-                "function" : ndlpy.util.dataframe.convert_year_iso,
+                "function" : convert_year_iso,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "current",
-                "function" : ndlpy.util.dataframe.current,
+                "function" : current,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "descending",
-                "function" : ndlpy.util.dataframe.descending,
+                "function" : descending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in descending order"
             },
             {
                 "name" : "former",
-                "function" : ndlpy.util.dataframe.former,
+                "function" : former,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "onbool",
-                "function" : ndlpy.util.dataframe.onbool,
+                "function" : onbool,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column is positive (or negative if inverted)"
             },
             {
                 "name" : "recent",
-                "function" : ndlpy.util.dataframe.recent,
+                "function" : recent,
                 "default_args" : {
                 },
                 "docstr" : "Filter on year of item"
             },
             {
                 "name" : "remove_nan",
-                "function" : ndlpy.util.misc.remove_nan,
+                "function" : remove_nan,
                 "default_args" : {
                 },
                 "docstr" : "Delete missing entries from dictionary"
