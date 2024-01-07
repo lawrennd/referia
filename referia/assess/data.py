@@ -3,7 +3,6 @@ import os
 import re
 
 import pandas as pd
-import liquid as lq
 
 import datetime
 
@@ -72,7 +71,6 @@ class CustomDataFrame(data.CustomDataFrame):
 
         # Call the parent class with data, colspecs, index, column, selector
 
-        self.autocache = True
         self.augment = False
         self._compute = None
         super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex)
