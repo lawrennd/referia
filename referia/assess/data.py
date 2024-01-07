@@ -25,6 +25,13 @@ from ..util.liquid import url_escape, markdownify, relative_url, absolute_url, t
 from ..config import interface
 
 
+log = Logger(
+    name=__name__,
+    level=self._cntxt["logging"]["level"],
+    filename=self._cntxt["logging"]["filename"],
+    directory = self._directory,            
+)
+
 
 def empty(val):
     """
@@ -56,28 +63,14 @@ def automapping(columns):
 
 class CustomDataFrame(data.CustomDataFrame):
     """Class to hold merged data flows together perform operations on them."""
-    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None, user_file="_referia.yml", directory="."):
+    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None):
 
-        self._directory = directory
-        self._user_file = user_file
-        self._cntxt = Context(name="referia")
-        self._interface = interface.Interface.from_file(user_file=self._user_file,
-                                           directory=self._directory)
         self._name_column_map = {}
         self._column_name_map = {}
-        if "mapping" in self._interface:
-            for name, column in self._interface["mapping"].items():
-                self.update_name_column_map(column=column, name=name)
 
         self._index = index
         self._column = column
         self._selector = selector
-        self.log = Logger(
-            name=__name__,
-            level=self._cntxt["logging"]["level"],
-            filename=self._cntxt["logging"]["filename"],
-            directory = self._directory,            
-        )
 
         # Call the parent class with data, colspecs, index, column, selector
 
@@ -168,18 +161,6 @@ class CustomDataFrame(data.CustomDataFrame):
     def _global_consts(self, value):
         self._d["global_consts"] = value
 
-    
-    @property
-    def autocache(self):
-        if self._autocache:
-            return True
-        else:
-            return False
-    @autocache.setter
-    def autocache(self, value):
-        if not isinstance(value, bool):
-            raise ValueError(f"autocache value must be boolean, set as \"{value}\"")
-        self._autocache = value
 
     @property
     def augment(self):
@@ -443,8 +424,8 @@ class CustomDataFrame(data.CustomDataFrame):
     def load_flows(self):
         """Load the input and output flows."""
         autocache = self.autocache
-        #self.autocache = False
-        #self.load_input_flows()
+        self.autocache = False
+        self.load_input_flows()
         self.load_output_flows()
         self.augment = True
         self.preprocess()

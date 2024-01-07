@@ -44,7 +44,7 @@ google-auth-oauthlib = "*"
 pypandoc = "*"
 pypdftk = "*"
 pdfannots = "*"
-your-package-name = { git = "https://github.com/lawrennd/ndlpy.git" }
+ndlpy = { git = "https://github.com/lawrennd/ndlpy.git" }
 #ndlpy = "*"
 # You can include platform-specific dependencies like this:
 # Note: This is just an example, you might need to adjust for actual requirements.
