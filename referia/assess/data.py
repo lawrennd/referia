@@ -18,18 +18,16 @@ from ndlpy.util.misc import to_camel_case, remove_nan, is_valid_var
 from ..config.interface import Interface
 from .compute import Compute
 
-
 from ..util.misc import renderable
-from ..util.liquid import url_escape, markdownify, relative_url, absolute_url, to_i
 
 from ..config import interface
 
 
+cntxt = Context()
 log = Logger(
     name=__name__,
-    level=self._cntxt["logging"]["level"],
-    filename=self._cntxt["logging"]["filename"],
-    directory = self._directory,            
+    level=cntxt["logging"]["level"],
+    filename=cntxt["logging"]["filename"],
 )
 
 
@@ -74,24 +72,41 @@ class CustomDataFrame(data.CustomDataFrame):
 
         # Call the parent class with data, colspecs, index, column, selector
 
-        # Load in compute function capability.
-        self._compute = Compute(self._interface, self)
         self.autocache = True
         self.augment = False
-        self.load_liquid()
-        self.add_liquid_filters()
+        self._compute = None
+        super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex)
+        # Pass self to augment column names. This is needed for
+        # the liquid filters. May be removable if this can be set
+        # in _finalize_df
+        self._augment_column_names(self)
 
-        if data is None:
-            self.load_flows()
-        else:
-            super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex)
-            # Pass self to augment column names. This is needed for
-            # the liquid filters. May be removable if this can be set
-            # in _finalize_df
-            self._augment_column_names(self)
 
-    
-            
+    @property
+    def compute(self):
+        """
+        Return the compute object.
+
+        :return: The compute object.
+        :rtype: Compute
+        """
+        return self._compute
+
+    @compute.setter
+    def compute(self, value):
+        """
+        Set the compute object.
+
+        :param value: The compute object.
+        :type value: Compute
+        :return: None
+        """
+        if not isinstance(value, Compute):
+            raise TypeError("compute must be of type Compute")
+        self._compute = value
+
+
+                        
     @property
     def _data(self):
         if len(self._d)>0:
@@ -196,7 +211,7 @@ class CustomDataFrame(data.CustomDataFrame):
                                 self.update_name_column_map(column=cname, name=cname)
                 else:
                     errmsg = f"In global_consts a \"local\" specification must contain a dictionary of fields and values."
-                    self._log.error(errmsg)
+                    log.error(errmsg)
                     raise ValueError(errmsg)
             else:
 
@@ -235,7 +250,7 @@ class CustomDataFrame(data.CustomDataFrame):
                                 self.update_name_column_map(column=cname, name=cname)
                 else:
                     errmsg = "\"local\" specified in config but not in form of a dictionary."
-                    self._log.error(errmsg)
+                    log.error(errmsg)
                     raise ValueError(errmsg)
             else:
                 df = self._finalize_df(*access.io.read_data(conf))
@@ -260,7 +275,7 @@ class CustomDataFrame(data.CustomDataFrame):
                 strindex = pd.Series([str(ind) for ind in df.index])
                 duplicates = ', '.join(strindex[df.index.duplicated()])
                 errmsg = f"The index for the incorporated data frame \"{i}\" must be unique. Index \"{duplicates}\" is/are duplicated."
-                self._log.error(errmsg)
+                log.error(errmsg)
                 raise ValueError(errmsg)
 
     def _remove_index_duplicates(self):
@@ -286,12 +301,12 @@ class CustomDataFrame(data.CustomDataFrame):
         :return: None
         """
         # Augment the data with default augmentation as "outer"
-        if "allocation" in self._interface:
-            self._augment_data(self._interface["allocation"], how="outer", concat=True, axis=0)
+        if "allocation" in self.interface:
+            self._augment_data(self.interface["allocation"], how="outer", concat=True, axis=0)
             self._remove_index_duplicates()
         else:
             errmsg = f"No \"allocation\" field in config file."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(f"No \"allocation\" field in config file.")
             
     def _load_additional(self):
@@ -301,52 +316,52 @@ class CustomDataFrame(data.CustomDataFrame):
         :return: None
         """
         # Augment the data with default augmentation as "inner"
-        if "additional" in self._interface:
-            self._augment_data(self._interface["additional"], how="inner", concat=False, suffix="_{joinNo}")
+        if "additional" in self.interface:
+            self._augment_data(self.interface["additional"], how="inner", concat=False, suffix="_{joinNo}")
 
     def _load_globals(self):
         """Load in any global variables to a data series."""
-        if "select" in self._interface["globals"]:
-            index_row = self._interface["globals"]["select"]
+        if "select" in self.interface["globals"]:
+            index_row = self.interface["globals"]["select"]
         else:
             index_row = "globals"
             
-        df = self._finalize_df(*access.io.globals_data(self._interface["globals"], pd.Index([index_row], name="index")), strict_columns=True)
+        df = self._finalize_df(*access.io.globals_data(self.interface["globals"], pd.Index([index_row], name="index")), strict_columns=True)
         self._globals = df
         self._globals_index = index_row
 
     def _load_cache(self):
         """Load in any cached data to data frames."""
-        df = self._finalize_df(*access.io.cache(self._interface["cache"], self.index), strict_columns=True)
+        df = self._finalize_df(*access.io.cache(self.interface["cache"], self.index), strict_columns=True)
         if df.index.is_unique:
             self._cache = df
         else:
             strindex = pd.Series([str(ind) for ind in df.index])
             duplicates = ', '.join(strindex[df.index.duplicated()])
             errmsg = f"The index for the cache must be unique. Index \"{duplicates}\" is/are duplicated."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(errmsg)
         
     def _load_scores(self):
         """Load in the score data to data frames."""
-        df = self._finalize_df(*access.io.scores(self._interface["scores"], self.index))
+        df = self._finalize_df(*access.io.scores(self.interface["scores"], self.index))
         if df.index.is_unique:
             self._writedata = df
         else:
             strindex = pd.Series([str(ind) for ind in df.index])
             duplicates = ', '.join(strindex[df.index.duplicated()])
             errmsg = f"The index for writedata must be unique. Index \"{duplicates}\" is/are duplicated."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(errmsg)
 
     def _load_series(self):
         """Load in the series data to data frames."""
-        if "selector" not in self._interface["series"]:
-            self._log.error(errmsg)
+        if "selector" not in self.interface["series"]:
+            log.error(errmsg)
             errmsg = f"A series entry must have a \"selector\" column."
             raise ValueError(errmsg)
-        self._writeseries = self._finalize_df(*access.io.series(self._interface["series"], self.index))
-        selector = self._interface["series"]["selector"]
+        self._writeseries = self._finalize_df(*access.io.series(self.interface["series"], self.index))
+        selector = self.interface["series"]["selector"]
         if selector not in self._writeseries.columns:
             self._writeseries[selector] = None
             
@@ -354,8 +369,8 @@ class CustomDataFrame(data.CustomDataFrame):
 
     def sort_series(self):
         """Sort the series by the column specified."""
-        if "series" in self._interface:
-            series = self._interface["series"]
+        if "series" in self.interface:
+            series = self.interface["series"]
         else:
             return
         if "sortby" in series and "field" in series["sortby"] and series["sortby"]["field"] in self._writeseries:
@@ -364,7 +379,7 @@ class CustomDataFrame(data.CustomDataFrame):
             else:
                 ascending=True
             field=series["sortby"]["field"]
-            self._log.debug(f"Sorting series by \"{field}\"")
+            log.debug(f"Sorting series by \"{field}\"")
             self._writeseries.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_input_flows(self):
@@ -374,8 +389,8 @@ class CustomDataFrame(data.CustomDataFrame):
         :return: None
         """
         self._load_allocation()
-        if "additional" in self._interface:
-            self._log.debug("Joining allocation and additional information.")
+        if "additional" in self.interface:
+            log.debug("Joining allocation and additional information.")
             self._load_additional()
 
         # If sorting is requested do it here.
@@ -384,18 +399,18 @@ class CustomDataFrame(data.CustomDataFrame):
 
     def _load_global_consts(self):
         """Load constants from the _referia.yml file."""
-        if "global_consts" in self._interface:
-            self._augment_global_consts(self._interface["global_consts"])
+        if "global_consts" in self.interface:
+            self._augment_global_consts(self.interface["global_consts"])
                     
         
     def sort_data(self):
-        if "sortby" in self._interface and "field" in self._interface["sortby"] and self._interface["sortby"]["field"] in self.columns:
-            if "ascending" in self._interface["sortby"]:
-                ascending = self._interface["sortby"]["ascending"]
+        if "sortby" in self.interface and "field" in self.interface["sortby"] and self.interface["sortby"]["field"] in self.columns:
+            if "ascending" in self.interface["sortby"]:
+                ascending = self.interface["sortby"]["ascending"]
             else:
                 ascending=True
-            field=self._interface["sortby"]["field"]
-            self._log.debug(f"Sorting by \"{field}\"")
+            field=self.interface["sortby"]["field"]
+            log.debug(f"Sorting by \"{field}\"")
             self.sort_values(by=field, ascending=ascending, inplace=True)
 
     def load_output_flows(self):
@@ -408,16 +423,16 @@ class CustomDataFrame(data.CustomDataFrame):
         Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index.
 
         """
-        if "globals" in self._interface:
+        if "globals" in self.interface:
             self._globals = None
             self._load_globals()
-        if "cache" in self._interface:
+        if "cache" in self.interface:
             self._cache = None
             self._load_cache()
-        if "scores" in self._interface:
+        if "scores" in self.interface:
             self._writedata = None
             self._load_scores()
-        if "series" in self._interface:
+        if "series" in self.interface:
             self._writeseries = None
             self._load_series()
 
@@ -435,47 +450,18 @@ class CustomDataFrame(data.CustomDataFrame):
     def save_flows(self):
         """Save the output flows."""
         if self._globals is not None:
-            self._log.debug(f"Writing _globals.")
-            access.io.write_globals(self._globals, self._interface)
+            log.debug(f"Writing _globals.")
+            access.io.write_globals(self._globals, self.interface)
         if self._cache is not None:
-            self._log.debug(f"Writing _cache.")
-            access.io.write_cache(self._cache, self._interface)
+            log.debug(f"Writing _cache.")
+            access.io.write_cache(self._cache, self.interface)
         if self._writedata is not None:
-            self._log.debug(f"Writing _writedata.")
-            access.io.write_scores(self._writedata, self._interface)
+            log.debug(f"Writing _writedata.")
+            access.io.write_scores(self._writedata, self.interface)
         if self._writeseries is not None:
-            access.io.write_series(self._writeseries, self._interface)
-            self._log.debug(f"Writing _writeseries.")
+            access.io.write_series(self._writeseries, self.interface)
+            log.debug(f"Writing _writeseries.")
 
-    def load_liquid(self):
-        """Load the liquid environment."""
-        loader = None
-        if "liquid" in self._interface:
-            if "templates" in self._interface["liquid"]:
-                if "dir" in self._interface["liquid"]["templates"]:
-                    templates_path = [os.path.abspath(self._interface["liquid"]["templates"])]
-                else:
-                    template_path = [
-                        os.path.join(os.path.dirname(__file__), "templates"),
-                    ]
-
-                    if "ext" in self._interface["liquid"]:
-                        ext = self._interface["liquid"]["ext"]
-                        loader = lq.loaders.FileExtensionLoader(search_path=template_path, ext=ext)
-                    else:
-                        loader = lq.FileSystemLoader(template_path)
-            elif "dict" in self._interface["liquid"]["templates"]:
-                loader = lq.loaders.DictLoader(self._interface["liquid"]["templates"]["dict"])
-        self._liquid_env = lq.Environment(loader=loader)
-
-
-    def add_liquid_filters(self):
-        """Add liquid filters to the liquid environment."""
-        self._liquid_env.add_filter("url_escape", url_escape)
-        self._liquid_env.add_filter("markdownify", markdownify)
-        self._liquid_env.add_filter("relative_url", relative_url)
-        self._liquid_env.add_filter("absolute_url", absolute_url)
-        self._liquid_env.add_filter("to_i", to_i)
         
     def set_index(self, value):
         """Index setter"""
@@ -485,15 +471,15 @@ class CustomDataFrame(data.CustomDataFrame):
             if orig_index in self.index:
                 self.compute_post()
         if value is None:
-            self._log.warning(f"Was asked to set index to None.")
+            log.warning(f"Was asked to set index to None.")
             return
         if value not in self.index:
-            self._log.warning(f"Index \"{value}\" not found in _data")
+            log.warning(f"Index \"{value}\" not found in _data")
             self.add_row(index=value)
             self.set_index(value)
         else:
             self._index = value
-            self._log.debug(f"Index \"{value}\" selected.")
+            log.debug(f"Index \"{value}\" selected.")
             self.check_or_set_subseries()
         # If index has changed, run computes.
         if orig_index is None or self._index != orig_index:
@@ -517,30 +503,30 @@ class CustomDataFrame(data.CustomDataFrame):
         """Subindex setter"""
         if subindex is None:
             self._subindex = None
-            self._log.debug(f"Subindex set to None.")
+            log.debug(f"Subindex set to None.")
             return
 
         if self._writeseries is not None and subindex not in self.get_subindices():
             index = self.get_index()
             errmsg = f"Subindex \"{subindex}\" under \"{index}\" not available in current series."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(errmsg)
         else:
             self._subindex=subindex
-            self._log.debug(f"Subindex \"{subindex}\" selected.")
+            log.debug(f"Subindex \"{subindex}\" selected.")
 
 
     def get_index(self):
         if self._index is None and len(self.index)>0:
-            self._log.debug(f"No index set, using first index of data.")
+            log.debug(f"No index set, using first index of data.")
             self.set_index(self.index[0])
         return self._index
 
     def _strict_columns(self, group):
-        if "strict_columns" in self._interface:
-            return self._interface["strict_columns"]
-        elif "strict_columns" in self._interface[group]:
-            return self._interface[group]["strict_columns"]
+        if "strict_columns" in self.interface:
+            return self.interface["strict_columns"]
+        elif "strict_columns" in self.interface[group]:
+            return self.interface[group]["strict_columns"]
         elif group=="cache" or group=="globals":
             return True
         else:
@@ -548,36 +534,40 @@ class CustomDataFrame(data.CustomDataFrame):
 
     def preprocess(self):
         """Run any preprocessing computations."""
-        self._compute.preprocess()
+        if self.compute is not None:
+            self.compute.preprocess()
 
     def compute_pre(self):
         """Run pre-computation on the index."""
-        self._compute.run_all(pre=True)
+        if self.compute is not None:
+            self.compute.run_all(pre=True)
         
     def compute_post(self):
         """Run post-computation on the index."""
-        self._compute.run_all(post=True)
+        if self.compute is not None:
+            self.compute.run_all(post=True)
 
     def compute_append(index, row):
         """Run computation for an appended row."""
-        self._compute.run_all(df=row, index=index, pre=True)
+        if self.compute is not None:
+            self.compute.run_all(df=row, index=index, pre=True)
         
 
     def set_selector(self, column):
         """Set which column of the series is to be used for selection."""
         # Set to None to indicate that self._writedata is correct place for recording.
         if column is None:
-            self._log.warning(f"No column selected for selector, setting to \"None\".")
+            log.warning(f"No column selected for selector, setting to \"None\".")
             self._selector = None
             return
 
         if column not in self.get_selectors():
-            self._log.info(f"Column \"{column}\" of chosen for selection not in Data._writeseries ... adding.")
+            log.info(f"Column \"{column}\" of chosen for selection not in Data._writeseries ... adding.")
             self.add_column(column)
             self.set_selector(column)
         else:
             self._selector = column
-            self._log.debug(f"Column \"{column}\" of Data._writeseries selected for selection.")
+            log.debug(f"Column \"{column}\" of Data._writeseries selected for selection.")
             if self.get_subindex() not in self._writeseries[column]:
                 self.set_subindex(None)
 
@@ -590,10 +580,10 @@ class CustomDataFrame(data.CustomDataFrame):
         subindices = self.get_subindices()
         if len(subindices)>0:
             index = self.get_index()
-            self._log.debug(f"No subindex set, using first entry of portion of Data._writeseries indexed by \"{index}\".")
+            log.debug(f"No subindex set, using first entry of portion of Data._writeseries indexed by \"{index}\".")
             self.set_subindex(subindices[0])
         else:
-            self._log.info(f"No subindex available.")
+            log.info(f"No subindex available.")
             self.add_series_row()
 
     def generate_subindex(self):
@@ -613,7 +603,7 @@ class CustomDataFrame(data.CustomDataFrame):
     def set_series_value(self, value, column):
         """Set a value in the write series data frame"""
         if not self.ismutable(column):
-            self._log.warning(f"Warning attempting to write to non mutable column \"{column}\".")
+            log.warning(f"Warning attempting to write to non mutable column \"{column}\".")
 
         if not self.isseries(column):
             self.add_series_column(column)
@@ -676,11 +666,11 @@ class CustomDataFrame(data.CustomDataFrame):
         for typ, data in self._d.items():
             if not self.isglobal(column_name):
                 if column_name in data.columns:
-                    self._log.debug(f"Dropping column \"{column_name}\" from _{typ}.")
+                    log.debug(f"Dropping column \"{column_name}\" from _{typ}.")
                     self._d[typ].drop(column_name, axis=1, inplace=True)
             else:
                 if column_name in data.index:
-                    self._log.debug(f"Dropping value \"{column_name}\" from _{typ}.")
+                    log.debug(f"Dropping value \"{column_name}\" from _{typ}.")
                     self._d[typ].drop(column_name, inplace=True)
 
     def filter_rows(self, condition):
@@ -695,10 +685,10 @@ class CustomDataFrame(data.CustomDataFrame):
         """Return the value of an element from the under focus cell (e.g. a list entry or a dict entry)."""
         value = self.get_value()
         if type(element) is int and type(value) is not list:
-            self._log.warning(f"Attempt to get element of a non list entry with an element \"{element}\" that is an integer.")
+            log.warning(f"Attempt to get element of a non list entry with an element \"{element}\" that is an integer.")
             return None
         elif type(element) is str and type(value) is not dict:
-            self._log.warning(f"Attempt to get element of a non dictionary entry with an element \"{element}\" that is a string.")
+            log.warning(f"Attempt to get element of a non dictionary entry with an element \"{element}\" that is a string.")
             return None
         else:
             if type(element) is int and not len(value)>element:
@@ -711,11 +701,11 @@ class CustomDataFrame(data.CustomDataFrame):
         """Set the value of an element from the under focus cell (e.g. a list entry or a dict entry)."""
         orig_value = self.get_value()
         if type(element) is int and type(orig_value) is not list:
-            self._log.warning("Value wasn't a list and element was set as integer, so converting to a list.")
+            log.warning("Value wasn't a list and element was set as integer, so converting to a list.")
             orig_value = [orig_value]
             
         elif type(element) is str and type(orig_value) is not dict:
-            self._log.warning("Value wasn't a dictionary and element was set as string, so converting to a dictionary.")
+            log.warning("Value wasn't a dictionary and element was set as string, so converting to a dictionary.")
             orig_value = {"original": orig_value}
 
         if type(element) is int and not len(orig_value)>element:
@@ -744,10 +734,10 @@ class CustomDataFrame(data.CustomDataFrame):
             if indexer.sum()>0:
                 return self._writeseries.loc[indexer, column]
             else:
-                self._log.warning(f"No data available with this index returning None.")
+                log.warning(f"No data available with this index returning None.")
                 return None
         else:
-            self._log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
+            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
             return None
 
     def get_value(self):
@@ -777,9 +767,9 @@ class CustomDataFrame(data.CustomDataFrame):
                 if indexer.sum()>0:
                     return self._writeseries.loc[indexer, column].iloc[0]
                 else:
-                    self._log.warning(f"No data available with this subindex and index , returning None.")
+                    log.warning(f"No data available with this subindex and index , returning None.")
             else:
-                self._log.warning(f"No subindex selected, returning None.")
+                log.warning(f"No subindex selected, returning None.")
         elif self._writedata is not None and column in self._writedata.columns:
             if index in self._data.index and not index in self._writedata.index:
                 # If index isn't created in write data yet, return None.
@@ -804,49 +794,49 @@ class CustomDataFrame(data.CustomDataFrame):
         elif self._data is not None and column==self._data.index.name:
             return index
         else:
-            self._log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._cache or in self._data returning \"None\"")
+            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._cache or in self._data returning \"None\"")
             return None
 
     def add_column(self, column, data=None):
         if column in self.columns:
             errmsg = f"Was requested to add column \"{column}\" but it already exists in data."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(errmsg)
         if self._writedata is None and self._writeseries is None:
             errmsg = f"There is no _writedata or _writeseries loaded to add the column \"{column}\" to."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(errmsg)
 
         if self._writeseries is not None and column in self._writeseries.columns:
-            self._log.warning(f"\"{column}\" requested to be added but it already exists in _writeseries.")
+            log.warning(f"\"{column}\" requested to be added but it already exists in _writeseries.")
             return
 
         if self._writedata is not None and column in self._writedata.columns:
-            self._log.warning(f"\"{column}\" requested to be added but it already exists in _writedata.")
+            log.warning(f"\"{column}\" requested to be added but it already exists in _writedata.")
             return
         
         if self._writeseries is not None and column not in self._writeseries.columns:
             if not self._strict_columns("series"):
-                self._log.info(f"\"{column}\" not in writeseries columns ... adding.")
+                log.info(f"\"{column}\" not in writeseries columns ... adding.")
                 self._writeseries[column] = data
                 return
         
         if self._writedata is not None and column not in self._writedata.columns:
             if not self._strict_columns("scores"):
-                self._log.info(f"\"{column}\" not in write columns ... adding.")
+                log.info(f"\"{column}\" not in write columns ... adding.")
                 self._writedata[column] = data
                 return
         errmsg = f"Cannot add column \"{column}\" to either scores or series due to strict_columns being set and/or series or scores not being present."
-        self._log.error(errmsg)
+        log.error(errmsg)
         raise ValueError(errmsg)
 
     def set_dtype(self, column, dtype):
         """Set a Data._writedata column to the given data type."""
         if self._writedata is not None and column in self._writedata.columns:
-            self._log.debug(f"\"{column}\" being set to \"{dtype}\".")
+            log.debug(f"\"{column}\" being set to \"{dtype}\".")
             self._writedata[column] = self._writedata[column].astype(dtype)
         if self._writeseries is not None and column in self._writeseries.columns:
-            self._log.debug(f"\"{column}\" being set to \"{dtype}\".")
+            log.debug(f"\"{column}\" being set to \"{dtype}\".")
             self._writeseries[column] = self._writeseries[column].astype(dtype)
 
     def _append_row(self, df, index):
@@ -865,16 +855,16 @@ class CustomDataFrame(data.CustomDataFrame):
         if index is None:
             index = self.get_index()
         if index is None:
-            self._log.warning("No index set to add row to.")
+            log.warning("No index set to add row to.")
             return
         selector = self.get_selector()
         for typ, data in self._d.items():
             if typ in self.types["output"] or typ in self.types["cache"]:
                 data = self._append_row(data, index)
-                self._log.info(f"\"{index}\" added as row in Data._writedata.")
+                log.info(f"\"{index}\" added as row in Data._writedata.")
                 self.set_index(index)
                 return
-        self._log.warning("No mutable data found to add row with index \"{index}\" to.")
+        log.warning("No mutable data found to add row with index \"{index}\" to.")
 
 
     def add_series_row(self, index=None):
@@ -882,16 +872,16 @@ class CustomDataFrame(data.CustomDataFrame):
         if index is None:
             index = self.get_index()
         self._writeseries = self._append_row(self._writeseries, index)
-        self._log.info(f"\"{index}\" added subseries row in Data._writeseries.")
+        log.info(f"\"{index}\" added subseries row in Data._writeseries.")
 
 
     def add_series_column(self, column):
         """Add a column to the data series"""
         if column not in self._writeseries.columns:
-            self._log.info(f"\"{column}\" not in series columns ... adding.")
+            log.info(f"\"{column}\" not in series columns ... adding.")
             self._writeseries[column] = None
         else:
-            self._log.warning(f"\"{column}\" requested to be added to series data but already exists.")
+            log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
     def update_name_column_map(self, name, column):
         """
@@ -905,7 +895,7 @@ class CustomDataFrame(data.CustomDataFrame):
         if column in self._column_name_map and self._column_name_map[column] != name:
             original_name = self._column_name_map[column]
             errmsg = f"Column \"{column}\" already exists in the name-column map and there's an attempt to update its value to \"{name}\" when it's original value was \"{original_name}\" and that would lead to unexpected behaviours. Try looking to see if you're setting column values to different names across different files and/or file loaders."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(errmsg)
         self._name_column_map[name] = column
         self._column_name_map[column] = name
@@ -974,7 +964,7 @@ class CustomDataFrame(data.CustomDataFrame):
                     return self.get_value_column(view["field"])
                 if "join" in view:
                     if "list" not in view["join"]:
-                        self._log.warning("No field \"list\" in \"concat\" viewer.")
+                        log.warning("No field \"list\" in \"concat\" viewer.")
                     elements = self.view_to_value(view["join"], kwargs, local)
                     if "separator" in view["join"]:
                         sep = view["join"]["separator"]
@@ -1018,7 +1008,7 @@ class CustomDataFrame(data.CustomDataFrame):
                     return values
                 if "join" in view:
                     if "list" not in view["join"]:
-                        self._log.warning("No field \"list\" in \"concat\" viewer.")
+                        log.warning("No field \"list\" in \"concat\" viewer.")
                     elements = self.view_to_value(view["join"], kwargs)
                     if "separator" in view["join"]:
                         sep = view["join"]["separator"]
@@ -1052,7 +1042,7 @@ class CustomDataFrame(data.CustomDataFrame):
         elif "join" in view:
             name = "join_"
             if "list" not in view["join"]:
-                self._log.warning("No field \"list\" in \"concat\" viewer.")
+                log.warning("No field \"list\" in \"concat\" viewer.")
             name += self.view_to_tmpname(view["join"])
             return name
         elif "compute" in view:
@@ -1110,8 +1100,8 @@ class CustomDataFrame(data.CustomDataFrame):
 
     def compute_to_value(self, compute):
         """Extract a value from a computation"""
-        compute_prep = self._compute.prep(compute)
-        return self._compute.run(compute_prep)
+        compute_prep = self.compute.prep(compute)
+        return self.compute.run(compute_prep)
     
     def compute_to_tmpname(self, compute):
         """Convert a display string to a temp name"""
@@ -1123,11 +1113,15 @@ class CustomDataFrame(data.CustomDataFrame):
 
     
     def liquid_to_value(self, display, kwargs=None, local={}):
+        if self.compute is None:
+            log.warning("Compute needs to be initialised before liquid_to_value is called.")
+            return ""
+        
         if kwargs is None or kwargs=={}:
             kwargs = self.mapping()
         kwargs.update(local)
         try:
-            return self._liquid_env.from_string(display).render(**remove_nan(kwargs))
+            return self.compute._liquid_env.from_string(display).render(**remove_nan(kwargs))
         except Exception as err:
             raise Exception(f"In {display}\n\n {err}") from err
 
@@ -1178,7 +1172,7 @@ class CustomDataFrame(data.CustomDataFrame):
             try:
                 return pd.Index([subindices[ind]], dtype=subindices.dtypegg)
             except IndexError as e:
-                self._log.warning(f"Requested invalid index in Data.tally_series()")
+                log.warning(f"Requested invalid index in Data.tally_series()")
                 return pd.Index([subindices[cur_loc]], dtype=subindices.dtype)
 
         def subind_series(ind, starter=True, reverse=False):
@@ -1189,7 +1183,7 @@ class CustomDataFrame(data.CustomDataFrame):
                     return pd.Index(subindices[:ind], dtype=subindices.dtype)
 
             except IndexError as e:
-                self._log.warning(f"Requested invalid index in Data.tally_series()")
+                log.warning(f"Requested invalid index in Data.tally_series()")
                 if starter:
                     return pd.Index(subindices[cur_loc:], dtype=subindices.dtype)
                 else:
@@ -1220,7 +1214,7 @@ class CustomDataFrame(data.CustomDataFrame):
             return subindices
         else:
             errmsg = "Unrecognised subindices specifier in tally."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(errmsg)
 
     def _column_from_renderable(self, df, **kwargs):
@@ -1250,7 +1244,7 @@ class CustomDataFrame(data.CustomDataFrame):
                     self.set_index(index)
                 #except ValueError as err:
                 #    errmsg = f"Could not set index, \"{index}\", likely due to allocation augmentation."
-                #    self._log.error(errmsg)
+                #    log.error(errmsg)
                 #    raise ValueError(errmsg)
                     
                     
@@ -1274,10 +1268,10 @@ class CustomDataFrame(data.CustomDataFrame):
             )
             if match:
                 if len(match.groups())>1:
-                    self._log.warning(f"Multiple regular expression matches in \"{regexp}\".")
+                    log.warning(f"Multiple regular expression matches in \"{regexp}\".")
                 series[index] = match.group(1)
             else:
-                self._log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
+                log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
         return series
 
 
@@ -1288,7 +1282,7 @@ class CustomDataFrame(data.CustomDataFrame):
                 data[field].fillna("", inplace=True)"""
         if "index" not in details:
             errmsg = "Missing index field in data frame specification in _referia.yml"
-            self._log.errmsg(errmsg)
+            log.errmsg(errmsg)
             raise ValueError(errmsg)
 
         if "columns" in details:
@@ -1296,10 +1290,10 @@ class CustomDataFrame(data.CustomDataFrame):
             for column in details["columns"]:
                 if column not in df.columns:
                     df[column] = None
-            if strict_columns or ("strict_columns" in self._interface and self._interface["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
+            if strict_columns or ("strict_columns" in self.interface and self.interface["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
                 if "columns" not in details:
                     errmsg = f"You can't have strict_columns set to True and not list the columns in the details structure."
-                    self._log.error(errmsg)
+                    log.error(errmsg)
                     raise ValueError(errmsg)
                 if type(details["index"]) is str:
                     index_column_name = details["index"]
@@ -1308,17 +1302,17 @@ class CustomDataFrame(data.CustomDataFrame):
                         index_column_name = details["index"]["name"]
                     else:
                         errmsg = f"Missing name in index dictionary."
-                        self._log.error(errmsg)
+                        log.error(errmsg)
                         raise ValueError(errmsg)
                 else:
                     errmsg = f"Incorrect form of index."
-                    self._log.error(errmsg)
+                    log.error(errmsg)
                     raise ValueError(errmsg)
                     
                 for column in df.columns:
                     if column not in details["columns"] and column!=index_column_name:
                         errmsg = f"DataFrame contains column: \"{column}\" which is not in the columns list of the specification and strict_columns is set to True."
-                        self._log.error(errmsg)
+                        log.error(errmsg)
                         raise ValueError(errmsg)
                     
 
@@ -1338,7 +1332,7 @@ class CustomDataFrame(data.CustomDataFrame):
                     if "set_selector" in details:
                         df[field] = details["set_selector"]
                     self._selector = field 
-                    self._log.warning(f"No selector column \"{field}\" found in data frame.")
+                    log.warning(f"No selector column \"{field}\" found in data frame.")
             elif type(field) is dict:
                 if "name" in field:
                     if renderable(field):
@@ -1353,11 +1347,11 @@ class CustomDataFrame(data.CustomDataFrame):
                             self.update_name_column_map(column=cname, name=cname)
                         else:
                             errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
-                            self._log.error(errmsg)
+                            log.error(errmsg)
                             raise ValueError(errmsg)
                     self._selector = cname
                 else:
-                    self._log.warning(f"No \"name\" associated with selector entry.")
+                    log.warning(f"No \"name\" associated with selector entry.")
         
         if "index" in details:            
             field = details["index"]
@@ -1379,7 +1373,7 @@ class CustomDataFrame(data.CustomDataFrame):
                         self.update_name_column_map(column=cname, name=cname)
                     else:
                         errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
-                        self._log.error(errmsg)
+                        log.error(errmsg)
                         raise ValueError(errmsg)
                 index_column_name = field["name"]
 
@@ -1402,7 +1396,7 @@ class CustomDataFrame(data.CustomDataFrame):
                     elif "value" in field:
                         column = self._series_from_value(df, **field)
                     else:
-                        self._log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\", \"liquid\", \"display\", (for renderable fields) in fields.")
+                        log.warning(f"Missing \"source\" or \"regexp\" (for regular expression derived fields) or \"value\", \"liquid\", \"display\", (for renderable fields) in fields.")
                         
                     cname = field["name"]
                     df[cname] = column
@@ -1411,11 +1405,11 @@ class CustomDataFrame(data.CustomDataFrame):
                             self.update_name_column_map(column=cname, name=cname)
                         else:
                             errmsg = f"Column \"{cname}\" is not a valid variable name and there is no mapping entry to provide an alternative. Please add a mapping entry to provide a valid variable name to use as proxy for \"{cname}\"."
-                            self._log.error(errmsg)
+                            log.error(errmsg)
                             raise ValueError(errmsg)
                     
                 else:
-                    self._log.warning(f"No \"name\" associated with field entry.")
+                    log.warning(f"No \"name\" associated with field entry.")
 
         # If it's a series post-process by creating entries field.
         if "series" in details and details["series"]:
@@ -1425,10 +1419,10 @@ class CustomDataFrame(data.CustomDataFrame):
             if "entries" not in mapping:
                 mapping["entries"] = "entries" # Covers series entries.
             else:
-                self._log.warning(f"Existing \"entries\" field in default mapping when incorporating a series.")
+                log.warning(f"Existing \"entries\" field in default mapping when incorporating a series.")
                 
-            self._log.info(f"Augmenting default mapping with an \"entries\" field for accessing series.")
-            self._interface["mapping"] = mapping
+            log.info(f"Augmenting default mapping with an \"entries\" field for accessing series.")
+            self.interface["mapping"] = mapping
             
             df[index_column_name] = df.index
             indexcol = list(set(df[index_column_name]))
@@ -1490,12 +1484,12 @@ class CustomDataFrame(data.CustomDataFrame):
                     if name == "_":
                         name = "_" + name
 
-                    self._log.warning(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Auto-generating a mapping entry \"{name}\" to provide a valid variable name to use as proxy for \"{column}\".")
+                    log.warning(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Auto-generating a mapping entry \"{name}\" to provide a valid variable name to use as proxy for \"{column}\".")
                     if is_valid_var(name):
                         self.update_name_column_map(name=name, column=column)
                     else:
                         errmsg = f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\"."
-                        self._log.error(errmsg)
+                        log.error(errmsg)
                         raise ValueError(errmsg)
     
     def to_score(self):
@@ -1505,9 +1499,9 @@ class CustomDataFrame(data.CustomDataFrame):
             return 0
 
     def scored(self):
-        if "scored" in self._interface:
-            if self._writedata is not None and self._interface["scored"]["field"] in self._writedata.columns:
-                return self._writedata[self._interface["scored"]["field"]].count()
+        if "scored" in self.interface:
+            if self._writedata is not None and self.interface["scored"]["field"] in self._writedata.columns:
+                return self._writedata[self.interface["scored"]["field"]].count()
             else:
                 return 0
 
@@ -1516,10 +1510,10 @@ class CustomDataFrame(data.CustomDataFrame):
         """Update the type of a given column according to a value passed."""
         coltype = df.dtypes[column]
         if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
-            self._log.warning(f"Changing column \"{column}\" type to 'object' due to string input.")
+            log.warning(f"Changing column \"{column}\" type to 'object' due to string input.")
             df[column] = df[column].astype("object")
         if is_numeric_dtype(coltype) and is_bool_dtype(type(value)):
-            self._log.warning(f"Changing column \"{column}\" type to 'object' due to bool input.")
+            log.warning(f"Changing column \"{column}\" type to 'object' due to bool input.")
             df[column] = df[column].astype("boolean")
 
         

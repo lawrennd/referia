@@ -32,7 +32,7 @@ def test_compute_initialization(compute_instance, mock_interface, mock_data):
     assert compute_instance._data is mock_data
     assert compute_instance._interface is mock_interface
 
-def test_compute_from_file(mocker, mock_interface):
+def test_compute_creation(mocker, mock_interface):
     # Create a MagicMock object that behaves like a dictionary
 
     # Patch Interface.from_file to return the mock_interface
@@ -43,9 +43,9 @@ def test_compute_from_file(mocker, mock_interface):
 
     # Create a CustomDataFrame object to pass as the 'data' argument
     mock_data = CustomDataFrame([{"cat": "dog"}], colspecs="input")
-
+    
     # Call the method under test with the required 'data' argument
-    result = Compute.from_file(data=mock_data, user_file="test.yml", directory=".")
+    result = Compute(data=mock_data, interface=mock_interface)
 
     # Check that a Compute instance is returned
     assert result is not None

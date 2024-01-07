@@ -46,7 +46,9 @@ def test_render_liquid():
     # Mock data object and its liquid_to_value method
     values = {"key1" : "value1", "key2" : "value2"}
     template = "{{key1}} {{key2}}"
+    interface = referia.config.interface.Interface({}) # Mock interface
     data = referia.assess.data.CustomDataFrame(data=[values], colspecs="data")
+    data.compute = referia.assess.data.Compute(data, interface)
     result = render_liquid(data, template)
     assert result == "value1 value2"
     mapping = {"key1" : "key1", "key2" : "key2"}

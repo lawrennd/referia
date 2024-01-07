@@ -1,9 +1,10 @@
 import os
 import datetime
 import pandas as pd
+import liquid as lq
 
 from ..config.interface import Interface
-import ndlpy as ndl
+import ndlpy
 
 from ..util.misc import add_one_to_max, return_shortest, return_longest, identity
 
@@ -12,32 +13,33 @@ from ..util.system import most_recent_screen_shot
 from ..util.plot import bar_plot, histogram
 from ..util.files import file_from_re, files_from_re
 
+from ..util.liquid import url_escape, markdownify, relative_url, absolute_url, to_i
+
 from ..exceptions import ComputeError
+
+
+cntxt = ndlpy.config.context.Context(name="referia")
+           
+log = ndlpy.log.Logger(
+    name=__name__,
+    level=cntxt["logging"]["level"],
+    filename=cntxt["logging"]["filename"],
+    
+)
 
 class Compute():
     def __init__(self, interface, data):
         """Initialize the compute object.
 
         :param data: The data object to be used.
-        :type data: ndlpy.asses.data.CustomDataFrame
-        :param user_file: The name of the user file to be used.
-        :type user_file: str
-        :param directory: The directory to be used.
-        :type directory: str
+        :type data: ndlpy.assess.data.CustomDataFrame
+        :param interface: The interface to be used.
+        :type interface: ndlpy.config.interface.Interface
         :return: None
         """
 
         self._data = data
         self._interface = interface
-        self._cntxt = ndl.config.context.Context(name="referia")
-           
-        self._log = ndl.log.Logger(
-            name=__name__,
-            level=self._cntxt["logging"]["level"],
-            filename=self._cntxt["logging"]["filename"],
-            directory = self._interface._directory,
-            
-        )
         
 
         self._computes = {}
@@ -53,23 +55,10 @@ class Compute():
                     self._computes[comptype].append(
                         self.prep(compute)
                     )
-        
-    @classmethod
-    def from_file(cls, data, user_file : str=None, directory : str=None) -> "Compute":
-        """
-        Return a compute object from a file.
 
-        :param user_file: The name of the user file to be used.
-        :type user_file: str
-        :param directory: The directory to be used.
-        :type directory: str
-        :return: The compute object.
-        :rtype: Compute
-        """
-
-        interface = Interface.from_file(user_file=user_file, directory=directory)
-        data = data.from_interface(interface)
-        return cls(interface, data)
+        self.load_liquid()
+        self.add_liquid_filters()
+                    
         
     def prep(self, settings : dict ) -> dict:
         """
@@ -102,6 +91,37 @@ class Compute():
         with open(filename, 'rb') as file:
             image = file.read()
         return image
+        super().interface = value
+            
+    def load_liquid(self):
+        """Load the liquid environment."""
+        loader = None
+        if "liquid" in self._interface:
+            if "templates" in self._interface["liquid"]:
+                if "dir" in self._interface["liquid"]["templates"]:
+                    templates_path = [os.path.abspath(self._interface["liquid"]["templates"])]
+                else:
+                    template_path = [
+                        os.path.join(os.path.dirname(__file__), "templates"),
+                    ]
+
+                    if "ext" in self._interface["liquid"]:
+                        ext = self._interface["liquid"]["ext"]
+                        loader = lq.loaders.FileExtensionLoader(search_path=template_path, ext=ext)
+                    else:
+                        loader = lq.FileSystemLoader(template_path)
+            elif "dict" in self._interface["liquid"]["templates"]:
+                loader = lq.loaders.DictLoader(self._interface["liquid"]["templates"]["dict"])
+        self._liquid_env = lq.Environment(loader=loader)
+
+
+    def add_liquid_filters(self):
+        """Add liquid filters to the liquid environment."""
+        self._liquid_env.add_filter("url_escape", url_escape)
+        self._liquid_env.add_filter("markdownify", markdownify)
+        self._liquid_env.add_filter("relative_url", relative_url)
+        self._liquid_env.add_filter("absolute_url", absolute_url)
+        self._liquid_env.add_filter("to_i", to_i)
 
     def gca_(self, function, field=None, refresh=False, args={}, row_args={}, view_args={}, function_args={}, subseries_args={}, column_args={}):
         """
@@ -136,7 +156,7 @@ class Compute():
                 break
         if not found_function:
             errmsg = f"Function \"{function}\" not found in list_functions."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(errmsg)
         return {
             "subseries_args" : subseries_args,
@@ -194,7 +214,7 @@ class Compute():
                     orig_col = self._data.get_column()
                     self._data.set_column(column)
                 if key in kwargs:
-                    self._log.warning(f"No key \"{key}\" already column_args found in kwargs.")
+                    log.warning(f"No key \"{key}\" already column_args found in kwargs.")
                 kwargs[key] = self._data.get_column_values()
                 self._data.set_column(orig_col)
                 
@@ -202,7 +222,7 @@ class Compute():
                 orig_col = self._data.get_column()
                 self._data.set_column(column)
                 if key in kwargs:
-                    self._log.warning(f"No key \"{key}\" from subseries_args already found in kwargs.")   
+                    log.warning(f"No key \"{key}\" from subseries_args already found in kwargs.")   
                 kwargs[key] = self._data.get_subseries_values()
                 self._data.set_column(orig_col)
 
@@ -214,10 +234,10 @@ class Compute():
                 
             for key, column in row_args.items():
                 if key in kwargs:
-                    self._log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
+                    log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
                 kwargs[key] = self._data.get_value_column(column)
             # kwargs.update(remove_nan(self._data.mapping(args)))
-            self._log.debug(f"The keyword arguments for the compute function are {kwargs}.")
+            log.debug(f"The keyword arguments for the compute function are {kwargs}.")
             return list_function["function"](**kwargs)
 
         compute_function.__name__ = list_function["name"]
@@ -282,9 +302,9 @@ class Compute():
 
         if refresh or any(missing_vals) or columns is None:
             if columns is not None:
-                self._log.debug(f"Running compute function \"{fname}\" storing in field(s) \"{columns}\" with index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+                log.debug(f"Running compute function \"{fname}\" storing in field(s) \"{columns}\" with index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
             else:
-                self._log.debug(f"Running compute function \"{fname}\" with no field(s) stored for index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+                log.debug(f"Running compute function \"{fname}\" with no field(s) stored for index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
 
             new_vals = compute["function"](**fargs)
         else:
@@ -292,7 +312,7 @@ class Compute():
 
         if multi_output and type(new_vals) is not tuple:
             errmsg = f"Multiple columns provided for return values of \"{fname}\" but return value given is not a tuple."
-            self._log.error(errmsg)
+            log.error(errmsg)
             raise ValueError(errmsg)
             
         if columns is None:
@@ -306,7 +326,7 @@ class Compute():
                 if column == "_":
                     continue
                 if refresh or missing_val and self._data.ismutable(column):
-                    self._log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
+                    log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
                     self._data.set_value_column(new_val, column)
   
     def preprocess(self):
@@ -358,7 +378,7 @@ class Compute():
         :return: None
         """
 
-        self._log.debug(f"Running computes on index=\"{index}\" with pre=\"{pre}\" and post=\"{post}\"")
+        log.debug(f"Running computes on index=\"{index}\" with pre=\"{pre}\" and post=\"{post}\"")
         computes = []
         if pre:
             computes += self._computes["precompute"]
@@ -374,7 +394,7 @@ class Compute():
                 else:                    
                     self.run(compute, df, index, refresh=False)
             else:
-                self._log.warning(f"Attempted to write to unmutable field \"{field}\"")
+                log.warning(f"Attempted to write to unmutable field \"{field}\"")
     
 
     def _compute_functions_list(self) -> list[dict]:
@@ -548,140 +568,140 @@ class Compute():
             },
             {
                 "name" : "get_url_file",
-                "function" : ndl.util.misc.get_url_file,
+                "function" : ndlpy.util.misc.get_url_file,
                 "default_args": {
                 },
                 "docstr" : "Download a file with the given name.",
             },
             {
                 "name" : "addmonth",
-                "function" : ndl.util.dataframe.addmonth,
+                "function" : ndlpy.util.dataframe.addmonth,
                 "default_args" : {
                 },
                 "docstr" : "Add month column based on source date field."
             },
             {
                 "name" : "addsupervisor",
-                "function" : ndl.util.dataframe.fillna, # FIXME: This is a hack
+                "function" : ndlpy.util.dataframe.fillna, # FIXME: This is a hack
                 "default_args" : {
                 },
                 "docstr" : "None"
             },
             {
                 "name" : "addyear",
-                "function" : ndl.util.dataframe.addyear,
+                "function" : ndlpy.util.dataframe.addyear,
                 "default_args" : {
                 },
                 "docstr" : "Add year column and based on source date field."
             },
             {
                 "name" : "ascending",
-                "function" : ndl.util.dataframe.ascending,
+                "function" : ndlpy.util.dataframe.ascending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in ascending order"
             },
             {
                 "name" : "augmentcurrency",
-                "function" : ndl.util.dataframe.augmentcurrency,
+                "function" : ndlpy.util.dataframe.augmentcurrency,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
             "name" : "augmentmonth",
-                "function" : ndl.util.dataframe.augmentmonth,
+                "function" : ndlpy.util.dataframe.augmentmonth,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a month column based on source date field."
             },
             {
                 "name" : "augmentyear",
-                "function" : ndl.util.dataframe.augmentyear,
+                "function" : ndlpy.util.dataframe.augmentyear,
                 "default_args" : {
                 },
                 "docstr" : "Augment with a year column based on source date field."
             },
             {
                 "name" : "columncontains",
-                "function" : ndl.util.dataframe.columncontains,
+                "function" : ndlpy.util.dataframe.columncontains,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column contains a given value"
             },
             {
                 "name" : "columnis",
-                "function" : ndl.util.dataframe.columnis,
+                "function" : ndlpy.util.dataframe.columnis,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is equal to a given value"
             },
             {
                 "name" : "convert_datetime",
-                "function" : ndl.util.dataframe.convert_datetime,
+                "function" : ndlpy.util.dataframe.convert_datetime,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set datetime type on columns."
             },
             {
                 "name" : "convert_int",
-                "function" : ndl.util.dataframe.convert_int,
+                "function" : ndlpy.util.dataframe.convert_int,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set integer type on columns."
             },
             {
                 "name" : "convert_string",
-                "function" : ndl.util.dataframe.convert_string,
+                "function" : ndlpy.util.dataframe.convert_string,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "convert_year_iso",
-                "function" : ndl.util.dataframe.convert_year_iso,
+                "function" : ndlpy.util.dataframe.convert_year_iso,
                 "default_args" : {
                 },
                 "docstr" : "Preprocessor to set string type on columns."
             },
             {
                 "name" : "current",
-                "function" : ndl.util.dataframe.current,
+                "function" : ndlpy.util.dataframe.current,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "descending",
-                "function" : ndl.util.dataframe.descending,
+                "function" : ndlpy.util.dataframe.descending,
                 "default_args" : {
                 },
                 "docstr" : "Sort in descending order"
             },
             {
                 "name" : "former",
-                "function" : ndl.util.dataframe.former,
+                "function" : ndlpy.util.dataframe.former,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether item is current"
             },
             {
                 "name" : "onbool",
-                "function" : ndl.util.dataframe.onbool,
+                "function" : ndlpy.util.dataframe.onbool,
                 "default_args" : {
                 },
                 "docstr" : "Filter on whether column is positive (or negative if inverted)"
             },
             {
                 "name" : "recent",
-                "function" : ndl.util.dataframe.recent,
+                "function" : ndlpy.util.dataframe.recent,
                 "default_args" : {
                 },
                 "docstr" : "Filter on year of item"
             },
             {
                 "name" : "remove_nan",
-                "function" : ndl.util.misc.remove_nan,
+                "function" : ndlpy.util.misc.remove_nan,
                 "default_args" : {
                 },
                 "docstr" : "Delete missing entries from dictionary"
