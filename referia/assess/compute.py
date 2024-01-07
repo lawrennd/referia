@@ -305,7 +305,7 @@ class Compute():
             for column, new_val, missing_val in zip(columns, new_vals, missing_vals):
                 if column == "_":
                     continue
-                if refresh or missing_val and self._data.mutable:
+                if refresh or missing_val and self._data.ismutable(column):
                     self._log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
                     self._data.set_value_column(new_val, column)
   

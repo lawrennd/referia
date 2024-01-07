@@ -443,8 +443,8 @@ class CustomDataFrame(data.CustomDataFrame):
     def load_flows(self):
         """Load the input and output flows."""
         autocache = self.autocache
-        self.autocache = False
-        self.load_input_flows()
+        #self.autocache = False
+        #self.load_input_flows()
         self.load_output_flows()
         self.augment = True
         self.preprocess()
