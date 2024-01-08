@@ -15,7 +15,6 @@ from ndlpy.assess import data
 from ndlpy.util.misc import to_camel_case, remove_nan, is_valid_var
 
 from ..config.interface import Interface
-from .compute import Compute
 
 from ..util.misc import renderable
 
@@ -99,8 +98,6 @@ class CustomDataFrame(data.CustomDataFrame):
         :type value: Compute
         :return: None
         """
-        if not isinstance(value, Compute):
-            raise TypeError("compute must be of type Compute")
         self._compute = value
 
 
