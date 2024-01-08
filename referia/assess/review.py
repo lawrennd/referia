@@ -21,13 +21,19 @@ from ndlpy import access
 from ndlpy.util.misc import remove_nan
 from ndlpy.config.context import Context
 
-from .widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
+from ..util.widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
 
-from .config import interface
-from . import assess 
-from . import system
+from ..config import interface
+from . import data
+from .. import system
 
 
+cntxt = Context(name="referia")
+log = log.Logger(
+    name=__name__,
+    level=cntxt["logging"]["level"],
+    filename=cntxt["logging"]["filename"],
+)
 
 
 def expand_cell():
@@ -81,19 +87,19 @@ def view(data):
     data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8, ax=ax)
     ax.set_xticks(range(0,13))
 
-def extract_load_scorer(details, scorer, widgets):
+def extract_load_reviewer(details, reviewer, widgets):
     """Extract details from a separate file where they're specified."""
     # This is a link to a widget specificaiton stored in a file
     if "details" not in details:
-        raise ValueError("Load scorer needs to provide load details as entry under \"details\"")
+        raise ValueError("Load reviewer needs to provide load details as entry under \"details\"")
     df,  newdetails = access.io.read_data(details["details"])
     for ind, series in df.iterrows():
-        extract_scorer(remove_nan(series.to_dict()), scorer, widgets)
+        extract_reviewer(remove_nan(series.to_dict()), reviewer, widgets)
 
-def extract_group_scorer(details, scorer, widgets):
+def extract_group_reviewer(details, reviewer, widgets):
     """Extract details that are clustered together in a group."""
     if "children" not in details:
-        raise ValueError("group scorer needs to provide a list of children under \"children\"")
+        raise ValueError("group reviewer needs to provide a list of children under \"children\"")
     for child in details["children"]:
         if "name" in child and "name" in details and details["name"] is not None:
             child["name"] = details["name"] + "-" + child["name"]
@@ -102,9 +108,9 @@ def extract_group_scorer(details, scorer, widgets):
                 child["prefix"] = details["prefix"] + child["prefix"]
             if "field" in child:
                 child["field"] = details["prefix"] + child["field"]
-        extract_scorer(child, scorer, widgets)
+        extract_reviewer(child, reviewer, widgets)
 
-def extract_composite_scorer(details, scorer, widgets):
+def extract_composite_reviewer(details, reviewer, widgets):
     """Extract details for a predefined composition of widgets."""
     if details["type"] == "Criterion":
         value = None
@@ -149,7 +155,7 @@ def extract_composite_scorer(details, scorer, widgets):
             criterion["args"]["join"] = join
         if lis is not None:
             criterion["args"]["list"] = lis
-        extract_scorer(criterion, scorer, widgets)
+        extract_reviewer(criterion, reviewer, widgets)
         return
 
     if details["type"] == "CriterionComment":
@@ -170,7 +176,7 @@ def extract_composite_scorer(details, scorer, widgets):
                 }
             }
         for sub_score in [criterion, comment]:
-            extract_scorer(sub_score, scorer, widgets)
+            extract_reviewer(sub_score, reviewer, widgets)
         return
 
     if details["type"] == "CriterionCommentDate":
@@ -185,7 +191,7 @@ def extract_composite_scorer(details, scorer, widgets):
             }
         }
         for sub_score in [criterion, date]:
-            extract_scorer(sub_score, scorer, widgets)
+            extract_reviewer(sub_score, reviewer, widgets)
         return
 
 
@@ -209,7 +215,7 @@ def extract_composite_scorer(details, scorer, widgets):
             }
         }
         for sub_score in [criterioncomment, expectation]:
-            extract_scorer(sub_score, scorer, widgets)
+            extract_reviewer(sub_score, reviewer, widgets)
         return
     
     if details["type"] == "CriterionCommentRaisesMeetsLowers":
@@ -232,7 +238,7 @@ def extract_composite_scorer(details, scorer, widgets):
             }
         }
         for sub_score in [criterioncomment, expectation]:
-            extract_scorer(sub_score, scorer, widgets)
+            extract_reviewer(sub_score, reviewer, widgets)
         return
 
     if details["type"] == "CriterionCommentRaisesMeetsLowersFlag":
@@ -249,7 +255,7 @@ def extract_composite_scorer(details, scorer, widgets):
             }
         }
         for sub_score in [criterioncommentraisesmeetslowers, flag]:
-            extract_scorer(sub_score, scorer, widgets)
+            extract_reviewer(sub_score, reviewer, widgets)
         return
 
     
@@ -292,9 +298,9 @@ def extract_composite_scorer(details, scorer, widgets):
             }
         }
         for sub_score in [criterioncomment, slider]:
-            extract_scorer(sub_score, scorer, widgets)
+            extract_reviewer(sub_score, reviewer, widgets)
 
-def extract_loop_scorer(details, scorer, widgets):
+def extract_loop_reviewer(details, reviewer, widgets):
     """Extract details for a loop of widgets."""
     if "start" not in details:
         raise ValueError("Missing start entry in loop")
@@ -304,7 +310,7 @@ def extract_loop_scorer(details, scorer, widgets):
     for ent in ["start", "stop", "step"]:
         if ent in details:
             if type(details[ent]) is dict:
-                loop.append(int(scorer._data.view_to_value(details[ent])))
+                loop.append(int(reviewer._data.view_to_value(details[ent])))
             else:
                 loop.append(int(details[ent]))
 
@@ -318,9 +324,9 @@ def extract_loop_scorer(details, scorer, widgets):
                 sub_score["local"] = {}
             sub_score["local"]["element"] = element
             sub_score["element"] = element
-            extract_scorer(sub_score, scorer, widgets)
+            extract_reviewer(sub_score, reviewer, widgets)
 
-def extract_widget(details, scorer, widgets):
+def extract_widget(details, reviewer, widgets):
     """Extract the widget information given in details."""    
     # Get the widget type from the global variables list
     global_variables = globals()        
@@ -329,29 +335,29 @@ def extract_widget(details, scorer, widgets):
         widget_key = None
         if "field" in details:
             field_name = clean_string(details["field"])
-            scorer._column_names_dict[field_name] = details["field"]
+            reviewer._column_names_dict[field_name] = details["field"]
 
             # Create an instance of the object to extract default value.
-            scorer._default_field_vals[details["field"]] = widget_type(parent=scorer, field_name=details["field"]).get_value()
+            reviewer._default_field_vals[details["field"]] = widget_type(parent=reviewer, field_name=details["field"]).get_value()
             if "value" in details:
-                scorer._default_field_vals[details["field"]] = details["value"]
+                reviewer._default_field_vals[details["field"]] = details["value"]
             if "args" in details and "value" in details["args"]:
-                scorer._default_field_vals[details["field"]] = details["args"]["value"]
+                reviewer._default_field_vals[details["field"]] = details["args"]["value"]
             if "default" in details:
                 if "source" in details["default"]:
                     source = details["default"]["source"]
-                    if source in scorer._data.columns:
-                        scorer._default_field_source[details["field"]] = source
+                    if source in reviewer._data.columns:
+                        reviewer._default_field_source[details["field"]] = source
                     else:
-                        scorer._log.warning(f"Missing column \"{source}\" in data.columns")
+                        reviewer._log.warning(f"Missing column \"{source}\" in data.columns")
                 if "value" in details["default"]:
-                    scorer._default_field_vals[details["field"]] = details["default"]["value"]
+                    reviewer._default_field_vals[details["field"]] = details["default"]["value"]
 
         else:
             # Field field_name is missing, generate a random one.
             field_name = "_"
             widget_key = "".join(random.choice(string.ascii_letters) for _ in range(39))
-            #scorer._column_names_dict[field_name] = field_name
+            #reviewer._column_names_dict[field_name] = field_name
 
         # Deep copy of details so we don't change it globally.
         process_details = json.loads(json.dumps(details))
@@ -368,8 +374,8 @@ def extract_widget(details, scorer, widgets):
             if "args" in process_details["source"]:
                 for arg, field in process_details["source"]["args"]:
                     if arg not in process_details["args"]:
-                        scorer.set_column(field)
-                        process_details["args"][arg] = scorer.get_value()
+                        reviewer.set_column(field)
+                        process_details["args"][arg] = reviewer.get_value()
 
         if "refresh_display" in process_details:
             refresh_display = process_details["refresh_display"]
@@ -391,7 +397,7 @@ def extract_widget(details, scorer, widgets):
             args["field_name"] = field_name
         except TypeError as err:
             raise TypeError("The argument \"args\" in _referia.yml should be in the form of a mapping.") from err
-        args["column_name"] = scorer._column_names_dict[field_name]
+        args["column_name"] = reviewer._column_names_dict[field_name]
 
         for field in ["display", "tally", "liquid", "compute"]:
             if field in process_details and field not in args:
@@ -403,53 +409,53 @@ def extract_widget(details, scorer, widgets):
             args["layout"] =  Layout(**process_details["layout"])
         elif "layout" in args:
             args["layout"] = Layout(**args["layout"])
-        args["parent"] = scorer
+        args["parent"] = reviewer
         # Add the widget
         widgets.add(**{widget_key: widget_type(**args)})
     else:
         raise Exception("Cannot find " + details["type"] + " interaction type.")
 
     
-def extract_scorer(details, scorer, widgets):
+def extract_reviewer(details, reviewer, widgets):
     """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
 
         
     if details["type"] == "precompute":
         # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
-        scorer._precompute.append(details)
+        reviewer._precompute.append(details)
         
     elif details["type"] == "postcompute":
         # These are score items that are computed every time the row is updated.
-        scorer._postcompute.append(details)
+        reviewer._postcompute.append(details)
         
     elif details["type"] == "load":
-        load_widgets = LoadWidgetCluster(name="load", parent=scorer)
+        load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
         widgets.add(load_widgets)
-        extract_load_scorer(details, scorer, load_widgets)
+        extract_load_reviewer(details, reviewer, load_widgets)
 
     elif details["type"] == "group":
-        group_widgets = GroupWidgetCluster(name="group", parent=scorer)
+        group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
         widgets.add(group_widgets)
-        extract_group_scorer(details, scorer, group_widgets)
+        extract_group_reviewer(details, reviewer, group_widgets)
 
     
     elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
         if isinstance(widgets, CompositeWidgetCluster):
-            extract_composite_scorer(details, scorer, widgets)
+            extract_composite_reviewer(details, reviewer, widgets)
         else:
-            composite_widget = CompositeWidgetCluster(name=details["type"], parent=scorer)
+            composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
             widgets.add(composite_widget)
-            extract_composite_scorer(details, scorer, composite_widget)
+            extract_composite_reviewer(details, reviewer, composite_widget)
 
 
     elif details["type"] == "loop":
-        loop_widget = LoopWidgetCluster(name="loop", details=details, parent=scorer)
+        loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer)
         widgets.add(loop_widget)
-        extract_loop_scorer(details, scorer, loop_widget)
+        extract_loop_reviewer(details, reviewer, loop_widget)
         
     else:
         # Widget is directly specified
-        extract_widget(details, scorer, widgets)
+        extract_widget(details, reviewer, widgets)
 
     
 def clean_string(instring):
@@ -458,17 +464,17 @@ def clean_string(instring):
 def nodes(chain, index=None):
     """Display the series of nodes """
     data = {}
-    scorer = {}
+    reviewer = {}
     oldkey=None
     while len(chain)>0:
         key, directory=chain.pop()
-        data[key] = assess.data.Data(directory=directory)
+        data[key] = data.Data(directory=directory)
         if index is None and data[key].index is not None:
             index = data[key].index[0]
-        scorer[key] = Scorer(index, data[key], directory=directory, viewer_inherit=False)
+        reviewer[key] = Reviewer(index, data[key], directory=directory, viewer_inherit=False)
         if oldkey is not None:
-            scorer[oldkey].add_downstream_display(scorer[key])
-        scorer[key].run()
+            reviewer[oldkey].add_downstream_display(reviewer[key])
+        reviewer[key].run()
         oldkey = key
                                 
 class WidgetCluster():
@@ -580,7 +586,7 @@ class DynamicWidgetCluster(WidgetCluster):
         if details is None:
             details=self._details
         self.clear_children()
-        extract_loop_scorer(details, self._parent, self)
+        extract_loop_reviewer(details, self._parent, self)
 
 class LoadWidgetCluster(WidgetCluster):
     def __init__(self, **kwargs):
@@ -598,7 +604,7 @@ class LoopWidgetCluster(DynamicWidgetCluster):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-class Scorer:
+class Reviewer:
     def __init__(self, index=None, data=None, user_file="_referia.yml", directory=".", viewer_inherit=True):
         self._directory = directory
         if viewer_inherit:
@@ -609,13 +615,6 @@ class Scorer:
             ignore = ["viewer"]
             
         self._interface = interface.Interface(user_file=user_file, directory=directory, append=append, ignore=ignore)
-        self._cntxt = Context(name="referia")
-        self._log = log.Logger(
-            name=__name__,
-            level=self._cntxt["logging"]["level"],
-            filename=self._cntxt["logging"]["filename"],
-            directory=directory,
-        )
         self._system = system.Sys(user_file=user_file,
                                   directory=directory)
         
@@ -639,7 +638,7 @@ class Scorer:
         self._postcompute = []
 
         if data is None:
-            self._data = assess.data.Data()
+            self._data = data.Data()
         else:
             self._data = data
 
@@ -677,10 +676,10 @@ class Scorer:
             widgets.add(**{label: Markdown(**args)})
         return widgets
 
-    def _create_scorer(self, scorers):
-        """Create the scorers from the config file."""
-        for scorer in scorers:
-            extract_scorer(scorer, self, self._widgets)
+    def _create_reviewer(self, reviewers):
+        """Create the reviewers from the config file."""
+        for reviewer in reviewers:
+            extract_reviewer(reviewer, self, self._widgets)
 
     def _create_documents(self, documents):
         """Process the document creators from the config file."""
@@ -730,9 +729,9 @@ class Scorer:
             widgets.add(cluster=self._create_viewer(config["viewer"]))
 
         widgets.add(self._create_reload_button(config))
-        # Process the scorer from the config file.
-        if "scorer" in config:
-            widgets.add(self._create_scorer(config["scorer"]))
+        # Process the reviewer from the config file.
+        if "reviewer" in config:
+            widgets.add(self._create_reviewer(config["reviewer"]))
 
         # Process the document creators from the config file.
         if "documents" in config:
@@ -794,7 +793,7 @@ class Scorer:
         old_value = self.get_value_by_element(element)
         column = self.get_column()
         if value != old_value:
-            self._log.debug(f"Column is \"{column}\" and element is \"{element}\". Old value is  \"{old_value}\" and new value is \"{value}\".")
+            log.debug(f"Column is \"{column}\" and element is \"{element}\". Old value is  \"{old_value}\" and new value is \"{value}\".")
             self._data.set_value_by_element(value, element)
             if trigger_update:
                 self.value_updated()                            
@@ -804,7 +803,7 @@ class Scorer:
         old_value = self.get_value()
         column = self.get_column()
         if value != old_value:
-            self._log.debug(f"Column is \"{column}\". Old value is \"{old_value}\" and new value is \"{value}\".")
+            log.debug(f"Column is \"{column}\". Old value is \"{old_value}\" and new value is \"{value}\".")
             self._data.set_value(value)
             if trigger_update:
                 self.value_updated()
@@ -884,7 +883,7 @@ class Scorer:
         self.set_value(filename)
 
     def run(self):
-        """Run the scorer to edit the data frame."""
+        """Run the reviewer to edit the data frame."""
         if self.index is not None:
             if "series" in self._interface:
                 self.full_selector()
@@ -906,13 +905,13 @@ class Scorer:
                     string += self._data.view_to_value(view)
                     string += "\n\n"
                 return string
-            elif template["use"] == "scorer":
+            elif template["use"] == "reviewer":
                 return self._widgets.to_markdown()
         else:
             return self._data.view_to_value(template)
         
     # Seems redundant, schedule for remove.
-    # def view_scorer(self):
+    # def view_reviewer(self):
     #     text = ""
     #     return 
     #     for key, widget in self.widgets().items():
@@ -922,15 +921,15 @@ class Scorer:
 
     def load_flows(self, reload=False):
         """Reload flows from data stores."""
-        self._log.info(f"Reload of flows requested.")
+        log.info(f"Reload of flows requested.")
         if reload:
             index = self.get_index()
             selector = self.get_selector()
             subindex = self.get_subindex()
-            self._log.debug(f"Storing index: \"{index}\" selector: \"{selector}\" subindex: \"{subindex}\"")
+            log.debug(f"Storing index: \"{index}\" selector: \"{selector}\" subindex: \"{subindex}\"")
         self._data.load_flows()
         if reload:
-            self._log.debug(f"Resetting index.")
+            log.debug(f"Resetting index.")
             if index is not None:
                 self.set_index(index)
             if selector is not None:
@@ -977,7 +976,7 @@ class Scorer:
                                 args[field] = self.template_to_value(document[field])
         if "body" in args:
             if "content" in args:
-                self._log.warning(f"Contents field being overwritten by body in create_document")       
+                log.warning(f"Contents field being overwritten by body in create_document")       
             args["content"] = args["body"]
         if "header" in args:
             args["content"] = args["header"] + "\n\n" + args["content"]
@@ -1042,7 +1041,7 @@ class Scorer:
             self._data.add_column(created_field)
         self._data.set_dtype(created_field, "datetime64[ns]")
 
-        if created_field not in self._data.columns or assess.data.empty(self._data.get_value_column(created_field)):
+        if created_field not in self._data.columns or data.empty(self._data.get_value_column(created_field)):
             self.set_column(created_field)
             self.set_value(today_val,
                            trigger_update=False)
@@ -1058,7 +1057,7 @@ class Scorer:
                     self.set_value(combinator,
                                    trigger_update=False)
                 else:
-                    self._log.error("Missing key 'field' in combinator view.")
+                    log.error("Missing key 'field' in combinator view.")
 
 
 
