@@ -741,6 +741,8 @@ class CustomDataFrame(data.CustomDataFrame):
     def get_value(self):
         """Return the value of the current cell under focus."""
         # Ordering here dictates the priority of selection, global constants, then globals, then series, then writedata, then cache then data.
+        return super().get_value()
+        
         column = self.get_column()
         if column == "_":
             return None
@@ -919,7 +921,7 @@ class CustomDataFrame(data.CustomDataFrame):
         
         if mapping is None:
             if series is None: # remove any columns not in self.columns
-                mapping = {name: column for name, column in self._default_mapping().items() if column in self.columns or column==self._data.index.name}
+                mapping = {name: column for name, column in self._default_mapping().items() if column in self.columns or column==self.index.name}
             else: # remove any columns not in provided series
                 mapping = {name: column for name, column in self._default_mapping().items() if column in series.index}
 

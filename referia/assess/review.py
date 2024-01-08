@@ -25,7 +25,6 @@ from ..util.widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text
 
 from ..config import interface
 from . import data
-from .. import system
 
 
 cntxt = Context(name="referia")
@@ -36,49 +35,6 @@ log = log.Logger(
 )
 
 
-def expand_cell():
-
-    display.display(display.HTML(data="""
-<style>
-.container {
-    width: 100% !important;
-}
-
-div.notebook-container {
-    width: 100% !important;
-    height: fit-content;
-}
-
-div.menubar-container {
-    width: 100% !important;
-    height: fit-content;
-}
-
-div.maintoolbar-container {
-    width: 100% !important;
-    height: fit-content;
-}
-
-div.cell.selected {
-    border-left-width: 1px !important;
-}
-
-div.output_scroll {
-    resize: vertical !important;
-}
-
-.output_wrapper .output {
-    overflow-y: visible;
-    height: fit-content;
-}
-
-
-.output_scroll {
-    box-shadow:none !important;
-    webkit-box-shadow:none !important;
-}
-</style>
-"""))
 
 
 def view(data):
@@ -605,22 +561,14 @@ class LoopWidgetCluster(DynamicWidgetCluster):
         super().__init__(**kwargs)
 
 class Reviewer:
-    def __init__(self, index=None, data=None, user_file="_referia.yml", directory=".", viewer_inherit=True):
-        self._directory = directory
+    
+    def __init__(self, index=None, data=None, interface=None, system=None, viewer_inherit=True):
         if viewer_inherit:
             append = ["viewer"]
             ignore = []
         else:
             append = []
             ignore = ["viewer"]
-            
-        self._interface = interface.Interface(user_file=user_file, directory=directory, append=append, ignore=ignore)
-        self._system = system.Sys(user_file=user_file,
-                                  directory=directory)
-        
-        # Store the map between valid python variable names and data column names
-        self._column_names_dict = {"_": "_"}
-        # Store the map between valid python varliable names and their boxed widgets.
         self._widgets = WidgetCluster(name="parent", parent=self)
         self._view_list = []
         self._dynamic_list = []
@@ -629,22 +577,31 @@ class Reviewer:
         self._default_field_vals = pd.Series(dtype=object)
         self._default_field_source = pd.Series(dtype=object)
 
-        self._write_score = True
-        self._select_subindex = False
-        self._select_selector = False
+        if interface is None:
+            raise TypeError("The interface argument is missing in Reviewer.")
+        else:
+            self._interface = interface
 
-        # TK Not clear these are being used anywhere
-        self._precompute = []
-        self._postcompute = []
+        if system is None:
+            raise TypeError("The system argument is missing in Reviewer.")
+        else:
+            self._system = system
 
         if data is None:
-            self._data = data.Data()
+            raise TypeError("The data argument is missing in Reviewer.")
         else:
             self._data = data
+
 
         if index is not None:
             # Widget isn't created yet so set index in data only.
             self._data.set_index(index)
+            
+        self._write_score = True
+        self._select_subindex = False
+        self._select_selector = False
+
+
 
         self._create_widgets(self._interface, self._widgets)
 

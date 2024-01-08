@@ -22,8 +22,17 @@ from ndlpy.config.context import Context
 from .util.misc import notempty, markdown2html, renderable, tallyable
 from .util.files import to_valid_file
 
-from .config import interface
+from .config.interface import Interface
 from . import display
+
+cntxt = Context(name="referia")
+        
+log = log.Logger(
+    name=__name__,
+    level=cntxt["logging"]["level"],
+    filename=cntxt["logging"]["filename"]
+)
+
 
 import platform
 OSX = False
@@ -92,17 +101,9 @@ if OSX:
 
 
 class Sys():
-    def __init__(self, user_file="_referia.yml", directory="."):
-        self._directory = directory
-        self._interface = interface.Interface(user_file=user_file,
-                                           directory=directory)
-        self._cntxt = Context(name="referia")
-        
-        self._log = log.Logger(
-            name=__name__,
-            level=self._cntxt["logging"]["level"],
-            filename=self._cntxt["logging"]["filename"]
-        )
+    @classmethod
+    def __init__(self, interface):
+        self._interface = interface
         self._tmp_pdf_files = {}
 
 
@@ -112,7 +113,7 @@ class Sys():
             destname = os.path.join(values["tmpdirectory"], filename)
             delete_keys.append(filename)
             if os.path.exists(destname):
-                self._log.info(f"Removing temporary file \"{filename}\".")
+                log.info(f"Removing temporary file \"{filename}\".")
                 os.remove(destname)
 
         for key in delete_keys:
@@ -139,43 +140,43 @@ class Sys():
         elif ext == ".md" or ext == ".markdown":
             self.open_markdown(filename)
         else:
-            self._log.debug(f"Opening file \"{filename}\".")
+            log.debug(f"Opening file \"{filename}\".")
             os.system(f"open --background \"{filename}\"")
 
 
     def open_directory(self, filename):
         """Use the system viewer to open a directory.""" 
-        self._log.debug(f"Opening file \"{filename}\".")
+        log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_markdown(self, filename):
         """Use the system viewer to open a markdown file."""
-        self._log.debug(f"Opening file \"{filename}\".")
+        log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_python(self, filename):
         """Use the system viewer to open a python file."""
-        self._log.debug(f"Opening file \"{filename}\".")
+        log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_docx(self, filename):
         """Use the system viewer to open a python file."""
-        self._log.debug(f"Opening file \"{filename}\".")
+        log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_ipynb(self, filename):
         """Use the system viewer to open a python file."""
-        self._log.debug(f"Opening file \"{filename}\".")
+        log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_pdf(self, filename):
         """Use the system viewer to open a PDF."""
-        self._log.debug(f"Opening file \"{filename}\".")
+        log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_video(self, filename):
         """Use the system viewer to open a video."""
-        self._log.debug(f"Opening file \"{filename}\".")
+        log.debug(f"Opening file \"{filename}\".")
         os.system(f"open --background \"{filename}\"")
 
     def open_url(self, urlname):
@@ -185,7 +186,7 @@ class Sys():
         else:
             browser="Google Chrome.app" 
 
-        self._log.debug(f"Opening url \"{urlname}\".")
+        log.debug(f"Opening url \"{urlname}\".")
         os.system(f"open -a \"{browser}\" --background \"{urlname}\"")
 
 
@@ -257,7 +258,7 @@ class Sys():
             to = email_args["to"]
         else:
             to = "unknown address"
-        self._log.debug(f"Drafting email to \"{to}\".")
+        log.debug(f"Drafting email to \"{to}\".")
         self.draft_email(**email_args)
 
 
@@ -324,7 +325,7 @@ class Sys():
     def move_file(self, origfile, destfile):
         """Move a file for editing or viewing."""
         if os.path.exists(origfile):
-            self._log.debug(f"Moving \"{origfile}\" to \"{destfile}\"")
+            log.debug(f"Moving \"{origfile}\" to \"{destfile}\"")
             self.move(origfile, destfile)
         else:
             raise ValueError(f"\"{origfile}\" doesn't exist in move_file.")
@@ -342,7 +343,7 @@ class Sys():
                 if notempty(firstpage) and notempty(lastpage) and notempty(view["field"]):
                     firstpage = int(firstpage)
                     lastpage = int(lastpage)
-                    self._log.debug(f"Extracting \"{destfile}\" from \"{origfile}\" pages {firstpage}-{lastpage}")
+                    log.debug(f"Extracting \"{destfile}\" from \"{origfile}\" pages {firstpage}-{lastpage}")
                     tk.get_pages(
                         pdf_path=origfile,
                         ranges=[[firstpage,
@@ -350,10 +351,10 @@ class Sys():
                         out_file=destfile,
                     )
             else:
-                self._log.debug(f"Copying \"{origfile}\" to \"{destfile}\".")
+                log.debug(f"Copying \"{origfile}\" to \"{destfile}\".")
                 copy2(origfile, destfile)
         else:
-            self._log.warning(f"Warning edit file \"{origfile}\" does not exist.")
+            log.warning(f"Warning edit file \"{origfile}\" does not exist.")
 
     def move_screen_capture(self, filename, order=0):
         """Copy the most recent screen capture to a given location."""
@@ -427,7 +428,7 @@ class Sys():
                     self.open_localfile(destfile)
                 else:
                     tyval = type(val)
-                    self._log.warning(f"Expected \"val\" to be of type str actual type is \"{tyval}\"")
+                    log.warning(f"Expected \"val\" to be of type str actual type is \"{tyval}\"")
 
     def view_directory(self, view):
         """View a directory containing relevant information to the assessment."""
@@ -443,7 +444,7 @@ class Sys():
                 extractor = view["extractor"]
                 if extractor == "pdfannots":
                     return subprocess.run(["pdfannots", filename], capture_output=True)
-        self._log.warning(f"Unknown extractor in {view}.")
+        log.warning(f"Unknown extractor in {view}.")
 
     def extract_field_value(self, view, data):
         """Extract the field value """
@@ -484,7 +485,7 @@ class Sys():
             if type(val) is str:
                 filename = os.path.expandvars(os.path.join(directory,val))
             else:
-                self._log.warning(f"Provided file {val} is not in string form.")
+                log.warning(f"Provided file {val} is not in string form.")
 
             if os.path.exists(filename):
                 _, ext = os.path.splitext(filename)
@@ -493,7 +494,7 @@ class Sys():
                     destfile = str(data.get_index()) + "_" + tmpname + ext
                     destname = os.path.join(tmpdirectory, destfile)
                     if not os.path.exists(destname):
-                        self._log.debug(f"Copying \"{filename}\" to \"{destname}\".")
+                        log.debug(f"Copying \"{filename}\" to \"{destname}\".")
                         copy2(filename, destname)
                     self._tmp_pdf_files[destfile] = {
                         "origfile": filename,
@@ -503,7 +504,7 @@ class Sys():
                 else:
                     self.open_localfile(filename)
             else:
-                self._log.warning(f"view_file \"{filename}\" does not exist.")
+                log.warning(f"view_file \"{filename}\" does not exist.")
 
 
     def view_files(self, data):
