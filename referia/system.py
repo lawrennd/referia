@@ -23,7 +23,6 @@ from .util.misc import notempty, markdown2html, renderable, tallyable
 from .util.files import to_valid_file
 
 from .config.interface import Interface
-from . import display
 
 cntxt = Context(name="referia")
         
