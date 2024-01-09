@@ -44,16 +44,16 @@ def view(data):
     data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8, ax=ax)
     ax.set_xticks(range(0,13))
 
-def extract_load_reviewer(details, reviewer, widgets):
+def extract_load_scorer(details, reviewer, widgets):
     """Extract details from a separate file where they're specified."""
     # This is a link to a widget specificaiton stored in a file
     if "details" not in details:
         raise ValueError("Load reviewer needs to provide load details as entry under \"details\"")
     df,  newdetails = access.io.read_data(details["details"])
     for ind, series in df.iterrows():
-        extract_reviewer(remove_nan(series.to_dict()), reviewer, widgets)
+        extract_scorer(remove_nan(series.to_dict()), reviewer, widgets)
 
-def extract_group_reviewer(details, reviewer, widgets):
+def extract_group_scorer(details, reviewer, widgets):
     """Extract details that are clustered together in a group."""
     if "children" not in details:
         raise ValueError("group reviewer needs to provide a list of children under \"children\"")
@@ -65,9 +65,9 @@ def extract_group_reviewer(details, reviewer, widgets):
                 child["prefix"] = details["prefix"] + child["prefix"]
             if "field" in child:
                 child["field"] = details["prefix"] + child["field"]
-        extract_reviewer(child, reviewer, widgets)
+        extract_scorer(child, reviewer, widgets)
 
-def extract_composite_reviewer(details, reviewer, widgets):
+def extract_composite_scorer(details, reviewer, widgets):
     """Extract details for a predefined composition of widgets."""
     if details["type"] == "Criterion":
         value = None
@@ -112,7 +112,7 @@ def extract_composite_reviewer(details, reviewer, widgets):
             criterion["args"]["join"] = join
         if lis is not None:
             criterion["args"]["list"] = lis
-        extract_reviewer(criterion, reviewer, widgets)
+        extract_scorer(criterion, reviewer, widgets)
         return
 
     if details["type"] == "CriterionComment":
@@ -133,7 +133,7 @@ def extract_composite_reviewer(details, reviewer, widgets):
                 }
             }
         for sub_score in [criterion, comment]:
-            extract_reviewer(sub_score, reviewer, widgets)
+            extract_scorer(sub_score, reviewer, widgets)
         return
 
     if details["type"] == "CriterionCommentDate":
@@ -148,7 +148,7 @@ def extract_composite_reviewer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterion, date]:
-            extract_reviewer(sub_score, reviewer, widgets)
+            extract_scorer(sub_score, reviewer, widgets)
         return
 
 
@@ -172,7 +172,7 @@ def extract_composite_reviewer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterioncomment, expectation]:
-            extract_reviewer(sub_score, reviewer, widgets)
+            extract_scorer(sub_score, reviewer, widgets)
         return
     
     if details["type"] == "CriterionCommentRaisesMeetsLowers":
@@ -195,7 +195,7 @@ def extract_composite_reviewer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterioncomment, expectation]:
-            extract_reviewer(sub_score, reviewer, widgets)
+            extract_scorer(sub_score, reviewer, widgets)
         return
 
     if details["type"] == "CriterionCommentRaisesMeetsLowersFlag":
@@ -212,7 +212,7 @@ def extract_composite_reviewer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterioncommentraisesmeetslowers, flag]:
-            extract_reviewer(sub_score, reviewer, widgets)
+            extract_scorer(sub_score, reviewer, widgets)
         return
 
     
@@ -255,9 +255,9 @@ def extract_composite_reviewer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterioncomment, slider]:
-            extract_reviewer(sub_score, reviewer, widgets)
+            extract_scorer(sub_score, reviewer, widgets)
 
-def extract_loop_reviewer(details, reviewer, widgets):
+def extract_loop_scorer(details, reviewer, widgets):
     """Extract details for a loop of widgets."""
     if "start" not in details:
         raise ValueError("Missing start entry in loop")
@@ -281,7 +281,7 @@ def extract_loop_reviewer(details, reviewer, widgets):
                 sub_score["local"] = {}
             sub_score["local"]["element"] = element
             sub_score["element"] = element
-            extract_reviewer(sub_score, reviewer, widgets)
+            extract_scorer(sub_score, reviewer, widgets)
 
 def extract_widget(details, reviewer, widgets):
     """Extract the widget information given in details."""    
@@ -291,8 +291,12 @@ def extract_widget(details, reviewer, widgets):
         widget_type = global_variables[details["type"]]
         widget_key = None
         if "field" in details:
+            
             field_name = to_valid_var(details["field"])
-            reviewer._column_names_dict[field_name] = details["field"]
+            if hasattr(reviewer, "_column_names_dict"):
+                reviewer._column_names_dict[field_name] = details["field"]
+            else:
+                reviewer._column_names_dict = {field_name: details["field"]}
 
             # Create an instance of the object to extract default value.
             reviewer._default_field_vals[details["field"]] = widget_type(parent=reviewer, field_name=details["field"]).get_value()
@@ -373,7 +377,7 @@ def extract_widget(details, reviewer, widgets):
         raise Exception("Cannot find " + details["type"] + " interaction type.")
 
     
-def extract_reviewer(details, reviewer, widgets):
+def extract_scorer(details, reviewer, widgets):
     """
     Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command. Widget is added to the widgets list.
 
@@ -397,27 +401,27 @@ def extract_reviewer(details, reviewer, widgets):
     elif details["type"] == "load":
         load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
         widgets.add(load_widgets)
-        extract_load_reviewer(details, reviewer, load_widgets)
+        extract_load_scorer(details, reviewer, load_widgets)
 
     elif details["type"] == "group":
         group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
         widgets.add(group_widgets)
-        extract_group_reviewer(details, reviewer, group_widgets)
+        extract_group_scorer(details, reviewer, group_widgets)
 
     
     elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
         if isinstance(widgets, CompositeWidgetCluster):
-            extract_composite_reviewer(details, reviewer, widgets)
+            extract_composite_scorer(details, reviewer, widgets)
         else:
             composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
             widgets.add(composite_widget)
-            extract_composite_reviewer(details, reviewer, composite_widget)
+            extract_composite_scorer(details, reviewer, composite_widget)
 
 
     elif details["type"] == "loop":
         loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer)
         widgets.add(loop_widget)
-        extract_loop_reviewer(details, reviewer, loop_widget)
+        extract_loop_scorer(details, reviewer, loop_widget)
         
     else:
         # Widget is directly specified
@@ -549,7 +553,7 @@ class DynamicWidgetCluster(WidgetCluster):
         if details is None:
             details=self._details
         self.clear_children()
-        extract_loop_reviewer(details, self._parent, self)
+        extract_loop_scorer(details, self._parent, self)
 
 class LoadWidgetCluster(WidgetCluster):
     def __init__(self, **kwargs):
@@ -637,10 +641,10 @@ class Reviewer:
             widgets.add(**{label: Markdown(**args)})
         return widgets
 
-    def _create_reviewer(self, reviewers):
+    def _create_scorer(self, reviewers):
         """Create the reviewers from the config file."""
         for reviewer in reviewers:
-            extract_reviewer(reviewer, self, self._widgets)
+            extract_scorer(reviewer, self, self._widgets)
 
     def _create_documents(self, documents):
         """Process the document creators from the config file."""
@@ -695,7 +699,7 @@ class Reviewer:
         self._widgets.add(self._create_reload_button(self._interface))
         # Process the reviewer from the interface file.
         if "scorer" in self._interface:
-            self._widgets.add(self._create_reviewer(self._interface["scorer"]))
+            self._widgets.add(self._create_scorer(self._interface["scorer"]))
 
         # Process the document creators from the interface file.
         if "documents" in self._interface:
@@ -875,7 +879,7 @@ class Reviewer:
             return self._data.view_to_value(template)
         
     # Seems redundant, schedule for remove.
-    # def view_reviewer(self):
+    # def view_scorer(self):
     #     text = ""
     #     return 
     #     for key, widget in self.widgets().items():
