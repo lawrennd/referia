@@ -580,6 +580,10 @@ class Reviewer:
         else:
             append = []
             ignore = ["viewer"]
+
+        # Store the map between valid python variable names and data column name
+        self._column_names_dict = {"_": "_"} # This initialisation handles case where a function gives no output.
+        # Store the map between valid python variable names and data column names
         self._widgets = WidgetCluster(name="parent", parent=self)
         self._view_list = []
         self._dynamic_list = []
