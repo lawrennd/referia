@@ -18,8 +18,9 @@ from ipywidgets import jslink, jsdlink, Layout
 
 from ndlpy import log
 from ndlpy import access
-from ndlpy.util.misc import remove_nan
+from ndlpy.util.misc import remove_nan, to_valid_var
 from ndlpy.config.context import Context
+
 
 from ..util.widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
 
@@ -290,7 +291,7 @@ def extract_widget(details, reviewer, widgets):
         widget_type = global_variables[details["type"]]
         widget_key = None
         if "field" in details:
-            field_name = clean_string(details["field"])
+            field_name = to_valid_var(details["field"])
             reviewer._column_names_dict[field_name] = details["field"]
 
             # Create an instance of the object to extract default value.
@@ -373,7 +374,16 @@ def extract_widget(details, reviewer, widgets):
 
     
 def extract_reviewer(details, reviewer, widgets):
-    """Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command"""
+    """
+    Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command. Widget is added to the widgets list.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
 
         
     if details["type"] == "precompute":
@@ -412,10 +422,7 @@ def extract_reviewer(details, reviewer, widgets):
     else:
         # Widget is directly specified
         extract_widget(details, reviewer, widgets)
-
     
-def clean_string(instring):
-    return re.sub("\W+|^(?=\d)","_", instring)
 
 def nodes(chain, index=None):
     """Display the series of nodes """
@@ -600,10 +607,7 @@ class Reviewer:
         self._write_score = True
         self._select_subindex = False
         self._select_selector = False
-
-
-
-        self._create_widgets(self._interface, self._widgets)
+        self._create_widgets()
 
     def _create_reload_button(self, config):
         """Create the reload button."""
@@ -676,37 +680,40 @@ class Reviewer:
         return widgets
 
         
-    def _create_widgets(self, config, widgets):
-        """Create the widgets to be used for display."""
-        if "scored" in config:
-            widgets.add(cluster=self._create_progress_bar(label="_progress_label"))
+    def _create_widgets(self):
+        """
+        Create the widgets to be used for display.
 
-        # Process the viewer from the config file.
-        if "viewer" in config:
-            widgets.add(cluster=self._create_viewer(config["viewer"]))
+        """
+        if "scored" in self._interface:
+            self._widgets.add(cluster=self._create_progress_bar(label="_progress_label"))
 
-        widgets.add(self._create_reload_button(config))
-        # Process the reviewer from the config file.
-        if "reviewer" in config:
-            widgets.add(self._create_reviewer(config["reviewer"]))
+        # Process the viewer from the interface file.
+        if "viewer" in self._interface:
+            self._widgets.add(cluster=self._create_viewer(self._interface["viewer"]))
 
-        # Process the document creators from the config file.
-        if "documents" in config:
-            documents = config["documents"]
-            widgets.add(cluster=self._create_documents(documents))
+        self._widgets.add(self._create_reload_button(self._interface))
+        # Process the reviewer from the interface file.
+        if "scorer" in self._interface:
+            self._widgets.add(self._create_reviewer(self._interface["scorer"]))
 
-        # Process the summaries from the config file.
-        if "summary" in config:
-            summaries = config["summary"]
-            widgets.add(cluster=self._create_summary(summaries))
+        # Process the document creators from the interface file.
+        if "documents" in self._interface:
+            documents = self._interface["documents"]
+            self._widgets.add(cluster=self._create_documents(documents))
 
-        # Process the summary document creators from the config file.
-        if "summary_documents" in config:
-            documents = config["summary_documents"]
-            widgets.add(cluster=self._create_summary_documents(documents))
+        # Process the summaries from the interface file.
+        if "summary" in self._interface:
+            summaries = self._interface["summary"]
+            self._widgets.add(cluster=self._create_summary(summaries))
+
+        # Process the summary document creators from the interface file.
+        if "summary_documents" in self._interface:
+            documents = self._interface["summary_documents"]
+            self._widgets.add(cluster=self._create_summary_documents(documents))
 
         _save_button = SaveButton(parent=self)
-        widgets.add(cluster=WidgetCluster(name="save_button", parent=self, _save_button=_save_button))
+        self._widgets.add(cluster=WidgetCluster(name="save_button", parent=self, _save_button=_save_button))
 
     def add_views(self, label):
         """Maintain a list of widgets that stem from views"""
@@ -862,7 +869,7 @@ class Reviewer:
                     string += self._data.view_to_value(view)
                     string += "\n\n"
                 return string
-            elif template["use"] == "reviewer":
+            elif template["use"] == "scorer":
                 return self._widgets.to_markdown()
         else:
             return self._data.view_to_value(template)

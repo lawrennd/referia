@@ -25,4 +25,4 @@ def Scorer(index=None, data=None, user_file="_referia.yml", directory="."):
     if index is None:
         index = data.index.iloc[0]
     sys = system.Sys(interface)
-    return Reviewer(index, data, interface, system)
+    return Reviewer(index, data, interface, sys)
