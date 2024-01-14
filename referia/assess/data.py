@@ -623,35 +623,35 @@ class CustomDataFrame(data.CustomDataFrame):
         return value
     
 
-    def set_value(self, value):
-        """Set the value of the current cell under focus."""
-        column = self.get_column()
-        if column is None:
-            raise KeyError(f"Warning attempting to write a value {value} when column is not set.")
-        if self._globals is not None and column in self._globals.index:
-            self._globals.at[self._globals_index, column] = value
-            return
+    # def set_value(self, value):
+    #     """Set the value of the current cell under focus."""
+    #     column = self.get_column()
+    #     if column is None:
+    #         raise KeyError(f"Warning attempting to write a value {value} when column is not set.")
+    #     if self._globals is not None and column in self._globals.index:
+    #         self._globals.at[self._globals_index, column] = value
+    #         return
 
         
-        index = self.get_index()
-        selector = self.get_selector()
-        subindex = self.get_subindex()
-        # If trying to set a numeric valued column's entry to a string, set the type of column to object.
-        if not self.ismutable(column):
-            raise KeyError(f"Attempting to write to column \"{column}\" which is read only.")
+    #     index = self.get_index()
+    #     selector = self.get_selector()
+    #     subindex = self.get_subindex()
+    #     # If trying to set a numeric valued column's entry to a string, set the type of column to object.
+    #     if not self.ismutable(column):
+    #         raise KeyError(f"Attempting to write to column \"{column}\" which is read only.")
         
-        col_source = self._col_source(column)
-        if not self.isglobal(column):
-            self._d[col_source].at[index, column] = value
-        elif not self.isseries(column):
-            self._d[col_source].at[column] = value
-        else:
-            self._update_type(self._d[col_source], column, value)
-            self._d[col_source].loc[
-                self._d[col_source].index.isin([index])
-                & (self._d[col_source][selector]==subindex).values,
-                column
-            ] = value
+    #     col_source = self._col_source(column)
+    #     if not self.isglobal(column):
+    #         self._d[col_source].at[index, column] = value
+    #     elif not self.isseries(column):
+    #         self._d[col_source].at[column] = value
+    #     else:
+    #         self._update_type(self._d[col_source], column, value)
+    #         self._d[col_source].loc[
+    #             self._d[col_source].index.isin([index])
+    #             & (self._d[col_source][selector]==subindex).values,
+    #             column
+    #         ] = value
 
     def drop_column(self, column_name):
         if column_name not in self.columns:
@@ -738,61 +738,61 @@ class CustomDataFrame(data.CustomDataFrame):
     def get_value(self):
         """Return the value of the current cell under focus."""
         # Ordering here dictates the priority of selection, global constants, then globals, then series, then writedata, then cache then data.
-        return super().get_value()
         
         column = self.get_column()
         if column == "_":
             return None
         if column == None:
             return None
-        if self._global_consts is not None and column in self._global_consts.index:
-            return self._global_consts[column]
+        return super().get_value()
+        # if self._global_consts is not None and column in self._global_consts.index:
+        #     return self._global_consts[column]
 
-        if self._globals is not None and column in self._globals.columns:
-            return self._globals.at[self._globals_index, column]
+        # if self._globals is not None and column in self._globals.columns:
+        #     return self._globals.at[self._globals_index, column]
 
-        index = self.get_index()
-        if index == None:
-            return None
-        selector = self.get_selector()
-        subindex = self.get_subindex()
-        # Prioritise returning from the _writeseries then the _writedata structure first.
-        if self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
-            if subindex is not None:
-                indexer = (self._writeseries.index.isin([index])
-                           & (self._writeseries[selector]==subindex).values)
-                if indexer.sum()>0:
-                    return self._writeseries.loc[indexer, column].iloc[0]
-                else:
-                    log.warning(f"No data available with this subindex and index , returning None.")
-            else:
-                log.warning(f"No subindex selected, returning None.")
-        elif self._writedata is not None and column in self._writedata.columns:
-            if index in self._data.index and not index in self._writedata.index:
-                # If index isn't created in write data yet, return None.
-                return None
-            try:
-                return self._writedata.at[index, column]
-            except KeyError as err:
-                raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _writedata.") from err
-        elif self._cache is not None and column in self._cache.columns:
-            if index in self._data.index and not index in self._cache.index:
-                # If index isn't created in write data yet, return None.
-                return None
-            try:
-                return self._cache.at[index, column]
-            except KeyError as err:
-                raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _cache.") from err
-        elif self._data is not None and column in self._data.columns:
-            try:
-                return self._data.at[index, column]
-            except KeyError as err:
-                raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _data.") from err
-        elif self._data is not None and column==self._data.index.name:
-            return index
-        else:
-            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._cache or in self._data returning \"None\"")
-            return None
+        # index = self.get_index()
+        # if index == None:
+        #     return None
+        # selector = self.get_selector()
+        # subindex = self.get_subindex()
+        # # Prioritise returning from the _writeseries then the _writedata structure first.
+        # if self._selector is not None and self._writeseries is not None and column in self._writeseries.columns:
+        #     if subindex is not None:
+        #         indexer = (self._writeseries.index.isin([index])
+        #                    & (self._writeseries[selector]==subindex).values)
+        #         if indexer.sum()>0:
+        #             return self._writeseries.loc[indexer, column].iloc[0]
+        #         else:
+        #             log.warning(f"No data available with this subindex and index , returning None.")
+        #     else:
+        #         log.warning(f"No subindex selected, returning None.")
+        # elif self._writedata is not None and column in self._writedata.columns:
+        #     if index in self._data.index and not index in self._writedata.index:
+        #         # If index isn't created in write data yet, return None.
+        #         return None
+        #     try:
+        #         return self._writedata.at[index, column]
+        #     except KeyError as err:
+        #         raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _writedata.") from err
+        # elif self._cache is not None and column in self._cache.columns:
+        #     if index in self._data.index and not index in self._cache.index:
+        #         # If index isn't created in write data yet, return None.
+        #         return None
+        #     try:
+        #         return self._cache.at[index, column]
+        #     except KeyError as err:
+        #         raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _cache.") from err
+        # elif self._data is not None and column in self._data.columns:
+        #     try:
+        #         return self._data.at[index, column]
+        #     except KeyError as err:
+        #         raise KeyError(f"Cannot find index: \"{index}\" and column: \"{column}\" in _data.") from err
+        # elif self._data is not None and column==self._data.index.name:
+        #     return index
+        # else:
+        #     log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._cache or in self._data returning \"None\"")
+        #     return None
 
     def add_column(self, column, data=None):
         if column in self.columns:
