@@ -1277,11 +1277,12 @@ class CustomDataFrame(data.CustomDataFrame):
         """for field in dtypes:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
+        # if "index" not in details:
+        #     errmsg = "Missing index field in data frame specification in _referia.yml"
+        #     log.error(errmsg)
+        #     raise ValueError(errmsg)
         if "index" not in details:
-            errmsg = "Missing index field in data frame specification in _referia.yml"
-            log.errmsg(errmsg)
-            raise ValueError(errmsg)
-
+            index_column_name = df.index.name
         if "columns" in details:
             # Make sure the listed columns are present.
             for column in details["columns"]:

@@ -16,6 +16,6 @@ def Data(user_file="_referia.yml", directory="."):
     """
 
     interface = Interface.from_file(user_file=user_file, directory=directory)
-    data = CustomDataFrame.from_interface(interface)
+    data = CustomDataFrame.from_flow(interface)
     data.compute = Compute(data, interface)
     return data

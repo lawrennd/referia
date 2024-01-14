@@ -47,27 +47,37 @@ class Interface(ndlpy.config.interface.Interface):
             if not isinstance(allocation, list):
                 allocation = [allocation]
             if "input" not in data:
-                data["input"] = {"type" : "hstack", "descriptions" : [{"type": "vstack", "descriptions" : allocation}]}
+                data["input"] = {"type" : "hstack", "specifications" : [{"type": "vstack", "specifications" : allocation}]}
+            del data["allocation"]
+            
         if "additional" in data:
             additional = data["additional"]
             if not isinstance(additional, list):
                 additional = [additional]
-            data["input"]["descriptions"] += additional
+            data["input"]["specifications"] += additional
+            del data["additional"]
+
         if "global_consts" in data:
             constants = data["global_consts"]
             if isinstance(constants, list):
-                data["constants"] = {"type": "hstack", "descriptions": constants}
+                data["constants"] = {"type": "hstack", "specifications": constants}
             else:
                 data["constants"] = constants
+            del data["global_consts"]
+
         if "globals" in data:
             parameters = data["globals"]
             if isinstance(parameters, list):
-                data["parameters"] = {"type": "hstack", "descriptions": parameters}
+                data["parameters"] = {"type": "hstack", "specifications": parameters}
             else:
                 data["parameters"] = parameters
+            del data["globals"]
 
         if "scores" in data:
             data["output"] = data["scores"]
+            del data["scores"]
+
+            #self._expand_scores()   
 
         super().__init__(data)
         
