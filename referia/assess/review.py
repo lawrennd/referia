@@ -445,7 +445,19 @@ def nodes(chain, index=None):
         oldkey = key
                                 
 class WidgetCluster():
+    """
+    A class to hold a cluster of widgets.
+    """
     def __init__(self, name, parent, viewer=False, **kwargs):
+        """
+        Create a cluster of widgets.
+
+        :param name: The name of the cluster.
+        :type name: str
+        :param parent: The parent of the cluster.
+        :type parent: Reviewer or WidgetCluster
+        :param viewer: Whether the cluster is a viewer.
+        """
         self._widget_dict = {}
         self._widget_list = []
         self._name = name
@@ -454,11 +466,17 @@ class WidgetCluster():
         self.add(**kwargs)
 
     def clear_children(self):
+        """
+        Clear the children of the cluster.
+        """
         self.close()
         self._widget_dict = {}
         self._widget_list = []
 
     def close(self):
+        """
+        Close the widgets.
+        """
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
                 entry.close()
@@ -466,15 +484,33 @@ class WidgetCluster():
                 self._widget_dict[entry].close()
                 
     def has(self, key):
+        """
+        Check if the cluster has a widget with the given key.
+
+        :param key: The key of the widget.
+        :type key: str
+        :return: Whether the cluster has the widget.
+        :rtype: bool
+        """
         if key in self.to_dict():
             return True
         else:
             return False
 
     def get(self, key):
+        """
+        Get the widget with the given key.
+
+        :param key: The key of the widget.
+        :type key: str
+        :return: The widget.
+        """
         return self.to_dict()[key]
 
     def refresh(self):
+        """
+        Refresh the widgets.
+        """
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
                 entry.refresh()
@@ -482,6 +518,14 @@ class WidgetCluster():
                 self._widget_dict[entry].refresh()
         
     def add(self, cluster=None, **kwargs):
+        """
+        Add a widget to the cluster.
+
+        :param cluster: The cluster to be added.
+        :type cluster: WidgetCluster
+        :param kwargs: The widgets to be added.
+        :type kwargs: dict
+        """
         if cluster is not None:
             cluster.add(**kwargs)
             self._widget_list.append(cluster)
@@ -491,6 +535,12 @@ class WidgetCluster():
                 self._widget_dict = {**self._widget_dict, **kwargs}
         
     def update(self, **kwargs):
+        """
+        Update the widgets.
+
+        :param kwargs: The widgets to be updated.
+        :type kwargs: dict
+        """
         for key, item in kwargs.items():
             if key in self._widget_dict:
                 self._widget_dict[key] = item
@@ -498,7 +548,11 @@ class WidgetCluster():
                 raise ValueError(f"Attempt to update widget \"{key}\" when it doesn't exist.")
 
     def to_markdown(self,skip=[]):
-        """Convert the widget outputs into text."""
+        """
+        Convert the widget outputs into text.
+
+        :param skip: The widgets to be skipped.
+        """
         text = ""
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
@@ -514,6 +568,12 @@ class WidgetCluster():
         return text
             
     def to_dict(self):
+        """
+        Convert the widget outputs into a dictionary.
+
+        :return: The widgets.
+        :rtype: dict
+        """
         widgets = {}
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
@@ -527,7 +587,9 @@ class WidgetCluster():
         return widgets
 
     def display(self):
-        """Display the widgets"""
+        """
+        Display the widgets
+        """
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
                 entry.display()
@@ -535,11 +597,23 @@ class WidgetCluster():
                 self._widget_dict[entry].display()
                 
 class DynamicWidgetCluster(WidgetCluster):
+    """
+    A class to hold a cluster of widgets that are dynamically reconstructed.
+    """
     def __init__(self, details, **kwargs):
+        """
+        Create a cluster of widgets.
+
+        :param details: The details of the scoring element.
+        :type details: dict
+        """
         self._details = details
         super().__init__(**kwargs)
 
     def refresh(self):
+        """
+        Refresh the widgets.
+        """
         self.from_details()
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
@@ -550,30 +624,59 @@ class DynamicWidgetCluster(WidgetCluster):
                 
 
     def from_details(self, details=None):
+        """
+        Reconstruct the widgets from the details.
+
+        :param details: The details of the scoring element.
+        :type details: dict
+        """
         if details is None:
             details=self._details
         self.clear_children()
         extract_loop_scorer(details, self._parent, self)
 
 class LoadWidgetCluster(WidgetCluster):
+    """
+    """
     def __init__(self, **kwargs):
+        """
+        Create a cluster of widgets.
+        """
         super().__init__(**kwargs)
 
 class GroupWidgetCluster(WidgetCluster):
+    """
+    """
     def __init__(self, **kwargs):
+        """
+        Create a cluster of widgets.
+        """
         super().__init__(**kwargs)
 
 class CompositeWidgetCluster(WidgetCluster):
+    """
+    """
     def __init__(self, **kwargs):
+        """
+        Create a cluster of widgets.
+        """
         super().__init__(**kwargs)
     
 class LoopWidgetCluster(DynamicWidgetCluster):
+    """
+    
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
 class Reviewer:
-    
+    """
+    A class to hold the display system.
+    """
     def __init__(self, index=None, data=None, interface=None, system=None, viewer_inherit=True):
+        """
+        Create the display system.
+        """
         if viewer_inherit:
             append = ["viewer"]
             ignore = []
@@ -607,7 +710,6 @@ class Reviewer:
         else:
             self._data = data
 
-
         if index is not None:
             # Widget isn't created yet so set index in data only.
             self._data.set_index(index)
@@ -618,17 +720,32 @@ class Reviewer:
         self._create_widgets()
 
     def _create_reload_button(self, config):
-        """Create the reload button."""
+        """
+        Create the reload button.
+
+        :param config: The configuration file.
+        :type config: dict
+        """
         _reload_button = ReloadButton(parent=self)
         return WidgetCluster(name="reload_button", parent=self,  _reload_button=_reload_button)
 
     def _create_progress_bar(self, label):
-        """Create the progress bar."""
+        """
+        Create the progress bar.
+
+        :param label: The label for the progress bar.
+        :type label: str
+        """
         _progress_label = Markdown(description=" ", field_name=label)
         return WidgetCluster(name="progress_bar", parent=self,  viewer=True, _progress_label=_progress_label)
 
     def _create_viewer(self, views):
-        """Create the viewer."""
+        """
+        Create the viewer.
+
+        :param views: The views to be displayed.
+        :type views: dict
+        """
         widgets = WidgetCluster(name="viewer", parent=self, viewer=True)
         if type(views) is not list:
             views = [views]
@@ -646,12 +763,22 @@ class Reviewer:
         return widgets
 
     def _create_scorer(self, reviewers):
-        """Create the reviewers from the config file."""
+        """
+        Create the reviewers from the config file.
+
+        :param reviewers: The reviewers to be displayed.
+        :type reviewers: dict
+        """
         for reviewer in reviewers:
             extract_scorer(reviewer, self, self._widgets)
 
     def _create_documents(self, documents):
-        """Process the document creators from the config file."""
+        """
+        Process the document creators from the config file.
+
+        :param documents: The documents to be created.
+        :type documents: dict
+        """
         widgets = WidgetCluster(name="documents", parent=self)
         for count, document in enumerate(documents):
             label = "_doc_button" + str(count)
@@ -664,6 +791,12 @@ class Reviewer:
         return widgets
 
     def _create_summary(self, summaries):
+        """
+        Process the summary creators from the config file.
+
+        :param summaries: The summaries to be created.
+        :type summaries: dict
+        """
         widgets = WidgetCluster(name="summaries", parent=self)
         for count, summary in enumerate(summaries):
             label = "_summary_button" + str(count)
@@ -676,6 +809,12 @@ class Reviewer:
         return widgets
     
     def _create_summary_documents(self, documents):
+        """
+        Process the summary document creators from the config file.
+
+        :param documents: The documents to be created.
+        :type documents: dict
+        """
         widgets = WidgetCluster(name="documents", parent=self)
         for count, document in enumerate(documents):
             label = "_summary_doc_button" + str(count)
@@ -691,7 +830,6 @@ class Reviewer:
     def _create_widgets(self):
         """
         Create the widgets to be used for display.
-
         """
         if "scored" in self._interface:
             self._widgets.add(cluster=self._create_progress_bar(label="_progress_label"))
@@ -724,26 +862,57 @@ class Reviewer:
         self._widgets.add(cluster=WidgetCluster(name="save_button", parent=self, _save_button=_save_button))
 
     def add_views(self, label):
-        """Maintain a list of widgets that stem from views"""
+        """
+        Maintain a list of widgets that stem from views
+
+        :param label: The label for the view.
+        """
         self._view_list.append(label)
 
     def add_dynamic(self, label):
-        """Maintain a list of widgets that are dynamically reconstructed."""
+        """
+        Maintain a list of widgets that are dynamically reconstructed.
+
+        :param label: The label for the dynamic widget.
+        :type label: str
+        """
         self._dynamic_list.append(label)
         
     def add_downstream_display(self, display):
-        """Add a display that is downstream of this one to be updated"""
+        """
+        Add a display that is downstream of this one to be updated.
+
+        :param display: The display to be updated.
+        :type display: Reviewer
+        """
         self._downstream_displays.append(display)
         
     @property
     def index(self):
+        """
+        Get the index of the display system.
+
+        :return: The index of the display system.
+        :rtype: int
+        """
         return self._data.index
 
     def get_index(self):
+        """
+        Get the index of the display system.
+
+        :return: The index of the display system.
+        :rtype: int
+        """
         return self._data.get_index()
 
     def set_index(self, value):
-        """Set the index of the display system"""
+        """
+        Set the index of the display system.
+
+        :param value: The index of the display system.
+        :type value: int
+        """
         oldval = self.get_index()
         if oldval != value:
             self._data.set_index(value)
@@ -754,10 +923,17 @@ class Reviewer:
                 ds.set_index(value)
             
     def get_value(self):
+        """
+        Get the value of the focus element in the data of display system.
+
+        :return: The value of the focus element in the data of the display system.
+        :rtype: object
+        """
         return self._data.get_value()
 
     def get_value_by_element(self, element):
-        """Get an element of the value."""
+        """
+        Get an element of the value."""
         return self._data.get_value_by_element(element)
     
     def set_value_by_element(self, value, element, trigger_update=True):
