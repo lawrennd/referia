@@ -382,7 +382,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
 
     def on_value_change(self, value):
         """
-        If display is refreshed then refresh it.
+        Observer for when value changes.
         """
         pass
     
@@ -469,10 +469,9 @@ class FieldWidget(ReferiaStatefulWidget):
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        self.set_value(change.new)
         if not self.private and self._parent is not None:
             self._parent.set_column(self.get_column())
-            self._parent.set_value(self.get_value())
+            self._parent.set_value(change.new)
 
         if self._refresh_display:
             if self._parent is not None:
@@ -545,10 +544,9 @@ class ElementWidget(FieldWidget):
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        self.set_value(change.new)
         if not self.private and self._parent is not None:
             self._parent.set_column(self.get_column())
-            self._parent.set_value_by_element(self.get_value(), self.get_element())
+            self._parent.set_value_by_element(change.new, self.get_element())
         if self._refresh_display:
             if self._parent is not None:
                 self._parent.refresh()
@@ -605,10 +603,11 @@ class IndexSelector(ReferiaStatefulWidget):
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        self.set_value(change.new)
+        super().on_value_change(change)
         if not self.private and self._parent is not None:
-            self._parent.set_index(self.get_value())
-            self._parent.view_series()
+            if change.new != self._parent.get_index():
+                self._parent.set_index(change.new)
+                self._parent.view_series()
 
     def set_index(self, value):
         """
@@ -866,9 +865,6 @@ class FullSelector(ReferiaMultiWidget):
                 else:
                     item["layout"]["display"] = "none"
         super().__init__(parent, stateful_args, stateless_args)
-
-
-    
 
 class IndexSubIndexSelectorSelect(FullSelector):
     """

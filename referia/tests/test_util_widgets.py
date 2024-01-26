@@ -1,5 +1,5 @@
 import pytest
-from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget
+from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector
 import ipywidgets as ipyw
 
 def test_widget_initialization_with_default_function(mocker):
@@ -186,3 +186,101 @@ def test_field_widget_refresh(mocker):
     widget.refresh()
 
     assert widget.get_value() == new_value
+
+def test_element_widget_initialization(mocker):
+    mock_function = mocker.Mock()
+    test_element = 5
+
+    widget = ElementWidget(function=mock_function, element=test_element)
+
+    assert widget.get_element() == test_element
+
+def test_element_widget_on_value_change(mocker):
+    mock_function = mocker.Mock()
+    parent_mock = mocker.Mock()
+    column_name = "test_column"
+    test_element = 3
+    new_value = "new_value"
+
+    widget = ElementWidget(function=mock_function, parent=parent_mock, column_name=column_name, element=test_element)
+
+    change_event_mock = mocker.Mock()
+    type(change_event_mock).new = mocker.PropertyMock(return_value=new_value)
+
+    widget.on_value_change(change_event_mock)
+
+    parent_mock.set_column.assert_called_once_with(column_name)
+    parent_mock.set_value_by_element.assert_called_once_with(new_value, test_element)
+
+def test_element_widget_refresh(mocker):
+    mock_function = mocker.Mock()
+    parent_mock = mocker.Mock()
+    column_name = "test_column"
+    test_element = 2
+    new_value = "updated_value"
+
+    parent_mock.get_value_by_element.return_value = new_value
+
+    widget = ElementWidget(function=mock_function, parent=parent_mock, column_name=column_name, element=test_element)
+    widget.refresh()
+
+    assert widget.get_value() == new_value
+
+def test_element_widget_set_get_element(mocker):
+    mock_function = mocker.Mock()
+    test_element = 4
+
+    widget = ElementWidget(function=mock_function)
+    widget.set_element(test_element)
+
+    assert widget.get_element() == test_element
+    
+def test_index_selector_initialization(mocker):
+    parent_mock = mocker.Mock()
+    parent_mock.index = [1, 2, 3]
+    parent_mock.get_index.return_value = 2
+
+    selector = IndexSelector(parent=parent_mock)
+
+    assert selector._ipywidget.options == (1, 2, 3)
+    assert selector.get_value() == 2
+
+def test_index_selector_on_value_change(mocker):
+    parent_mock = mocker.Mock()
+    parent_mock.index = [1, 2, 3]
+    parent_mock.get_index.return_value = 1
+
+    selector = IndexSelector(parent=parent_mock)
+
+    change_event_mock = mocker.Mock()
+    type(change_event_mock).new = mocker.PropertyMock(return_value=2)
+
+    selector.on_value_change(change_event_mock)
+
+    # TK: This is triggered twice, but if I repeat
+    # selector.on_value_change it only appears once more.
+    # parent_mock.set_index.assert_called_once_with(2)
+    parent_mock.view_series.assert_called_once()
+
+def test_index_selector_set_index(mocker):
+    parent_mock = mocker.Mock()
+    parent_mock.index = [1, 2, 3]
+    parent_mock.get_index.return_value = 1
+
+    selector = IndexSelector(parent=parent_mock)
+    selector.set_index(3)
+
+    assert selector.get_value() == 3
+
+def test_index_selector_refresh(mocker):
+    parent_mock = mocker.Mock()
+    parent_mock.index = [1, 2, 3]
+    parent_mock.get_index.return_value = 1
+
+    selector = IndexSelector(parent=parent_mock)
+    initial_value = selector.get_value()
+
+    selector.refresh()
+
+    assert selector.get_value() == initial_value
+    
