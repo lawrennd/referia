@@ -1,5 +1,5 @@
 import pytest
-from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector
+from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, gsv_, gwu_, gwc_, gocf_
 import ipywidgets as ipyw
 
 def test_widget_initialization_with_default_function(mocker):
@@ -284,3 +284,73 @@ def test_index_selector_refresh(mocker):
 
     assert selector.get_value() == initial_value
     
+
+# Test Initialization
+def test_referia_multi_widget_initialization(mocker):
+    parent_mock = mocker.Mock()
+    stateful_args = {
+        'key1': {'function': mocker.Mock(), 'result_function': mocker.Mock(), 
+                 'conversion': mocker.Mock(), 'reversion': mocker.Mock()}
+    }
+    stateless_args = {
+        'key2': {'function': mocker.Mock(), 'on_click_function': mocker.Mock()}
+    }
+
+    widget = ReferiaMultiWidget(parent=parent_mock, stateful_args=stateful_args, stateless_args=stateless_args)
+
+    assert 'key1' in widget._ipywidgets
+    assert widget._ipywidgets['key1']['stateful'] == True
+    assert 'key2' in widget._ipywidgets
+    assert widget._ipywidgets['key2']['stateful'] == False
+
+# Test add_stateful Method
+def test_add_stateful(mocker):
+    parent_mock = mocker.Mock()
+    widget = ReferiaMultiWidget(parent=parent_mock, stateful_args={}, stateless_args={})
+
+    key = 'key1'
+    item = {'function': mocker.Mock(), 'result_function': mocker.Mock(), 
+            'conversion': mocker.Mock(), 'reversion': mocker.Mock()}
+
+    widget.add_stateful(key, item)
+
+    assert key in widget._ipywidgets
+    assert widget._ipywidgets[key]['stateful'] == True
+
+# Test update_side_effects Method
+def test_update_side_effects(mocker):
+    parent_mock = mocker.Mock()
+    widget = ReferiaMultiWidget(parent=parent_mock, stateful_args={}, stateless_args={})
+
+    key = 'key1'
+    item = {'function': mocker.Mock(), 'result_function': mocker.Mock(), 
+            'conversion': mocker.Mock(), 'reversion': mocker.Mock()}
+
+    widget.add_stateful(key, item)
+    widget.update_side_effects(key, item)
+
+    assert widget._ipywidgets[key]['on_change'] is not None
+
+# Test add_stateless Method
+def test_add_stateless(mocker):
+    parent_mock = mocker.Mock()
+    widget = ReferiaMultiWidget(parent=parent_mock, stateful_args={}, stateless_args={})
+
+    key = 'key2'
+    item = {'function': mocker.Mock(), 'on_click_function': mocker.Mock()}
+
+    widget.add_stateless(key, item)
+
+    assert key in widget._ipywidgets
+    assert widget._ipywidgets[key]['stateful'] == False
+
+# Test display Method
+def test_display(mocker):
+    mocker.patch('IPython.display.display')
+    mock_vbox = mocker.patch('ipywidgets.VBox')
+    parent_mock = mocker.Mock()
+    widget = ReferiaMultiWidget(parent=parent_mock, stateful_args={}, stateless_args={})
+
+    widget.display()
+
+    ipyw.VBox.assert_called()
