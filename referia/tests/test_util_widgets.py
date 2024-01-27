@@ -1,5 +1,5 @@
 import pytest
-from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, ScreenCapture, FullSelector, IndexSubIndexSelectorSelect, gocf_, gsv_, gwc_, gwu_, gwf_, gwef_
+from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, ScreenCapture, FullSelector, IndexSubIndexSelectorSelect, CreateDocButton, CreateSummaryDocButton, CreateSummaryButton, SaveButton, ReloadButton, PopulateButton, gocf_, gsv_, gwc_, gwu_, gwf_, gwef_
 import ipywidgets as ipyw
 
 def test_widget_initialization_with_default_function(mocker):
@@ -441,7 +441,6 @@ def test_index_subindex_selector_select_on_value_change(mocker):
 
     selector.on_value_change(change_event_mock)
 
-    # Additional assertions based on your implementation
 
 def test_index_subindex_selector_select_set_index(mocker):
     parent_mock = mocker.Mock()
@@ -476,6 +475,76 @@ def test_index_subindex_selector_select_set_index(mocker):
     # Assert that the mock set_value function was called correctly
     mock_set_value_function.assert_called_once_with(new_index_value)
 
+
+# Mock parent class for testing
+class MockParent:
+    def create_document(self, document, summary=False):
+        pass
+
+    def create_summary(self, details):
+        pass
+
+    def save(self):
+        pass
+
+    def load_flows(self, reload=False):
+        pass
+
+    def populate_display(self):
+        pass
+
+@pytest.mark.parametrize("summary", [True, False])
+def test_create_doc_button(mocker, summary):
+    parent_mock = mocker.Mock(spec=MockParent)
+    button = CreateDocButton(type="DocType", document="Doc", parent=parent_mock) if not summary else CreateSummaryDocButton(type="DocType", document="Doc", parent=parent_mock)
+    
+    mocker.patch.object(parent_mock, 'create_document')
+    button.on_click(None)
+    parent_mock.create_document.assert_called_once_with("Doc", summary=summary)
+
+def test_create_summary_button(mocker):
+    parent_mock = mocker.Mock(spec=MockParent)
+    details = {"detail_key": "detail_value"}
+    button = CreateSummaryButton(type="SummaryType", details=details, parent=parent_mock)
+
+    mocker.patch.object(parent_mock, 'create_summary')
+    button.on_click(None)
+    parent_mock.create_summary.assert_called_once_with(details)
+
+def test_save_button(mocker):
+    parent_mock = mocker.Mock(spec=MockParent)
+    button = SaveButton(parent=parent_mock)
+
+    mocker.patch.object(parent_mock, 'save')
+    button.on_click(None)
+    parent_mock.save.assert_called_once()
+
+def test_reload_button(mocker):
+    parent_mock = mocker.Mock(spec=MockParent)
+    button = ReloadButton(parent=parent_mock)
+
+    mocker.patch.object(parent_mock, 'load_flows')
+    button.on_click(None)
+    parent_mock.load_flows.assert_called_once_with(reload=True)
+
+def test_populate_button(mocker):
+    # Creating a chain of mock objects for nested attributes
+    compute_mock = mocker.Mock()
+    data_mock = mocker.Mock(_compute=compute_mock)
+    parent_mock = mocker.Mock(_data=data_mock, spec=MockParent)
+
+    compute = {"compute_key": "compute_value"}
+    button = PopulateButton(target="Target", compute=compute, parent=parent_mock)
+
+    mocker.patch.object(parent_mock, 'populate_display')
+    mocker.patch.object(compute_mock, 'run')
+    mocker.patch.object(compute_mock, 'prep', return_value=compute)
+
+    button.on_click(None)
+
+    parent_mock.populate_display.assert_called_once()
+    compute_mock.run.assert_called_once_with(compute)
+    compute_mock.prep.assert_called_once_with(compute)
 
 class MockReferiaMultiWidget:
     def __init__(self):
