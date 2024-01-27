@@ -1,5 +1,5 @@
 import pytest
-from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, FullSelector, gsv_, gwu_, gwc_, gocf_
+from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, ScreenCapture, FullSelector, IndexSubIndexSelectorSelect, gsv_, gwu_, gwc_, gocf_
 import ipywidgets as ipyw
 
 def test_widget_initialization_with_default_function(mocker):
@@ -355,6 +355,28 @@ def test_display(mocker):
 
     ipyw.VBox.assert_called()
 
+def test_screen_capture_initialization(mocker):
+    parent_mock = mocker.Mock()
+    parent_mock.copy_screen_capture = mocker.Mock()
+
+    # Mock ipywidgets.Image and ipywidgets.Button
+    mock_image = mocker.patch.object(ipyw, 'Image', return_value=mocker.Mock())
+    mock_button = mocker.patch.object(ipyw, 'Button', return_value=mocker.Mock())
+
+    screen_capture = ScreenCapture(parent=parent_mock)
+
+    # Check if the stateful widget "image" is correctly set up
+    assert "image" in screen_capture._ipywidgets
+    mock_image.assert_called_once()
+
+    # Check if the stateless widget "capture_button" is correctly set up
+    assert "capture_button" in screen_capture._ipywidgets
+    mock_button.assert_called_once()
+
+    # Check if on_click was set up for the button
+    button_widget = screen_capture._ipywidgets["capture_button"]["widget"]
+    button_widget.on_click.assert_called_once()
+
 
 # Test Initialization for `FullSelector`
 def test_full_selector_initialization(mocker):
@@ -381,3 +403,75 @@ def test_full_selector_initialization(mocker):
     assert 'key1' in full_selector._ipywidgets
     assert 'key2' in full_selector._ipywidgets
     
+
+# Test Initialization
+def test_index_subindex_selector_select_initialization(mocker):
+    parent_mock = mocker.Mock()
+    parent_mock.get_indices = mocker.Mock()
+    parent_mock.get_selectors = mocker.Mock()
+    parent_mock.get_subindices = mocker.Mock()
+    parent_mock.get_index = mocker.Mock(return_value=1)
+    parent_mock.get_selector = mocker.Mock(return_value='selector1')
+    parent_mock.get_subindex = mocker.Mock(return_value='subindex1')
+    parent_mock.get_select_subindex = mocker.Mock(return_value=True)
+    parent_mock.get_select_selector = mocker.Mock(return_value=True)
+    parent_mock.add_series_row = mocker.Mock()
+
+    mocker.patch.object(ipyw, 'Dropdown', return_value=mocker.Mock())
+    mocker.patch.object(ipyw, 'Checkbox', return_value=mocker.Mock())
+    mocker.patch.object(ipyw, 'Button', return_value=mocker.Mock())
+
+    selector = IndexSubIndexSelectorSelect(parent=parent_mock)
+
+    assert "index_select" in selector._ipywidgets
+    assert "selector_select" in selector._ipywidgets
+    assert "subindex_select" in selector._ipywidgets
+    assert "select_subindex_checkbox" in selector._ipywidgets
+    assert "select_selector_checkbox" in selector._ipywidgets
+    assert "generate_button" in selector._ipywidgets
+
+def test_index_subindex_selector_select_on_value_change(mocker):
+    parent_mock = mocker.Mock()
+    mocker.patch.object(ipyw, 'Dropdown', return_value=mocker.Mock())
+    mocker.patch.object(ipyw, 'Checkbox', return_value=mocker.Mock())
+    selector = IndexSubIndexSelectorSelect(parent=parent_mock)
+
+    change_event_mock = mocker.Mock()
+    type(change_event_mock).new = mocker.PropertyMock(return_value="new_value")
+
+    selector.on_value_change(change_event_mock)
+
+    # Additional assertions based on your implementation
+
+def test_index_subindex_selector_select_set_index(mocker):
+    parent_mock = mocker.Mock()
+    parent_mock.get_indices = mocker.Mock(return_value=[1, 2, 3])
+    parent_mock.get_selectors = mocker.Mock(return_value=['selector1', 'selector2'])
+    parent_mock.get_subindices = mocker.Mock(return_value=['subindex1', 'subindex2'])
+    parent_mock.get_index = mocker.Mock(return_value=1)
+    parent_mock.get_selector = mocker.Mock(return_value='selector1')
+    parent_mock.get_subindex = mocker.Mock(return_value='subindex1')
+    parent_mock.get_select_subindex = mocker.Mock(return_value=True)
+    parent_mock.get_select_selector = mocker.Mock(return_value=True)
+    parent_mock.add_series_row = mocker.Mock()
+
+    mock_set_value_function = mocker.Mock()
+
+    # Mock gsv_ to return our mock_set_value_function
+    gsv_mock = mocker.patch('referia.util.widgets.gsv_', return_value=mock_set_value_function)
+   
+    mocker.patch.object(ipyw, 'Dropdown', return_value=mocker.Mock())
+    mocker.patch.object(ipyw, 'Checkbox', return_value=mocker.Mock())
+    mocker.patch.object(ipyw, 'Button', return_value=mocker.Mock())
+
+    selector = IndexSubIndexSelectorSelect(parent=parent_mock)
+
+    new_index_value = "new_index"
+    selector.set_index(new_index_value)
+
+    # Check if the correct method is being called on the widget
+    index_widget = selector._ipywidgets["index_select"]["widget"]
+    assert hasattr(index_widget, 'set_value'), "Widget does not have a set_value method"
+
+    # Assert that the mock set_value function was called correctly
+    mock_set_value_function.assert_called_once_with(new_index_value)

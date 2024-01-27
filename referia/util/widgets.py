@@ -825,7 +825,10 @@ class ScreenCapture(ReferiaMultiWidget):
                 "function" : ipyw.Image,
                 "defaultargs" : {
                     "format": "png",
-                }
+                },
+                "result_function": None, 
+                "conversion": None,      
+                "reversion": None,       
             }
         }
         stateless_args = {
@@ -882,8 +885,8 @@ class IndexSubIndexSelectorSelect(FullSelector):
         :param parent: The parent widget.
         :type parent: ReferiaWidget
         """
-        
         # Define the widgets to create
+        self._private = False
         stateful_args = {
             "index_select":  {
                 "options_function": parent.get_indices,
@@ -943,7 +946,7 @@ class IndexSubIndexSelectorSelect(FullSelector):
         :param change: The change event.
         """
         if not self.private and self._parent is not None:
-            self._parent.set_index(self.get_value())
+            self._parent.set_index(change.new)
             self._parent.view_series()
 
     def set_index(self, value):
