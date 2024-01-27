@@ -94,7 +94,7 @@ def extract_composite_scorer(details, reviewer, widgets):
         else:
             width = "800px"
             criterion = {
-                "field": "_" + prefix + " Criterion",
+                #"field": "_" + prefix + " Criterion",
                 "type": "Markdown",
                 "args": {
                     "layout": {"width": width},
@@ -314,10 +314,10 @@ def extract_widget(details, reviewer, widgets):
                 if "value" in details["default"]:
                     reviewer._default_field_vals[details["field"]] = details["default"]["value"]
 
-        else:
+        #else:
             # Field field_name is missing, generate a random one.
-            field_name = "_"
-            widget_key = "".join(random.choice(string.ascii_letters) for _ in range(39))
+            #field_name = "_"
+            #widget_key = "".join(random.choice(string.ascii_letters) for _ in range(39))
             #reviewer._column_names_dict[field_name] = field_name
 
         # Deep copy of details so we don't change it globally.

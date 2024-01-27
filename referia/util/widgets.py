@@ -779,34 +779,35 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
 #         return [val for widget in self._ipywidgets if widget["stateful"]]
     
         
-class ActionExtractor(ReferiaMultiWidget):
-    """
-    This multi widget allows a box to be filled from an action taken by a button.
-    """
-    def __init__(self, parent, action_function, action_args):
-        """
-        Initialise the widget.
+# class ActionExtractor(ReferiaMultiWidget):
+#     """
+#     This multi widget allows a box to be filled from an action taken by a button.
+#     """
+#     def __init__(self, parent, action_function, action_args):
+#         """
+#         Initialise the widget.
 
-        :param parent: The parent widget.
-        :type parent: ReferiaWidget
-        :param action_function: The function to call when the button is clicked.
-        :type action_function: function
-        :param action_args: The arguments for the action function.
-        :type action_args: dict
-        """
-        stateful_args = {
-            "extract_information" : {
-                "function" : ipyw.Textarea,
-                "defaultargs" : {},
-            }
-        }
-        stateless_args = {
-            "extract_button" : {
-                "function": ipyw.Button,
-                "on_click_function": action,
-            }
-        }
-        super().__init__(parent, stateful_args, stateless_args)
+#         :param parent: The parent widget.
+#         :type parent: ReferiaWidget
+#         :param action_function: The function to call when the button is clicked.
+#         :type action_function: function
+#         :param action_args: The arguments for the action function.
+#         :type action_args: dict
+#         """
+#         stateful_args = {
+#             "extract_information" : {
+#                 "function" : ipyw.Textarea,
+#                 "defaultargs" : {},
+#             }
+#         }
+#         stateless_args = {
+#             "extract_button" : {
+#                 "function": ipyw.Button,
+#                 "on_click_function": action_function,
+#                 "on_click_args": action_args,
+#             }
+#         }
+#         super().__init__(parent, stateful_args, stateless_args)
         
 class ScreenCapture(ReferiaMultiWidget):
     """

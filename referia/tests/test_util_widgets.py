@@ -1,5 +1,5 @@
 import pytest
-from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, gsv_, gwu_, gwc_, gocf_
+from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, FullSelector, gsv_, gwu_, gwc_, gocf_
 import ipywidgets as ipyw
 
 def test_widget_initialization_with_default_function(mocker):
@@ -354,3 +354,30 @@ def test_display(mocker):
     widget.display()
 
     ipyw.VBox.assert_called()
+
+
+# Test Initialization for `FullSelector`
+def test_full_selector_initialization(mocker):
+    parent_mock = mocker.Mock()
+    stateful_args = {
+        'key1': {
+            'function': mocker.Mock(),
+            'result_function': mocker.Mock(),
+            'value_function': mocker.Mock(),
+            'options_function': mocker.Mock(),
+            'conversion': mocker.Mock(),
+            'reversion': mocker.Mock()
+        }
+    }
+    stateless_args = {
+        'key2': {
+            'function': mocker.Mock(),
+            'on_click_function': mocker.Mock()
+        }
+    }
+
+    full_selector = FullSelector(parent=parent_mock, stateful_args=stateful_args, stateless_args=stateless_args)
+
+    assert 'key1' in full_selector._ipywidgets
+    assert 'key2' in full_selector._ipywidgets
+    
