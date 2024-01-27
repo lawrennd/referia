@@ -1,5 +1,10 @@
 import pytest
-from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, ScreenCapture, FullSelector, IndexSubIndexSelectorSelect, CreateDocButton, CreateSummaryDocButton, CreateSummaryButton, SaveButton, ReloadButton, PopulateButton, gocf_, gsv_, gwc_, gwu_, gwf_, gwef_
+import sys
+import os
+import glob
+import referia
+
+from referia.util.widgets import list_stateful_widgets, ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, ScreenCapture, FullSelector, IndexSubIndexSelectorSelect, CreateDocButton, CreateSummaryDocButton, CreateSummaryButton, SaveButton, ReloadButton, PopulateButton, gocf_, gsv_, gwc_, gwu_, gwf_, gwef_, populate_widgets, populate_element_widgets, MyFileChooser
 import ipywidgets as ipyw
 
 def test_widget_initialization_with_default_function(mocker):
@@ -646,3 +651,30 @@ def test_gwef_(mocker):
         conversion=None,
         reversion=None
     )
+
+
+def test_populate_widgets(mocker):
+    populate_widgets(list_stateful_widgets)
+    for widget in list_stateful_widgets:
+        assert hasattr(referia.util.widgets, widget["name"]), f"Widget {widget['name']} not found in module after population."
+
+def test_populate_element_widgets():
+    populate_element_widgets(list_stateful_widgets)
+
+    for widget in list_stateful_widgets:
+        element_widget_name = "Element" + widget["name"]
+        assert hasattr(referia.util.widgets, element_widget_name), f"Element Widget {element_widget_name} not found in module after population."
+    
+
+def test_my_file_chooser(mocker):
+    directory = "test_dir"
+    glob_pattern = "*.py"
+    mocker.patch('os.path.join', return_value=directory)
+    mocker.patch('glob.glob', return_value=[f"{directory}/file1.py", f"{directory}/file2.py"])
+    mocker.patch('os.path.basename', side_effect=lambda x: x.split("/")[-1])
+
+    widget = MyFileChooser(directory=directory, glob=glob_pattern)
+
+    assert isinstance(widget, ipyw.Dropdown)
+    assert widget.options == ("", "file1.py", "file2.py")
+        
