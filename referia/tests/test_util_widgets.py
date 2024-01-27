@@ -1,5 +1,5 @@
 import pytest
-from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, ScreenCapture, FullSelector, IndexSubIndexSelectorSelect, gsv_, gwu_, gwc_, gocf_
+from referia.util.widgets import ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, ScreenCapture, FullSelector, IndexSubIndexSelectorSelect, gocf_, gsv_, gwc_, gwu_, gwf_, gwef_
 import ipywidgets as ipyw
 
 def test_widget_initialization_with_default_function(mocker):
@@ -475,3 +475,105 @@ def test_index_subindex_selector_select_set_index(mocker):
 
     # Assert that the mock set_value function was called correctly
     mock_set_value_function.assert_called_once_with(new_index_value)
+
+
+class MockReferiaMultiWidget:
+    def __init__(self):
+        self._ipywidgets = {}
+
+@pytest.fixture(autouse=True)
+def mock_widgets(mocker):
+    mocker.patch('referia.util.widgets.FieldWidget', return_value=mocker.Mock())
+    mocker.patch('referia.util.widgets.ElementWidget', return_value=mocker.Mock())
+
+# Test gsv_
+def test_gsv_(mocker):
+    obj = MockReferiaMultiWidget()
+    key = 'test_key'
+    mock_widget = mocker.Mock()
+    item = {'widget': mock_widget, 'conversion': None, 'result_function': mocker.Mock()}
+    obj._ipywidgets[key] = item
+
+    set_value_function = gsv_(key, item, obj)
+    assert callable(set_value_function)
+    set_value_function('value')
+    assert mock_widget.value == 'value'
+    item['result_function'].assert_called_once_with('value')
+
+# Test gwu_
+def test_gwu_(mocker):
+    obj = MockReferiaMultiWidget()
+    key = 'test_key'
+    mock_widget = mocker.Mock()
+    item = {
+        'widget': mock_widget,
+        'options_function': mocker.Mock(return_value=['option1', 'option2']),
+        'value_function': mocker.Mock(return_value='value'),
+    }
+    obj._ipywidgets[key] = item
+
+    update_function = gwu_(key, item, obj)
+    assert callable(update_function)
+    update_function()
+    assert mock_widget.options == ['option1', 'option2']
+    assert mock_widget.value == 'value'
+
+# Test gwf_
+def test_gwf_(mocker):
+    function_mock = mocker.Mock(return_value=mocker.Mock())
+
+    # Mocking the FieldWidget function in the gwf_ generator
+    field_widget_mock = mocker.patch('referia.util.widgets.FieldWidget', return_value=mocker.Mock())
+    widget_function = gwf_('test_widget', function_mock, default_args={'arg1': 'default1'})
+
+    assert callable(widget_function)
+    widget = widget_function(arg1='value1')
+
+    field_widget_mock.assert_called_once_with(
+        function=function_mock,
+        arg1="value1",
+        conversion=None,
+        reversion=None,
+    )
+
+    # Check default argument
+    field_widget_mock2 = mocker.patch('referia.util.widgets.FieldWidget', return_value=mocker.Mock())
+    widget = widget_function()
+
+    field_widget_mock2.assert_called_once_with(
+        function=function_mock,
+        arg1="default1",
+        conversion=None,
+        reversion=None,
+    )
+    
+def test_gwef_(mocker):
+    function_mock = mocker.Mock(return_value=mocker.Mock())
+
+    # Mocking the ElementWidget function in the gwef_ generator
+    element_widget_mock = mocker.patch('referia.util.widgets.ElementWidget', return_value=mocker.Mock())
+    
+    widget_function = gwef_('test_element_widget', function_mock, default_args={'arg1': 'default1'})
+    
+    assert callable(widget_function)
+    widget = widget_function(arg1='value1')
+    
+    # Check if ElementWidget was called with the correct arguments including the default ones
+    element_widget_mock.assert_called_once_with(
+        function=function_mock,
+        arg1='value1',
+        conversion=None,
+        reversion=None
+    )
+
+    element_widget_mock2 = mocker.patch('referia.util.widgets.ElementWidget', return_value=mocker.Mock())
+    
+    widget = widget_function()
+    
+    # Check if ElementWidget was called with the correct default argument
+    element_widget_mock2.assert_called_once_with(
+        function=function_mock,
+        arg1='default1',
+        conversion=None,
+        reversion=None
+    )
