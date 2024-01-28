@@ -398,6 +398,15 @@ class ReferiaStatefulWidget(ReferiaWidget):
         else:
             return self._reversion(self._ipywidget.value)
 
+    def get_layout(self):
+        """
+        Returns the layout of the internal ipywidget.
+
+        :return: The layout of the widget.
+        :rtype: ipywidgets.Layout
+        """
+        return self._ipywidget.layout
+        
     def get_description(self):
         """
         Get the description of the widget.

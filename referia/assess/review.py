@@ -290,34 +290,46 @@ def extract_widget(details, reviewer, widgets):
     if details["type"] in global_variables:
         widget_type = global_variables[details["type"]]
         widget_key = None
+        # Look for an associated field or cache
+        store_type = None
         if "field" in details:
+            store_name = details["field"]
+            store_type = "output"
+        elif "cache" in details:
+            store_name = details["cache"]
+            store_type = "cache"
             
-            field_name = to_valid_var(details["field"])
+        if store_type is not None:
+            # This is key for widget storage
+            widget_key = store_name
+            
+            # Update the column name mapping to valid names.
+            valid_name = to_valid_var(store_name)
             if hasattr(reviewer, "_column_names_dict"):
-                reviewer._column_names_dict[field_name] = details["field"]
+                reviewer._column_names_dict[valid_name] = store_name
             else:
-                reviewer._column_names_dict = {field_name: details["field"]}
+                reviewer._column_names_dict = {valid_name: store_name}
 
             # Create an instance of the object to extract default value.
-            reviewer._default_field_vals[details["field"]] = widget_type(parent=reviewer, field_name=details["field"]).get_value()
+            reviewer._default_field_vals[store_name] = widget_type(parent=reviewer, field_name=store_name).get_value()
             if "value" in details:
-                reviewer._default_field_vals[details["field"]] = details["value"]
+                reviewer._default_field_vals[store_name] = details["value"]
             if "args" in details and "value" in details["args"]:
-                reviewer._default_field_vals[details["field"]] = details["args"]["value"]
+                reviewer._default_field_vals[store_name] = details["args"]["value"]
             if "default" in details:
                 if "source" in details["default"]:
                     source = details["default"]["source"]
                     if source in reviewer._data.columns:
-                        reviewer._default_field_source[details["field"]] = source
+                        reviewer._default_field_source[store_name] = source
                     else:
-                        reviewer._log.warning(f"Missing column \"{source}\" in data.columns")
+                        reviewer._log.warning(f"Missing column source \"{source}\" in data.columns which was proposed to provide a default value.")
                 if "value" in details["default"]:
-                    reviewer._default_field_vals[details["field"]] = details["default"]["value"]
+                    reviewer._default_field_vals[store_name] = details["default"]["value"]
 
-        #else:
+        else:
             # Field field_name is missing, generate a random one.
             #field_name = "_"
-            #widget_key = "".join(random.choice(string.ascii_letters) for _ in range(39))
+            widget_key = "".join(random.choice(string.ascii_letters) for _ in range(39))
             #reviewer._column_names_dict[field_name] = field_name
 
         # Deep copy of details so we don't change it globally.
@@ -345,8 +357,6 @@ def extract_widget(details, reviewer, widgets):
             else:
                 process_details["args"]["refresh_display"] = refresh_display
 
-        if widget_key is None:
-            widget_key = field_name
         if "element" in process_details:
             element = process_details["element"]
             process_details["args"]["element"] = element
@@ -355,14 +365,17 @@ def extract_widget(details, reviewer, widgets):
         # Set up arguments for the widget
         args = process_details["args"]
         try:
-            args["field_name"] = field_name
+            args["field_name"] = valid_name
         except TypeError as err:
             raise TypeError("The argument \"args\" in _referia.yml should be in the form of a mapping.") from err
-        args["column_name"] = reviewer._column_names_dict[field_name]
+        args["column_name"] = reviewer._column_names_dict[valid_name]
 
+        # Move any renderable elements to the args
         for field in ["display", "tally", "liquid", "compute"]:
             if field in process_details and field not in args:
                 args[field] = process_details[field]
+
+        # Move any local elements to arg
         if "local" in process_details:
             args["local"] = process_details["local"]
         # Layout descriptor can be in main structure, or in args.
