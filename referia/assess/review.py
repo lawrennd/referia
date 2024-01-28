@@ -36,112 +36,121 @@ log = log.Logger(
 )
 
 
+def set_default_values(details, widget_type, reviewer):
+    """
+    Set default values for the widget based on provided details.
+
+    :param details: Widget configuration details from YAML.
+    :type details: dict
+    :param widget_type: The widget class type.
+    :type widget_type: class
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    """
+    store_name = details.get("field") or details.get("cache")
+    default_value = details.get("value", 
+                                details.get("args", {}).get("value", 
+                                details.get("default", {}).get("value", 
+                                widget_type(parent=reviewer, field_name=store_name).get_value())))
+
+    reviewer._default_field_vals[store_name] = default_value
+
+    # Handle default value source
+    source = details.get("default", {}).get("source")
+    if source and source in reviewer._data.columns:
+        reviewer._default_field_source[store_name] = source
+    elif source:
+        reviewer._log.warning(f"Missing column source \"{source}\" in data.columns proposed for default value.")
+
+def process_layout_and_local_args(process_details):
+    """
+    Process layout and local arguments from the provided details.
+
+    :param process_details: Processed widget configuration details.
+    :type process_details: dict
+    :return: Processed args including layout and local settings.
+    :rtype: dict
+    """
+    args = process_details.get("args", {})
+    if "layout" in process_details:
+        args["layout"] = Layout(**process_details["layout"])
+    elif "layout" in args:
+        args["layout"] = Layout(**args["layout"])
+
+    if "local" in process_details:
+        args["local"] = process_details["local"]
+
+    return args
+        
 
 def extract_widget(details, reviewer, widgets):
-    """Extract the widget information given in details."""    
-    # Get the widget type from the global variables list
-    global_variables = globals()        
-    if details["type"] in global_variables:
-        widget_type = global_variables[details["type"]]
-        widget_key = None
-        # Look for an associated field or cache
-        store_type = None
-        if "field" in details:
-            store_name = details["field"]
-            store_type = "output"
-        elif "cache" in details:
-            store_name = details["cache"]
-            store_type = "cache"
-            
-        if store_type is not None:
-            # This is key for widget storage
-            widget_key = store_name
-            
-            # Update the column name mapping to valid names.
-            valid_name = to_valid_var(store_name)
-            if hasattr(reviewer, "_column_names_dict"):
-                reviewer._column_names_dict[valid_name] = store_name
-            else:
-                reviewer._column_names_dict = {valid_name: store_name}
+    """
+    Extract widget information from provided details and add it to the widgets collection.
 
-            # Create an instance of the object to extract default value.
-            reviewer._default_field_vals[store_name] = widget_type(parent=reviewer, field_name=store_name).get_value()
-            if "value" in details:
-                reviewer._default_field_vals[store_name] = details["value"]
-            if "args" in details and "value" in details["args"]:
-                reviewer._default_field_vals[store_name] = details["args"]["value"]
-            if "default" in details:
-                if "source" in details["default"]:
-                    source = details["default"]["source"]
-                    if source in reviewer._data.columns:
-                        reviewer._default_field_source[store_name] = source
-                    else:
-                        reviewer._log.warning(f"Missing column source \"{source}\" in data.columns which was proposed to provide a default value.")
-                if "value" in details["default"]:
-                    reviewer._default_field_vals[store_name] = details["default"]["value"]
+    :param details: Widget configuration details from YAML.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets collection to add the extracted widget.
+    :type widgets: WidgetsCollection
+    :raises Exception: If widget type is not found.
+    """
+    widget_type = globals().get(details["type"])
+    if not widget_type:
+        raise Exception(f"Cannot find {details['type']} interaction type.")
 
-        else:
-            # Field field_name is missing, generate a random one.
-            #field_name = "_"
-            widget_key = "".join(random.choice(string.ascii_letters) for _ in range(39))
-            #reviewer._column_names_dict[field_name] = field_name
-
-        # Deep copy of details so we don't change it globally.
-        process_details = json.loads(json.dumps(details))
-        if "args" not in process_details:
-            process_details["args"] = {}
-
-        # Deal with HTML descriptions (setting them to blank if not set)
-        if process_details["type"] in ["HTML", "HTMLMath", "Markdown"]:
-            if "description" not in process_details["args"]:
-                process_details["args"]["description"] = " "
-
-        if "source" in process_details:
-            # Set arguments of widget from data fields if source is given
-            if "args" in process_details["source"]:
-                for arg, field in process_details["source"]["args"]:
-                    if arg not in process_details["args"]:
-                        reviewer.set_column(field)
-                        process_details["args"][arg] = reviewer.get_value()
-
-        if "refresh_display" in process_details:
-            refresh_display = process_details["refresh_display"]
-            if type(refresh_display) is not bool:
-                ValueError(f"\"refresh_display\" entry should be either True or False.")
-            else:
-                process_details["args"]["refresh_display"] = refresh_display
-
-        if "element" in process_details:
-            element = process_details["element"]
-            process_details["args"]["element"] = element
-            widget_key = widget_key + str(element)
-
-        # Set up arguments for the widget
-        args = process_details["args"]
-        try:
-            args["field_name"] = valid_name
-        except TypeError as err:
-            raise TypeError("The argument \"args\" in _referia.yml should be in the form of a mapping.") from err
-        args["column_name"] = reviewer._column_names_dict[valid_name]
-
-        # Move any renderable elements to the args
-        for field in ["display", "tally", "liquid", "compute"]:
-            if field in process_details and field not in args:
-                args[field] = process_details[field]
-
-        # Move any local elements to arg
-        if "local" in process_details:
-            args["local"] = process_details["local"]
-        # Layout descriptor can be in main structure, or in args.
-        if "layout" in process_details and "layout" not in args:
-            args["layout"] =  Layout(**process_details["layout"])
-        elif "layout" in args:
-            args["layout"] = Layout(**args["layout"])
-        args["parent"] = reviewer
-        # Add the widget
-        widgets.add(**{widget_key: widget_type(**args)})
+    # Generate widget key
+    store_name = details.get("field") or details.get("cache")
+    widget_key = store_name or "".join(random.choices(string.ascii_letters, k=39))
+    # Set default values
+    if store_name:
+        set_default_values(details, widget_type, reviewer)
+        valid_name = to_valid_var(store_name)
+        reviewer._column_names_dict[valid_name] = store_name
     else:
-        raise Exception("Cannot find " + details["type"] + " interaction type.")
+        valid_name = widget_key
+
+    # Deep copy of details to avoid global modification
+    process_details = json.loads(json.dumps(details))
+    
+    # Handle special case for HTML widgets
+    if process_details["type"] in ["HTML", "HTMLMath", "Markdown"] and "description" not in process_details.get("args", {}):
+        process_details["args"]["description"] = " "
+
+    # Process layout and local arguments
+    args = process_layout_and_local_args(process_details)
+
+    # Process source arguments if provided
+    source_args = details.get("source", {}).get("args", {})
+    for arg, field in source_args.items():
+        if arg not in args:
+            reviewer.set_column(field)
+            args[arg] = reviewer.get_value()
+
+    # Handle refresh display setting
+    refresh_display = details.get("refresh_display")
+    if refresh_display is not None:
+        if not isinstance(refresh_display, bool):
+            raise ValueError(f"\"refresh_display\" entry should be either True or False.")
+        args["refresh_display"] = refresh_display
+
+    # Process element if present
+    element = details.get("element")
+    if element is not None:
+        args["element"] = element
+        widget_key += str(element)
+
+    # Additional processing for specific fields
+    for field in ["display", "tally", "liquid", "compute"]:
+        if field in details and field not in args:
+            args[field] = details[field]
+
+    args["field_name"] = valid_name
+    args["column_name"] = reviewer._column_names_dict[valid_name]
+    args["parent"] = reviewer
+
+    # Add the widget
+    widgets.add(**{widget_key: widget_type(**args)})
 
 def view(data):
     """Provide a view of the data that allows the user to verify some aspect of its quality."""
