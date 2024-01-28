@@ -152,6 +152,57 @@ def extract_widget(details, reviewer, widgets):
     # Add the widget
     widgets.add(**{widget_key: widget_type(**args)})
 
+
+def extract_scorer(details, reviewer, widgets):
+    """
+    Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command. Widget is added to the widgets list.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
+
+        
+    if details["type"] == "precompute":
+        # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
+        reviewer._precompute.append(details)
+        
+    elif details["type"] == "postcompute":
+        # These are score items that are computed every time the row is updated.
+        reviewer._postcompute.append(details)
+        
+    elif details["type"] == "load":
+        load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
+        widgets.add(load_widgets)
+        extract_load_scorer(details, reviewer, load_widgets)
+
+    elif details["type"] == "group":
+        group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
+        widgets.add(group_widgets)
+        extract_group_scorer(details, reviewer, group_widgets)
+
+    
+    elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
+        if isinstance(widgets, CompositeWidgetCluster):
+            extract_composite_scorer(details, reviewer, widgets)
+        else:
+            composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
+            widgets.add(composite_widget)
+            extract_composite_scorer(details, reviewer, composite_widget)
+
+
+    elif details["type"] == "loop":
+        loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer)
+        widgets.add(loop_widget)
+        extract_loop_scorer(details, reviewer, loop_widget)
+        
+    else:
+        # Widget is directly specified
+        extract_widget(details, reviewer, widgets)
+
 def view(data):
     """Provide a view of the data that allows the user to verify some aspect of its quality."""
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -159,7 +210,16 @@ def view(data):
     ax.set_xticks(range(0,13))
 
 def extract_load_scorer(details, reviewer, widgets):
-    """Extract details from a separate file where they're specified."""
+    """
+    Extract details from a separate file where they're specified.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
     # This is a link to a widget specificaiton stored in a file
     if "details" not in details:
         raise ValueError("Load reviewer needs to provide load details as entry under \"details\"")
@@ -168,7 +228,16 @@ def extract_load_scorer(details, reviewer, widgets):
         extract_scorer(remove_nan(series.to_dict()), reviewer, widgets)
 
 def extract_group_scorer(details, reviewer, widgets):
-    """Extract details that are clustered together in a group."""
+    """
+    Extract details that are clustered together in a group.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
     if "children" not in details:
         raise ValueError("group reviewer needs to provide a list of children under \"children\"")
     for child in details["children"]:
@@ -182,7 +251,16 @@ def extract_group_scorer(details, reviewer, widgets):
         extract_scorer(child, reviewer, widgets)
 
 def extract_composite_scorer(details, reviewer, widgets):
-    """Extract details for a predefined composition of widgets."""
+    """
+    Extract details for a predefined composition of widgets.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
     if details["type"] == "Criterion":
         value = None
         display = None
@@ -372,7 +450,16 @@ def extract_composite_scorer(details, reviewer, widgets):
             extract_scorer(sub_score, reviewer, widgets)
 
 def extract_loop_scorer(details, reviewer, widgets):
-    """Extract details for a loop of widgets."""
+    """
+    Extract details for a loop of widgets.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
     if "start" not in details:
         raise ValueError("Missing start entry in loop")
     if "stop" not in details:
@@ -399,55 +486,6 @@ def extract_loop_scorer(details, reviewer, widgets):
 
 
     
-def extract_scorer(details, reviewer, widgets):
-    """
-    Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command. Widget is added to the widgets list.
-
-    :param details: The details of the scoring element.
-    :type details: dict
-    :param reviewer: The reviewer object.
-    :type reviewer: Reviewer
-    :param widgets: The widgets to be displayed.
-    :type widgets: WidgetCluster
-    """
-
-        
-    if details["type"] == "precompute":
-        # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
-        reviewer._precompute.append(details)
-        
-    elif details["type"] == "postcompute":
-        # These are score items that are computed every time the row is updated.
-        reviewer._postcompute.append(details)
-        
-    elif details["type"] == "load":
-        load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
-        widgets.add(load_widgets)
-        extract_load_scorer(details, reviewer, load_widgets)
-
-    elif details["type"] == "group":
-        group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
-        widgets.add(group_widgets)
-        extract_group_scorer(details, reviewer, group_widgets)
-
-    
-    elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
-        if isinstance(widgets, CompositeWidgetCluster):
-            extract_composite_scorer(details, reviewer, widgets)
-        else:
-            composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
-            widgets.add(composite_widget)
-            extract_composite_scorer(details, reviewer, composite_widget)
-
-
-    elif details["type"] == "loop":
-        loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer)
-        widgets.add(loop_widget)
-        extract_loop_scorer(details, reviewer, loop_widget)
-        
-    else:
-        # Widget is directly specified
-        extract_widget(details, reviewer, widgets)
     
 
 def nodes(chain, index=None):
