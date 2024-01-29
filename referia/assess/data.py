@@ -61,9 +61,6 @@ class CustomDataFrame(data.CustomDataFrame):
     """Class to hold merged data flows together perform operations on them."""
     def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None):
 
-        self._name_column_map = {}
-        self._column_name_map = {}
-
         self._index = index
         self._column = column
         self._selector = selector
