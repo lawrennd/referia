@@ -377,85 +377,85 @@ class CustomDataFrame(data.CustomDataFrame):
             log.debug(f"Sorting series by \"{field}\"")
             self._writeseries.sort_values(by=field, ascending=ascending, inplace=True)
 
-    def load_input_flows(self):
-        """
-        Load the input flows specified in the _referia.yml file.
+    # def load_input_flows(self):
+    #     """
+    #     Load the input flows specified in the _referia.yml file.
 
-        :return: None
-        """
-        self._load_allocation()
-        if "additional" in self.interface:
-            log.debug("Joining allocation and additional information.")
-            self._load_additional()
+    #     :return: None
+    #     """
+    #     self._load_allocation()
+    #     if "additional" in self.interface:
+    #         log.debug("Joining allocation and additional information.")
+    #         self._load_additional()
 
-        # If sorting is requested do it here.
-        self.sort_data()
-        self._load_global_consts()
+    #     # If sorting is requested do it here.
+    #     self.sort_data()
+    #     self._load_global_consts()
 
-    def _load_global_consts(self):
-        """Load constants from the _referia.yml file."""
-        if "global_consts" in self.interface:
-            self._augment_global_consts(self.interface["global_consts"])
+    # def _load_global_consts(self):
+    #     """Load constants from the _referia.yml file."""
+    #     if "global_consts" in self.interface:
+    #         self._augment_global_consts(self.interface["global_consts"])
                     
         
-    def sort_data(self):
-        if "sortby" in self.interface and "field" in self.interface["sortby"] and self.interface["sortby"]["field"] in self.columns:
-            if "ascending" in self.interface["sortby"]:
-                ascending = self.interface["sortby"]["ascending"]
-            else:
-                ascending=True
-            field=self.interface["sortby"]["field"]
-            log.debug(f"Sorting by \"{field}\"")
-            self.sort_values(by=field, ascending=ascending, inplace=True)
+    # def sort_data(self):
+    #     if "sortby" in self.interface and "field" in self.interface["sortby"] and self.interface["sortby"]["field"] in self.columns:
+    #         if "ascending" in self.interface["sortby"]:
+    #             ascending = self.interface["sortby"]["ascending"]
+    #         else:
+    #             ascending=True
+    #         field=self.interface["sortby"]["field"]
+    #         log.debug(f"Sorting by \"{field}\"")
+    #         self.sort_values(by=field, ascending=ascending, inplace=True)
 
-    def load_output_flows(self):
-        """
-        Load the output flows data specified in the _referia.yml file. 
-        Different output flows are listed in the configuration file under "globals", "cache", "scores", "series".
-        Those listed under "globals" are constants that don't change when the index changes. 
-        Those specified under "cache" are variables that can be cached and used in liquid templates or comptue functions but are assumed as not needed to be stored.
-        Those specified under "scores" are the variables that the user will want to store.
-        Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index.
+    # def load_output_flows(self):
+    #     """
+    #     Load the output flows data specified in the _referia.yml file. 
+    #     Different output flows are listed in the configuration file under "globals", "cache", "scores", "series".
+    #     Those listed under "globals" are constants that don't change when the index changes. 
+    #     Those specified under "cache" are variables that can be cached and used in liquid templates or comptue functions but are assumed as not needed to be stored.
+    #     Those specified under "scores" are the variables that the user will want to store.
+    #     Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index.
 
-        """
-        if "globals" in self.interface:
-            self._globals = None
-            self._load_globals()
-        if "cache" in self.interface:
-            self._cache = None
-            self._load_cache()
-        if "scores" in self.interface:
-            self._writedata = None
-            self._load_scores()
-        if "series" in self.interface:
-            self._writeseries = None
-            self._load_series()
+    #     """
+    #     if "globals" in self.interface:
+    #         self._globals = None
+    #         self._load_globals()
+    #     if "cache" in self.interface:
+    #         self._cache = None
+    #         self._load_cache()
+    #     if "scores" in self.interface:
+    #         self._writedata = None
+    #         self._load_scores()
+    #     if "series" in self.interface:
+    #         self._writeseries = None
+    #         self._load_series()
 
-    def load_flows(self):
-        """Load the input and output flows."""
-        autocache = self.autocache
-        self.autocache = False
-        self.load_input_flows()
-        self.load_output_flows()
-        self.augment = True
-        self.preprocess()
-        self.augment = False
-        self.autocache = autocache
+    # def load_flows(self):
+    #     """Load the input and output flows."""
+    #     autocache = self.autocache
+    #     self.autocache = False
+    #     self.load_input_flows()
+    #     self.load_output_flows()
+    #     self.augment = True
+    #     self.preprocess()
+    #     self.augment = False
+    #     self.autocache = autocache
         
-    def save_flows(self):
-        """Save the output flows."""
-        if self._globals is not None:
-            log.debug(f"Writing _globals.")
-            access.io.write_globals(self._globals, self.interface)
-        if self._cache is not None:
-            log.debug(f"Writing _cache.")
-            access.io.write_cache(self._cache, self.interface)
-        if self._writedata is not None:
-            log.debug(f"Writing _writedata.")
-            access.io.write_scores(self._writedata, self.interface)
-        if self._writeseries is not None:
-            access.io.write_series(self._writeseries, self.interface)
-            log.debug(f"Writing _writeseries.")
+    # def save_flows(self):
+    #     """Save the output flows."""
+    #     if self._globals is not None:
+    #         log.debug(f"Writing _globals.")
+    #         access.io.write_globals(self._globals, self.interface)
+    #     if self._cache is not None:
+    #         log.debug(f"Writing _cache.")
+    #         access.io.write_cache(self._cache, self.interface)
+    #     if self._writedata is not None:
+    #         log.debug(f"Writing _writedata.")
+    #         access.io.write_scores(self._writedata, self.interface)
+    #     if self._writeseries is not None:
+    #         access.io.write_series(self._writeseries, self.interface)
+    #         log.debug(f"Writing _writeseries.")
 
         
     def set_index(self, value):
@@ -718,7 +718,9 @@ class CustomDataFrame(data.CustomDataFrame):
         
 
     def get_subseries_values(self):
-        """Return a pd.Series containing all the values in a column."""
+        """
+        Return a pd.Series containing all the values in a column.
+        """
         column = self.get_column()
         if column == None:
             return None
@@ -795,30 +797,38 @@ class CustomDataFrame(data.CustomDataFrame):
         #     return None
 
     def add_column(self, column, data=None):
+        """
+        Add a column to the data structure.
+
+        :param column: The name of the column to add.
+        :type column: str
+        :param data: The data to add to the column.
+        :type data: pd.Series
+        """
+        
         if column in self.columns:
             errmsg = f"Was requested to add column \"{column}\" but it already exists in data."
             log.error(errmsg)
             raise ValueError(errmsg)
-        if self._writedata is None and self._writeseries is None:
-            errmsg = f"There is no _writedata or _writeseries loaded to add the column \"{column}\" to."
+        
+        if not self.mutable:
+            errmsg = f"This is not a mutable object, so there is no data structure to add the column \"{column}\" to."
             log.error(errmsg)
             raise ValueError(errmsg)
 
-        if self._writeseries is not None and column in self._writeseries.columns:
-            log.warning(f"\"{column}\" requested to be added but it already exists in _writeseries.")
-            return
-
-        if self._writedata is not None and column in self._writedata.columns:
-            log.warning(f"\"{column}\" requested to be added but it already exists in _writedata.")
-            return
+        if self._strict_columns and not self.autocache:
+            errmsg = f"Cannot add column \"{column}\" to data due to strict_columns being set and/or autocache being switched off."
+            log.error(errmsg)
+            raise ValueError(errmsg)
+            
         
-        if self._writeseries is not None and column not in self._writeseries.columns:
+        if "series" in self._d:
             if not self._strict_columns("series"):
                 log.info(f"\"{column}\" not in writeseries columns ... adding.")
-                self._writeseries[column] = data
+                self._d["series"][column] = data
                 return
         
-        if self._writedata is not None and column not in self._writedata.columns:
+        if "outut"self._writedata is not None and column not in self._writedata.columns:
             if not self._strict_columns("scores"):
                 log.info(f"\"{column}\" not in write columns ... adding.")
                 self._writedata[column] = data
@@ -934,7 +944,15 @@ class CustomDataFrame(data.CustomDataFrame):
 
 
     def viewer_to_value(self, viewer, kwargs=None):
-        """Convert a viewer structure to populated values."""
+        """
+        Convert a viewer structure to populated values.
+
+        :param viewer: The viewer to create the text of.
+        :type viewer: dict or list of dicts
+        :param kwargs: The mapping to use to populate the viewer.
+        :type kwargs: dict
+        :returns: The text of the viewer.
+        """
         value = ""
         if type(viewer) is not list:
             viewer = [viewer]
@@ -945,7 +963,15 @@ class CustomDataFrame(data.CustomDataFrame):
         return value
 
     def view_to_value(self, view, kwargs=None, local={}):
-        """Create the text of the view."""
+        """
+        Create the text of the view.
+
+        :param view: The view to create the text of.
+        :type view: dict
+        :param kwargs: The mapping to use to populate the view.
+        :type kwargs: dict
+        :returns: The text of the view.
+        """
         value = ""
 
         if self.conditions(view):
@@ -982,7 +1008,15 @@ class CustomDataFrame(data.CustomDataFrame):
             return ""
 
     def summary_viewer_to_value(self, viewer, kwargs=None):
-        """Convert a summary viewer structure to populated values."""
+        """
+        Convert a summary viewer structure to populated values.
+
+        :param viewer: The summary viewer to create the text of.
+        :type viewer: dict or list of dicts
+        :param kwargs: The mapping to use to populate the summary viewer.
+        :type kwargs: dict
+        :returns: The text of the summary viewer.
+        """
         value = ""
         if type(viewer) is not list:
             viewer = [viewer]
@@ -992,8 +1026,16 @@ class CustomDataFrame(data.CustomDataFrame):
                 value += "\n\n"
         return value
     
-    def summary_view_to_value(self, view, kwargs=None):
-        """Create the text of the summary view."""
+    def summary_view_to_value(self, view, kwargs=None, local={}):
+        """
+        Create the text of the summary view.
+
+        :param view: The summary view to create the text of.
+        :type view: dict
+        :param kwargs: The mapping to use to populate the summary view.
+        :type kwargs: dict
+        :returns: The text of the summary view.
+        """
         value = ""
 
         if self.conditions(view):
@@ -1001,7 +1043,7 @@ class CustomDataFrame(data.CustomDataFrame):
                 if "list" in view:
                     values = []
                     for v in view["list"]:
-                        values.append(self.view_to_value(v, kwargs))
+                        values.append(self.view_to_value(v, kwargs, local))
                     return values
                 if "join" in view:
                     if "list" not in view["join"]:
@@ -1013,13 +1055,13 @@ class CustomDataFrame(data.CustomDataFrame):
                         sep = "\n\n"
                     return sep.join(elements)
                 if "compute" in view:
-                    value += self.compute_to_value(view["compute"], kwargs)
+                    value += self.compute_to_value(view["compute"], kwargs, local)
                 if "liquid" in view:
-                    value += self.liquid_to_value(view["liquid"], kwargs)
+                    value += self.liquid_to_value(view["liquid"], kwargs, local)
                 if "tally" in view:
-                    value += self.tally_to_value(view["tally"], kwargs)
+                    value += self.tally_to_value(view["tally"], kwargs, local)
                 if "display" in view:
-                    value += self.display_to_value(view["display"], kwargs)
+                    value += self.display_to_value(view["display"], kwargs, local)
                 return value
             else:
                 raise TypeError("View should be a \"dict\".")
@@ -1027,7 +1069,14 @@ class CustomDataFrame(data.CustomDataFrame):
             return None
 
     def view_to_tmpname(self, view):
-        """Convert a view to a temporary name"""
+        """
+        Convert a view to a name
+
+        :param view: The view to convert to a name.
+        :type view: dict
+        :returns: A name derived from the view./
+        :rtype: str
+        """
         if "list" in view:
             name = "list_"
             for v in view["list"]:
@@ -1050,17 +1099,40 @@ class CustomDataFrame(data.CustomDataFrame):
             return self.display_to_tmpname(view["display"])
 
     def tally_to_value(self, tally, kwargs=None, local={}):
-        """Create the text of the view."""
+        """
+        Create the text of the view.
+
+        :param tally: The tally to create the text of.
+        :type tally: dict
+        :param kwargs: The mapping to use to populate the tally.
+        :type kwargs: dict
+        :returns: The text of the tally.
+        
+        """
         return self.tally_values(tally, kwargs, local)
 
-    def tally_to_tmpname(self, tally):
-        """Convert a view to a temporary name"""
+    def tally_to_tmpname(self, tally) -> str:
+        """
+        Convert a view to a temporary name
+
+        :param tally: The tally to convert to a name.
+        :type tally: dict
+        :returns: A name derived from the tally.
+        :rtype: str
+        """
         if "tally" in view:
             name = self.tally_to_tmpname(view["tally"])
         return name
 
-    def conditions(self, view):
-        """Check if the viewer should be displayed."""
+    def conditions(self, view) -> bool:
+        """
+        Check if a given data viewer should be displayed.
+
+        :param view: The data viewer to check.
+        :type view: dict or Interface
+        :returns: True if the data viewer should be displayed, False otherwise.
+        :rtype: bool
+        """
         if "conditions" not in view:
             return True
         else:
@@ -1081,12 +1153,32 @@ class CustomDataFrame(data.CustomDataFrame):
                         return False
         return True
 
-    def display_to_tmpname(self, display):
-        """Convert a display string to a temp name"""
+    def display_to_tmpname(self, display) -> str:
+        """
+        Convert a display string to a temp name
+
+        :param display: The display string to convert.
+        :type display: str
+        :returns: A name derived from the display string.
+        :rtype: str
+        """
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", ""))
 
 
     def display_to_value(self, display, kwargs=None, local={}):
+        """
+        Convert a display string to a string.
+
+        :param display: The display string to convert.
+        :type display: str
+        :param kwargs: The mapping to use for the display string, defaults to None
+        :type kwargs: dict, optional
+        :param local: Local overrides to use on top of the kwargs for substitution in the display string, defaults to {}
+        :type local: dict, optional
+        :returns: The string extracted from the display string.
+        :rtype: str
+        :raises KeyError: If the mapping doesn't contain the key requested in the display string.
+        """
         if kwargs is None:
             kwargs = self.mapping()
         kwargs.update(local)
@@ -1096,20 +1188,51 @@ class CustomDataFrame(data.CustomDataFrame):
             raise KeyError(f"The mapping doesn't contain the key {err} requested in \"{display}\". Set the mapping in \"_referia.yml\".") from err
 
     def compute_to_value(self, compute):
-        """Extract a value from a computation"""
+        """
+        Extract a value from a computation
+
+        :param compute: The interface details containing the computation to extract the value from.
+        :type compute: dict or Interface
+        :returns: The value extracted from the computation.
+        """
         compute_prep = self.compute.prep(compute)
         return self.compute.run(compute_prep)
     
-    def compute_to_tmpname(self, compute):
-        """Convert a display string to a temp name"""
+    def compute_to_tmpname(self, compute) -> str:
+        """
+        Convert a compute specification to a descriptive name
+
+        :param compute: The compute specification to convert to a name.
+        :type compute: dict or Interface
+        :returns: A name derived from the compute specification.
+        :rtype: str
+        
+        """
         return to_camel_case(compute["function"].replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
         
     def liquid_to_tmpname(self, display):
-        """Convert a display string to a temp name"""
+        """
+        Convert a liquid template specification to a decriptive name.
+
+        :param display: The liquid template specification to convert to a name.
+        :type display: str
+        :returns: A name derived from the liquid template specification.
+        :rtype: str
+        """
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
 
     
     def liquid_to_value(self, display, kwargs=None, local={}):
+        """
+        Convert a liquid template to a string.
+
+        :param display: The liquid template to convert.
+        :type display: str
+        :param kwargs: The mapping to use for the liquid template, defaults to None
+        :type kwargs: dict, optional
+        :param local: Local overrides to use on top of the kwargs for substitution in the liquid template, defaults to {}
+        :type local: dict, optional
+        """
         if self.compute is None:
             log.warning("Compute needs to be initialised before liquid_to_value is called.")
             return ""
@@ -1136,6 +1259,15 @@ class CustomDataFrame(data.CustomDataFrame):
         return tmpname
 
     def tally_values(self, tally, kwargs=None, local={}):
+        """
+        Create the text of the tally. A tally has a "begin" field, and an "end" field and is used for summarising a series.
+
+        :param tally: The tally to create the text of.
+        :type tally: dict
+        :param kwargs: The mapping to use to populate the tally.
+        :type kwargs: dict
+        :returns: The text of the tally.
+        """
         value = ""
         if "begin" in tally:
             value += tally["begin"]
@@ -1156,6 +1288,15 @@ class CustomDataFrame(data.CustomDataFrame):
         return value
 
     def tally_series(self, tally):
+        """
+        Return the series to be used for a tally.
+
+        :param tally: The tally to create the text of.
+        :type tally: dict
+        :returns: The series to be used for a tally.
+        :rtype: pd.Series
+        
+        """
         orig_subindex = self.get_subindex()
         subindices = self.get_subindices()
         if subindices is None:
@@ -1220,11 +1361,23 @@ class CustomDataFrame(data.CustomDataFrame):
 
 
     def _index_from_renderable(self, df, **kwargs):
-        """Create an index from a renderable field."""
+        """
+        Create an index from a renderable field.
+
+        :param df: The data frame to create the index from.
+        :type df: pd.DataFrame
+        :param kwargs: The mapping to use to populate the index.
+        :type kwargs: dict
+        :returns: The index created from the renderable field.
+        :rtype: pd.Index
+        """
         return self._series_from_renderable(df, is_index=True, **kwargs)
 
     def _series_from_value(self, df, value, name, **kwargs):
-        """Create a series from a given value."""
+        """
+        Create a series from a given value.
+
+        """
         series = pd.Series(index=df.index, dtype="object")
         for index in series.index:
             series[index] = value

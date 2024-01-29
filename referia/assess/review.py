@@ -48,19 +48,31 @@ def set_default_values(details, widget_type, reviewer):
     :type reviewer: Reviewer
     """
     store_name = details.get("field") or details.get("cache")
+
+    # Default value initialization
     default_value = details.get("value", 
                                 details.get("args", {}).get("value", 
-                                details.get("default", {}).get("value", 
-                                widget_type(parent=reviewer, field_name=store_name).get_value())))
+                                widget_type(parent=reviewer, field_name=store_name).get_value()))
 
+    # Handle 'default' key when it's a dictionary or a string
+    default_details = details.get("default")
+    if isinstance(default_details, dict):
+        default_value = default_details.get("value", default_value)
+        source = default_details.get("source")
+    elif isinstance(default_details, str):
+        # Interpret string as 'source'
+        source = default_details
+    else:
+        source = None
+
+    # Set default value
     reviewer._default_field_vals[store_name] = default_value
 
     # Handle default value source
-    source = details.get("default", {}).get("source")
     if source and source in reviewer._data.columns:
         reviewer._default_field_source[store_name] = source
     elif source:
-        reviewer._log.warning(f"Missing column source \"{source}\" in data.columns proposed for default value.")
+        log.warning(f"Missing column source \"{source}\" in data.columns proposed for default value.")
 
 def process_layout_and_local_args(process_details):
     """
@@ -108,11 +120,15 @@ def extract_widget(details, reviewer, widgets):
         valid_name = to_valid_var(store_name)
         reviewer._column_names_dict[valid_name] = store_name
     else:
-        valid_name = widget_key
+        valid_name = None
 
     # Deep copy of details to avoid global modification
     process_details = json.loads(json.dumps(details))
-    
+
+    # Ensure 'args' dictionary exists in process_details
+    if "args" not in process_details:
+        process_details["args"] = {}
+        
     # Handle special case for HTML widgets
     if process_details["type"] in ["HTML", "HTMLMath", "Markdown"] and "description" not in process_details.get("args", {}):
         process_details["args"]["description"] = " "
@@ -145,8 +161,9 @@ def extract_widget(details, reviewer, widgets):
         if field in details and field not in args:
             args[field] = details[field]
 
-    args["field_name"] = valid_name
-    args["column_name"] = reviewer._column_names_dict[valid_name]
+    if valid_name is not None:       
+        args["field_name"] = valid_name
+        args["column_name"] = reviewer._column_names_dict[valid_name]
     args["parent"] = reviewer
 
     # Add the widget
