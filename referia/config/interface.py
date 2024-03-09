@@ -77,6 +77,7 @@ class Interface(ndlpy.config.interface.Interface):
             data["output"] = data["scores"]
             del data["scores"]
 
+            
             #self._expand_scores()   
 
         super().__init__(data)
