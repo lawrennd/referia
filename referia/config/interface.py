@@ -34,6 +34,13 @@ def nodes(user_file="_referia.yml", directory="."):
 
     
 class Interface(ndlpy.config.interface.Interface):
+    @classmethod
+    def default_config_file(cls):
+        """
+        Return the default configuration file name
+        """
+        return "_referia.yml"
+    
     def __init__(self, data=None):
         """
         Initialise the interface object.

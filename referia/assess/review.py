@@ -36,7 +36,189 @@ log = log.Logger(
 )
 
 
+def set_default_values(details, widget_type, reviewer):
+    """
+    Set default values for the widget based on provided details.
 
+    :param details: Widget configuration details from YAML.
+    :type details: dict
+    :param widget_type: The widget class type.
+    :type widget_type: class
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    """
+    store_name = details.get("field") or details.get("cache")
+
+    # Default value initialization
+    default_value = details.get("value", 
+                                details.get("args", {}).get("value", 
+                                widget_type(parent=reviewer, field_name=store_name).get_value()))
+
+    # Handle 'default' key when it's a dictionary or a string
+    default_details = details.get("default")
+    if isinstance(default_details, dict):
+        default_value = default_details.get("value", default_value)
+        source = default_details.get("source")
+    elif isinstance(default_details, str):
+        # Interpret string as 'source'
+        source = default_details
+    else:
+        source = None
+
+    # Set default value
+    reviewer._default_field_vals[store_name] = default_value
+
+    # Handle default value source
+    if source and source in reviewer._data.columns:
+        reviewer._default_field_source[store_name] = source
+    elif source:
+        log.warning(f"Missing column source \"{source}\" in data.columns proposed for default value.")
+
+def process_layout_and_local_args(process_details):
+    """
+    Process layout and local arguments from the provided details.
+
+    :param process_details: Processed widget configuration details.
+    :type process_details: dict
+    :return: Processed args including layout and local settings.
+    :rtype: dict
+    """
+    args = process_details.get("args", {})
+    if "layout" in process_details:
+        args["layout"] = Layout(**process_details["layout"])
+    elif "layout" in args:
+        args["layout"] = Layout(**args["layout"])
+
+    if "local" in process_details:
+        args["local"] = process_details["local"]
+
+    return args
+        
+
+def extract_widget(details, reviewer, widgets):
+    """
+    Extract widget information from provided details and add it to the widgets collection.
+
+    :param details: Widget configuration details from YAML.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets collection to add the extracted widget.
+    :type widgets: WidgetsCollection
+    :raises Exception: If widget type is not found.
+    """
+    widget_type = globals().get(details["type"])
+    if not widget_type:
+        raise Exception(f"Cannot find {details['type']} interaction type.")
+
+    # Generate widget key
+    store_name = details.get("field") or details.get("cache")
+    widget_key = store_name or "".join(random.choices(string.ascii_letters, k=39))
+    # Set default values
+    if store_name:
+        set_default_values(details, widget_type, reviewer)
+        valid_name = to_valid_var(store_name)
+        reviewer._column_names_dict[valid_name] = store_name
+    else:
+        valid_name = None
+
+    # Deep copy of details to avoid global modification
+    process_details = json.loads(json.dumps(details))
+
+    # Ensure 'args' dictionary exists in process_details
+    if "args" not in process_details:
+        process_details["args"] = {}
+        
+    # Handle special case for HTML widgets
+    if process_details["type"] in ["HTML", "HTMLMath", "Markdown"] and "description" not in process_details.get("args", {}):
+        process_details["args"]["description"] = " "
+
+    # Process layout and local arguments
+    args = process_layout_and_local_args(process_details)
+
+    # Process source arguments if provided
+    source_args = details.get("source", {}).get("args", {})
+    for arg, field in source_args.items():
+        if arg not in args:
+            reviewer.set_column(field)
+            args[arg] = reviewer.get_value()
+
+    # Handle refresh display setting
+    refresh_display = details.get("refresh_display")
+    if refresh_display is not None:
+        if not isinstance(refresh_display, bool):
+            raise ValueError(f"\"refresh_display\" entry should be either True or False.")
+        args["refresh_display"] = refresh_display
+
+    # Process element if present
+    element = details.get("element")
+    if element is not None:
+        args["element"] = element
+        widget_key += str(element)
+
+    # Additional processing for specific fields
+    for field in ["display", "tally", "liquid", "compute"]:
+        if field in details and field not in args:
+            args[field] = details[field]
+
+    if valid_name is not None:       
+        args["field_name"] = valid_name
+        args["column_name"] = reviewer._column_names_dict[valid_name]
+    args["parent"] = reviewer
+
+    # Add the widget
+    widgets.add(**{widget_key: widget_type(**args)})
+
+
+def extract_scorer(details, reviewer, widgets):
+    """
+    Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command. Widget is added to the widgets list.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
+
+        
+    if details["type"] == "precompute":
+        # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
+        reviewer._precompute.append(details)
+        
+    elif details["type"] == "postcompute":
+        # These are score items that are computed every time the row is updated.
+        reviewer._postcompute.append(details)
+        
+    elif details["type"] == "load":
+        load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
+        widgets.add(load_widgets)
+        extract_load_scorer(details, reviewer, load_widgets)
+
+    elif details["type"] == "group":
+        group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
+        widgets.add(group_widgets)
+        extract_group_scorer(details, reviewer, group_widgets)
+
+    
+    elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
+        if isinstance(widgets, CompositeWidgetCluster):
+            extract_composite_scorer(details, reviewer, widgets)
+        else:
+            composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
+            widgets.add(composite_widget)
+            extract_composite_scorer(details, reviewer, composite_widget)
+
+
+    elif details["type"] == "loop":
+        loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer)
+        widgets.add(loop_widget)
+        extract_loop_scorer(details, reviewer, loop_widget)
+        
+    else:
+        # Widget is directly specified
+        extract_widget(details, reviewer, widgets)
 
 def view(data):
     """Provide a view of the data that allows the user to verify some aspect of its quality."""
@@ -45,7 +227,16 @@ def view(data):
     ax.set_xticks(range(0,13))
 
 def extract_load_scorer(details, reviewer, widgets):
-    """Extract details from a separate file where they're specified."""
+    """
+    Extract details from a separate file where they're specified.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
     # This is a link to a widget specificaiton stored in a file
     if "details" not in details:
         raise ValueError("Load reviewer needs to provide load details as entry under \"details\"")
@@ -54,7 +245,16 @@ def extract_load_scorer(details, reviewer, widgets):
         extract_scorer(remove_nan(series.to_dict()), reviewer, widgets)
 
 def extract_group_scorer(details, reviewer, widgets):
-    """Extract details that are clustered together in a group."""
+    """
+    Extract details that are clustered together in a group.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
     if "children" not in details:
         raise ValueError("group reviewer needs to provide a list of children under \"children\"")
     for child in details["children"]:
@@ -68,7 +268,16 @@ def extract_group_scorer(details, reviewer, widgets):
         extract_scorer(child, reviewer, widgets)
 
 def extract_composite_scorer(details, reviewer, widgets):
-    """Extract details for a predefined composition of widgets."""
+    """
+    Extract details for a predefined composition of widgets.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
     if details["type"] == "Criterion":
         value = None
         display = None
@@ -94,7 +303,7 @@ def extract_composite_scorer(details, reviewer, widgets):
         else:
             width = "800px"
             criterion = {
-                "field": "_" + prefix + " Criterion",
+                #"field": "_" + prefix + " Criterion",
                 "type": "Markdown",
                 "args": {
                     "layout": {"width": width},
@@ -258,7 +467,16 @@ def extract_composite_scorer(details, reviewer, widgets):
             extract_scorer(sub_score, reviewer, widgets)
 
 def extract_loop_scorer(details, reviewer, widgets):
-    """Extract details for a loop of widgets."""
+    """
+    Extract details for a loop of widgets.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    :param reviewer: The reviewer object.
+    :type reviewer: Reviewer
+    :param widgets: The widgets to be displayed.
+    :type widgets: WidgetCluster
+    """
     if "start" not in details:
         raise ValueError("Missing start entry in loop")
     if "stop" not in details:
@@ -283,149 +501,8 @@ def extract_loop_scorer(details, reviewer, widgets):
             sub_score["element"] = element
             extract_scorer(sub_score, reviewer, widgets)
 
-def extract_widget(details, reviewer, widgets):
-    """Extract the widget information given in details."""    
-    # Get the widget type from the global variables list
-    global_variables = globals()        
-    if details["type"] in global_variables:
-        widget_type = global_variables[details["type"]]
-        widget_key = None
-        if "field" in details:
-            
-            field_name = to_valid_var(details["field"])
-            if hasattr(reviewer, "_column_names_dict"):
-                reviewer._column_names_dict[field_name] = details["field"]
-            else:
-                reviewer._column_names_dict = {field_name: details["field"]}
-
-            # Create an instance of the object to extract default value.
-            reviewer._default_field_vals[details["field"]] = widget_type(parent=reviewer, field_name=details["field"]).get_value()
-            if "value" in details:
-                reviewer._default_field_vals[details["field"]] = details["value"]
-            if "args" in details and "value" in details["args"]:
-                reviewer._default_field_vals[details["field"]] = details["args"]["value"]
-            if "default" in details:
-                if "source" in details["default"]:
-                    source = details["default"]["source"]
-                    if source in reviewer._data.columns:
-                        reviewer._default_field_source[details["field"]] = source
-                    else:
-                        reviewer._log.warning(f"Missing column \"{source}\" in data.columns")
-                if "value" in details["default"]:
-                    reviewer._default_field_vals[details["field"]] = details["default"]["value"]
-
-        else:
-            # Field field_name is missing, generate a random one.
-            field_name = "_"
-            widget_key = "".join(random.choice(string.ascii_letters) for _ in range(39))
-            #reviewer._column_names_dict[field_name] = field_name
-
-        # Deep copy of details so we don't change it globally.
-        process_details = json.loads(json.dumps(details))
-        if "args" not in process_details:
-            process_details["args"] = {}
-
-        # Deal with HTML descriptions (setting them to blank if not set)
-        if process_details["type"] in ["HTML", "HTMLMath", "Markdown"]:
-            if "description" not in process_details["args"]:
-                process_details["args"]["description"] = " "
-
-        if "source" in process_details:
-            # Set arguments of widget from data fields if source is given
-            if "args" in process_details["source"]:
-                for arg, field in process_details["source"]["args"]:
-                    if arg not in process_details["args"]:
-                        reviewer.set_column(field)
-                        process_details["args"][arg] = reviewer.get_value()
-
-        if "refresh_display" in process_details:
-            refresh_display = process_details["refresh_display"]
-            if type(refresh_display) is not bool:
-                ValueError(f"\"refresh_display\" entry should be either True or False.")
-            else:
-                process_details["args"]["refresh_display"] = refresh_display
-
-        if widget_key is None:
-            widget_key = field_name
-        if "element" in process_details:
-            element = process_details["element"]
-            process_details["args"]["element"] = element
-            widget_key = widget_key + str(element)
-
-        # Set up arguments for the widget
-        args = process_details["args"]
-        try:
-            args["field_name"] = field_name
-        except TypeError as err:
-            raise TypeError("The argument \"args\" in _referia.yml should be in the form of a mapping.") from err
-        args["column_name"] = reviewer._column_names_dict[field_name]
-
-        for field in ["display", "tally", "liquid", "compute"]:
-            if field in process_details and field not in args:
-                args[field] = process_details[field]
-        if "local" in process_details:
-            args["local"] = process_details["local"]
-        # Layout descriptor can be in main structure, or in args.
-        if "layout" in process_details and "layout" not in args:
-            args["layout"] =  Layout(**process_details["layout"])
-        elif "layout" in args:
-            args["layout"] = Layout(**args["layout"])
-        args["parent"] = reviewer
-        # Add the widget
-        widgets.add(**{widget_key: widget_type(**args)})
-    else:
-        raise Exception("Cannot find " + details["type"] + " interaction type.")
 
     
-def extract_scorer(details, reviewer, widgets):
-    """
-    Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command. Widget is added to the widgets list.
-
-    :param details: The details of the scoring element.
-    :type details: dict
-    :param reviewer: The reviewer object.
-    :type reviewer: Reviewer
-    :param widgets: The widgets to be displayed.
-    :type widgets: WidgetCluster
-    """
-
-        
-    if details["type"] == "precompute":
-        # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
-        reviewer._precompute.append(details)
-        
-    elif details["type"] == "postcompute":
-        # These are score items that are computed every time the row is updated.
-        reviewer._postcompute.append(details)
-        
-    elif details["type"] == "load":
-        load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
-        widgets.add(load_widgets)
-        extract_load_scorer(details, reviewer, load_widgets)
-
-    elif details["type"] == "group":
-        group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
-        widgets.add(group_widgets)
-        extract_group_scorer(details, reviewer, group_widgets)
-
-    
-    elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
-        if isinstance(widgets, CompositeWidgetCluster):
-            extract_composite_scorer(details, reviewer, widgets)
-        else:
-            composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
-            widgets.add(composite_widget)
-            extract_composite_scorer(details, reviewer, composite_widget)
-
-
-    elif details["type"] == "loop":
-        loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer)
-        widgets.add(loop_widget)
-        extract_loop_scorer(details, reviewer, loop_widget)
-        
-    else:
-        # Widget is directly specified
-        extract_widget(details, reviewer, widgets)
     
 
 def nodes(chain, index=None):
@@ -445,7 +522,19 @@ def nodes(chain, index=None):
         oldkey = key
                                 
 class WidgetCluster():
+    """
+    A class to hold a cluster of widgets.
+    """
     def __init__(self, name, parent, viewer=False, **kwargs):
+        """
+        Create a cluster of widgets.
+
+        :param name: The name of the cluster.
+        :type name: str
+        :param parent: The parent of the cluster.
+        :type parent: Reviewer or WidgetCluster
+        :param viewer: Whether the cluster is a viewer.
+        """
         self._widget_dict = {}
         self._widget_list = []
         self._name = name
@@ -454,11 +543,17 @@ class WidgetCluster():
         self.add(**kwargs)
 
     def clear_children(self):
+        """
+        Clear the children of the cluster.
+        """
         self.close()
         self._widget_dict = {}
         self._widget_list = []
 
     def close(self):
+        """
+        Close the widgets.
+        """
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
                 entry.close()
@@ -466,15 +561,33 @@ class WidgetCluster():
                 self._widget_dict[entry].close()
                 
     def has(self, key):
+        """
+        Check if the cluster has a widget with the given key.
+
+        :param key: The key of the widget.
+        :type key: str
+        :return: Whether the cluster has the widget.
+        :rtype: bool
+        """
         if key in self.to_dict():
             return True
         else:
             return False
 
     def get(self, key):
+        """
+        Get the widget with the given key.
+
+        :param key: The key of the widget.
+        :type key: str
+        :return: The widget.
+        """
         return self.to_dict()[key]
 
     def refresh(self):
+        """
+        Refresh the widgets.
+        """
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
                 entry.refresh()
@@ -482,6 +595,14 @@ class WidgetCluster():
                 self._widget_dict[entry].refresh()
         
     def add(self, cluster=None, **kwargs):
+        """
+        Add a widget to the cluster.
+
+        :param cluster: The cluster to be added.
+        :type cluster: WidgetCluster
+        :param kwargs: The widgets to be added.
+        :type kwargs: dict
+        """
         if cluster is not None:
             cluster.add(**kwargs)
             self._widget_list.append(cluster)
@@ -491,6 +612,12 @@ class WidgetCluster():
                 self._widget_dict = {**self._widget_dict, **kwargs}
         
     def update(self, **kwargs):
+        """
+        Update the widgets.
+
+        :param kwargs: The widgets to be updated.
+        :type kwargs: dict
+        """
         for key, item in kwargs.items():
             if key in self._widget_dict:
                 self._widget_dict[key] = item
@@ -498,7 +625,11 @@ class WidgetCluster():
                 raise ValueError(f"Attempt to update widget \"{key}\" when it doesn't exist.")
 
     def to_markdown(self,skip=[]):
-        """Convert the widget outputs into text."""
+        """
+        Convert the widget outputs into text.
+
+        :param skip: The widgets to be skipped.
+        """
         text = ""
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
@@ -514,6 +645,12 @@ class WidgetCluster():
         return text
             
     def to_dict(self):
+        """
+        Convert the widget outputs into a dictionary.
+
+        :return: The widgets.
+        :rtype: dict
+        """
         widgets = {}
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
@@ -527,7 +664,9 @@ class WidgetCluster():
         return widgets
 
     def display(self):
-        """Display the widgets"""
+        """
+        Display the widgets
+        """
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
                 entry.display()
@@ -535,11 +674,23 @@ class WidgetCluster():
                 self._widget_dict[entry].display()
                 
 class DynamicWidgetCluster(WidgetCluster):
+    """
+    A class to hold a cluster of widgets that are dynamically reconstructed.
+    """
     def __init__(self, details, **kwargs):
+        """
+        Create a cluster of widgets.
+
+        :param details: The details of the scoring element.
+        :type details: dict
+        """
         self._details = details
         super().__init__(**kwargs)
 
     def refresh(self):
+        """
+        Refresh the widgets.
+        """
         self.from_details()
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
@@ -550,30 +701,59 @@ class DynamicWidgetCluster(WidgetCluster):
                 
 
     def from_details(self, details=None):
+        """
+        Reconstruct the widgets from the details.
+
+        :param details: The details of the scoring element.
+        :type details: dict
+        """
         if details is None:
             details=self._details
         self.clear_children()
         extract_loop_scorer(details, self._parent, self)
 
 class LoadWidgetCluster(WidgetCluster):
+    """
+    """
     def __init__(self, **kwargs):
+        """
+        Create a cluster of widgets.
+        """
         super().__init__(**kwargs)
 
 class GroupWidgetCluster(WidgetCluster):
+    """
+    """
     def __init__(self, **kwargs):
+        """
+        Create a cluster of widgets.
+        """
         super().__init__(**kwargs)
 
 class CompositeWidgetCluster(WidgetCluster):
+    """
+    """
     def __init__(self, **kwargs):
+        """
+        Create a cluster of widgets.
+        """
         super().__init__(**kwargs)
     
 class LoopWidgetCluster(DynamicWidgetCluster):
+    """
+    
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
 class Reviewer:
-    
+    """
+    A class to hold the display system.
+    """
     def __init__(self, index=None, data=None, interface=None, system=None, viewer_inherit=True):
+        """
+        Create the display system.
+        """
         if viewer_inherit:
             append = ["viewer"]
             ignore = []
@@ -607,7 +787,6 @@ class Reviewer:
         else:
             self._data = data
 
-
         if index is not None:
             # Widget isn't created yet so set index in data only.
             self._data.set_index(index)
@@ -618,17 +797,32 @@ class Reviewer:
         self._create_widgets()
 
     def _create_reload_button(self, config):
-        """Create the reload button."""
+        """
+        Create the reload button.
+
+        :param config: The configuration file.
+        :type config: dict
+        """
         _reload_button = ReloadButton(parent=self)
         return WidgetCluster(name="reload_button", parent=self,  _reload_button=_reload_button)
 
     def _create_progress_bar(self, label):
-        """Create the progress bar."""
+        """
+        Create the progress bar.
+
+        :param label: The label for the progress bar.
+        :type label: str
+        """
         _progress_label = Markdown(description=" ", field_name=label)
         return WidgetCluster(name="progress_bar", parent=self,  viewer=True, _progress_label=_progress_label)
 
     def _create_viewer(self, views):
-        """Create the viewer."""
+        """
+        Create the viewer.
+
+        :param views: The views to be displayed.
+        :type views: dict
+        """
         widgets = WidgetCluster(name="viewer", parent=self, viewer=True)
         if type(views) is not list:
             views = [views]
@@ -646,12 +840,22 @@ class Reviewer:
         return widgets
 
     def _create_scorer(self, reviewers):
-        """Create the reviewers from the config file."""
+        """
+        Create the reviewers from the config file.
+
+        :param reviewers: The reviewers to be displayed.
+        :type reviewers: dict
+        """
         for reviewer in reviewers:
             extract_scorer(reviewer, self, self._widgets)
 
     def _create_documents(self, documents):
-        """Process the document creators from the config file."""
+        """
+        Process the document creators from the config file.
+
+        :param documents: The documents to be created.
+        :type documents: dict
+        """
         widgets = WidgetCluster(name="documents", parent=self)
         for count, document in enumerate(documents):
             label = "_doc_button" + str(count)
@@ -664,6 +868,12 @@ class Reviewer:
         return widgets
 
     def _create_summary(self, summaries):
+        """
+        Process the summary creators from the config file.
+
+        :param summaries: The summaries to be created.
+        :type summaries: dict
+        """
         widgets = WidgetCluster(name="summaries", parent=self)
         for count, summary in enumerate(summaries):
             label = "_summary_button" + str(count)
@@ -676,6 +886,12 @@ class Reviewer:
         return widgets
     
     def _create_summary_documents(self, documents):
+        """
+        Process the summary document creators from the config file.
+
+        :param documents: The documents to be created.
+        :type documents: dict
+        """
         widgets = WidgetCluster(name="documents", parent=self)
         for count, document in enumerate(documents):
             label = "_summary_doc_button" + str(count)
@@ -691,7 +907,6 @@ class Reviewer:
     def _create_widgets(self):
         """
         Create the widgets to be used for display.
-
         """
         if "scored" in self._interface:
             self._widgets.add(cluster=self._create_progress_bar(label="_progress_label"))
@@ -724,26 +939,57 @@ class Reviewer:
         self._widgets.add(cluster=WidgetCluster(name="save_button", parent=self, _save_button=_save_button))
 
     def add_views(self, label):
-        """Maintain a list of widgets that stem from views"""
+        """
+        Maintain a list of widgets that stem from views
+
+        :param label: The label for the view.
+        """
         self._view_list.append(label)
 
     def add_dynamic(self, label):
-        """Maintain a list of widgets that are dynamically reconstructed."""
+        """
+        Maintain a list of widgets that are dynamically reconstructed.
+
+        :param label: The label for the dynamic widget.
+        :type label: str
+        """
         self._dynamic_list.append(label)
         
     def add_downstream_display(self, display):
-        """Add a display that is downstream of this one to be updated"""
+        """
+        Add a display that is downstream of this one to be updated.
+
+        :param display: The display to be updated.
+        :type display: Reviewer
+        """
         self._downstream_displays.append(display)
         
     @property
     def index(self):
+        """
+        Get the index of the display system.
+
+        :return: The index of the display system.
+        :rtype: int
+        """
         return self._data.index
 
     def get_index(self):
+        """
+        Get the index of the display system.
+
+        :return: The index of the display system.
+        :rtype: int
+        """
         return self._data.get_index()
 
     def set_index(self, value):
-        """Set the index of the display system"""
+        """
+        Set the index of the display system.
+
+        :param value: The index of the display system.
+        :type value: int
+        """
         oldval = self.get_index()
         if oldval != value:
             self._data.set_index(value)
@@ -754,10 +1000,17 @@ class Reviewer:
                 ds.set_index(value)
             
     def get_value(self):
+        """
+        Get the value of the focus element in the data of display system.
+
+        :return: The value of the focus element in the data of the display system.
+        :rtype: object
+        """
         return self._data.get_value()
 
     def get_value_by_element(self, element):
-        """Get an element of the value."""
+        """
+        Get an element of the value."""
         return self._data.get_value_by_element(element)
     
     def set_value_by_element(self, value, element, trigger_update=True):

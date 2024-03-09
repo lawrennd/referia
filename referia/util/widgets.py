@@ -7,7 +7,6 @@ import ipywidgets as ipyw
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
-
 from .misc import notempty, markdown2html, html2markdown, yyyymmddToDatetime, datetimeToYyyymmdd, filename_to_binary
 
 
@@ -383,7 +382,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
 
     def on_value_change(self, value):
         """
-        If display is refreshed then refresh it.
+        Observer for when value changes.
         """
         pass
     
@@ -399,6 +398,15 @@ class ReferiaStatefulWidget(ReferiaWidget):
         else:
             return self._reversion(self._ipywidget.value)
 
+    def get_layout(self):
+        """
+        Returns the layout of the internal ipywidget.
+
+        :return: The layout of the widget.
+        :rtype: ipywidgets.Layout
+        """
+        return self._ipywidget.layout
+        
     def get_description(self):
         """
         Get the description of the widget.
@@ -470,10 +478,9 @@ class FieldWidget(ReferiaStatefulWidget):
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        self.set_value(change.new)
         if not self.private and self._parent is not None:
             self._parent.set_column(self.get_column())
-            self._parent.set_value(self.get_value())
+            self._parent.set_value(change.new)
 
         if self._refresh_display:
             if self._parent is not None:
@@ -546,10 +553,9 @@ class ElementWidget(FieldWidget):
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        self.set_value(change.new)
         if not self.private and self._parent is not None:
             self._parent.set_column(self.get_column())
-            self._parent.set_value_by_element(self.get_value(), self.get_element())
+            self._parent.set_value_by_element(change.new, self.get_element())
         if self._refresh_display:
             if self._parent is not None:
                 self._parent.refresh()
@@ -606,10 +612,11 @@ class IndexSelector(ReferiaStatefulWidget):
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        self.set_value(change.new)
+        super().on_value_change(change)
         if not self.private and self._parent is not None:
-            self._parent.set_index(self.get_value())
-            self._parent.view_series()
+            if change.new != self._parent.get_index():
+                self._parent.set_index(change.new)
+                self._parent.view_series()
 
     def set_index(self, value):
         """
@@ -781,34 +788,35 @@ class ReferiaMultiWidget(ReferiaStatefulWidget):
 #         return [val for widget in self._ipywidgets if widget["stateful"]]
     
         
-class ActionExtractor(ReferiaMultiWidget):
-    """
-    This multi widget allows a box to be filled from an action taken by a button.
-    """
-    def __init__(self, parent, action_function, action_args):
-        """
-        Initialise the widget.
+# class ActionExtractor(ReferiaMultiWidget):
+#     """
+#     This multi widget allows a box to be filled from an action taken by a button.
+#     """
+#     def __init__(self, parent, action_function, action_args):
+#         """
+#         Initialise the widget.
 
-        :param parent: The parent widget.
-        :type parent: ReferiaWidget
-        :param action_function: The function to call when the button is clicked.
-        :type action_function: function
-        :param action_args: The arguments for the action function.
-        :type action_args: dict
-        """
-        stateful_args = {
-            "extract_information" : {
-                "function" : ipyw.Textarea,
-                "defaultargs" : {},
-            }
-        }
-        stateless_args = {
-            "extract_button" : {
-                "function": ipyw.Button,
-                "on_click_function": action,
-            }
-        }
-        super().__init__(parent, stateful_args, stateless_args)
+#         :param parent: The parent widget.
+#         :type parent: ReferiaWidget
+#         :param action_function: The function to call when the button is clicked.
+#         :type action_function: function
+#         :param action_args: The arguments for the action function.
+#         :type action_args: dict
+#         """
+#         stateful_args = {
+#             "extract_information" : {
+#                 "function" : ipyw.Textarea,
+#                 "defaultargs" : {},
+#             }
+#         }
+#         stateless_args = {
+#             "extract_button" : {
+#                 "function": ipyw.Button,
+#                 "on_click_function": action_function,
+#                 "on_click_args": action_args,
+#             }
+#         }
+#         super().__init__(parent, stateful_args, stateless_args)
         
 class ScreenCapture(ReferiaMultiWidget):
     """
@@ -826,7 +834,10 @@ class ScreenCapture(ReferiaMultiWidget):
                 "function" : ipyw.Image,
                 "defaultargs" : {
                     "format": "png",
-                }
+                },
+                "result_function": None, 
+                "conversion": None,      
+                "reversion": None,       
             }
         }
         stateless_args = {
@@ -868,9 +879,6 @@ class FullSelector(ReferiaMultiWidget):
                     item["layout"]["display"] = "none"
         super().__init__(parent, stateful_args, stateless_args)
 
-
-    
-
 class IndexSubIndexSelectorSelect(FullSelector):
     """
     This multi widget allows a range of interacting index selectors.
@@ -886,8 +894,8 @@ class IndexSubIndexSelectorSelect(FullSelector):
         :param parent: The parent widget.
         :type parent: ReferiaWidget
         """
-        
         # Define the widgets to create
+        self._private = False
         stateful_args = {
             "index_select":  {
                 "options_function": parent.get_indices,
@@ -947,7 +955,7 @@ class IndexSubIndexSelectorSelect(FullSelector):
         :param change: The change event.
         """
         if not self.private and self._parent is not None:
-            self._parent.set_index(self.get_value())
+            self._parent.set_index(change.new)
             self._parent.view_series()
 
     def set_index(self, value):
@@ -959,6 +967,139 @@ class IndexSubIndexSelectorSelect(FullSelector):
         self._ipywidgets["index_select"]["set_value"](value)
 
 
+class CreateDocButton(ReferiaWidget):
+    """
+    Create a document for editing based on the information we have.
+    """
+    def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param type: The type of document to create.
+        :type type: str
+        :param document: The document to create.
+        :type document: str
+        """
+        args["description"] = "Create " + args["type"]
+        super().__init__(**args)
+        self.type = args["type"]
+        self.document = args["document"]
+        
+    def on_click(self, b):
+        """
+        When the button is clicked create the document.
+        """
+        self._parent.create_document(self.document, summary=False)
+
+class CreateSummaryDocButton(ReferiaWidget):
+    """
+    Create a summary document based on all the entries.
+    """
+    def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param type: The type of document to create.
+        :type type: str
+        :param document: The document to create.
+        :type document: str
+        """
+        args["description"] = "Create Summary " + args["type"]
+        super().__init__(**args)
+        self.type = args["type"]
+        self.document = args["document"]
+        
+    def on_click(self, b):
+        """
+        When the button is clicked create the document.
+        """
+        self._parent.create_document(self.document, summary=True)
+
+class CreateSummaryButton(ReferiaWidget):
+    """Create a summary based on all the entries."""
+    def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param type: The type of summary to create.
+        :type type: str
+        :param details: The details of the summary to create.
+        :type details: dict
+        """
+        
+        args["description"] = "Create " + args["type"] + " Summary"
+        super().__init__(**args)
+        self.type = args["type"]
+        self.details = args["details"]
+        
+    def on_click(self, b):
+        self._parent.create_summary(self.details)
+        
+        
+class SaveButton(ReferiaWidget):
+    """Write the data to the appropriate storage files."""
+    def __init__(self, **args):
+        """
+        Initialise the widget.
+        """
+        args["description"] = "Save Flows"
+        super().__init__(**args)
+
+    def on_click(self, b):
+        """
+        When the button is clicked save the flows.
+        """
+        self._parent.save()
+
+class ReloadButton(ReferiaWidget):
+    """Reload the data from the appropriate storage files."""
+    def __init__(self, **args):
+        """
+        Initialise the widget.
+        """
+        args["description"] = "Reload Flows"
+        super().__init__(**args)
+
+    def on_click(self, b):
+        """
+        When the button is clicked reload the flows.
+        """
+        self._parent.load_flows(reload=True)
+
+class PopulateButton(ReferiaWidget):
+    """Populate the data from a compute."""
+    def __init__(self, **args):
+        """
+        Initialise the widget.
+
+        :param target: The target to populate.
+        :type target: str
+        :param compute: The compute to run.
+        :type compute: dict
+        :param description: The description of the widget.
+        :type description: str
+        """
+        if "target" in args:
+            args["description"] = "Populate " + args["target"]
+        else:
+            args["description"] = "Populate"
+        if type(args["compute"]) is list:
+            self._compute = args["compute"]
+        else:
+            self._compute = [args["compute"]]
+            
+        super().__init__(**args)
+
+    def on_click(self, b):
+        """
+        When the button is clicked populate the data.
+        """
+        for compute in self._compute:
+            compute["refresh"] = True
+            self._parent._data._compute.run(self._parent._data._compute.prep(compute))
+        self._parent.populate_display()
+
+        
             
 def gocf_(key, item, obj, docstr=None):
     """
@@ -1135,6 +1276,8 @@ def gwef_(name, function, conversion=None, reversion=None, default_args={}, docs
     widget_function.__doc__ = docstr
     return widget_function
                 
+
+        
 def populate_widgets(widget_list):
     """
     Automatically creates widget wrapper objects and adds them to the module.
@@ -1238,140 +1381,6 @@ def interactive(function, **kwargs):
         newargs[key] = widget.widget
     ipyw.interactive(function, **newargs)
 
-
-class CreateDocButton(ReferiaWidget):
-    """
-    Create a document for editing based on the information we have.
-    """
-    def __init__(self, **args):
-        """
-        Initialise the widget.
-
-        :param type: The type of document to create.
-        :type type: str
-        :param document: The document to create.
-        :type document: str
-        """
-        args["description"] = "Create " + args["type"]
-        super().__init__(**args)
-        self.type = args["type"]
-        self.document = args["document"]
-        
-    def on_click(self, b):
-        """
-        When the button is clicked create the document.
-        """
-        self._parent.create_document(self.document, summary=False)
-
-class CreateSummaryDocButton(ReferiaWidget):
-    """
-    Create a summary document based on all the entries.
-    """
-    def __init__(self, **args):
-        """
-        Initialise the widget.
-
-        :param type: The type of document to create.
-        :type type: str
-        :param document: The document to create.
-        :type document: str
-        """
-        args["description"] = "Create Summary " + args["type"]
-        super().__init__(**args)
-        self.type = args["type"]
-        self.document = args["document"]
-        
-    def on_click(self, b):
-        """
-        When the button is clicked create the document.
-        """
-        self._parent.create_document(self.document, summary=True)
-
-class CreateSummaryButton(ReferiaWidget):
-    """Create a summary based on all the entries."""
-    def __init__(self, **args):
-        """
-        Initialise the widget.
-
-        :param type: The type of summary to create.
-        :type type: str
-        :param details: The details of the summary to create.
-        :type details: dict
-        """
-        
-        args["description"] = "Create " + args["type"] + " Summary"
-        super().__init__(**args)
-        self.type = args["type"]
-        self.details = args["details"]
-        
-    def on_click(self, b):
-        self._parent.create_summary(self.details)
-        
-        
-class SaveButton(ReferiaWidget):
-    """Write the data to the appropriate storage files."""
-    def __init__(self, **args):
-        """
-        Initialise the widget.
-        """
-        args["description"] = "Save Flows"
-        super().__init__(**args)
-
-    def on_click(self, b):
-        """
-        When the button is clicked save the flows.
-        """
-        self._parent.save()
-
-class ReloadButton(ReferiaWidget):
-    """Reload the data from the appropriate storage files."""
-    def __init__(self, **args):
-        """
-        Initialise the widget.
-        """
-        args["description"] = "Reload Flows"
-        super().__init__(**args)
-
-    def on_click(self, b):
-        """
-        When the button is clicked reload the flows.
-        """
-        self._parent.load_flows(reload=True)
-
-class PopulateButton(ReferiaWidget):
-    """Populate the data from a compute."""
-    def __init__(self, **args):
-        """
-        Initialise the widget.
-
-        :param target: The target to populate.
-        :type target: str
-        :param compute: The compute to run.
-        :type compute: dict
-        :param description: The description of the widget.
-        :type description: str
-        """
-        if "target" in args:
-            args["description"] = "Populate " + args["target"]
-        else:
-            args["description"] = "Populate"
-        if type(args["compute"]) is list:
-            self._compute = args["compute"]
-        else:
-            self._compute = [args["compute"]]
-            
-        super().__init__(**args)
-
-    def on_click(self, b):
-        """
-        When the button is clicked populate the data.
-        """
-        for compute in self._compute:
-            compute["refresh"] = True
-            self._parent._data._compute.run(self._parent._data._compute.prep(compute))
-        self._parent.populate_display()
-
-        
     
 populate_widgets(list_stateful_widgets)
 populate_element_widgets(list_stateful_widgets)

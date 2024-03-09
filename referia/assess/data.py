@@ -61,9 +61,6 @@ class CustomDataFrame(data.CustomDataFrame):
     """Class to hold merged data flows together perform operations on them."""
     def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None):
 
-        self._name_column_map = {}
-        self._column_name_map = {}
-
         self._index = index
         self._column = column
         self._selector = selector
@@ -377,85 +374,85 @@ class CustomDataFrame(data.CustomDataFrame):
             log.debug(f"Sorting series by \"{field}\"")
             self._writeseries.sort_values(by=field, ascending=ascending, inplace=True)
 
-    def load_input_flows(self):
-        """
-        Load the input flows specified in the _referia.yml file.
+    # def load_input_flows(self):
+    #     """
+    #     Load the input flows specified in the _referia.yml file.
 
-        :return: None
-        """
-        self._load_allocation()
-        if "additional" in self.interface:
-            log.debug("Joining allocation and additional information.")
-            self._load_additional()
+    #     :return: None
+    #     """
+    #     self._load_allocation()
+    #     if "additional" in self.interface:
+    #         log.debug("Joining allocation and additional information.")
+    #         self._load_additional()
 
-        # If sorting is requested do it here.
-        self.sort_data()
-        self._load_global_consts()
+    #     # If sorting is requested do it here.
+    #     self.sort_data()
+    #     self._load_global_consts()
 
-    def _load_global_consts(self):
-        """Load constants from the _referia.yml file."""
-        if "global_consts" in self.interface:
-            self._augment_global_consts(self.interface["global_consts"])
+    # def _load_global_consts(self):
+    #     """Load constants from the _referia.yml file."""
+    #     if "global_consts" in self.interface:
+    #         self._augment_global_consts(self.interface["global_consts"])
                     
         
-    def sort_data(self):
-        if "sortby" in self.interface and "field" in self.interface["sortby"] and self.interface["sortby"]["field"] in self.columns:
-            if "ascending" in self.interface["sortby"]:
-                ascending = self.interface["sortby"]["ascending"]
-            else:
-                ascending=True
-            field=self.interface["sortby"]["field"]
-            log.debug(f"Sorting by \"{field}\"")
-            self.sort_values(by=field, ascending=ascending, inplace=True)
+    # def sort_data(self):
+    #     if "sortby" in self.interface and "field" in self.interface["sortby"] and self.interface["sortby"]["field"] in self.columns:
+    #         if "ascending" in self.interface["sortby"]:
+    #             ascending = self.interface["sortby"]["ascending"]
+    #         else:
+    #             ascending=True
+    #         field=self.interface["sortby"]["field"]
+    #         log.debug(f"Sorting by \"{field}\"")
+    #         self.sort_values(by=field, ascending=ascending, inplace=True)
 
-    def load_output_flows(self):
-        """
-        Load the output flows data specified in the _referia.yml file. 
-        Different output flows are listed in the configuration file under "globals", "cache", "scores", "series".
-        Those listed under "globals" are constants that don't change when the index changes. 
-        Those specified under "cache" are variables that can be cached and used in liquid templates or comptue functions but are assumed as not needed to be stored.
-        Those specified under "scores" are the variables that the user will want to store.
-        Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index.
+    # def load_output_flows(self):
+    #     """
+    #     Load the output flows data specified in the _referia.yml file. 
+    #     Different output flows are listed in the configuration file under "globals", "cache", "scores", "series".
+    #     Those listed under "globals" are constants that don't change when the index changes. 
+    #     Those specified under "cache" are variables that can be cached and used in liquid templates or comptue functions but are assumed as not needed to be stored.
+    #     Those specified under "scores" are the variables that the user will want to store.
+    #     Those specified under "series" are variabels that the user is storing, but there are multiple entries for each index.
 
-        """
-        if "globals" in self.interface:
-            self._globals = None
-            self._load_globals()
-        if "cache" in self.interface:
-            self._cache = None
-            self._load_cache()
-        if "scores" in self.interface:
-            self._writedata = None
-            self._load_scores()
-        if "series" in self.interface:
-            self._writeseries = None
-            self._load_series()
+    #     """
+    #     if "globals" in self.interface:
+    #         self._globals = None
+    #         self._load_globals()
+    #     if "cache" in self.interface:
+    #         self._cache = None
+    #         self._load_cache()
+    #     if "scores" in self.interface:
+    #         self._writedata = None
+    #         self._load_scores()
+    #     if "series" in self.interface:
+    #         self._writeseries = None
+    #         self._load_series()
 
-    def load_flows(self):
-        """Load the input and output flows."""
-        autocache = self.autocache
-        self.autocache = False
-        self.load_input_flows()
-        self.load_output_flows()
-        self.augment = True
-        self.preprocess()
-        self.augment = False
-        self.autocache = autocache
+    # def load_flows(self):
+    #     """Load the input and output flows."""
+    #     autocache = self.autocache
+    #     self.autocache = False
+    #     self.load_input_flows()
+    #     self.load_output_flows()
+    #     self.augment = True
+    #     self.preprocess()
+    #     self.augment = False
+    #     self.autocache = autocache
         
-    def save_flows(self):
-        """Save the output flows."""
-        if self._globals is not None:
-            log.debug(f"Writing _globals.")
-            access.io.write_globals(self._globals, self.interface)
-        if self._cache is not None:
-            log.debug(f"Writing _cache.")
-            access.io.write_cache(self._cache, self.interface)
-        if self._writedata is not None:
-            log.debug(f"Writing _writedata.")
-            access.io.write_scores(self._writedata, self.interface)
-        if self._writeseries is not None:
-            access.io.write_series(self._writeseries, self.interface)
-            log.debug(f"Writing _writeseries.")
+    # def save_flows(self):
+    #     """Save the output flows."""
+    #     if self._globals is not None:
+    #         log.debug(f"Writing _globals.")
+    #         access.io.write_globals(self._globals, self.interface)
+    #     if self._cache is not None:
+    #         log.debug(f"Writing _cache.")
+    #         access.io.write_cache(self._cache, self.interface)
+    #     if self._writedata is not None:
+    #         log.debug(f"Writing _writedata.")
+    #         access.io.write_scores(self._writedata, self.interface)
+    #     if self._writeseries is not None:
+    #         access.io.write_series(self._writeseries, self.interface)
+    #         log.debug(f"Writing _writeseries.")
 
         
     def set_index(self, value):
@@ -605,22 +602,6 @@ class CustomDataFrame(data.CustomDataFrame):
 
         self._update_type(self._writeseries, column, value)
 
-    def set_value_column(self, value, column):
-        """Set a value to a column in the write data frame"""
-        orig_col = self.get_column()
-        self.set_column(column)
-        self.set_value(value)
-        if orig_col is not None:
-            self.set_column(orig_col)
-
-    def get_value_column(self, column):
-        """Get a value from a column in the data frame(s)"""
-        orig_col = self.get_column()
-        self.set_column(column)
-        value = self.get_value()
-        if orig_col is not None:
-            self.set_column(orig_col)
-        return value
     
 
     # def set_value(self, value):
@@ -718,7 +699,9 @@ class CustomDataFrame(data.CustomDataFrame):
         
 
     def get_subseries_values(self):
-        """Return a pd.Series containing all the values in a column."""
+        """
+        Return a pd.Series containing all the values in a column.
+        """
         column = self.get_column()
         if column == None:
             return None
@@ -795,27 +778,35 @@ class CustomDataFrame(data.CustomDataFrame):
         #     return None
 
     def add_column(self, column, data=None):
+        """
+        Add a column to the data structure.
+
+        :param column: The name of the column to add.
+        :type column: str
+        :param data: The data to add to the column.
+        :type data: pd.Series
+        """
+        
         if column in self.columns:
             errmsg = f"Was requested to add column \"{column}\" but it already exists in data."
             log.error(errmsg)
             raise ValueError(errmsg)
-        if self._writedata is None and self._writeseries is None:
-            errmsg = f"There is no _writedata or _writeseries loaded to add the column \"{column}\" to."
+        
+        if not self.mutable:
+            errmsg = f"This is not a mutable object, so there is no data structure to add the column \"{column}\" to."
             log.error(errmsg)
             raise ValueError(errmsg)
 
-        if self._writeseries is not None and column in self._writeseries.columns:
-            log.warning(f"\"{column}\" requested to be added but it already exists in _writeseries.")
-            return
-
-        if self._writedata is not None and column in self._writedata.columns:
-            log.warning(f"\"{column}\" requested to be added but it already exists in _writedata.")
-            return
+        if self._strict_columns and not self.autocache:
+            errmsg = f"Cannot add column \"{column}\" to data due to strict_columns being set and/or autocache being switched off."
+            log.error(errmsg)
+            raise ValueError(errmsg)
+            
         
-        if self._writeseries is not None and column not in self._writeseries.columns:
+        if "series" in self._d:
             if not self._strict_columns("series"):
                 log.info(f"\"{column}\" not in writeseries columns ... adding.")
-                self._writeseries[column] = data
+                self._d["series"][column] = data
                 return
         
         if self._writedata is not None and column not in self._writedata.columns:
@@ -880,351 +871,29 @@ class CustomDataFrame(data.CustomDataFrame):
         else:
             log.warning(f"\"{column}\" requested to be added to series data but already exists.")
 
-    def update_name_column_map(self, name, column):
-        """
-        Update the map from valid variable names to columns in the data frame. Valid variable names are needed e.g. for Liquid filters.
-
-        :param name: The name of the variable.
-        :type name: str
-        :param column: The column in the data frame.
-        :type column: str
-        """
-        if column in self._column_name_map and self._column_name_map[column] != name:
-            original_name = self._column_name_map[column]
-            errmsg = f"Column \"{column}\" already exists in the name-column map and there's an attempt to update its value to \"{name}\" when it's original value was \"{original_name}\" and that would lead to unexpected behaviours. Try looking to see if you're setting column values to different names across different files and/or file loaders."
-            log.error(errmsg)
-            raise ValueError(errmsg)
-        self._name_column_map[name] = column
-        self._column_name_map[column] = name
-        
-    def _default_mapping(self):
-        """
-        Generate the default mapping from config or from columns
-
-        :returns: dictionary of mapping between variable names and column values
-        :rtype: dict
-        """
-        return self._name_column_map
-
-    def mapping(self, mapping=None, series=None):
-        """
-        Generate dictionary of mapping between variable names and column values.
-
-        :param mapping: mapping to use, if None use default mapping
-        :param series: series to use, if None use current series
-        :returns: dictionary of mapping between variable names and column values
-        :rtype: dict
-        """
-        
-        if mapping is None:
-            if series is None: # remove any columns not in self.columns
-                mapping = {name: column for name, column in self._default_mapping().items() if column in self.columns or column==self.index.name}
-            else: # remove any columns not in provided series
-                mapping = {name: column for name, column in self._default_mapping().items() if column in series.index}
-
-        format = {}
-        for name, column in mapping.items():
-            if series is None:
-                self.set_column(column)
-                format[name] = self.get_value()
-            else:
-                if column in series:
-                    format[name] = series[column]
-        return remove_nan(format)
-
-
-    def viewer_to_value(self, viewer, kwargs=None):
-        """Convert a viewer structure to populated values."""
-        value = ""
-        if type(viewer) is not list:
-            viewer = [viewer]
-        for view in viewer:
-            value += self.view_to_value(view, kwargs)
-            if value != "":
-                value += "\n\n"
-        return value
-
-    def view_to_value(self, view, kwargs=None, local={}):
-        """Create the text of the view."""
-        value = ""
-
-        if self.conditions(view):
-            if type(view) is dict:
-                if "local" in view:
-                    local.update(view["local"])
-                if "list" in view:
-                    values = []
-                    for v in view["list"]:
-                        values.append(self.view_to_value(v, kwargs, local))
-                    return values
-                if "field" in view:
-                    return self.get_value_column(view["field"])
-                if "join" in view:
-                    if "list" not in view["join"]:
-                        log.warning("No field \"list\" in \"concat\" viewer.")
-                    elements = self.view_to_value(view["join"], kwargs, local)
-                    if "separator" in view["join"]:
-                        sep = view["join"]["separator"]
-                    else:
-                        sep = "\n\n"
-                    return sep.join(elements)
-                if "compute" in view:
-                    return self.compute_to_value(view["compute"])
-                if "liquid" in view:
-                    return self.liquid_to_value(view["liquid"], kwargs, local)
-                if "tally" in view:
-                    return self.tally_to_value(view["tally"], kwargs, local)
-                if "display" in view:
-                    return self.display_to_value(view["display"], kwargs, local)
-            else:
-                raise TypeError("View should be a \"dict\".")
-        else:
-            return ""
-
-    def summary_viewer_to_value(self, viewer, kwargs=None):
-        """Convert a summary viewer structure to populated values."""
-        value = ""
-        if type(viewer) is not list:
-            viewer = [viewer]
-        for view in viewer:
-            value += self.summary_view_to_value(view, kwargs)
-            if value != "":
-                value += "\n\n"
-        return value
-    
-    def summary_view_to_value(self, view, kwargs=None):
-        """Create the text of the summary view."""
-        value = ""
-
-        if self.conditions(view):
-            if type(view) is dict:
-                if "list" in view:
-                    values = []
-                    for v in view["list"]:
-                        values.append(self.view_to_value(v, kwargs))
-                    return values
-                if "join" in view:
-                    if "list" not in view["join"]:
-                        log.warning("No field \"list\" in \"concat\" viewer.")
-                    elements = self.view_to_value(view["join"], kwargs)
-                    if "separator" in view["join"]:
-                        sep = view["join"]["separator"]
-                    else:
-                        sep = "\n\n"
-                    return sep.join(elements)
-                if "compute" in view:
-                    value += self.compute_to_value(view["compute"], kwargs)
-                if "liquid" in view:
-                    value += self.liquid_to_value(view["liquid"], kwargs)
-                if "tally" in view:
-                    value += self.tally_to_value(view["tally"], kwargs)
-                if "display" in view:
-                    value += self.display_to_value(view["display"], kwargs)
-                return value
-            else:
-                raise TypeError("View should be a \"dict\".")
-        else:
-            return None
-
-    def view_to_tmpname(self, view):
-        """Convert a view to a temporary name"""
-        if "list" in view:
-            name = "list_"
-            for v in view["list"]:
-                name += self.view_to_tmpname(v)
-                name += "_"
-            return name
-        elif "field" in view:
-            return to_camel_case(view["field"])
-        elif "join" in view:
-            name = "join_"
-            if "list" not in view["join"]:
-                log.warning("No field \"list\" in \"concat\" viewer.")
-            name += self.view_to_tmpname(view["join"])
-            return name
-        elif "compute" in view:
-            return self.compute_to_tmpname(view["compute"])
-        elif "liquid" in view:
-            return self.liquid_to_tmpname(view["liquid"])
-        elif "display" in view:
-            return self.display_to_tmpname(view["display"])
-
-    def tally_to_value(self, tally, kwargs=None, local={}):
-        """Create the text of the view."""
-        return self.tally_values(tally, kwargs, local)
-
-    def tally_to_tmpname(self, tally):
-        """Convert a view to a temporary name"""
-        if "tally" in view:
-            name = self.tally_to_tmpname(view["tally"])
-        return name
-
-    def conditions(self, view):
-        """Check if the viewer should be displayed."""
-        if "conditions" not in view:
-            return True
-        else:
-            for condition in view["conditions"]:
-                if "present" in condition:
-                    if not condition["present"]["field"] in self.columns:
-                        return False
-                    else:
-                        self.set_column(condition["present"]["field"])
-                        if pd.isna(self.get_value()):
-                            return False
-                        else:
-                            return True
-
-                if "equal" in condition:
-                    self.set_column(condition["equal"]["field"])
-                    if not self.get_value() == condition["equal"]["value"]:
-                        return False
-        return True
-
-    def display_to_tmpname(self, display):
-        """Convert a display string to a temp name"""
-        return to_camel_case(display.replace("/", "_").replace("{","").replace("}", ""))
-
-
-    def display_to_value(self, display, kwargs=None, local={}):
-        if kwargs is None:
-            kwargs = self.mapping()
-        kwargs.update(local)
-        try:
-            return display.format(**kwargs)
-        except KeyError as err:
-            raise KeyError(f"The mapping doesn't contain the key {err} requested in \"{display}\". Set the mapping in \"_referia.yml\".") from err
-
-    def compute_to_value(self, compute):
-        """Extract a value from a computation"""
-        compute_prep = self.compute.prep(compute)
-        return self.compute.run(compute_prep)
-    
-    def compute_to_tmpname(self, compute):
-        """Convert a display string to a temp name"""
-        return to_camel_case(compute["function"].replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
-        
-    def liquid_to_tmpname(self, display):
-        """Convert a display string to a temp name"""
-        return to_camel_case(display.replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
-
-    
-    def liquid_to_value(self, display, kwargs=None, local={}):
-        if self.compute is None:
-            log.warning("Compute needs to be initialised before liquid_to_value is called.")
-            return ""
-        
-        if kwargs is None or kwargs=={}:
-            kwargs = self.mapping()
-        kwargs.update(local)
-        try:
-            return self.compute._liquid_env.from_string(display).render(**remove_nan(kwargs))
-        except Exception as err:
-            raise Exception(f"In {display}\n\n {err}") from err
-
-    def tally_to_tmpname(self, tally):
-        """Convert a tally to a temporary name"""
-        tmpname = ""
-        if "begin" in tally:
-            tmpname += "begin_"
-            tmpname += self.view_to_tmpname(tally["begin"])
-        tmpname += "display_"
-        tmpname += self.view_to_tmpname(tally)
-        if "end" in tally:
-            tmpname += "end_"
-            tmpname += self.view_to_tmpname(tally["end"])
-        return tmpname
-
-    def tally_values(self, tally, kwargs=None, local={}):
-        value = ""
-        if "begin" in tally:
-            value += tally["begin"]
-            if value != "":
-                value += "\n\n"
-        orig_subindex = self.get_subindex()
-        subindices = self.tally_series(tally)
-        for subindex in subindices:
-            self.set_subindex(subindex)
-            value += self.view_to_value(tally, kwargs, local)
-            if value != "":
-                value += "\n\n"
-        self.set_subindex(orig_subindex)
-        if "end" in tally:
-            value += tally["end"]
-            if value != "":
-                value += "\n\n"
-        return value
-
-    def tally_series(self, tally):
-        orig_subindex = self.get_subindex()
-        subindices = self.get_subindices()
-        if subindices is None:
-            return None
-        if orig_subindex in subindices:
-            cur_loc = subindices.get_loc(orig_subindex)
-        else:
-            cur_loc = 0
-            orig_subindex = subindices[0]
-        def subind_val(ind):
-            try:
-                return pd.Index([subindices[ind]], dtype=subindices.dtypegg)
-            except IndexError as e:
-                log.warning(f"Requested invalid index in Data.tally_series()")
-                return pd.Index([subindices[cur_loc]], dtype=subindices.dtype)
-
-        def subind_series(ind, starter=True, reverse=False):
-            try:
-                if starter:
-                    return pd.Index(subindices[ind:], dtype=subindices.dtype)
-                else:
-                    return pd.Index(subindices[:ind], dtype=subindices.dtype)
-
-            except IndexError as e:
-                log.warning(f"Requested invalid index in Data.tally_series()")
-                if starter:
-                    return pd.Index(subindices[cur_loc:], dtype=subindices.dtype)
-                else:
-                    return pd.Index(subindices[:cur_loc], dtype=subindices.dtype)
-
-        if "reverse" not in tally or not tally["reverse"]:
-            reverse=False
-        else:
-            reverse=True
-            
-        if "which" not in tally:
-            return subindices
-        elif tally["which"] == "pop":
-            return subind_val(0, reverse=reverse)
-        elif tally["which"] == "bottom":
-            return subind_val(-1, reverse=reverse)
-        elif tally["which"] == "previous":
-            return subind_val(cur_loc+1, reverse=reverse)
-        elif tally["which"] == "next":
-            return subind_val(cur_loc-1, reverse=reverse)
-        elif tally["which"] == "earlier":
-            return subind_series(cur_loc+1, reverse=reverse)
-        elif tally["which"] == "later":
-            return subind_series(cur_loc, starter=False, reverse=reverse)
-        elif tally["which"] == "others":
-            return subind_series(cur_loc, starter=False, reverse=reverse).append(subind_series(cur_loc+1))
-        elif tally["which"] == "all":
-            return subindices
-        else:
-            errmsg = "Unrecognised subindices specifier in tally."
-            log.error(errmsg)
-            raise ValueError(errmsg)
-
     def _column_from_renderable(self, df, **kwargs):
         """Create a column from a renderable field."""
         return self._series_from_renderable(df, is_index=False, **kwargs)
 
 
     def _index_from_renderable(self, df, **kwargs):
-        """Create an index from a renderable field."""
+        """
+        Create an index from a renderable field.
+
+        :param df: The data frame to create the index from.
+        :type df: pd.DataFrame
+        :param kwargs: The mapping to use to populate the index.
+        :type kwargs: dict
+        :returns: The index created from the renderable field.
+        :rtype: pd.Index
+        """
         return self._series_from_renderable(df, is_index=True, **kwargs)
 
     def _series_from_value(self, df, value, name, **kwargs):
-        """Create a series from a given value."""
+        """
+        Create a series from a given value.
+
+        """
         series = pd.Series(index=df.index, dtype="object")
         for index in series.index:
             series[index] = value
