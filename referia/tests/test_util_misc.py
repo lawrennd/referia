@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 from referia.util.misc import (
     identity, filename_to_binary, yyyymmddToDatetime, datetimeToYyyymmdd,
-    add_one_to_max, markdown2html, html2markdown, renderable, tallyable, notempty,
+    add_one_to_max, renderable, tallyable, notempty,
     return_longest, return_shortest
 )
 
@@ -24,12 +24,6 @@ def test_yyyymmddToDatetime():
     with pytest.raises(ValueError):
         yyyymmddToDatetime("not formatted date")
         
-def test_markdown2html():
-    assert markdown2html("# Test") == "<h1>Test</h1>"
-
-def test_html2markdown():
-    assert html2markdown("<h1>Test</h1>") == "Test\n====\n\n"
-
 def test_renderable():
     assert renderable("display")
     assert not renderable("unknown")

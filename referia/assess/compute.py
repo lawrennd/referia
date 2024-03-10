@@ -11,14 +11,19 @@ from ..config.interface import Interface
 from ..util.misc import add_one_to_max, return_shortest, return_longest, identity
 
 from ndlpy.util.misc import get_url_file, remove_nan
+from ndlpy.assess.data import CustomDataFrame
+import ndlpy.assess.compute
 
 from ndlpy.util.dataframe import addmonth, fillna, addyear, ascending, augmentcurrency, augmentmonth, augmentyear, columncontains, columnis, convert_datetime, convert_int, convert_string, convert_year_iso, current, descending, former, onbool, recent
-from ..util.text import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, render_liquid
+
+from ndlpy.util.text import render_liquid
+
+from ..util.text import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments
 from ..util.system import most_recent_screen_shot
 from ..util.plot import bar_plot, histogram
 from ..util.files import file_from_re, files_from_re
 
-from ..util.liquid import url_escape, markdownify, relative_url, absolute_url, to_i
+
 
 from ..exceptions import ComputeError
 
@@ -32,51 +37,51 @@ log = Logger(
     
 )
 
-class Compute():
-    def __init__(self, interface, data):
+class Compute(ndlpy.assess.compute.Compute):
+    def __init__(self, interface):
         """Initialize the compute object.
 
-        :param data: The data object to be used.
-        :type data: ndlpy.assess.data.CustomDataFrame
         :param interface: The interface to be used.
         :type interface: ndlpy.config.interface.Interface
         :return: None
         """
+        super().__init__(interface=interface)
 
-        self._data = data
-        self._interface = interface
-        
+    def prep_all(self, interface, data):
+        """
+        Prepare all compute entries for use.
 
-        self._computes = {}
+        :param interface: The interface to be used.
+        :type interface: ndlpy.config.interface.Interface
+        :param data: The data object to be used.
+        :type data: ndlpy.assess.data.CustomDataFrame
+        :return: None
+        """
         for comptype in ["precompute", "compute", "postcompute"]:
-            self._computes[comptype]=[]
-            if comptype in self._interface:
-                if type(self._interface[comptype]) is list:
-                    computes = self._interface[comptype]
+            if comptype in interface:
+                if type(interface[comptype]) is list:
+                    computes = interface[comptype]
                 else:
-                    computes = [self._interface[comptype]]
-
+                    computes = [interface[comptype]]
                 for compute in computes:
                     self._computes[comptype].append(
-                        self.prep(compute)
+                        self.prep(compute, data)
                     )
-
-        self.load_liquid()
-        self.add_liquid_filters()
                     
-        
-    def prep(self, settings : dict ) -> dict:
+    def prep(self, settings : dict, data : CustomDataFrame ) -> dict:
         """
         Prepare a compute entry for use.
 
         :param settings: The settings to be used.
         :type settings: dict
+        :param data: The data to be used.
+        :type data: ndlpy.assess.data.CustomDataFrame
         :return: The prepared compute entry.
         :rtype: dict
 
         """
         compute_prep = {
-            "function": self.gcf_(function=settings["function"]),
+            "function": self.gcf_(function=settings["function"], data=data),
             "args" : self.gca_(**settings),
             "refresh" : "refresh" in settings and settings["refresh"],
         }
@@ -98,36 +103,6 @@ class Compute():
         return image
         super().interface = value
             
-    def load_liquid(self):
-        """Load the liquid environment."""
-        loader = None
-        if "liquid" in self._interface:
-            if "templates" in self._interface["liquid"]:
-                if "dir" in self._interface["liquid"]["templates"]:
-                    templates_path = [os.path.abspath(self._interface["liquid"]["templates"])]
-                else:
-                    template_path = [
-                        os.path.join(os.path.dirname(__file__), "templates"),
-                    ]
-
-                    if "ext" in self._interface["liquid"]:
-                        ext = self._interface["liquid"]["ext"]
-                        loader = lq.loaders.FileExtensionLoader(search_path=template_path, ext=ext)
-                    else:
-                        loader = lq.FileSystemLoader(template_path)
-            elif "dict" in self._interface["liquid"]["templates"]:
-                loader = lq.loaders.DictLoader(self._interface["liquid"]["templates"]["dict"])
-        self._liquid_env = lq.Environment(loader=loader)
-
-
-    def add_liquid_filters(self):
-        """Add liquid filters to the liquid environment."""
-        self._liquid_env.add_filter("url_escape", url_escape)
-        self._liquid_env.add_filter("markdownify", markdownify)
-        self._liquid_env.add_filter("relative_url", relative_url)
-        self._liquid_env.add_filter("absolute_url", absolute_url)
-        self._liquid_env.add_filter("to_i", to_i)
-
     def gca_(self, function, field=None, refresh=False, args={}, row_args={}, view_args={}, function_args={}, subseries_args={}, column_args={}):
         """
         Args generator for compute functions.
@@ -174,12 +149,14 @@ class Compute():
         }
 
 
-    def gcf_(self, function):
+    def gcf_(self, function, data):
         """
         Function generator for compute functions.
 
         :param function: The name of the function to be used.
         :type function: str
+        :param data: The data to be used.
+        :type data: ndlpy.assess.data.CustomDataFrame
         :return: The function to be used.
         """
         found_function = False
@@ -190,7 +167,7 @@ class Compute():
         if not found_function:
             raise ValueError(f"Function \"{function}\" not found in list_functions.")
 
-        def compute_function(args={}, subseries_args={}, column_args={}, row_args={}, view_args={}, function_args = {}, default_args={}):
+        def compute_function(data, args={}, subseries_args={}, column_args={}, row_args={}, view_args={}, function_args = {}, default_args={}):
             """
             Compute a function using arguments found in subseries (column of sub-series specified by value in dictionary), or columns (full column specified by value in dictionary) or the same row (value from row as specified in the dictionary).
             :param args: The arguments to be used.
@@ -213,35 +190,35 @@ class Compute():
             kwargs = default_args.copy()
             kwargs.update(args)
             for key, value in function_args.items():
-                kwargs[key] = self.gcf_(value)
+                kwargs[key] = self.gcf_(value, data)
             for key, column in column_args.items():
                 if otherdf is None:
-                    orig_col = self._data.get_column()
-                    self._data.set_column(column)
+                    orig_col = data.get_column()
+                    data.set_column(column)
                 if key in kwargs:
                     log.warning(f"No key \"{key}\" already column_args found in kwargs.")
-                kwargs[key] = self._data.get_column_values()
-                self._data.set_column(orig_col)
+                kwargs[key] = data.get_column_values()
+                data.set_column(orig_col)
                 
             for key, column in subseries_args.items():
-                orig_col = self._data.get_column()
-                self._data.set_column(column)
+                orig_col = data.get_column()
+                data.set_column(column)
                 if key in kwargs:
                     log.warning(f"No key \"{key}\" from subseries_args already found in kwargs.")   
-                kwargs[key] = self._data.get_subseries_values()
-                self._data.set_column(orig_col)
+                kwargs[key] = data.get_subseries_values()
+                data.set_column(orig_col)
 
             ## Arguments based on liquid, or format, or join.
             for key, view in view_args.items():
-                orig_col = self._data.get_column()
-                kwargs[key] = self._data.view_to_value(view)
-                self._data.set_column(orig_col)
+                orig_col = data.get_column()
+                kwargs[key] = data.view_to_value(view)
+                data.set_column(orig_col)
                 
             for key, column in row_args.items():
                 if key in kwargs:
                     log.warning(f"No key \"{key}\" from row_args already found in kwargs.")
-                kwargs[key] = self._data.get_value_column(column)
-            # kwargs.update(remove_nan(self._data.mapping(args)))
+                kwargs[key] = data.get_value_column(column)
+            # kwargs.update(remove_nan(data.mapping(args)))
             log.debug(f"The keyword arguments for the compute function are {kwargs}.")
             return list_function["function"](**kwargs)
 
@@ -250,7 +227,7 @@ class Compute():
             compute_function.__doc__ = list_function["docstr"]
         return compute_function
 
-    def run(self, compute, df=None, index=None, refresh=True):
+    def run(self, compute, data, df=None, index=None, refresh=True):
         """
         Run the computation given in compute.
 
@@ -270,7 +247,7 @@ class Compute():
         fname = compute["function"].__name__
         fargs = compute["args"]
         if index is None:
-            index = self._data.get_index()
+            index = data.get_index()
 
         if "field" in compute:
             columns = compute["field"]
@@ -286,7 +263,7 @@ class Compute():
         if columns is not None:
             for column in columns:
                 if df is None:
-                    if column not in self._data.columns:
+                    if column not in data.columns:
                         missing_vals.append(True)
                         continue
                 else:
@@ -297,7 +274,7 @@ class Compute():
                     missing_vals.append(False)
                     continue
                 if df is None:
-                    val = self._data.get_value_column(column)
+                    val = data.get_value_column(column)
                 else:
                     val = df.at[index, column]
                 if type(val) is not list and pd.isna(val):
@@ -330,11 +307,11 @@ class Compute():
             for column, new_val, missing_val in zip(columns, new_vals, missing_vals):
                 if column == "_":
                     continue
-                if refresh or missing_val and self._data.ismutable(column):
+                if refresh or missing_val and data.ismutable(column):
                     log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
-                    self._data.set_value_column(new_val, column)
+                    data.set_value_column(new_val, column)
   
-    def preprocess(self):
+    def preprocess(self, data, interface):
         """
         Run all preprocess computations.
 
@@ -343,32 +320,32 @@ class Compute():
         ##### Copied raw need to run on all elements.
         ## preprocess
         for op in ["preprocessor", "augmentor", "sorter"]:
-            if op in self._interface["compute"]:
-                computes = self._interface["compute"][op]
+            if op in interface["compute"]:
+                computes = interface["compute"][op]
                 if not isinstance(computes, list):
                     computes = [computes]
                 for compute in computes:
                     compute_prep = self.prep(compute)
                     fargs = compute_prep["args"]
                     if "field" in compute:
-                        self._data[compute["field"]] = compute_prep["function"](self._data, **fargs)
+                        data[compute["field"]] = compute_prep["function"](data, **fargs)
                     else:
-                        compute_prep["function"](self._data, **fargs)
+                        compute_prep["function"](data, **fargs)
                         
         # Filter
-        filt = pd.Series(True, index=self._data.index)
-        if "filter" in self._interface["compute"]:
-            computes = self._interface["compute"]["filter"]
+        filt = pd.Series(True, index=data.index)
+        if "filter" in interface["compute"]:
+            computes = interface["compute"]["filter"]
             if not isinstance(computes, list):
                 computes = [computes]    
                 for compute in computes:
                     compute_prep = self.prep(compute)
                     fargs = compute_prep["args"]
-                    newfilt = compute_prep["function"](self._data, **fargs)
+                    newfilt = compute_prep["function"](data, **fargs)
                     filt = (filt & newfilt)
-            self._data.filter_row(filt)
+            data.filter_row(filt)
     
-    def run_all(self, df=None, index=None, pre=False, post=False):
+    def run_all(self, data, df=None, index=None, pre=False, post=False):
         """
         Run any computation elements on the data frame.
 
@@ -393,11 +370,11 @@ class Compute():
             
         for compute in computes:
             field = compute["field"]
-            if self._data.ismutable(field):
+            if data.ismutable(field):
                 if compute["refresh"]:
-                    self.run(compute, df, index, refresh=True)
+                    self.run(compute, data, df, index, refresh=True)
                 else:                    
-                    self.run(compute, df, index, refresh=False)
+                    self.run(compute, data, df, index, refresh=False)
             else:
                 log.warning(f"Attempted to write to unmutable field \"{field}\"")
     

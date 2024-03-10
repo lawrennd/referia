@@ -4,8 +4,6 @@ import re
 from pandas.api.types import is_bool_dtype, is_integer_dtype, is_float_dtype, is_string_dtype
 
 import pandas as pd
-import markdown
-import markdownify
 
 import wget
 
@@ -77,29 +75,6 @@ def add_one_to_max(values=None, default=1):
     else:
         return values.max() + 1
 
-def markdown2html(text):
-    """
-    Convert markdown to HTML.
-
-    :param text: The markdown text to be converted.
-    :type text: str
-    :return: The HTML.
-    :rtype: str
-    """
-    
-    return markdown.markdown(text)
-
-def html2markdown(text, **args):
-    """
-    Convert HTML to markdown.
-
-    :param text: The HTML text to be converted.
-    :type text: str
-    :return: The markdown.
-    :rtype: str
-    """
-    
-    return markdownify.markdownify(text, **args)
 
 def renderable(view):
     """
