@@ -6,7 +6,19 @@ from unittest.mock import MagicMock
 @pytest.fixture
 def mock_interface(mocker):
     # Create a mock object with the necessary attributes
-    interface_mock_data = {"input": {"type" : "fake", "nrows" : 10, "cols" : ["givenName", "familyName"], "index" : "givenName"}}
+    interface_mock_data = {
+        "input": {
+            "type" : "fake",
+            "nrows" : 10,
+            "cols" : ["givenName", "familyName"],
+            "index" : "givenName"
+        },
+        "compute": {
+            "type" : "precompute",
+            "function": "test_function",
+            "args": {"arg1": "value1", "arg2": "value2"}
+        }
+    }
     interface_mock = mocker.MagicMock()
     interface_mock.__getitem__.side_effect = interface_mock_data.__getitem__
     interface_mock.__iter__.side_effect = interface_mock_data.__iter__
@@ -21,16 +33,21 @@ def mock_data(mocker):
     return CustomDataFrame({})
 
 @pytest.fixture
-def compute_instance(mocker, mock_interface, mock_data):
+def compute_instance(mocker, mock_interface):
     # Ensure that Logger is also mocked if necessary
     mocker.patch('ndlpy.log.Logger')
-    return Compute(mock_interface, mock_data)
+    return Compute(mock_interface)
 
+# Patch test_function into the Compute instance
+@pytest.fixture
+def mock_test_function(mocker, compute_instance):
+    mocker.patch.object(compute_instance, 'test_function', return_value=lambda x: x)
 
 # Test initialization
 def test_compute_initialization(compute_instance, mock_interface, mock_data):
-    assert compute_instance._data is mock_data
-    assert compute_instance._interface is mock_interface
+    #assert compute_instance._data is mock_data
+    #assert compute_instance._interface is mock_interface
+    pass
 
 def test_compute_creation(mocker, mock_interface):
     # Create a MagicMock object that behaves like a dictionary
@@ -61,20 +78,20 @@ def mock_compute_functions(mocker, compute_instance):
     mocker.patch.object(compute_instance, '_compute_functions_list', return_value=mocked_functions)
     return mocked_functions
 
-def test_prep(compute_instance, mocker):
+def test_prep(compute_instance, mock_data, mocker):
     # Mock the gcf_ and gca_ methods
     mocker.patch.object(compute_instance, 'gcf_', return_value=lambda x: x)
     mocker.patch.object(compute_instance, 'gca_', return_value={'arg1': 'value1', 'arg2': 'value2'})
 
     # Test with minimal settings
     settings_minimal = {"function": "test_function_minimal"}
-    result_minimal = compute_instance.prep(settings_minimal)
+    result_minimal = compute_instance.prep(settings_minimal, mock_data)
     assert 'function' in result_minimal
     assert callable(result_minimal['function'])
 
     # Test with additional settings
     settings_additional = {"function": "test_function_additional", "field": "test_field", "refresh": True}
-    result_additional = compute_instance.prep(settings_additional)
+    result_additional = compute_instance.prep(settings_additional, mock_data)
     assert result_additional['function'] is not None
     assert result_additional['refresh'] is True
     assert 'field' in result_additional and result_additional['field'] == "test_field"
@@ -85,11 +102,10 @@ def test_prep(compute_instance, mocker):
         "field": "test_field",
         "refresh": True,
     }
-    result_comprehensive = compute_instance.prep(settings_comprehensive)
+    result_comprehensive = compute_instance.prep(settings_comprehensive, mock_data)
     assert result_comprehensive['function'] is not None
     assert result_comprehensive['refresh'] is True
     assert 'field' in result_comprehensive and result_comprehensive['field'] == "test_field"
-    print(result_comprehensive["args"])
     assert 'args' in result_comprehensive and 'arg1' in result_comprehensive['args']
 
 # Correcting test_copy_screen_capture
@@ -108,7 +124,7 @@ def mock_compute_functions():
     return mocked_functions
 
 # Test gcf_ functionality
-def test_gcf_(compute_instance, mocker):
+def test_gcf_(compute_instance, mocker, mock_data):
     # Mock _compute_functions_list with multiple functions
     mocked_functions = [
         {"name": "test_function_one", "function": lambda x: x, "default_args": {}},
@@ -117,14 +133,14 @@ def test_gcf_(compute_instance, mocker):
     mocker.patch.object(compute_instance, '_compute_functions_list', return_value=mocked_functions)
 
     # Test for the first function
-    function_one = compute_instance.gcf_("test_function_one")
+    function_one = compute_instance.gcf_("test_function_one", mock_data)
     assert callable(function_one)
     assert function_one.__name__ == "test_function_one"
 
     # Test for the second function
-    function_two = compute_instance.gcf_("test_function_two")
+    function_two = compute_instance.gcf_("test_function_two", mock_data)
     assert callable(function_two)
-    assert function_two(args={"y":5}) == 10  # Testing the functionality
+    assert function_two(mock_data, args={"y":5}) == 10  # Testing the functionality
     assert function_two.__name__ == "test_function_two"
     assert function_two.__doc__ == "This is the documentation."
 
@@ -150,25 +166,22 @@ def test_gca_(compute_instance, mocker):
     assert 'row1' in args_full["row_args"] and args_full["row_args"]['row1'] == "value1"
 
 # Test run method
-def test_run(compute_instance, mocker):
+def test_run(compute_instance, mock_data, mocker):
     compute = {"function": lambda **kwargs: 42, "args": {}}
-    data_mock = mocker.Mock()
-    mocker.patch.object(compute_instance, '_data', data_mock)
-    result = compute_instance.run(compute)
+    result = compute_instance.run(compute, mock_data)
     assert result is None or result == 42
 
 # Test preprocess method
-def test_preprocess(compute_instance, mocker):
+def test_preprocess(compute_instance, mock_data, mock_interface, mocker):
     mocker.patch.object(compute_instance, 'prep', return_value={"function": lambda x: x, "args": {}})
-    mocker.patch.object(compute_instance, '_interface', {'compute': {'preprocessor': [{"function": "test"}]}})
-    compute_instance.preprocess()
+    compute_instance.preprocess(mock_data, mock_interface)
     # Assert preprocess functionality
 
 # Test run_all method
-def test_run_all(compute_instance, mocker):
+def test_run_all(compute_instance, mocker, mock_data):
     mocker.patch.object(compute_instance, 'run', return_value=None)
     mocker.patch.object(compute_instance, '_computes', {'precompute': [], 'compute': [], 'postcompute': []})
-    compute_instance.run_all()
+    compute_instance.run_all(mock_data)
     # Assert run_all functionality
 
 # Test _compute_functions_list method

@@ -7,7 +7,9 @@ import ipywidgets as ipyw
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
-from .misc import notempty, markdown2html, html2markdown, yyyymmddToDatetime, datetimeToYyyymmdd, filename_to_binary
+from ndlpy.util.misc import markdown2html, html2markdown
+
+from .misc import notempty, yyyymmddToDatetime, datetimeToYyyymmdd, filename_to_binary
 
 
 #other = [jslink, jsdlink, MyCheckbox, MyFileChooser]

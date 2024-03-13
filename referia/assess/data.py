@@ -12,6 +12,7 @@ from ndlpy.log import Logger
 from ndlpy.config.context import Context
 from ndlpy import access
 from ndlpy.assess import data
+from ..assess import compute # move to ndlpy.assess??
 from ndlpy.util.misc import to_camel_case, remove_nan, is_valid_var
 
 from ..config.interface import Interface
@@ -19,7 +20,6 @@ from ..config.interface import Interface
 from ..util.misc import renderable
 
 from ..config import interface
-
 
 cntxt = Context()
 log = Logger(
@@ -527,22 +527,22 @@ class CustomDataFrame(data.CustomDataFrame):
     def preprocess(self):
         """Run any preprocessing computations."""
         if self.compute is not None:
-            self.compute.preprocess()
+            self.compute.preprocess(data=self)
 
     def compute_pre(self):
         """Run pre-computation on the index."""
         if self.compute is not None:
-            self.compute.run_all(pre=True)
+            self.compute.run_all(data=self, pre=True)
         
     def compute_post(self):
         """Run post-computation on the index."""
         if self.compute is not None:
-            self.compute.run_all(post=True)
+            self.compute.run_all(data=self, post=True)
 
     def compute_append(index, row):
         """Run computation for an appended row."""
         if self.compute is not None:
-            self.compute.run_all(df=row, index=index, pre=True)
+            self.compute.run_all(data=self, df=row, index=index, pre=True)
         
 
     def set_selector(self, column):
@@ -940,9 +940,24 @@ class CustomDataFrame(data.CustomDataFrame):
                 log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
         return series
 
+    def _extract_compute(self, interface):
+        """
+        Extract the compute object.
 
+        :param interface: The interface to the compute object.
+        :type interface: ndlpy.config.interface.Interface or dict
+        :returns: The compute object.
+        """
+        return compute.Compute.from_flow(interface)
+    
     def _finalize_df(self, df, details, strict_columns=False):
-        """This function augments the raw data and sets the index of the data frame."""
+        """
+        This function augments the raw data and sets the index of the data frame.
+        :param df: The data frame to be augmented.
+        :param details: The details of the data frame.
+        :param strict_columns: Whether to enforce strict columns.
+        :return: The augmented data frame.
+        """
         """for field in dtypes:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
