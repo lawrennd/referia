@@ -55,6 +55,10 @@ class Interface(ndlpy.config.interface.Interface):
                 allocation = [allocation]
             if "input" not in data:
                 data["input"] = {"type" : "hstack", "specifications" : [{"type": "vstack", "specifications" : allocation}]}
+            else:
+                errmsg = "\"allocation\" is not allowed when \"input\" is present."
+                log.error(errmsg)
+                raise ValueError(errmsg)
             del data["allocation"]
             
         if "additional" in data:
