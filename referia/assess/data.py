@@ -75,29 +75,6 @@ class CustomDataFrame(data.CustomDataFrame):
         # in _finalize_df
         self._augment_column_names(self)
 
-
-    @property
-    def compute(self):
-        """
-        Return the compute object.
-
-        :return: The compute object.
-        :rtype: Compute
-        """
-        return self._compute
-
-    @compute.setter
-    def compute(self, value):
-        """
-        Set the compute object.
-
-        :param value: The compute object.
-        :type value: Compute
-        :return: None
-        """
-        self._compute = value
-
-
                         
     @property
     def _data(self):
