@@ -23,6 +23,6 @@ def Scorer(index=None, data=None, user_file="_referia.yml", directory="."):
     if data is None:
         data = assess.data.CustomDataFrame.from_interface(interface)
     if index is None:
-        index = data.index.iloc[0]
+        index = data.index[0]
     sys = system.Sys(interface)
     return Reviewer(index, data, interface, sys)

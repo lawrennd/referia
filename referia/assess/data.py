@@ -942,6 +942,7 @@ class CustomDataFrame(data.CustomDataFrame):
         #     errmsg = "Missing index field in data frame specification in _referia.yml"
         #     log.error(errmsg)
         #     raise ValueError(errmsg)
+        print("finalizing")
         if "index" not in details:
             index_column_name = df.index.name
         if "columns" in details:
@@ -1011,13 +1012,14 @@ class CustomDataFrame(data.CustomDataFrame):
                     self._selector = cname
                 else:
                     log.warning(f"No \"name\" associated with selector entry.")
-        
+        print(details)
         if "index" in details:            
             field = details["index"]
             if type(field) is str:
                 index_column_name = details["index"]
                 
             elif type(field) is dict: # Index is created from existing columns
+                print("Playing with index")
                 if "name" not in field:
                     field["name"] = "index"
                 if renderable(field):
