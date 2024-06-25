@@ -40,17 +40,17 @@ log = Logger(
 class Compute(ndlpy.assess.compute.Compute):
     def __init__(self, interface):
         """Initialize the compute object.
-
+        
         :param interface: The interface to be used.
         :type interface: ndlpy.config.interface.Interface
         :return: None
         """
         super().__init__(interface=interface)
-
+        
     def prep_all(self, interface, data):
         """
         Prepare all compute entries for use.
-
+        
         :param interface: The interface to be used.
         :type interface: ndlpy.config.interface.Interface
         :param data: The data object to be used.
@@ -68,17 +68,17 @@ class Compute(ndlpy.assess.compute.Compute):
                         self.prep(compute, data)
                     )
                     
-    def prep(self, settings : dict, data : CustomDataFrame ) -> dict:
+    def prep(self, settings : dict, data : ndlpy.assess.data.CustomDataFrame ) -> dict:
         """
         Prepare a compute entry for use.
-
+        
         :param settings: The settings to be used.
         :type settings: dict
         :param data: The data to be used.
         :type data: ndlpy.assess.data.CustomDataFrame
         :return: The prepared compute entry.
         :rtype: dict
-
+        
         """
         compute_prep = {
             "function": self.gcf_(function=settings["function"], data=data),
