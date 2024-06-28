@@ -481,8 +481,9 @@ class FieldWidget(ReferiaStatefulWidget):
         :param change: The change event.
         """
         if not self.private and self._parent is not None:
-            self._parent.set_column(self.get_column())
-            self._parent.set_value(change.new)
+            if self.get_column() is not None:
+                self._parent.set_column(self.get_column())
+                self._parent.set_value(change.new)
 
         if self._refresh_display:
             if self._parent is not None:

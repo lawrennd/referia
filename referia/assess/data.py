@@ -916,16 +916,6 @@ class CustomDataFrame(data.CustomDataFrame):
             else:
                 log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
         return series
-
-    def _extract_compute(self, interface):
-        """
-        Extract the compute object.
-
-        :param interface: The interface to the compute object.
-        :type interface: ndlpy.config.interface.Interface or dict
-        :returns: The compute object.
-        """
-        return compute.Compute.from_flow(interface)
     
     def _finalize_df(self, df, details, strict_columns=False):
         """
