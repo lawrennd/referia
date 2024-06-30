@@ -120,7 +120,7 @@ class Compute(ndlpy.assess.compute.Compute):
         :rtype: object
         """
 
-        super().preprocess(compute, data, df, index, refresh)
+        super().run(data, Interface({"compute": compute}));
         
         multi_output = False
         fname = compute["function"].__name__

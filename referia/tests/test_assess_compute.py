@@ -67,6 +67,7 @@ def test_compute_creation(mocker, mock_interface):
     # Check that a Compute instance is returned
     assert result is not None
 
+    
 # Updated mock_compute_functions fixture
 @pytest.fixture
 def mock_compute_functions(mocker, compute_instance):
@@ -108,12 +109,6 @@ def test_prep(compute_instance, mock_data, mocker):
     assert 'field' in result_comprehensive and result_comprehensive['field'] == "test_field"
     assert 'args' in result_comprehensive and 'arg1' in result_comprehensive['args']
 
-# Correcting test_copy_screen_capture
-def test_copy_screen_capture(compute_instance, mocker):
-    mocker.patch('referia.assess.compute.most_recent_screen_shot', return_value='screenshot.png')
-    mocker.patch('builtins.open', mocker.mock_open(read_data=b'image_data'))
-    image = compute_instance.copy_screen_capture()
-    assert image == b'image_data'
 
 @pytest.fixture
 def mock_compute_functions():
@@ -195,3 +190,11 @@ def test_compute_functions_list(compute_instance):
         assert 'function' in func
         assert callable(func['function'])
         assert 'default_args' in func
+
+# Correcting test_copy_screen_capture
+def test_copy_screen_capture(compute_instance, mocker):
+    mocker.patch('referia.assess.compute.most_recent_screen_shot', return_value='screenshot.png')
+    mocker.patch('builtins.open', mocker.mock_open(read_data=b'image_data'))
+    image = compute_instance.copy_screen_capture()
+    assert image == b'image_data'
+       
