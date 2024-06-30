@@ -317,6 +317,7 @@ class Compute(ndlpy.assess.compute.Compute):
 
         :return: None
         """
+        super().preprocess(data, interface)
         ##### Copied raw need to run on all elements.
         ## preprocess
         for op in ["preprocessor", "augmentor", "sorter"]:
@@ -359,7 +360,7 @@ class Compute(ndlpy.assess.compute.Compute):
         :type post: bool
         :return: None
         """
-
+        super().run_all(data, df, index, pre, post)
         log.debug(f"Running computes on index=\"{index}\" with pre=\"{pre}\" and post=\"{post}\"")
         computes = []
         if pre:

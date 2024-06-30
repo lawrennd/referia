@@ -16,6 +16,7 @@ from ..assess import compute # move to ndlpy.assess??
 from ndlpy.util.misc import to_camel_case, remove_nan, is_valid_var
 
 from ..config.interface import Interface
+from ..assess.compute import Compute
 
 from ..util.misc import renderable
 
@@ -435,6 +436,9 @@ class CustomDataFrame(data.CustomDataFrame):
     def set_index(self, value):
         """Index setter"""
         orig_index = self._index
+        # Call parent set index
+        super().set_index(value)
+        
         # If index has changed, run computes.
         if orig_index is not None and value != orig_index:
             if orig_index in self.index:
@@ -1167,4 +1171,4 @@ class CustomDataFrame(data.CustomDataFrame):
             log.warning(f"Changing column \"{column}\" type to 'object' due to bool input.")
             df[column] = df[column].astype("boolean")
 
-        
+           

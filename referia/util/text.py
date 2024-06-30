@@ -9,14 +9,15 @@ import warnings
 
 from wordcloud import WordCloud, STOPWORDS
 
-#from spacy.lang.en.stop_words import STOP_WORDS
+import spacy
+from spacy.lang.en.stop_words import STOP_WORDS
 from string import punctuation
 from heapq import nlargest
 
 from ..exceptions import ComputeError
 from ..assess import data
 
-#nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_sm")
 
 # -*- coding: utf-8 -*-
 import re
@@ -126,6 +127,7 @@ def comment_list(text):
 
     return comments, comment_ids, authors, dates, starts, finishes, highlight_texts
         
+
 def word_count(text):
     """
     Count the number of words in a text string using SpaCy, excluding punctuation.

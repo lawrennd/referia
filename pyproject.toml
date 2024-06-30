@@ -28,7 +28,7 @@ classifiers = [
 python = ">=3.11,<4.0"
 XlsxWriter = "*"
 pandas = "*"
-numpy = "*"
+numpy = ">=1.0.0,<2.0.0"
 jupyter = "*"
 matplotlib = "*"
 unidecode = "*"
