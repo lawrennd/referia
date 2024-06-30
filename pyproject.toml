@@ -25,10 +25,10 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<4.0"
+python = ">=3.11,<3.12" # Due to latexenc using \g to esacape which 3.12 doesn't like
 XlsxWriter = "*"
 pandas = "*"
-numpy = ">=1.0.0,<2.0.0"
+numpy = ">=1.0.0,<2.0.0" # to deal with this https://github.com/explosion/thinc/issues/939
 jupyter = "*"
 matplotlib = "*"
 unidecode = "*"
