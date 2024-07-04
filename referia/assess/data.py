@@ -60,7 +60,7 @@ def automapping(columns):
 
 class CustomDataFrame(data.CustomDataFrame):
     """Class to hold merged data flows together perform operations on them."""
-    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None):
+    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None, compute=None):
 
         self._index = index
         self._column = column
@@ -70,11 +70,7 @@ class CustomDataFrame(data.CustomDataFrame):
 
         self.augment = False
         self._compute = None
-        super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex)
-        # Pass self to augment column names. This is needed for
-        # the liquid filters. May be removable if this can be set
-        # in _finalize_df
-        self._augment_column_names(self)
+        super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex, compute=compute)
 
                         
     @property
@@ -921,70 +917,62 @@ class CustomDataFrame(data.CustomDataFrame):
                 log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
         return series
     
-    def _finalize_df(self, df, details, strict_columns=False):
+    def _finalize_df(self, df : "CustomDataFrame", interface  : Interface, strict_columns=False) -> "CustomDataFrame":
         """
         This function augments the raw data and sets the index of the data frame.
         :param df: The data frame to be augmented.
-        :param details: The details of the data frame.
+        :param interface: The interface of the data frame.
         :param strict_columns: Whether to enforce strict columns.
         :return: The augmented data frame.
         """
         """for field in dtypes:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
-        # if "index" not in details:
+        # if "index" not in interface:
         #     errmsg = "Missing index field in data frame specification in _referia.yml"
         #     log.error(errmsg)
         #     raise ValueError(errmsg)
-        print("finalizing")
-        if "index" not in details:
-            index_column_name = df.index.name
-        if "columns" in details:
-            # Make sure the listed columns are present.
-            for column in details["columns"]:
-                if column not in df.columns:
-                    df[column] = None
-            if strict_columns or ("strict_columns" in self.interface and self.interface["strict_columns"]) or ("strict_columns" in details and details["strict_columns"]):
-                if "columns" not in details:
-                    errmsg = f"You can't have strict_columns set to True and not list the columns in the details structure."
+        if "index" not in interface:
+            interface["index"] = df.index.name
+
+        if strict_columns or ("strict_columns" in self.interface and self.interface["strict_columns"]) or ("strict_columns" in interface and interface["strict_columns"]):
+            strict_columns = True
+
+        if strict_columns: # check that index is provided
+            # TK: This should happen when interface is loaded and converted
+            if isinstance(interface["index"],dict): # Legacy: Index is built through constructing a column
+                if not "name" in interface["index"]:
+                    errmsg = f"Missing name in index dictionary."
                     log.error(errmsg)
                     raise ValueError(errmsg)
-                if type(details["index"]) is str:
-                    index_column_name = details["index"]
-                elif type(details["index"]) is dict:
-                    if "name" in details["index"]:
-                        index_column_name = details["index"]["name"]
-                    else:
-                        errmsg = f"Missing name in index dictionary."
-                        log.error(errmsg)
-                        raise ValueError(errmsg)
+                if "field" in interface:
+                    interface["field"] += [interface["index"]]
                 else:
-                    errmsg = f"Incorrect form of index."
-                    log.error(errmsg)
-                    raise ValueError(errmsg)
-                    
-                for column in df.columns:
-                    if column not in details["columns"] and column!=index_column_name:
-                        errmsg = f"DataFrame contains column: \"{column}\" which is not in the columns list of the specification and strict_columns is set to True."
-                        log.error(errmsg)
-                        raise ValueError(errmsg)
-                    
-
-        if "mapping" in details:
+                    interface["field"] = [interface["index"]]
+                interface["index"] = interface["index"]["name"]
+            elif not isinstance(interface["index"],str):
+                errmsg = f"Incorrect form of index."
+                log.error(errmsg)
+                raise ValueError(errmsg)
             
-            for name, column in details["mapping"].items():
-                self.update_name_column_map(column=column, name=name)
+        df = super()._finalize_df(df, interface, strict_columns)
 
-        self._augment_column_names(df)
-                
-        if "selector" in details:
-            field = details["selector"]
+        # if "selector" in interface:
+        #     if isinstance(interface["selector"], str):
+        #         self.set_selector(interface["selector"])
+        #     else:
+        #         errmsg = f'"selector" should be a string in interface.'
+        #         log.error(errmsg)
+        #         raise ValueError(errmsg)
+        
+        if "selector" in interface:
+            field = interface["selector"]
             if type(field) is str:
                 if field in df.columns:
                     self._selector = field 
                 else:
-                    if "set_selector" in details:
-                        df[field] = details["set_selector"]
+                    if "set_selector" in interface:
+                        df[field] = interface["set_selector"]
                     self._selector = field 
                     log.warning(f"No selector column \"{field}\" found in data frame.")
             elif type(field) is dict:
@@ -1006,14 +994,12 @@ class CustomDataFrame(data.CustomDataFrame):
                     self._selector = cname
                 else:
                     log.warning(f"No \"name\" associated with selector entry.")
-        print(details)
-        if "index" in details:            
-            field = details["index"]
+        if "index" in interface:            
+            field = interface["index"]
             if type(field) is str:
-                index_column_name = details["index"]
+                index_column_name = interface["index"]
                 
             elif type(field) is dict: # Index is created from existing columns
-                print("Playing with index")
                 if "name" not in field:
                     field["name"] = "index"
                 if renderable(field):
@@ -1039,8 +1025,8 @@ class CustomDataFrame(data.CustomDataFrame):
 
 
             
-        if "fields" in details and details["fields"] is not None:
-            for field in details["fields"]:
+        if "fields" in interface and interface["fields"] is not None:
+            for field in interface["fields"]:
                 if "name" in field:
                     if renderable(field):
                         column = self._column_from_renderable(df, **field)
@@ -1067,7 +1053,7 @@ class CustomDataFrame(data.CustomDataFrame):
                     log.warning(f"No \"name\" associated with field entry.")
 
         # If it's a series post-process by creating entries field.
-        if "series" in details and details["series"]:
+        if "series" in interface and interface["series"]:
             """The data frame is a series (with multiple identical indices)"""
             mapping = self._default_mapping()
             # Make sure there's an entries entry in default mapping
@@ -1082,13 +1068,13 @@ class CustomDataFrame(data.CustomDataFrame):
             df[index_column_name] = df.index
             indexcol = list(set(df[index_column_name]))
             index = pd.Index(range(len(indexcol)))
-            # selector_column_name = details["selector"]
+            # selector_column_name = interface["selector"]
             # selectorcol = list(set(df[selector_column_name]))
             # selector = pd.Index(range(len(selectorcol)))
             newdf = pd.DataFrame(index=index, columns=[index_column_name, "entries"])
             newdf[index_column_name] = indexcol
-            newdetails = details.copy()
-            del newdetails["series"]
+            newinterface = interface.copy()
+            del newinterface["series"]
             for ind in range(len(indexcol)):
                 entries = []
                 index_name = indexcol[ind]
@@ -1113,40 +1099,17 @@ class CustomDataFrame(data.CustomDataFrame):
                 newdf.at[ind, "entries"] = entries
                 newdf.at[ind, index_column_name] = indexcol[ind]
                                  
-            if "fields" in details:
+            if "fields" in interface:
                 """Fields have already been resolved."""
-                del newdetails["fields"]
-            if "selector" in details:
-                del newdetails["selector"]
+                del newinterface["fields"]
+            if "selector" in interface:
+                del newinterface["selector"]
                 
-            newdetails["index"] = index_column_name
-            return self._finalize_df(newdf, newdetails)
+            newinterface["index"] = index_column_name
+            return self._finalize_df(newdf, newinterface)
                     
         return df
 
-    def _augment_column_names(self, data):
-        """
-        Add each column name to the column name map if not already there.
-        """
-        for column in data.columns:
-            # If column title is valid variable name, add it to the column name map
-            if column not in self._column_name_map:
-                if is_valid_var(column):
-                    self.update_name_column_map(name=column, column=column)
-                else:
-                    name = to_camel_case(column)
-                    # Keep variable names as private
-                    if name == "_":
-                        name = "_" + name
-
-                    log.warning(f"Column \"{column}\" is not a valid variable name and there is no mapping entry to provide an alternative. Auto-generating a mapping entry \"{name}\" to provide a valid variable name to use as proxy for \"{column}\".")
-                    if is_valid_var(name):
-                        self.update_name_column_map(name=name, column=column)
-                    else:
-                        errmsg = f"Column \"{column}\" is not a valid variable name. Tried autogenerating a camel case name \"{name}\" but it is also not valid. Please add a mapping entry to provide an alternative to use as proxy for \"{column}\"."
-                        log.error(errmsg)
-                        raise ValueError(errmsg)
-    
     def to_score(self):
         if self._writedata is not None:
             return len(self._writedata.index)

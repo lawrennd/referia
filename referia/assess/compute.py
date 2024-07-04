@@ -109,7 +109,7 @@ class Compute(ndlpy.assess.compute.Compute):
         Run the computation given in compute.
 
         :param compute: The compute to be run.
-        :type compute: dict
+        :type compute: ndlpy.config.interface.Interface
         :param df: The data frame to be used.
         :type df: pandas.DataFrame or ndlpy.assess.data.CustomDataFrame
         :param index: The index to be used.
@@ -120,7 +120,7 @@ class Compute(ndlpy.assess.compute.Compute):
         :rtype: object
         """
 
-        super().run(data, Interface({"compute": compute}));
+        #super().run(compute, data, df, index, refresh);
         
         multi_output = False
         fname = compute["function"].__name__
@@ -267,7 +267,7 @@ class Compute(ndlpy.assess.compute.Compute):
         :return: A list of compute functions.
         :rtype: list
         """
-        return  [
+        return super()._compute_functions_list() + [
             {
                 "name" : "liquid",
                 "function" : render_liquid,
@@ -307,14 +307,6 @@ class Compute(ndlpy.assess.compute.Compute):
                 "name" : "next_integer",
                 "function" : add_one_to_max,
                 "default_args" : {},
-            },
-            {
-                "name" : "today",
-                "function" : datetime.datetime.now().strftime,
-                "default_args": {
-                    "format": "%Y-%m-%d",
-                },
-                "docstr" : "Return today's date as a string.",
             },
             {
                 "name" : "file_from_re",

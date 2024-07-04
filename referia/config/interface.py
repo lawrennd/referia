@@ -51,6 +51,11 @@ class Interface(ndlpy.config.interface.Interface):
         """
         if "allocation" in data:
             allocation = data["allocation"]
+            mapping, columns = self._extract_mapping_columns(allocation)
+            if "mapping" in allocation:
+                del allocation["mapping"]
+            if "columns" in allocation:
+                del allocation["columns"]
             if not isinstance(allocation, list):
                 allocation = [allocation]
             if "input" not in data:
@@ -59,13 +64,34 @@ class Interface(ndlpy.config.interface.Interface):
                 errmsg = "\"allocation\" is not allowed when \"input\" is present."
                 log.error(errmsg)
                 raise ValueError(errmsg)
+            if "mapping" in data["input"]:
+                data["input"]["mapping"] += mapping
+            else:
+                data["input"]["mapping"] = mapping
+            if "columns" in data["input"]:
+                data["input"]["columns"] += columns
+            else:
+                data["input"]["columns"] = columns
             del data["allocation"]
             
         if "additional" in data:
             additional = data["additional"]
+            mapping, columns = self._extract_mapping_columns(additional)
+            if "mapping" in additional:
+                del additional["mapping"]
+            if "columns" in additional:
+                del additional["columns"]
             if not isinstance(additional, list):
                 additional = [additional]
             data["input"]["specifications"] += additional
+            if "mapping" in data["input"]:
+                data["input"]["mapping"] += mapping
+            else:
+                data["input"]["mapping"] = mapping
+            if "columns" in data["input"]:
+                data["input"]["columns"] += columns
+            else:
+                data["input"]["columns"] = columns
             del data["additional"]
 
         if "global_consts" in data:
@@ -89,12 +115,30 @@ class Interface(ndlpy.config.interface.Interface):
             del data["scores"]
 
             
+            
             #self._expand_scores()   
 
         super().__init__(data)
         
 
+    def _extract_mapping_columns(self, data):
+        """
+        Extract mapping and columns from data.
 
+        :param data: The data to be processed.
+        :type data: dict
+        :return: The mapping and columns.
+        :rtype: tuple
+        """
+        mapping = []
+        columns = []
+        if "mapping" in data:
+            mapping = data["mapping"]
+            del data["mapping"]
+        if "columns" in data:
+            columns = data["columns"]
+            del data["columns"]
+        return mapping, columns
                 
     def _process_parent(self):
 

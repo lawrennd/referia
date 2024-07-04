@@ -400,7 +400,6 @@ class Sys():
             elif renderable(view):
                 filestub = data.view_to_tmpname(view) + ".pdf"
             else:
-                print(view)
                 filestub = ''.join(random.choices(string.digits+string.ascii_letters, k=8)) + ".pdf"
 
             
