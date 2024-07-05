@@ -1,5 +1,4 @@
 import pytest
-import ndlpy
 import referia
 
 from referia.util.text import (

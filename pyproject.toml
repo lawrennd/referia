@@ -42,8 +42,8 @@ google-auth-oauthlib = "*"
 pypandoc = "*"
 pypdftk = "*"
 pdfannots = "*"
-ndlpy = { git = "https://github.com/lawrennd/ndlpy.git" }
-#ndlpy = "*"
+#linguine = { git = "https://github.com/lawrennd/linguine.git" }
+#linguine = "*"
 # You can include platform-specific dependencies like this:
 # Note: This is just an example, you might need to adjust for actual requirements.
 gspread_pandas = { version = "*", platform = "darwin" }
