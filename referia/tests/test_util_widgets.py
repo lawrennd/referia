@@ -489,7 +489,7 @@ class MockParent:
     def create_summary(self, details):
         pass
 
-    def save(self):
+    def save_flows(self):
         pass
 
     def load_flows(self, reload=False):
@@ -520,9 +520,9 @@ def test_save_button(mocker):
     parent_mock = mocker.Mock(spec=MockParent)
     button = SaveButton(parent=parent_mock)
 
-    mocker.patch.object(parent_mock, 'save')
+    mocker.patch.object(parent_mock, 'save_flows')
     button.on_click(None)
-    parent_mock.save.assert_called_once()
+    parent_mock.save_flows.assert_called_once()
 
 def test_reload_button(mocker):
     parent_mock = mocker.Mock(spec=MockParent)
