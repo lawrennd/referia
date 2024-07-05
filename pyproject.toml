@@ -6,6 +6,7 @@ build-backend = "poetry.core.masonry.api"
 pytest = "^6.2.5"
 pytest-cov = "^3.0.0"
 pytest-mock = "^3.3.1"  
+deepdiff = "^6.6.0"
 
 [tool.poetry]
 name = "referia"
