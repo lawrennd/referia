@@ -42,7 +42,7 @@ google-auth-oauthlib = "*"
 pypandoc = "*"
 pypdftk = "*"
 pdfannots = "*"
-#linguine = { git = "https://github.com/lawrennd/linguine.git" }
+linguine = { git = "https://github.com/lawrennd/linguine.git" }
 #linguine = "*"
 # You can include platform-specific dependencies like this:
 # Note: This is just an example, you might need to adjust for actual requirements.
