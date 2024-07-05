@@ -1052,7 +1052,7 @@ class SaveButton(ReferiaWidget):
         """
         When the button is clicked save the flows.
         """
-        self._parent.save()
+        self._parent.save_flows()
 
 class ReloadButton(ReferiaWidget):
     """Reload the data from the appropriate storage files."""

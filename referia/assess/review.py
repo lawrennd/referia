@@ -1163,9 +1163,11 @@ class Reviewer:
                 self.set_subindex(subindex)
         self.populate_display()
 
-    def save(self):
-        """Save output flows and reload inputs for any downstream displays."""
-        self._data.save()
+    def save_flows(self):
+        """
+        Save output flows and reload inputs for any downstream displays.
+        """
+        self._data.save_flows()
         for ds in self._downstream_displays:
             ds.load()
             ds.set_index(self.get_index())

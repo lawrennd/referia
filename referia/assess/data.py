@@ -75,6 +75,9 @@ class CustomDataFrame(data.CustomDataFrame):
                         
     @property
     def _data(self):
+        """
+        This property recreates the original structure of data storage for referia where data was stored under _data not _d.
+        """
         if len(self._d)>0:
             if "data" in self._d:
                 # Data that is input (not for writing to)
@@ -413,20 +416,6 @@ class CustomDataFrame(data.CustomDataFrame):
     #     self.augment = False
     #     self.autocache = autocache
         
-    # def save_flows(self):
-    #     """Save the output flows."""
-    #     if self._globals is not None:
-    #         log.debug(f"Writing _globals.")
-    #         access.io.write_globals(self._globals, self.interface)
-    #     if self._cache is not None:
-    #         log.debug(f"Writing _cache.")
-    #         access.io.write_cache(self._cache, self.interface)
-    #     if self._writedata is not None:
-    #         log.debug(f"Writing _writedata.")
-    #         access.io.write_scores(self._writedata, self.interface)
-    #     if self._writeseries is not None:
-    #         access.io.write_series(self._writeseries, self.interface)
-    #         log.debug(f"Writing _writeseries.")
 
         
     def set_index(self, value):
