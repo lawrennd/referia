@@ -14,10 +14,10 @@ import pyminizip as pz
 
 import pypdftk as tk
 
-from ndlpy import log
-from ndlpy.util.misc import to_camel_case, extract_full_filename, extract_abs_filename, markdown2html
-from ndlpy import access
-from ndlpy.config.context import Context
+from linguine import log
+from linguine.util.misc import to_camel_case, extract_full_filename, extract_abs_filename, markdown2html
+from linguine import access
+from linguine.config.context import Context
 
 from .util.misc import notempty, renderable, tallyable
 from .util.files import to_valid_file

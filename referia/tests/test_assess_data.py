@@ -1,10 +1,10 @@
-# tests/test_ndlpy_dataframe.py
+# tests/test_assess_data.py
 
 import pytest
 import referia.assess.data
 import pandas as pd
 import numpy as np
-import ndlpy
+import linguine
 
 from deepdiff import DeepDiff
 
@@ -24,7 +24,7 @@ def create_series_dataframe():
     data = {"A": [1, 2], "B": [3, 4], "C": [5, 5], "D": [6, 6], "E": [7, 7], "F": [8, 8]}
     colspecs = {"input": ["A", "B"], "output": ["C", "D"], "writeseries": ["E", "F"]}
     
-    return ndlpy.assess.data.CustomDataFrame(data, colspecs=colspecs)
+    return linguine.assess.data.CustomDataFrame(data, colspecs=colspecs)
 
 # Basic Functionality
 def test_dataframe_creation():
@@ -53,7 +53,7 @@ def test_mean():
 def test_concat():
     df1 = create_test_dataframe()
     df2 = create_test_dataframe()
-    result = ndlpy.assess.data.concat([df1, df2])
+    result = linguine.assess.data.concat([df1, df2])
     assert result.shape == (6, 2)
 
 def test_merge():
@@ -221,7 +221,7 @@ def test_large_dataframe_performance():
 def test_compatibility_with_pandas():
     pandas_df = pd.DataFrame({'A': [1, 2, 3]})
     ndl_df = referia.assess.data.CustomDataFrame({'A': [1, 2, 3]})
-    assert pandas_df.equals(ndl_df.to_pandas())  # Assuming to_pandas() converts ndlpy DataFrame to Pandas DataFrame
+    assert pandas_df.equals(ndl_df.to_pandas())  # Assuming to_pandas() converts linguine DataFrame to Pandas DataFrame
 
 # Testing for Exceptions
 def test_out_of_bounds_access():
