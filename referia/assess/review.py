@@ -16,10 +16,10 @@ import matplotlib.pyplot as plt
 
 from ipywidgets import jslink, jsdlink, Layout
 
-from linguine import log
-from linguine import access
-from linguine.util.misc import remove_nan, to_valid_var
-from linguine.config.context import Context
+from lynguine import log
+from lynguine import access
+from lynguine.util.misc import remove_nan, to_valid_var
+from lynguine.config.context import Context
 
 
 from ..util.widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)

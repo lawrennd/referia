@@ -3,8 +3,8 @@ import yaml
 import numpy as np
 
 
-from linguine.util.misc import to_valid_var
-import linguine
+from lynguine.util.misc import to_valid_var
+import lynguine
 
 
 GSPREAD_AVAILABLE=True
@@ -33,7 +33,7 @@ def nodes(user_file="_referia.yml", directory="."):
     return chain
 
     
-class Interface(linguine.config.interface.Interface):
+class Interface(lynguine.config.interface.Interface):
     @classmethod
     def default_config_file(cls):
         """

@@ -10,7 +10,7 @@ The referia library provides tools for assisting with assessment, originally wri
 
 The library uses jupyter notebook as an interface. 
 
-The library builds on functionality provided in the [`linguine`](https://github.com/lawrennd/linguine/) data oriented architecture library. The main difference between the two is that functionality that is general for the flow-based model the code follows sits in `linguine`. The `referia` code is the place where functionality that is specific to interacting with the data (such as reviewing) is provided. 
+The library builds on functionality provided in the [`lynguine`](https://github.com/lawrennd/lynguine/) data oriented architecture library. The main difference between the two is that functionality that is general for the flow-based model the code follows sits in `lynguine`. The `referia` code is the place where functionality that is specific to interacting with the data (such as reviewing) is provided. 
 
 To install use
 

@@ -1,6 +1,6 @@
 import pytest
 from referia.assess.compute import Compute  # Adjust the import as necessary
-from linguine.assess.data import CustomDataFrame
+from lynguine.assess.data import CustomDataFrame
 from unittest.mock import MagicMock
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def mock_data(mocker):
 @pytest.fixture
 def compute_instance(mocker, mock_interface):
     # Ensure that Logger is also mocked if necessary
-    mocker.patch('linguine.log.Logger')
+    mocker.patch('lynguine.log.Logger')
     return Compute(mock_interface)
 
 # Patch test_function into the Compute instance

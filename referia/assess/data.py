@@ -8,12 +8,12 @@ import datetime
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
-from linguine.log import Logger
-from linguine.config.context import Context
-from linguine import access
-from linguine.assess import data
-from ..assess import compute # move to linguine.assess??
-from linguine.util.misc import to_camel_case, remove_nan, is_valid_var
+from lynguine.log import Logger
+from lynguine.config.context import Context
+from lynguine import access
+from lynguine.assess import data
+from ..assess import compute # move to lynguine.assess??
+from lynguine.util.misc import to_camel_case, remove_nan, is_valid_var
 
 from ..config.interface import Interface
 from ..assess.compute import Compute
