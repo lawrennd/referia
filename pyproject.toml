@@ -53,3 +53,9 @@ appscript = { version = "*", platform = "darwin" }
 [build]
 # Include if you have any build scripts, though this is rare
 script = "path/to/script"
+
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
