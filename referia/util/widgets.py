@@ -7,7 +7,7 @@ import ipywidgets as ipyw
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
-from linguine.util.misc import markdown2html, html2markdown
+from lynguine.util.misc import markdown2html, html2markdown
 
 from .misc import notempty, yyyymmddToDatetime, datetimeToYyyymmdd, filename_to_binary
 
@@ -200,8 +200,15 @@ class ReferiaWidget():
 
         if "parent" in args:
             self._parent = args["parent"]
+            del args["parent"]
+
+        # Delete other arguments not used by widget
+        for key in ["type", "document", "target", "details", "compute"]:
+            if key in args:
+                del args[key]
         self._create_widget(args)
 
+        
     def _default_widget(self):
         """
         Return the default widget function.
@@ -210,6 +217,7 @@ class ReferiaWidget():
         :rtype: function
         """
         return ipyw.Button
+
 
     def _create_widget(self, args):
         """
@@ -1328,6 +1336,7 @@ def MyFileChooser(**args):
         directory = "."
     else:
         directory = args["directory"]
+        del args["directory"]
 
     if "path" in args:
         directory = os.path.join(path, directory)
@@ -1336,6 +1345,7 @@ def MyFileChooser(**args):
         globname = "*"
     else:
         globname = args["glob"]
+        del args["glob"]
     files = glob.glob(os.path.join(os.path.expandvars(directory), globname))
     dirs = []
     options = []

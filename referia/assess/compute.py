@@ -3,20 +3,20 @@ import datetime
 import pandas as pd
 import liquid as lq
 
-from linguine.config.context import Context
-from linguine.log import Logger
+from lynguine.config.context import Context
+from lynguine.log import Logger
 
 from ..config.interface import Interface
 
 from ..util.misc import add_one_to_max, return_shortest, return_longest, identity
 
-from linguine.util.misc import get_url_file, remove_nan
-from linguine.assess.data import CustomDataFrame
-import linguine.assess.compute
+from lynguine.util.misc import get_url_file, remove_nan
+from lynguine.assess.data import CustomDataFrame
+import lynguine.assess.compute
 
-from linguine.util.dataframe import addmonth, fillna, addyear, ascending, augmentcurrency, augmentmonth, augmentyear, columncontains, columnis, convert_datetime, convert_int, convert_string, convert_year_iso, current, descending, former, onbool, recent
+from lynguine.util.dataframe import addmonth, fillna, addyear, ascending, augmentcurrency, augmentmonth, augmentyear, columncontains, columnis, convert_datetime, convert_int, convert_string, convert_year_iso, current, descending, former, onbool, recent
 
-from linguine.util.text import render_liquid
+from lynguine.util.text import render_liquid
 
 from ..util.text import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments
 from ..util.system import most_recent_screen_shot
@@ -37,12 +37,12 @@ log = Logger(
     
 )
 
-class Compute(linguine.assess.compute.Compute):
+class Compute(lynguine.assess.compute.Compute):
     def __init__(self, interface):
         """Initialize the compute object.
         
         :param interface: The interface to be used.
-        :type interface: linguine.config.interface.Interface
+        :type interface: lynguine.config.interface.Interface
         :return: None
         """
         super().__init__(interface=interface)
@@ -52,9 +52,9 @@ class Compute(linguine.assess.compute.Compute):
         Prepare all compute entries for use.
         
         :param interface: The interface to be used.
-        :type interface: linguine.config.interface.Interface
+        :type interface: lynguine.config.interface.Interface
         :param data: The data object to be used.
-        :type data: linguine.assess.data.CustomDataFrame
+        :type data: lynguine.assess.data.CustomDataFrame
         :return: None
         """
         for comptype in ["precompute", "compute", "postcompute"]:
@@ -68,14 +68,14 @@ class Compute(linguine.assess.compute.Compute):
                         self.prep(compute, data)
                     )
                     
-    def prep(self, settings : dict, data : linguine.assess.data.CustomDataFrame ) -> dict:
+    def prep(self, settings : dict, data : lynguine.assess.data.CustomDataFrame ) -> dict:
         """
         Prepare a compute entry for use.
         
         :param settings: The settings to be used.
         :type settings: dict
         :param data: The data to be used.
-        :type data: linguine.assess.data.CustomDataFrame
+        :type data: lynguine.assess.data.CustomDataFrame
         :return: The prepared compute entry.
         :rtype: dict
         
@@ -109,9 +109,9 @@ class Compute(linguine.assess.compute.Compute):
         Run the computation given in compute.
 
         :param compute: The compute to be run.
-        :type compute: linguine.config.interface.Interface
+        :type compute: lynguine.config.interface.Interface
         :param df: The data frame to be used.
-        :type df: pandas.DataFrame or linguine.assess.data.CustomDataFrame
+        :type df: pandas.DataFrame or lynguine.assess.data.CustomDataFrame
         :param index: The index to be used.
         :type index: object
         :param refresh: Whether to refresh the field.
@@ -230,7 +230,7 @@ class Compute(linguine.assess.compute.Compute):
         Run any computation elements on the data frame.
 
         :param df: The data frame to be used.
-        :type df: pandas.DataFrame or linguine.assess.data.CustomDataFrame
+        :type df: pandas.DataFrame or lynguine.assess.data.CustomDataFrame
         :param index: The index to be used.
         :type index: object
         :param pre: Whether to run precomputes.
