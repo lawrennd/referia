@@ -418,33 +418,41 @@ class CustomDataFrame(data.CustomDataFrame):
         
 
         
-    def set_index(self, value):
-        """Index setter"""
-        orig_index = self._index
-        # Call parent set index
-        super().set_index(value)
-        
-        # If index has changed, run computes.
-        if orig_index is not None and value != orig_index:
-            if orig_index in self.index:
-                self.compute_post()
-        if value is None:
-            log.warning(f"Was asked to set index to None.")
-            return
-        if value not in self.index:
-            log.warning(f"Index \"{value}\" not found in _data")
-            self.add_row(index=value)
-            self.set_index(value)
-        else:
-            self._index = value
-            log.debug(f"Index \"{value}\" selected.")
-            self.check_or_set_subseries()
-        # If index has changed, run computes.
-        if orig_index is None or self._index != orig_index:
-            self.compute_pre()
+    def set_index(self, value : str) -> None:
+        """
+        Index setter
 
-    def check_or_set_subseries(self):
-        """Check if there is a sub-series if so, use top subindex, if not create a row."""
+        :param value: The index to be set.
+        :type value: str
+        :return: None
+        """
+        
+        # If index has changed, run post computes (computes that take place after review).
+        # post-computes are run on the index we're changing from
+        if self._index is not None and value != self._index:
+            if self._index in self.index:
+                log.debug(f"Calling post-compute on index \"{self._index}\".")
+                self.compute_post()
+        
+        # Call parent to set index
+        orig_index = self._index
+        super().set_index(value)
+
+        # If index has changed, run pre computes (computes that take place before review).
+        # pre-computes are run on the index we're changing to
+        if orig_index is None or self._index != orig_index:
+            log.debug(f"Calling pre-compute on index \"{self._index}\".")
+            self.compute_pre()
+                
+        # If index has changed, check if there is a subseries, if so, use top subindex, if not create a row.
+        self.check_or_set_subseries()
+            
+            
+
+    def check_or_set_subseries(self) -> None:
+        """
+        Check if there is a sub-series if so, use top subindex, if not create a row.
+        """
         if self._writeseries is not None:
             subindices = self.get_subseries()
             if len(subindices) > 0:
@@ -457,8 +465,14 @@ class CustomDataFrame(data.CustomDataFrame):
                 
 
 
-    def set_subindex(self, subindex):
-        """Subindex setter"""
+    def set_subindex(self, subindex : str) -> None:
+        """
+        Subindex setter
+
+        :param subindex: The subindex to be set.
+        :type subindex: str
+        :return: None
+        """
         if subindex is None:
             self._subindex = None
             log.debug(f"Subindex set to None.")
@@ -474,7 +488,13 @@ class CustomDataFrame(data.CustomDataFrame):
             log.debug(f"Subindex \"{subindex}\" selected.")
 
 
-    def get_index(self):
+    def get_index(self) -> str:
+        """
+        Index getter
+
+        :return: The index.
+        :rtype: str
+        """
         if self._index is None and len(self.index)>0:
             log.debug(f"No index set, using first index of data.")
             self.set_index(self.index[0])

@@ -10,6 +10,7 @@ import pandas as pd
 import json
 
 import markdown
+import warnings
 
 from IPython import display
 import matplotlib.pyplot as plt
@@ -170,7 +171,7 @@ def extract_widget(details, reviewer, widgets):
     widgets.add(**{widget_key: widget_type(**args)})
 
 
-def extract_scorer(details, reviewer, widgets):
+def extract_review(details, reviewer, widgets):
     """
     Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command. Widget is added to the widgets list.
 
@@ -194,27 +195,27 @@ def extract_scorer(details, reviewer, widgets):
     elif details["type"] == "load":
         load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
         widgets.add(load_widgets)
-        extract_load_scorer(details, reviewer, load_widgets)
+        extract_load_review(details, reviewer, load_widgets)
 
     elif details["type"] == "group":
         group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
         widgets.add(group_widgets)
-        extract_group_scorer(details, reviewer, group_widgets)
+        extract_group_review(details, reviewer, group_widgets)
 
     
     elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
         if isinstance(widgets, CompositeWidgetCluster):
-            extract_composite_scorer(details, reviewer, widgets)
+            extract_composite_review(details, reviewer, widgets)
         else:
             composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
             widgets.add(composite_widget)
-            extract_composite_scorer(details, reviewer, composite_widget)
+            extract_composite_review(details, reviewer, composite_widget)
 
 
     elif details["type"] == "loop":
         loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer)
         widgets.add(loop_widget)
-        extract_loop_scorer(details, reviewer, loop_widget)
+        extract_loop_review(details, reviewer, loop_widget)
         
     else:
         # Widget is directly specified
@@ -226,7 +227,7 @@ def view(data):
     data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8, ax=ax)
     ax.set_xticks(range(0,13))
 
-def extract_load_scorer(details, reviewer, widgets):
+def extract_load_review(details, reviewer, widgets):
     """
     Extract details from a separate file where they're specified.
 
@@ -242,9 +243,9 @@ def extract_load_scorer(details, reviewer, widgets):
         raise ValueError("Load reviewer needs to provide load details as entry under \"details\"")
     df,  newdetails = access.io.read_data(details["details"])
     for ind, series in df.iterrows():
-        extract_scorer(remove_nan(series.to_dict()), reviewer, widgets)
+        extract_review(remove_nan(series.to_dict()), reviewer, widgets)
 
-def extract_group_scorer(details, reviewer, widgets):
+def extract_group_review(details, reviewer, widgets):
     """
     Extract details that are clustered together in a group.
 
@@ -265,9 +266,9 @@ def extract_group_scorer(details, reviewer, widgets):
                 child["prefix"] = details["prefix"] + child["prefix"]
             if "field" in child:
                 child["field"] = details["prefix"] + child["field"]
-        extract_scorer(child, reviewer, widgets)
+        extract_review(child, reviewer, widgets)
 
-def extract_composite_scorer(details, reviewer, widgets):
+def extract_composite_review(details, reviewer, widgets):
     """
     Extract details for a predefined composition of widgets.
 
@@ -321,7 +322,7 @@ def extract_composite_scorer(details, reviewer, widgets):
             criterion["args"]["join"] = join
         if lis is not None:
             criterion["args"]["list"] = lis
-        extract_scorer(criterion, reviewer, widgets)
+        extract_review(criterion, reviewer, widgets)
         return
 
     if details["type"] == "CriterionComment":
@@ -342,7 +343,7 @@ def extract_composite_scorer(details, reviewer, widgets):
                 }
             }
         for sub_score in [criterion, comment]:
-            extract_scorer(sub_score, reviewer, widgets)
+            extract_review(sub_score, reviewer, widgets)
         return
 
     if details["type"] == "CriterionCommentDate":
@@ -357,7 +358,7 @@ def extract_composite_scorer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterion, date]:
-            extract_scorer(sub_score, reviewer, widgets)
+            extract_review(sub_score, reviewer, widgets)
         return
 
 
@@ -381,7 +382,7 @@ def extract_composite_scorer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterioncomment, expectation]:
-            extract_scorer(sub_score, reviewer, widgets)
+            extract_review(sub_score, reviewer, widgets)
         return
     
     if details["type"] == "CriterionCommentRaisesMeetsLowers":
@@ -404,7 +405,7 @@ def extract_composite_scorer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterioncomment, expectation]:
-            extract_scorer(sub_score, reviewer, widgets)
+            extract_review(sub_score, reviewer, widgets)
         return
 
     if details["type"] == "CriterionCommentRaisesMeetsLowersFlag":
@@ -421,7 +422,7 @@ def extract_composite_scorer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterioncommentraisesmeetslowers, flag]:
-            extract_scorer(sub_score, reviewer, widgets)
+            extract_review(sub_score, reviewer, widgets)
         return
 
     
@@ -464,9 +465,9 @@ def extract_composite_scorer(details, reviewer, widgets):
             }
         }
         for sub_score in [criterioncomment, slider]:
-            extract_scorer(sub_score, reviewer, widgets)
+            extract_review(sub_score, reviewer, widgets)
 
-def extract_loop_scorer(details, reviewer, widgets):
+def extract_loop_review(details, reviewer, widgets):
     """
     Extract details for a loop of widgets.
 
@@ -499,7 +500,7 @@ def extract_loop_scorer(details, reviewer, widgets):
                 sub_score["local"] = {}
             sub_score["local"]["element"] = element
             sub_score["element"] = element
-            extract_scorer(sub_score, reviewer, widgets)
+            extract_review(sub_score, reviewer, widgets)
 
 
     
@@ -535,9 +536,15 @@ class WidgetCluster():
         :type parent: Reviewer or WidgetCluster
         :param viewer: Whether the cluster is a viewer.
         """
-        self._widget_dict = {}
-        self._widget_list = []
+
+        # _widget_dict contains a dictionary of FieldWidget
+        self._widget_dict = {} 
+        # _widget_list contains a list which has entries as string if it's
+        # in the widget dictionary or a WidgetCluster object if it's a
+        # cluster of widgets.
+        self._widget_list = [] 
         self._name = name
+        log.debug(f"Setting cluster name to \"{name}\".")
         self._viewer = viewer
         self._parent = parent
         self.add(**kwargs)
@@ -588,11 +595,21 @@ class WidgetCluster():
         """
         Refresh the widgets.
         """
+        log.debug(f"Widget list is currently \"{self._widget_list}\"")
         for entry in self._widget_list:
             if isinstance(entry, WidgetCluster):
+                # If it's a cluster of widgets recursively call refresh.
+                log.debug(f"Refreshing widget cluster \"{entry._name}\"")
                 entry.refresh()
-            else:
+            elif isinstance(entry, str):
+                # If it's an actual widget call refresh.
+                log.debug(f"Refreshing widget \"{entry}\"")                
                 self._widget_dict[entry].refresh()
+            else:
+                errmsg = f"Invalid entry type \"{type(entry)}\"."
+                log.error(errmsg)
+                raise KeyError(errmsg)
+        log.debug(f"Finished refreshing")
         
     def add(self, cluster=None, **kwargs):
         """
@@ -609,6 +626,7 @@ class WidgetCluster():
         else:
             if kwargs != {}:
                 self._widget_list += list(kwargs.keys())
+                # extend the widget dictionary with the provided dictionary.
                 self._widget_dict = {**self._widget_dict, **kwargs}
         
     def update(self, **kwargs):
@@ -692,11 +710,7 @@ class DynamicWidgetCluster(WidgetCluster):
         Refresh the widgets.
         """
         self.from_details()
-        for entry in self._widget_list:
-            if isinstance(entry, WidgetCluster):
-                entry.refresh()
-            else:
-                self._widget_dict[entry].refresh()
+        super().refresh()
         self.display()
                 
 
@@ -710,7 +724,7 @@ class DynamicWidgetCluster(WidgetCluster):
         if details is None:
             details=self._details
         self.clear_children()
-        extract_loop_scorer(details, self._parent, self)
+        extract_loop_review(details, self._parent, self)
 
 class LoadWidgetCluster(WidgetCluster):
     """
@@ -753,6 +767,17 @@ class Reviewer:
     def __init__(self, index=None, data=None, interface=None, system=None, viewer_inherit=True):
         """
         Create the display system.
+
+        :param index: The index of the data.
+        :type index: str
+        :param data: The data to be displayed.
+        :type data: pd.DataFrame
+        :param interface: The interface to be used.
+        :type interface: str
+        :param system: The system to be used.
+        :type system: str
+        :param viewer_inherit: Whether the viewer inherits a parent viewer.
+        :type viewer_inherit: bool
         """
         if viewer_inherit:
             append = ["viewer"]
@@ -823,7 +848,7 @@ class Reviewer:
         :param views: The views to be displayed.
         :type views: dict
         """
-        widgets = WidgetCluster(name="viewer", parent=self, viewer=True)
+        widgets = WidgetCluster(name="viewer", parent=self._widgets, viewer=True)
         if type(views) is not list:
             views = [views]
 
@@ -839,15 +864,17 @@ class Reviewer:
             widgets.add(**{label: Markdown(**args)})
         return widgets
 
-    def _create_scorer(self, reviewers):
+    def _create_review(self, reviewers):
         """
         Create the reviewers from the config file.
 
         :param reviewers: The reviewers to be displayed.
         :type reviewers: dict
         """
+        widgets = WidgetCluster(name="review_widgets", parent=self._widgets)
         for reviewer in reviewers:
-            extract_scorer(reviewer, self, self._widgets)
+            extract_review(reviewer, self, widgets)
+        return widgets
 
     def _create_documents(self, documents):
         """
@@ -856,7 +883,7 @@ class Reviewer:
         :param documents: The documents to be created.
         :type documents: dict
         """
-        widgets = WidgetCluster(name="documents", parent=self)
+        widgets = WidgetCluster(name="documents", parent=self._widgets)
         for count, document in enumerate(documents):
             label = "_doc_button" + str(count)
             args = {
@@ -874,7 +901,7 @@ class Reviewer:
         :param summaries: The summaries to be created.
         :type summaries: dict
         """
-        widgets = WidgetCluster(name="summaries", parent=self)
+        widgets = WidgetCluster(name="summaries", parent=self._widgets)
         for count, summary in enumerate(summaries):
             label = "_summary_button" + str(count)
             args = {
@@ -892,7 +919,7 @@ class Reviewer:
         :param documents: The documents to be created.
         :type documents: dict
         """
-        widgets = WidgetCluster(name="documents", parent=self)
+        widgets = WidgetCluster(name="documents", parent=self._widgets)
         for count, document in enumerate(documents):
             label = "_summary_doc_button" + str(count)
             args = {
@@ -918,8 +945,16 @@ class Reviewer:
         self._widgets.add(self._create_reload_button(self._interface))
         # Process the reviewer from the interface file.
         if "scorer" in self._interface:
-            self._widgets.add(self._create_scorer(self._interface["scorer"]))
+            # Send deprecation warning that name needs updating to reviewer
+            warnmsg = f"Use of the \"scorer\" entry in the interface is deprecated. Use \"review\" to name the entry in _referia.yml"
+            warnings.warn(warnmsg, DeprecationWarning) # stacklevel=2) # Removed stacklevel as doesn't appear on Jupyter.
+            log.warning(warnmsg)
+            self._widgets.add(self._create_review(self._interface["scorer"]))
 
+        # Process the review from the interface file.
+        if "review" in self._interface:
+            self._widgets.add(self._create_review(self._interface["review"]))
+            
         # Process the document creators from the interface file.
         if "documents" in self._interface:
             documents = self._interface["documents"]
@@ -983,12 +1018,13 @@ class Reviewer:
         """
         return self._data.get_index()
 
-    def set_index(self, value):
+    def set_index(self, value : str) -> None:
         """
         Set the index of the display system.
 
         :param value: The index of the display system.
-        :type value: int
+        :type value: str
+        :return: None
         """
         oldval = self.get_index()
         if oldval != value:
@@ -1024,91 +1060,190 @@ class Reviewer:
                 self.value_updated()                            
         
     def set_value(self, value, trigger_update=True):
-        """Update a value in one of the output flows."""
+        """
+        Update a value in one of the output flows.
+
+        :param value: The value to be set.
+        :type value: object
+        :param trigger_update: Whether to trigger an update.
+        :type trigger_update: bool
+        """
         old_value = self.get_value()
         column = self.get_column()
         if value != old_value:
             log.debug(f"Column is \"{column}\". Old value is \"{old_value}\" and new value is \"{value}\".")
             self._data.set_value(value)
             if trigger_update:
+                log.debug("Triggering update.")
                 self.value_updated()
 
-    def get_column(self):
+    def get_column(self) -> str:
+        """
+        Get the column of the display system.
+
+        :return: The column of the display system.
+        """
         return self._data.get_column()
 
-    def set_column(self, column):
+    def set_column(self, column) -> None:
+        """
+        Set the column of the display system.
+
+        :param column: The column of the display system.
+        :type column: valid column (column of the dataframe)
+        """
         self._data.set_column(column)
 
-    def get_selectors(self):
+    def get_selectors(self) -> list:
+        """
+        Get the list of valid selectors of the display system.
+
+        :return: The selectors of the display system.
+        :rtype: list
+        """
         return self._data.get_selectors()
 
     def get_selector(self):
+        """
+        Get the selector of the display system.
+
+        :return: The selector of the display system.
+        :rtype: valid selector (column of a series portion(s) of the dataframe)
+        """
         return self._data.get_selector()
 
-    def set_selector(self, value):
+    def set_selector(self, value) -> None:
+        """
+        Set the selector of the display system.
+
+        :param value: The selector of the display system.
+        :type value: valid selector (column of the dataframe)
+        """
         self._data.set_selector(value)
 
-    def get_indices(self):
+    def get_indices(self) -> pd.Index:
+        """
+        Get the list of valid indices of the display system.
+
+        :return: The indices of the display system.
+        :rtype: pd.Index
+        """
         return self._data.index
 
-    def get_subindices(self):
+    def get_subindices(self) -> pd.Index:
+        """
+        Get the list of valid subindices of the display system.
+
+        :return: The subindices of the display system.
+        :rtype: pd.Index
+        """
         return self._data.get_subindices()
 
     def get_subindex(self):
+        """
+        Get the subindex of the display system.
+
+        :return: The subindex of the display system.
+
+        """
         return self._data.get_subindex()
 
     def set_subindex(self, value):
+        """
+        Set the subindex of the display system.
+
+        :param value: The subindex of the display system.
+        :type value: valid subindex
+        """
         self._data.set_subindex(value)
         self.populate_display()
 
     def add_series_row(self):
-        """Add a row with a generated subindex to the series."""
+        """
+        Add a row with a generated subindex to the series.
+        """
         self._data.add_series_row()
 
     def full_selector(self):
-        """Select a selector and subindex from the data"""
+        """
+        Select a selector and subindex from the data
+
+        """
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
         self._selector_widget.display()
 
     def select_index(self):
+        """
+        Select an index from the data
+        """
         self._selector_widget=IndexSelector(parent=self)
         self._selector_widget.display()
 
     def select_selector(self):
-        """Select a selector from the data"""
+        """
+        Select a selector from the data
+
+        :return: The selector selected.
+        """
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
         self._selector_widget.display()
 
     def select_subindex(self):
-        """Select a subindex from the data"""
+        """
+        Select a subindex from the data
+
+        :return: The subindex selected.
+        """
         self._selector_widget=IndexSubIndexSelectorSelect(parent=self)
         self._selector_widget.display()
 
     def get_select_selector(self):
-        """Get state of selector selection."""
+        """
+        Get state of selector selection.
+
+        :return: The state of the selector selection.
+        """
         return self._select_selector
 
     def set_select_selector(self, value):
-        """Set state of selector selection."""
+        """
+        Set state of selector selection.
+
+        :param value: The value of the selector selection.
+        """
         self._select_selector = value
 
     def get_select_subindex(self):
-        """Get state of subindex selection."""
+        """
+        Get state of subindex selection.
+
+        :return: The state of the subindex selection.
+        :rtype: valid index
+        """
         return self._select_subindex
 
-    def set_select_subindex(self, value):
-        """Set state of subindex selection."""
+    def set_select_subindex(self, value) -> None:
+        """
+        Set state of subindex selection.
+
+        :param value: The value of the subindex selection.
+        :type value: valid index
+        """
         self._select_subindex = value
         
     def get_most_recent_screen_capture(self):
-        """This function copys the name of the most recent screen capture to a column."""
+        """
+        This function copys the name of the most recent screen capture to a column.
+        """
         raise NotImplementedError("Copying screen capture not yet implemented.")
         filename = self._system.get_screen_capture(filename)
         self.set_column(column_name)
         self.set_value(filename)
 
     def run(self):
-        """Run the reviewer to edit the data frame."""
+        """
+        Run the reviewer to edit the data frame.
+        """
         if self.index is not None:
             if "series" in self._interface:
                 self.full_selector()
@@ -1118,8 +1253,15 @@ class Reviewer:
         self.populate_display()
         self.view_series()
 
-    def template_to_value(self, template):
-        """Convert a template to values."""
+    def template_to_value(self, template : dict) -> str:
+        """
+        Convert a template to values.
+
+        :param template: The template to be converted.
+        :type template: dict
+        :return: The value of the template.
+        :rtype: str
+        """
         if "use" in template:
             if template["use"] == "viewer":
                 viewer = self._interface["viewer"] 
@@ -1130,13 +1272,13 @@ class Reviewer:
                     string += self._data.view_to_value(view)
                     string += "\n\n"
                 return string
-            elif template["use"] == "scorer":
+            elif template["use"] == "scorer" or template["use"] == "review":
                 return self._widgets.to_markdown()
         else:
             return self._data.view_to_value(template)
         
     # Seems redundant, schedule for remove.
-    # def view_scorer(self):
+    # def view_review(self):
     #     text = ""
     #     return 
     #     for key, widget in self.widgets().items():
@@ -1144,8 +1286,13 @@ class Reviewer:
     #     return text
 
 
-    def load_flows(self, reload=False):
-        """Reload flows from data stores."""
+    def load_flows(self, reload : bool = False) -> None:
+        """
+        Load flows from data stores
+
+        :param reload: Whether to reload the flows.
+        :type reload: bool
+        """
         log.info(f"Reload of flows requested.")
         if reload:
             index = self.get_index()
@@ -1163,7 +1310,7 @@ class Reviewer:
                 self.set_subindex(subindex)
         self.populate_display()
 
-    def save_flows(self):
+    def save_flows(self) -> None:
         """
         Save output flows and reload inputs for any downstream displays.
         """
@@ -1174,15 +1321,29 @@ class Reviewer:
             ds.populate_display()
 
         
-    def load_input_flows(self):
+    def load_input_flows(self) -> None:
+        """
+        Load input flows.
+
+        """
         self._data.load_input_flows()
 
-    def load_output_flows(self):
+    def load_output_flows(self) -> None:
+        """
+        Load output flows.
+        """
         self._data.load_output_flows()
         
             
-    def create_document(self, document, summary=False):
-        """Create a document from the data we've provided."""
+    def create_document(self, document : dict, summary : bool = False) -> None:
+        """
+        Create a document from the data we've provided.
+
+        :param document: The document to be created.
+        :type document: dict
+        :param summary: Whether the document is a summary.
+        :type summary: bool
+        """
         args = {}
         for field in document:
             if field not in ["type"]:
@@ -1212,13 +1373,15 @@ class Reviewer:
             args["content"] = args["content"] + "\n\n" + args["footer"]
             del args["footer"]
             
-            
         self._system.create_document(document, **args)
 
-    
+    def create_summary(self, details : "lynguine.config.interface.Interface") -> None:
+        """
+        Create a summary file given the relevant information
 
-    def create_summary(self, details):
-        """Create a summary file given the relevant information"""
+        :param details: The details of the summary.
+        :type details: lynguine.config.interface.Interface
+        """
         args = {}
         args["entries"] = []
         if "columns" in details:
@@ -1235,18 +1398,28 @@ class Reviewer:
                     args["entries"].append(val)
         self._system.create_summary(details, **args)
 
-    def compute(self, compute):
-        """Perform a computation as specified in the associated details."""
+    def compute(self, compute : "lynguine.config.interface.Interface") -> None:
+        """
+        Perform a computation as specified in the associated details.
+
+        :param compute: The computation to be performed.
+        :type compute: lynguine.config.interface.Interface
+        """
         self._data._compute.run(compute)
         
     def value_updated(self):
-        """If a value in a row has been updated, modify other values"""
+        """
+        If a value in a row has been updated, modify other values that are dependent on change.
+        """
 
+        # TK Perform updates triggered by value changes.
         # If index has changed, run computes.
-        self._data._compute.run_all(post=True)
+        self._data._compute.run_all(post=True, index=self.get_index())
 
+        # TK Create a new compute type "onchange" or similar and place these within.
         # Need to determine if these should update series or data.
-        # Update timestamp fields.
+
+        # Update timestamp field.
         today_val = pd.to_datetime("today")
         if "timestamp_field" in self._interface:
             timestamp_field = self._interface["timestamp_field"]
@@ -1259,6 +1432,8 @@ class Reviewer:
         self.set_column(timestamp_field)
         self.set_value(today_val,
                        trigger_update=False)
+
+        # Set the created field
         if "created_field" in self._interface:
             created_field = self._interface["created_field"]
         else:
@@ -1273,6 +1448,7 @@ class Reviewer:
             self.set_value(today_val,
                            trigger_update=False)
 
+            
         # Combinator is a combined field based on others
         if "combinator" in self._interface:
             for view in self._interface["combinator"]:
@@ -1289,8 +1465,13 @@ class Reviewer:
 
 
     
-    def populate_display(self):
-        """Update the widgets with defaults or values from the data"""
+    def populate_display(self) -> None:
+        """
+        Update the widgets with defaults or values from the data
+
+        :return: None
+        """
+        log.debug("Populating display.")
         self._widgets.refresh()
         if self._widgets.has("_progress_label"):
             total = self._data.to_score()

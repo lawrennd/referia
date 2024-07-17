@@ -11,6 +11,16 @@ from lynguine.util.misc import markdown2html, html2markdown
 
 from .misc import notempty, yyyymmddToDatetime, datetimeToYyyymmdd, filename_to_binary
 
+from lynguine import log
+from lynguine.config.context import Context
+
+cntxt = Context(name="referia")
+log = log.Logger(
+    name=__name__,
+    level=cntxt["logging"]["level"],
+    filename=cntxt["logging"]["filename"],
+)
+
 
 #other = [jslink, jsdlink, MyCheckbox, MyFileChooser]
 
@@ -366,7 +376,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
         super().__init__(**args)
         if "value" in args:
             self._default_value = args["value"]
-            self.set_value(args["value"])
+            self.set_value(args["value"]) # TK should this be set silently?
         else:
             self._default_value = self._ipywidget_function().value
         # Is this a private field (one that doesn't update the parent data)
@@ -411,7 +421,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
     def get_layout(self):
         """
         Returns the layout of the internal ipywidget.
-
+        
         :return: The layout of the widget.
         :rtype: ipywidgets.Layout
         """
@@ -420,7 +430,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
     def get_description(self):
         """
         Get the description of the widget.
-
+        
         :return: The description of the widget.
         :rtype: str
         """
@@ -429,7 +439,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
     def set_value(self, value):
         """
         Set the value of the widget.
-
+        
         :param value: The value to set.
         :type value: any
         """
@@ -439,13 +449,52 @@ class ReferiaStatefulWidget(ReferiaWidget):
             else:
                 self._ipywidget.value = self._conversion(value)
         else:
+            log.debug(f"Widget {self._field_name} has been set to an empty value. Setting to widget's default value.")
+            # TK Should it be set to a default value or left as empty?
             self.reset_value()
+    
+    def set_value_silently(self, value) -> None:
+        """
+        Set the value of the widget without triggering the observer.
 
+        :param value: The value to set.
+        :type value: any
+        """
+
+        # Remove value change observers
+        observers = self._get_observers()
+        for observer in observers:
+            self._ipywidget.unobserve(observer, names='value')
+
+        # Silently change value
+        if self._conversion is None:
+            self._ipywidget.value = value
+        else:
+            self._ipywidget.value = self._conversion(value)
+
+        # Re-add value change observers
+        for observer in observers:
+            self._ipywidget.observe(observer, names='value')        
+
+    def _get_observers(self) -> list:
+        """
+        Return the observers for value change for the widget.
+
+        :return: The observers for value change for the widget.
+        :rtype: list
+        """
+        try:
+            return self._ipywidget._trait_notifiers['value']['change']
+        except (AttributeError, KeyError, TypeError):
+            return []
+        
     def reset_value(self):
         """
         Reset value to default for widget.
-        """  
-        self._ipywidget.value = self._default_value
+        """
+        value = self._default_value
+        log.debug(f"Setting widget {self.widget} named {self._field_name} to default value {value}.")
+        self.set_value_silently(value)
         
     def get_column(self):
         """
@@ -511,15 +560,20 @@ class FieldWidget(ReferiaStatefulWidget):
         Update the widget value from the data.
         """
         self._ipywidget.observe(self.null, names='value')
+        log.debug(f"Refreshing widget {self._field_name}")
         column = self.get_column()
         if column is not None and self._parent is not None:
             if self.has_viewer():
                 # Convert the result using viewer before setting value.
                 value = self._parent._data.viewer_to_value(self._viewer)
-                self.set_value(value)
             else:
                 self._parent.set_column(column)
-                self.set_value(self._parent.get_value())
+                value = self._parent.get_value()
+
+            if notempty(value):
+                self.set_value(value)
+            else:
+                self.reset_value()
         else:
             self.reset_value()
         self._ipywidget.observe(self.on_value_change, names="value")
