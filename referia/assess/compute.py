@@ -224,6 +224,18 @@ class Compute(lynguine.assess.compute.Compute):
                     newfilt = compute_prep["function"](data, **fargs)
                     filt = (filt & newfilt)
             data.filter_row(filt)
+
+    def run_onchange(self, index, column, data):
+        """
+        Run all onchange computations. These are computations that occur when a particular column is modified.
+
+        :param index: The index to be used.
+        :type index: object
+        :param column: The column to be used.
+        :type column: str
+        :return: None
+        """
+        super().run_onchange(index, column, data)
     
     def run_all(self, data, df=None, index=None, pre=False, post=False):
         """

@@ -260,5 +260,113 @@ def test_len_with_mixed_data_types():
     custom_df = referia.assess.data.CustomDataFrame(data)
     assert len(custom_df) == 3
 
-# Add more tests as needed to cover other scenarios and edge cases
+@pytest.fixture
+def valid_local_settings():
+    # Return a sample interface object that is valid
+    return referia.config.interface.Interface({
+        "input":
+        {
+            "type" : "local",
+            "index" : "index",
+            "data" : [
+            {
+                'index': 'indexValue',
+                'key1': 'value1',
+                'key2': 'value2',
+                'key3': 'value3',
+            }],
+            "select" : 'indexValue'
+        }
+    })
+@pytest.fixture
+def valid_local_select_settings():
+    # Return a sample interface object that is valid
+    return referia.config.interface.Interface({
+        "parameters":
+        {
+            "type" : "local",
+            "index" : "index",
+            "select" : "indexValue2",
+            "data" : [
+            {
+                'index': 'indexValue',
+                'key1': 'value1',
+                'key2': 'value2',
+                'key3': 'value3',
+            },
+            {
+                'index': 'indexValue2',
+                'key1': 'value1row2',
+                'key2': 'value2row2',
+                'key3': 'value3row2',
+            }],
+        }
+    })
 
+    
+# test from_flow with a valid setting that specifies local data.
+def test_from_flow_with_valid_settings(valid_local_settings):
+    cdf = referia.assess.data.CustomDataFrame.from_flow(valid_local_settings)
+    assert isinstance(cdf, referia.assess.data.CustomDataFrame)
+    assert cdf == referia.assess.data.CustomDataFrame(pd.DataFrame({'key1': 'value1', 'key2' : 'value2', 'key3': 'value3'}, index=['indexValue']))
+    assert cdf.colspecs == {"input" : ["key1", "key2", "key3"]}
+
+# test from_flow with a valid setting that specifies local data.
+def test_from_flow_with_valid_select_settings(valid_local_select_settings):
+    cdf = referia.assess.data.CustomDataFrame.from_flow(valid_local_select_settings)
+    assert isinstance(cdf, referia.assess.data.CustomDataFrame)
+    assert cdf == referia.assess.data.CustomDataFrame(pd.DataFrame({'key1': 'value1row2', 'key2' : 'value2row2', 'key3': 'value3row2'}, index=[0]))
+    assert cdf.colspecs == {"parameters" : ["key1", "key2", "key3"]}
+    
+def test_from_flow_with_invalid_type():
+    with pytest.raises(ValueError):
+        referia.assess.data.CustomDataFrame.from_flow("not-a-dictionary")
+
+def test_from_flow_with_missing_keys():
+    incomplete_settings = referia.config.interface.Interface({
+        # Settings with missing keys
+        "key1": "value1",
+    })
+    with pytest.raises(ValueError):
+        referia.assess.data.CustomDataFrame.from_flow(incomplete_settings)
+
+def test_from_flow_with_empty_settings():
+    cdf = referia.assess.data.CustomDataFrame.from_flow(referia.config.interface.Interface({"globals":
+                                                           {"type" : "local",
+                                                            "data" : {},
+                                                            "index" : "index"}}))
+    # Assert the result is as expected (empty dataframe, etc.)
+    assert isinstance(cdf, referia.assess.data.CustomDataFrame)
+    assert cdf.empty
+
+@pytest.fixture
+def valid_local_input_output_settings():
+    # Return a sample interface object that is valid
+    return referia.config.interface.Interface({
+        "input":
+        {
+            "type" : "local",
+            "index" : "index",
+            "data" : [
+            {
+                'givenName': 'Jim',
+                'familyName': 'Gonzalez',
+                'title': 'Professor',
+            }],
+            "compute" : [
+            {
+                'field': index,
+                'function' : render_liquid,
+                'args' : {
+                    'template' : '{{givenName}}_{{familyName}}',
+                }
+            }],
+        }
+    })
+    
+# Test the to_score() method 
+def test_data_scored_count():
+    # Create a CustomDataFrame object
+    cdf = 
+
+       # The number of scored elements is the number of filed in maching "scored:field" in the interface

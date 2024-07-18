@@ -1406,6 +1406,17 @@ class Reviewer:
         :type compute: lynguine.config.interface.Interface
         """
         self._data._compute.run(compute)
+
+    def compute_onchange(self):
+        """
+        Perform all computations that are triggered by a change in the data.
+
+        :return: None
+        """
+
+        log.debug(f"Running onchange computes.")
+        log.debug(f"Compute is type \"{type(self._data._compute)}\" containing \"{self._data._compute}\".")
+        self._data._compute.run_onchange(data=self._data, index=self.get_index(), column=self.get_column())
         
     def value_updated(self):
         """
@@ -1414,55 +1425,60 @@ class Reviewer:
 
         # TK Perform updates triggered by value changes.
         # If index has changed, run computes.
-        self._data._compute.run_all(post=True, index=self.get_index())
+        column = self.get_column()
+        log.debug(f"Value updated. Index is \"{self.get_index()}\" and column is \"{column}\".")
+        self.compute_onchange()
+        log.debug(f"On change computes complete.")
 
         # TK Create a new compute type "onchange" or similar and place these within.
         # Need to determine if these should update series or data.
 
         # Update timestamp field.
+        log.debug(f"Updating timestamp field.")
         today_val = pd.to_datetime("today")
         if "timestamp_field" in self._interface:
             timestamp_field = self._interface["timestamp_field"]
         else:
             timestamp_field = "Timestamp"
         if timestamp_field not in self._data.columns:
+            log.debug(f"Adding \"timestamp\" column as \"{timestamp_field}\".")
             self._data.add_column(timestamp_field)
         self._data.set_dtype(timestamp_field, "datetime64[ns]")
 
         self.set_column(timestamp_field)
-        self.set_value(today_val,
-                       trigger_update=False)
+        self.set_value_silently(today_val)
 
         # Set the created field
+        log.debug(f"Setting created field.")
         if "created_field" in self._interface:
             created_field = self._interface["created_field"]
         else:
             created_field = "Created"
 
         if created_field not in self._data.columns:
+            log.debug(f"Adding created column as \"{created_field}\".")
             self._data.add_column(created_field)
         self._data.set_dtype(created_field, "datetime64[ns]")
 
         if created_field not in self._data.columns or data.empty(self._data.get_value_column(created_field)):
             self.set_column(created_field)
-            self.set_value(today_val,
-                           trigger_update=False)
+            self.set_value_silently(today_val)
 
             
         # Combinator is a combined field based on others
         if "combinator" in self._interface:
+            log.debug(f"Updating combinator field.")
             for view in self._interface["combinator"]:
                 if "field" in view:
                     col = view["field"]
                     del view["field"] #Prevent data reviewer trying to return field
                     combinator = self._data.viewer_to_value(view)
                     self.set_column(col)
-                    self.set_value(combinator,
-                                   trigger_update=False)
+                    self.set_value_silently(combinator)
                 else:
                     log.error("Missing key 'field' in combinator view.")
 
-
+        self.set_column(column)
 
     
     def populate_display(self) -> None:

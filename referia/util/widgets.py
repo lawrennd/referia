@@ -443,11 +443,14 @@ class ReferiaStatefulWidget(ReferiaWidget):
         :param value: The value to set.
         :type value: any
         """
+        log.debug(f"Setting widget {self._field_name} to value {value}")
         if notempty(value):
-            if self._conversion is None:
-                self._ipywidget.value = value
-            else:
-                self._ipywidget.value = self._conversion(value)
+            if self._conversion is not None:
+                log.debug(f"Converting value {value} for widget {self._field_name}")             
+                value = self._conversion(value)
+
+            log.debug(f"Setting widget {self._field_name} to value {value}")
+            self._ipywidget.value = value
         else:
             log.debug(f"Widget {self._field_name} has been set to an empty value. Setting to widget's default value.")
             # TK Should it be set to a default value or left as empty?
@@ -460,20 +463,28 @@ class ReferiaStatefulWidget(ReferiaWidget):
         :param value: The value to set.
         :type value: any
         """
-
+        log.debug(f"Setting widget {self._field_name} to value {value} silently")
         # Remove value change observers
-        observers = self._get_observers()
+        # Formerly self._ipywidget.observe(self.null, names='value')
+        observers = self._get_observers().copy()
+        log.debug(f"Length of obsrervers is {len(observers)}")
         for observer in observers:
+            log.debug(f"Removing observer {observer} from widget {self._field_name}")
             self._ipywidget.unobserve(observer, names='value')
 
         # Silently change value
-        if self._conversion is None:
-            self._ipywidget.value = value
-        else:
-            self._ipywidget.value = self._conversion(value)
+        if self._conversion is not None:
+            log.debug(f"Converting value {value} for widget {self._field_name}")
+            value = self._conversion(value)
+            
+        log.debug(f"Setting widget {self._field_name} to value {value}")
+        self._ipywidget.value = value
 
         # Re-add value change observers
+        # Formerly self._ipywidget.observe(self.on_value_change, names="value")
+        log.debug(f"Length of obsrervers is {len(observers)}")
         for observer in observers:
+            log.debug(f"Re-adding observer {observer} to widget {self._field_name}")
             self._ipywidget.observe(observer, names='value')        
 
     def _get_observers(self) -> list:
@@ -486,6 +497,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
         try:
             return self._ipywidget._trait_notifiers['value']['change']
         except (AttributeError, KeyError, TypeError):
+            log.debug(f"Widget {self._field_name} has no observers")
             return []
         
     def reset_value(self):
@@ -524,6 +536,18 @@ class FieldWidget(ReferiaStatefulWidget):
     Widget for editing field values in parent data.
     """
     def __init__(self, function=None, conversion=None, reversion=None, **args):
+        """
+        Initialise the widget.
+
+        :param function: The function for creating the widget.
+        :type function: function
+        :param conversion: The conversion function for setting the widget value.
+        :type conversion: function
+        :param reversion: The reversion function for getting the widget value.
+        :type reversion: function
+        :param args: The arguments for the widget.
+        :type args: dict
+        """
         # This argument includes the ipywidgets function for creating the widget
         args["function"] = function
 
@@ -535,8 +559,12 @@ class FieldWidget(ReferiaStatefulWidget):
     def on_value_change(self, change):
         """
         When value of the widget changes update the relevant parent data structure.
-        :param change: The change event.
+
+        :param change: The change event containing keys 'old' and 'new'.
+        :type change: dict
         """
+
+        # If the widget is not private and has a parent, update the parent data structure.
         if not self.private and self._parent is not None:
             if self.get_column() is not None:
                 self._parent.set_column(self.get_column())
@@ -559,7 +587,6 @@ class FieldWidget(ReferiaStatefulWidget):
         """
         Update the widget value from the data.
         """
-        self._ipywidget.observe(self.null, names='value')
         log.debug(f"Refreshing widget {self._field_name}")
         column = self.get_column()
         if column is not None and self._parent is not None:
@@ -571,12 +598,11 @@ class FieldWidget(ReferiaStatefulWidget):
                 value = self._parent.get_value()
 
             if notempty(value):
-                self.set_value(value)
+                self.set_value_silently(value)
             else:
                 self.reset_value()
         else:
             self.reset_value()
-        self._ipywidget.observe(self.on_value_change, names="value")
 
 class ElementWidget(FieldWidget):
     """
@@ -638,7 +664,7 @@ class ElementWidget(FieldWidget):
         """
         Update the widget value from the data.
         """
-        self._ipywidget.observe(self.null, names='value')
+        log.debug(f"Refreshing widget {self._field_name}")
         column = self.get_column()
         if column is not None and self._parent is not None:
             if self.has_viewer():
@@ -647,10 +673,9 @@ class ElementWidget(FieldWidget):
                 self.set_value(value)
             else:
                 self._parent.set_column(column)
-                self.set_value(self._parent.get_value_by_element(self.get_element()))
+                self.set_value_silently(self._parent.get_value_by_element(self.get_element()))
         else:
             self.reset_value()
-        self._ipywidget.observe(self.on_value_change, names="value")
 
         
 class IndexSelector(ReferiaStatefulWidget):

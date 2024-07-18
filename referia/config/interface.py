@@ -130,7 +130,7 @@ class Interface(lynguine.config.interface.Interface):
         :return: The mapping and columns.
         :rtype: tuple
         """
-        mapping = []
+        mapping = {}
         columns = []
         if "mapping" in data:
             mapping = data["mapping"]

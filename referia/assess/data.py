@@ -62,15 +62,10 @@ class CustomDataFrame(data.CustomDataFrame):
     """Class to hold merged data flows together perform operations on them."""
     def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None, compute=None):
 
-        self._index = index
-        self._column = column
-        self._selector = selector
-
         # Call the parent class with data, colspecs, index, column, selector
-
-        self.augment = False
-        self._compute = None
+        log.debug(f"referia.assess.data.CustomDataFrame initialiser called.")
         super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex, compute=compute)
+        self.augment = False
 
                         
     @property
@@ -152,6 +147,7 @@ class CustomDataFrame(data.CustomDataFrame):
             return True
         else:
             return False
+        
     @augment.setter
     def augment(self, value):
         if not isinstance(value, bool):
@@ -159,7 +155,15 @@ class CustomDataFrame(data.CustomDataFrame):
         self._augment = value
                 
     def _augment_global_consts(self, configs, suffix=''):
-        """Augment the globals by joining the two series together."""
+        """
+        Augment the globals by joining the two series together.
+
+        :param configs: The configurations for the globals.
+        :type configs: list
+        :param suffix: The suffix to be added to the column names.
+        :type suffix: str
+        :return: None
+        """
         if type(configs) is not list:
             configs = [configs]
         for i, conf in enumerate(configs):
@@ -196,7 +200,21 @@ class CustomDataFrame(data.CustomDataFrame):
                 self._global_consts = pd.DataFrame(self._global_consts).T.join(pd.DataFrame(ds).T, rsuffix=rsuffix).loc[ds.name]
                     
     def _augment_data(self, configs, how="left", suffix='', concat=False, axis=0):
-        """Augment the data by joining or concatenating the new values."""
+        """
+        Augment the data by joining or concatenating the new values.
+
+        :param configs: The configurations for the data.
+        :type configs: list
+        :param how: The type of join to be performed.
+        :type how: str
+        :param suffix: The suffix to be added to the column names.
+        :type suffix: str
+        :param concat: Whether to concatenate the data.
+        :type concat: bool
+        :param axis: The axis to concatenate the data on.
+        :type axis: int
+        :return: None
+        """
         if type(configs) is not list:
             configs = [configs]
         for i, conf in enumerate(configs):
@@ -248,7 +266,11 @@ class CustomDataFrame(data.CustomDataFrame):
                 raise ValueError(errmsg)
 
     def _remove_index_duplicates(self):
-        """Rename the index of any duplicates"""
+        """
+        Rename the index of any duplicates
+
+        :return: None
+        """
         existlist=[]
         count=0
         indseries = pd.Series(self.index)
@@ -429,19 +451,18 @@ class CustomDataFrame(data.CustomDataFrame):
         
         # If index has changed, run post computes (computes that take place after review).
         # post-computes are run on the index we're changing from
-        if self._index is not None and value != self._index:
-            if self._index in self.index:
-                log.debug(f"Calling post-compute on index \"{self._index}\".")
-                self.compute_post()
+        if self.get_index() is not None and value != self.get_index():
+            log.debug(f"Calling post-compute on index \"{self.get_index()}\".")
+            self.compute_post()
         
         # Call parent to set index
-        orig_index = self._index
+        orig_index = self.get_index()
         super().set_index(value)
 
         # If index has changed, run pre computes (computes that take place before review).
         # pre-computes are run on the index we're changing to
-        if orig_index is None or self._index != orig_index:
-            log.debug(f"Calling pre-compute on index \"{self._index}\".")
+        if orig_index is None or self.get_index() != orig_index:
+            log.debug(f"Calling pre-compute on index \"{self.get_index()}\".")
             self.compute_pre()
                 
         # If index has changed, check if there is a subseries, if so, use top subindex, if not create a row.
@@ -495,10 +516,12 @@ class CustomDataFrame(data.CustomDataFrame):
         :return: The index.
         :rtype: str
         """
-        if self._index is None and len(self.index)>0:
+        _index = super().get_index()
+        if _index is None and len(self.index)>0:
             log.debug(f"No index set, using first index of data.")
-            self.set_index(self.index[0])
-        return self._index
+            _index = self.index[0]
+            self.set_index(_index)
+        return _index
 
     def _strict_columns(self, group):
         if "strict_columns" in self.interface:
@@ -963,7 +986,6 @@ class CustomDataFrame(data.CustomDataFrame):
                 errmsg = f"Incorrect form of index."
                 log.error(errmsg)
                 raise ValueError(errmsg)
-            
         df = super()._finalize_df(df, interface, strict_columns)
 
         # if "selector" in interface:
@@ -1120,21 +1142,48 @@ class CustomDataFrame(data.CustomDataFrame):
         return df
 
     def to_score(self):
-        if self._writedata is not None:
-            return len(self._writedata.index)
+        """
+        Return the total number of entries to be scored.
+
+        :return: The total number of entries to be scored.
+        :rtype: int
+        """
+        if "output" in self._d:
+            return len(self._d["output"].index)
         else:
+            log.debug(f"No output flow in interface data types are \"{', '.join(self._d.keys())}\".")
             return 0
 
-    def scored(self):
+    def scored(self) -> int:
+        """
+        Return the number of scored entries in the data frame.
+
+        :return: The number of scored entries.
+        :rtype: int
+        """
+        
         if "scored" in self.interface:
-            if self._writedata is not None and self.interface["scored"]["field"] in self._writedata.columns:
-                return self._writedata[self.interface["scored"]["field"]].count()
+            if "output" in self._d is not None and self.interface["scored"]["field"] in self._d["output"].columns:
+                return self._d["output"][self.interface["scored"]["field"]].count()
             else:
+                if "output" in self._d:
+                    log.debug(f"No \"scored:field\" in output flow.")
+                else:
+                    log.debug(f"No output flow in interface types are \"{', '.join(self._d.keys())}\".")
                 return 0
+        log.debug("No \"scored:field\" in interface.") 
 
+    def _update_type(self, df : pd.DataFrame, column : str, value) -> None:
+        """
+        Update the type of a given column according to a value passed.
 
-    def _update_type(self, df, column, value):
-        """Update the type of a given column according to a value passed."""
+        :param df: The data frame to update.
+        :type df: pd.DataFrame
+        :param column: The column to update.
+        :type column: str
+        :param value: The value whose type the column should be updated with.
+        :type value: Any
+        """
         coltype = df.dtypes[column]
         if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
             log.warning(f"Changing column \"{column}\" type to 'object' due to string input.")

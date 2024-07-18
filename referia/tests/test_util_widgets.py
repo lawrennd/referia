@@ -667,12 +667,13 @@ def test_gwef_(mocker):
         reversion=None
     )
 
-
+# Test the population of widgets.
 def test_populate_widgets(mocker):
     populate_widgets(list_stateful_widgets)
     for widget in list_stateful_widgets:
         assert hasattr(referia.util.widgets, widget["name"]), f"Widget {widget['name']} not found in module after population."
 
+# Test the population of element widgets
 def test_populate_element_widgets():
     populate_element_widgets(list_stateful_widgets)
 
@@ -710,7 +711,7 @@ def mock_textarea(mocker, mock_observer):
 def mock_conversion():
     return lambda x: f"converted_{x}"
 
-
+# Create a widget and set its value
 def test_stateful_widget_set_get_value(mock_textarea, mock_conversion):
     test_value = "test value"
     
@@ -723,7 +724,7 @@ def test_stateful_widget_set_get_value(mock_textarea, mock_conversion):
     assert widget.get_value() == f"converted_{test_value}"
 
 
-
+# Create a widget and set its value silently.
 def test_stateful_widget_set_value_silently(mock_textarea, mock_conversion, mock_observer):
     test_value = "silent test value"
     
@@ -747,11 +748,12 @@ def test_stateful_widget_set_value_silently(mock_textarea, mock_conversion, mock
     assert mock_textarea.observe.call_args_list[0][0][0].__func__.__name__ == 'on_value_change'
     assert mock_textarea.observe.call_args_list[0][1] == {'names': 'value'}
     
-    # Check the third call (attaching the MagicMock)
+    # Check the second call (attaching the MagicMock)
     assert mock_textarea.observe.call_args_list[1][0][0] == mock_observer
     assert mock_textarea.observe.call_args_list[1][1] == {'names': 'value'}
 
 
+# Test that the value of the widget changes when set_value is called    
 @pytest.mark.parametrize("initial_value,new_value", [
     ("default", "new value"),
     ("", "non-empty value"),
@@ -766,6 +768,7 @@ def test_stateful_widget_value_changes(mock_textarea, mock_conversion, initial_v
     assert mock_textarea.value == f"converted_{new_value}"
     assert widget.get_value() == f"converted_{new_value}"
 
+# Test that the value of the widget changes when set_value_silently is called
 def test_stateful_widget_observers(mocker):
     mock_widget = mocker.Mock(spec=ipyw.Textarea)
     mock_widget._trait_notifiers = {'value': {'change': [mocker.Mock(), mocker.Mock()]}}
@@ -774,8 +777,12 @@ def test_stateful_widget_observers(mocker):
     widget = ReferiaStatefulWidget()
     widget.set_value_silently("test")
 
+    # Check that the observers were unobserved and observed again
     for observer in mock_widget._trait_notifiers['value']['change']:
         mock_widget.unobserve.assert_any_call(observer, names='value')
         mock_widget.observe.assert_any_call(observer, names='value')    
+
+    # Check that the value of the widget was updated.
+    assert mock_widget.value == "test"
 
 

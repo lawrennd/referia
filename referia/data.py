@@ -2,7 +2,6 @@
 
 from .assess.data import CustomDataFrame
 from .config.interface import Interface
-from .assess.compute import Compute
 
 def Data(user_file="_referia.yml", directory="."):
     """
