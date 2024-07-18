@@ -340,7 +340,31 @@ def test_from_flow_with_empty_settings():
     assert cdf.empty
 
 @pytest.fixture
-def valid_local_input_output_settings():
+def local_name_inputs():
+
+    input_yaml_text="""input:
+  type: local
+  index: fullName
+  data:
+  - familyName: Xing
+    givenName: Pei
+  - familyName: Venkatasubramanian
+    givenName: Siva
+  - familyName: Paz Luiz
+    givenName: Miguel
+  compute:
+    field: fullName
+    function: render_liquid
+    args:
+      template: '{{familyName | replace: " ", "-"}}_{{givenName | replace: " ", "-"}}'
+    row_args:
+      givenName: givenName
+      familyName: familyName"""
+    # Read in dictionaary from yaml text
+    input_dict = yaml.safe_load(input_yaml_text)
+    return lynguine.config.interface.Interface(input_dict)
+@pytest.fixture
+def valid_local_input_compute_settings():
     # Return a sample interface object that is valid
     return referia.config.interface.Interface({
         "input":
@@ -363,10 +387,16 @@ def valid_local_input_output_settings():
             }],
         }
     })
+# test from_flow with a valid setting that specifies local data and a compute field
+def test_from_flow_with_valid_settings(valid_local_settings):
+    cdf = referia.assess.data.CustomDataFrame.from_flow(valid_local_settings)
+    assert isinstance(cdf, referia.assess.data.CustomDataFrame)
+    assert cdf == referia.assess.data.CustomDataFrame(pd.DataFrame({'key1': 'value1', 'key2' : 'value2', 'key3': 'value3'}, index=['indexValue']))
+    assert cdf.colspecs == {"input" : ["key1", "key2", "key3"]}
     
 # Test the to_score() method 
-def test_data_scored_count():
-    # Create a CustomDataFrame object
-    cdf = 
+#def test_data_scored_count():
+#    # Create a CustomDataFrame object
+#    cdf = 
 
        # The number of scored elements is the number of filed in maching "scored:field" in the interface

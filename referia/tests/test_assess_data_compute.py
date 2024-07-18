@@ -55,10 +55,13 @@ def local_name_inputs():
   data:
   - familyName: Xing
     givenName: Pei
+    candidateId: 71232344
   - familyName: Venkatasubramanian
     givenName: Siva
+    candidateId: 71232345
   - familyName: Paz Luiz
     givenName: Miguel
+    candidateId: 71232346
   compute:
   - field: fullName
     function: render_liquid
@@ -72,9 +75,9 @@ def local_name_inputs():
     args:
       template: '{{familyName}}, {{givenName}} ({{candidateId}}).pdf'
     row_args:
-      givenName: GivenName
-      familyName: FamilyName
-      candidateId: CandidateID
+      givenName: givenName
+      familyName: familyName
+      candidateId: candidateId
     """
     # Read in dictionaary from yaml text
     return referia.config.interface.Interface.from_yaml(input_yaml_text)
@@ -93,5 +96,5 @@ def test_from_flow_with_compute(valid_local_data):
 def test_from_flow_with_compute_liquid(local_name_inputs):
     cdf = referia.assess.data.CustomDataFrame.from_flow(local_name_inputs)
     assert isinstance(cdf, referia.assess.data.CustomDataFrame)
-    assert cdf == referia.assess.data.CustomDataFrame(pd.DataFrame([{'familyName': 'Xing', 'givenName' : 'Pei'}, {'familyName': 'Venkatasubramanian', 'givenName' : 'Siva'}, {'familyName': 'Paz Luiz', 'givenName' : 'Miguel'}], index=pd.Index(['Xing_Pei', 'Venkatasubramanian_Siva', 'Paz-Luiz_Miguel'], name='fullName')))
-    assert cdf.colspecs == {"input" : ["familyName", "givenName"]}
+    assert cdf == referia.assess.data.CustomDataFrame(pd.DataFrame([{'familyName': 'Xing', 'givenName' : 'Pei','candidateId' : '7123234', 'applicationPDF' : 'Xing, Pei (7123234).pdf'}, {'familyName': 'Venkatasubramanian', 'givenName' : 'Siva', 'candidateId' : '71232345', 'applicationPDF' : 'Venkatasubramanian, Siva (71232345).pdf'}, {'familyName': 'Paz Luiz', 'givenName' : 'Miguel', 'candidateId' : '71232346', 'applicationPDF' : 'Paz Luiz, Miguel (71232346).pdf'}], index=pd.Index(['Xing_Pei', 'Venkatasubramanian_Siva', 'Paz-Luiz_Miguel'], name='fullName')))
+    assert cdf.colspecs == {"input" : ["familyName", "givenName", "candidateId", "applicationPDF"]}
