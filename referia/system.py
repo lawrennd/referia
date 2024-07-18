@@ -15,7 +15,7 @@ import pyminizip as pz
 import pypdftk as tk
 
 from lynguine import log
-from lynguine.util.misc import to_camel_case, extract_full_filename, extract_abs_filename, markdown2html
+from lynguine.util.misc import to_camel_case, extract_full_filename, extract_abs_filename, markdown2html, isna
 from lynguine import access
 from lynguine.config.context import Context
 
@@ -379,15 +379,26 @@ class Sys():
 
 
     def edit_files(self, data):
-        """Use the system viewer to show a PDF containing relevant information to the assessment."""
+        """
+        Use the system viewer to edit files
+        """
 
         displays = []
+        index = data.get_index()
+        # Check for the editpdf key in the interface
         if "editpdf" in self._interface:
             displays += self._interface["editpdf"]
 
+        # Iterate across the displays editing the files
         for view in displays:
-            val = self.extract_field_value(view, data)
-            if "storedirectory" in view:
+            val = self.extract_file_value(view, data)
+            if isna(val):
+                if "field" in view:
+                    log.info(f"No field value provided for editing in edit_files for field \"{view['field']}\" in entry \"{index}\".")
+                else:
+                    log.info("No field value provided for editing in edit_files for field in entry \"{index}\".")
+                continue
+            if "storedirectory" in view: 
                 storeDirectory = os.path.expandvars(view["storedirectory"])
             else:
                 raise ValueError(f"Missing \"storedirectory\" in edit_files configuration.")
@@ -408,11 +419,11 @@ class Sys():
             else:
                 vals = [val]
             for i, val in enumerate(vals):
-            
                 if type(val) is str:
-
+                    if index is None:
+                        raise ValueError(f"Index is None in edit_files.")
                     # Filename to edit, based on index of the file plus the stub
-                    editfilename = to_valid_file(str(data.get_index()))
+                    editfilename = to_valid_file(str(index))
                     if len(vals)>1:
                         editfilename += "_" + str(enumerate)
                     editfilename += "_" + to_valid_file(filestub)
@@ -426,7 +437,7 @@ class Sys():
                     self.open_localfile(destfile)
                 else:
                     tyval = type(val)
-                    log.warning(f"Expected \"val\" to be of type str actual type is \"{tyval}\"")
+                    log.warning(f"In Sys.edit_files() Expected \"val\" to be of type str actual type is \"{tyval}\" and value is \"{val}\" in view: \"{str(view)}\".")
 
     def view_directory(self, view):
         """View a directory containing relevant information to the assessment."""
@@ -444,8 +455,14 @@ class Sys():
                     return subprocess.run(["pdfannots", filename], capture_output=True)
         log.warning(f"Unknown extractor in {view}.")
 
-    def extract_field_value(self, view, data):
-        """Extract the field value """
+    def extract_file_value(self, view, data):
+        """
+        Extract the file value.
+
+        :param view: The view configuration.
+        :param data: The data object.
+        :return: The value extracted from the field.
+        """
         if renderable(view):
             val = data.view_to_value(view)
             tmpname = data.view_to_tmpname(view)

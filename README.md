@@ -38,7 +38,7 @@ Provides information at the top of the score sheet that gives background (for ex
 
 `editpdf`
 
-Lists how pdfs to copy and allow the user to edit (for example to make notes on a submitted thesis).
+Lists pdfs to copy and allow the user to edit (for example to make notes on a submitted thesis).
 
 Subfields are `field` which contains the filename, `sourcedirectory` and `storedirectory`. Also provides ability to specify `pages` from the source, so that we have something like
 
@@ -50,6 +50,8 @@ pages:
   last: ColumnName2
 storedirectory: ./pdfs
 ```
+
+Functionality is provided in `system.Sys.edit_files`.
 
 `urls` 
 
