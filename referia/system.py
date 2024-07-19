@@ -478,14 +478,21 @@ class Sys():
             raise ValueError(f"Missing \"field\", \"file\", renderable or tallyable section in the extract field value configuration.")
         return val
         
-    def view_file(self, view, data):
-        """View a file containing relevant information to the assessment."""
+    def view_file(self, view : Interface or dict, data : "lynguine.assess.data.CustomDataFrame") -> None:
+        """
+        View a file containing relevant information to the assessment.
+
+        :param view: The interface containing information about viewing.
+        :type view: Interface or dict
+        :param data: The data with file information to be viewed.
+        :type data: lynguine.assess.data.CustomDataFrame
+        """
         filename = ""
         tmpname = ''.join(random.choices(string.digits+string.ascii_letters, k=8))
         temp_file = False
         if "temp_file" in view:
             temp_file = view["temp_file"]
-        val = self.extract_field_value(view, data)
+        val = self.extract_file_value(view, data)
 
         if "directory" in view:
             directory = view["directory"]
