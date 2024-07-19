@@ -78,7 +78,7 @@ def local_name_inputs():
       givenName: givenName
       familyName: familyName
       candidateId: candidateId
-    """
+"""
     # Read in dictionaary from yaml text
     return referia.config.interface.Interface.from_yaml(input_yaml_text)
 

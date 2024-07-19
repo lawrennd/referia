@@ -949,7 +949,7 @@ class CustomDataFrame(data.CustomDataFrame):
                 log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
         return series
     
-    def _finalize_df(self, df : "CustomDataFrame", interface  : Interface, strict_columns=False) -> "CustomDataFrame":
+    def _finalize_df(self, df : "CustomDataFrame", interface  : Interface, strict_columns : bool = False) -> "CustomDataFrame":
         """
         This function augments the raw data and sets the index of the data frame.
         :param df: The data frame to be augmented.
@@ -960,12 +960,12 @@ class CustomDataFrame(data.CustomDataFrame):
         """for field in dtypes:
             if dtypes[field] is str_type:
                 data[field].fillna("", inplace=True)"""
-        # if "index" not in interface:
-        #     errmsg = "Missing index field in data frame specification in _referia.yml"
-        #     log.error(errmsg)
-        #     raise ValueError(errmsg)
-        if "index" not in interface:
-            interface["index"] = df.index.name
+        #if "index" not in interface:
+        #    errmsg = "Missing index field in data frame specification in _referia.yml"
+        #    log.error(errmsg)
+        #    raise ValueError(errmsg)
+        #if "index" not in interface:
+        #    interface["index"] = df.index.name
 
         if strict_columns or ("strict_columns" in self.interface and self.interface["strict_columns"]) or ("strict_columns" in interface and interface["strict_columns"]):
             strict_columns = True

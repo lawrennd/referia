@@ -43,7 +43,7 @@ class Interface(lynguine.config.interface.Interface):
     
     def __init__(self, data=None):
         """
-        Initialise the interface object.
+        Initialise the interface object. The referia interface is converted to a linguine interface.
 
         :param data: The data to be loaded in.
         :type data: dict
@@ -56,10 +56,36 @@ class Interface(lynguine.config.interface.Interface):
                 del allocation["mapping"]
             if "columns" in allocation:
                 del allocation["columns"]
-            if not isinstance(allocation, list):
+
+                
+            if isinstance(allocation, list):
+                index = None
+                for i, item in enumerate(allocation):
+                    if "index" in item:
+                        if index is None:
+                            index = item["index"]
+                        elif index != item["index"]:
+                            errmsg = "All \"allocation\" items must have the same \"index\"."
+                            log.error(errmsg)
+                            raise ValueError(errmsg)
+                        del item["index"]
+                        allocation[i] = item
+            else:
+                if "index" in allocation:
+                    index = allocation["index"]
+                del allocation["index"]
                 allocation = [allocation]
+                
+            # If "input" is not present, create it with the list of allocation.
             if "input" not in data:
-                data["input"] = {"type" : "hstack", "specifications" : [{"type": "vstack", "specifications" : allocation}]}
+                data["input"] = {
+                    "type" : "hstack", # allocation will be concatenated horizontally with additionals
+                    "index" : index, # extracted index from allocation elements
+                    "specifications" : [{ 
+                        "type": "vstack", # each allocation element will be concatenated vertically
+                        "specifications" : allocation
+                    }],
+                }
             else:
                 errmsg = "\"allocation\" is not allowed when \"input\" is present."
                 log.error(errmsg)
