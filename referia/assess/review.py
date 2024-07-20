@@ -178,9 +178,9 @@ def extract_widget(details, reviewer, widgets):
 
 def extract_review(details, reviewer, widgets):
     """
-    Interpret a scoring element from the yaml file and create the relevant widgets to be passed to the interact command. Widget is added to the widgets list.
+    Interpret a review element from the yaml file and create the relevant widgets to be passed to the interact command. Widget is added to the widgets list.
 
-    :param details: The details of the scoring element.
+    :param details: The details of the review element.
     :type details: dict
     :param reviewer: The reviewer object.
     :type reviewer: Reviewer
