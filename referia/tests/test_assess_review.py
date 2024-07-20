@@ -12,7 +12,7 @@ from referia.assess.review import (
     CompositeWidgetCluster, DynamicWidgetCluster, LoopWidgetCluster,
     set_default_values, process_layout_and_local_args, extract_widget,
     extract_review, extract_load_review, extract_group_review,
-    extract_composite_review, extract_loop_review
+    expand_composite_review, extract_loop_review
 )
 
 def test_extract_widget_with_different_widget_types(mocker):
@@ -313,7 +313,7 @@ def test_extract_group_review():
         extract_group_review(details, reviewer, widgets)
         assert mock_extract_review.call_count == 2
 
-def test_extract_composite_review():
+def test_expand_composite_review():
     reviewer = Mock()
     widgets = Mock()
     details = {
@@ -323,7 +323,9 @@ def test_extract_composite_review():
     }
 
     with patch("referia.assess.review.extract_review") as mock_extract_review:
-        extract_composite_review(details, reviewer, widgets)
+        expanded_details = expand_composite_review(details)
+        for detail in expanded_details:
+            mock_extract_review(detail, reviewer, widgets)
         
         # Check that extract_review was called twice
         assert mock_extract_review.call_count == 2
@@ -347,7 +349,9 @@ def test_extract_composite_review():
     }
 
     with patch("referia.assess.review.extract_review") as mock_extract_review:
-        extract_composite_review(details, reviewer, widgets)
+        expanded_details = expand_composite_review(details)
+        for detail in expanded_details:
+            mock_extract_review(detail, reviewer, widgets)
         
         # Check the second call (comment) for default width
         second_call_args = mock_extract_review.call_args_list[1][0]

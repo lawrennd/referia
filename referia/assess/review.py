@@ -126,6 +126,8 @@ def extract_widget(details, reviewer, widgets):
     :type widgets: WidgetsCollection
     :raises Exception: If widget type is not found.
     """
+
+    
     widget_type = globals().get(details["type"])
     if not widget_type:
         raise Exception(f"Cannot find {details['type']} interaction type.")
@@ -223,11 +225,13 @@ def extract_review(details, reviewer, widgets):
     
     elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
         if isinstance(widgets, CompositeWidgetCluster):
-            extract_composite_review(details, reviewer, widgets)
+            for sub_score in expand_composite_review(details):
+                extract_review(sub_score, reviewer, widgets)
         else:
             composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
             widgets.add(composite_widget)
-            extract_composite_review(details, reviewer, composite_widget)
+            for sub_score in expand_composite_review(details):
+                extract_review(sub_score, reviewer, composite_widget)
 
 
     elif details["type"] == "loop":
@@ -286,16 +290,12 @@ def extract_group_review(details, reviewer, widgets):
                 child["field"] = details["prefix"] + child["field"]
         extract_review(child, reviewer, widgets)
 
-def extract_composite_review(details, reviewer, widgets):
+def expand_composite_review(details):
     """
     Extract details for a predefined composition of widgets.
 
     :param details: The details of the scoring element.
     :type details: dict
-    :param reviewer: The reviewer object.
-    :type reviewer: Reviewer
-    :param widgets: The widgets to be displayed.
-    :type widgets: WidgetCluster
     """
     if details["type"] == "Criterion":
         value = None
@@ -323,7 +323,6 @@ def extract_composite_review(details, reviewer, widgets):
             width = "800px"
 
         criterion = {
-            #"field": "_" + prefix + " Criterion",
             "type": "Markdown",
             "args": {
                 "layout": {"width": width},
@@ -341,8 +340,7 @@ def extract_composite_review(details, reviewer, widgets):
             criterion["args"]["join"] = join
         if lis is not None:
             criterion["args"]["list"] = lis
-        extract_review(criterion, reviewer, widgets)
-        return
+        return [criterion]
 
     if details["type"] == "CriterionComment":
         criterion = json.loads(json.dumps(details))
@@ -363,9 +361,7 @@ def extract_composite_review(details, reviewer, widgets):
                 "layout": {"width": width},
             }
         }
-        for sub_score in [criterion, comment]:
-            extract_review(sub_score, reviewer, widgets)
-        return
+        return [criterion, comment]
 
     if details["type"] == "CriterionCommentDate":
         criterion = json.loads(json.dumps(details))
@@ -378,9 +374,7 @@ def extract_composite_review(details, reviewer, widgets):
                 "description": "Date",
             }
         }
-        for sub_score in [criterion, date]:
-            extract_review(sub_score, reviewer, widgets)
-        return
+        return [criterion, date]
 
 
     if details["type"] == "CriterionCommentRedAmberGreen":
@@ -402,9 +396,7 @@ def extract_composite_review(details, reviewer, widgets):
                 "description": "Traffic Signal",
             }
         }
-        for sub_score in [criterioncomment, expectation]:
-            extract_review(sub_score, reviewer, widgets)
-        return
+        return [criterioncomment, expectation]
     
     if details["type"] == "CriterionCommentRaisesMeetsLowers":
         criterioncomment = json.loads(json.dumps(details))
@@ -425,9 +417,7 @@ def extract_composite_review(details, reviewer, widgets):
                 "description": "Expectation",
             }
         }
-        for sub_score in [criterioncomment, expectation]:
-            extract_review(sub_score, reviewer, widgets)
-        return
+        return [criterioncomment, expectation]
 
     if details["type"] == "CriterionCommentRaisesMeetsLowersFlag":
         criterioncommentraisesmeetslowers = json.loads(json.dumps(details))
@@ -442,9 +432,7 @@ def extract_composite_review(details, reviewer, widgets):
                 "description": "Flag",
             }
         }
-        for sub_score in [criterioncommentraisesmeetslowers, flag]:
-            extract_review(sub_score, reviewer, widgets)
-        return
+        return [criterioncommentraisesmeetslowers, flag]
 
     
     if details["type"] == "CriterionCommentScore":
@@ -485,12 +473,15 @@ def extract_composite_review(details, reviewer, widgets):
                 "layout": {"width": width},
             }
         }
-        for sub_score in [criterioncomment, slider]:
-            extract_review(sub_score, reviewer, widgets)
+        return [criterioncomment, slider]
 
 def extract_loop_review(details, reviewer, widgets):
     """
-    Extract details for a loop of widgets.
+    Extract details for a loop of widgets. The loop is defined by a
+    start, stop and step value. The body of the loop is defined by
+    body which is a list of widgets. The element value is passed to
+    the body widgets so that the widgets can be updated for each
+    element in the loop.
 
     :param details: The details of the scoring element.
     :type details: dict
@@ -498,6 +489,7 @@ def extract_loop_review(details, reviewer, widgets):
     :type reviewer: Reviewer
     :param widgets: The widgets to be displayed.
     :type widgets: WidgetCluster
+
     """
     if "start" not in details:
         raise ValueError("Missing start entry in loop")
@@ -766,7 +758,7 @@ class Reviewer(DisplaySystem):
             widgets.add(**{label: CreateSummaryDocButton(**args)})
         return widgets
 
-        
+    
     def _create_widgets(self):
         """
         Create the widgets to be used for display.
