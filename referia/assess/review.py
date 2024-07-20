@@ -221,7 +221,8 @@ def extract_review(details, reviewer, widgets):
     elif details["type"] == "group":
         group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
         widgets.add(group_widgets)
-        extract_group_review(details, reviewer, group_widgets)
+        for detail in expand_group_review(details):
+            extract_review(detail, reviewer, group_widgets)
 
     
     elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
@@ -238,7 +239,8 @@ def extract_review(details, reviewer, widgets):
     elif details["type"] == "loop":
         loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer)
         widgets.add(loop_widget)
-        extract_loop_review(details, reviewer, loop_widget)
+        for sub_score in expand_loop_review(details, reviewer):
+            extract_review(sub_score, reviewer, loop_widget)
         
     else:
         # Widget is directly specified
@@ -256,10 +258,6 @@ def expand_load_review(details):
 
     :param details: The details of the scoring element.
     :type details: dict
-    :param reviewer: The reviewer object.
-    :type reviewer: Reviewer
-    :param widgets: The widgets to be displayed.
-    :type widgets: WidgetCluster
     """
     # This is a link to a widget specificaiton stored in a file
     if "details" not in details:
@@ -270,19 +268,16 @@ def expand_load_review(details):
         return_details.append(remove_nan(series.to_dict()))
     return return_details                      
 
-def extract_group_review(details, reviewer, widgets):
+def expand_group_review(details):
     """
     Extract details that are clustered together in a group.
 
     :param details: The details of the scoring element.
     :type details: dict
-    :param reviewer: The reviewer object.
-    :type reviewer: Reviewer
-    :param widgets: The widgets to be displayed.
-    :type widgets: WidgetCluster
     """
     if "children" not in details:
         raise ValueError("group reviewer needs to provide a list of children under \"children\"")
+    return_details = []
     for child in details["children"]:
         if "name" in child and "name" in details and details["name"] is not None:
             child["name"] = details["name"] + "-" + child["name"]
@@ -291,7 +286,8 @@ def extract_group_review(details, reviewer, widgets):
                 child["prefix"] = details["prefix"] + child["prefix"]
             if "field" in child:
                 child["field"] = details["prefix"] + child["field"]
-        extract_review(child, reviewer, widgets)
+        return_details.append(child)
+    return return_details
 
 def expand_composite_review(details):
     """
@@ -478,7 +474,7 @@ def expand_composite_review(details):
         }
         return [criterioncomment, slider]
 
-def extract_loop_review(details, reviewer, widgets):
+def expand_loop_review(details, reviewer):
     """
     Extract details for a loop of widgets. The loop is defined by a
     start, stop and step value. The body of the loop is defined by
@@ -506,8 +502,8 @@ def extract_loop_review(details, reviewer, widgets):
             else:
                 loop.append(int(details[ent]))
 
+    return_details = []
     for element in range(*loop):
-        
         sub_scores = details["body"]
         if type(sub_scores) is not list:
             sub_scores = [sub_scores]
@@ -516,8 +512,8 @@ def extract_loop_review(details, reviewer, widgets):
                 sub_score["local"] = {}
             sub_score["local"]["element"] = element
             sub_score["element"] = element
-            extract_review(sub_score, reviewer, widgets)
-
+            return_details.append(sub_score)
+    return return_details
 
     
     

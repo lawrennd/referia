@@ -11,8 +11,8 @@ from referia.assess.review import (
     Reviewer, LoadWidgetCluster, GroupWidgetCluster,
     CompositeWidgetCluster, DynamicWidgetCluster, LoopWidgetCluster,
     set_default_values, process_layout_and_local_args, extract_widget,
-    extract_review, expand_load_review, extract_group_review,
-    expand_composite_review, extract_loop_review
+    extract_review, expand_load_review, expand_group_review,
+    expand_composite_review, expand_loop_review
 )
 
 def test_extract_widget_with_different_widget_types(mocker):
@@ -301,7 +301,7 @@ def test_expand_load_review():
         mock_read_data.assert_called_once_with("test_file.csv")
         assert mock_extract_review.call_count == 3
 
-def test_extract_group_review():
+def test_expand_group_review():
     reviewer = Mock()
     widgets = Mock()
     details = {
@@ -312,7 +312,8 @@ def test_extract_group_review():
     }
     
     with patch("referia.assess.review.extract_review") as mock_extract_review:
-        extract_group_review(details, reviewer, widgets)
+        for detail in expand_group_review(details):
+            mock_extract_review(detail, reviewer, widgets)
         assert mock_extract_review.call_count == 2
 
 def test_expand_composite_review():
@@ -359,7 +360,7 @@ def test_expand_composite_review():
         second_call_args = mock_extract_review.call_args_list[1][0]
         assert second_call_args[0]["args"]["layout"]["width"] == "800px"
 
-def test_extract_loop_review():
+def test_expand_loop_review():
     reviewer = Mock()
     widgets = Mock()
     details = {
@@ -369,5 +370,7 @@ def test_extract_loop_review():
     }
     
     with patch("referia.assess.review.extract_review") as mock_extract_review:
-        extract_loop_review(details, reviewer, widgets)
+        details = expand_loop_review(details, reviewer)
+        for detail in details:
+            mock_extract_review(detail, reviewer, widgets)
         assert mock_extract_review.call_count == 3    
