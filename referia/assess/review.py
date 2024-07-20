@@ -215,7 +215,8 @@ def extract_review(details, reviewer, widgets):
     elif details["type"] == "load":
         load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
         widgets.add(load_widgets)
-        extract_load_review(details, reviewer, load_widgets)
+        for detail in expand_load_review(details):
+            extract_review(detail, reviewer, load_widgets)
 
     elif details["type"] == "group":
         group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
@@ -249,7 +250,7 @@ def view(data):
     data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8, ax=ax)
     ax.set_xticks(range(0,13))
 
-def extract_load_review(details, reviewer, widgets):
+def expand_load_review(details):
     """
     Extract details from a separate file where they're specified.
 
@@ -264,8 +265,10 @@ def extract_load_review(details, reviewer, widgets):
     if "details" not in details:
         raise ValueError("Load reviewer needs to provide load details as entry under \"details\"")
     df,  newdetails = access.io.read_data(details["details"])
+    return_details = []
     for ind, series in df.iterrows():
-        extract_review(remove_nan(series.to_dict()), reviewer, widgets)
+        return_details.append(remove_nan(series.to_dict()))
+    return return_details                      
 
 def extract_group_review(details, reviewer, widgets):
     """

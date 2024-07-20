@@ -11,7 +11,7 @@ from referia.assess.review import (
     Reviewer, LoadWidgetCluster, GroupWidgetCluster,
     CompositeWidgetCluster, DynamicWidgetCluster, LoopWidgetCluster,
     set_default_values, process_layout_and_local_args, extract_widget,
-    extract_review, extract_load_review, extract_group_review,
+    extract_review, expand_load_review, extract_group_review,
     expand_composite_review, extract_loop_review
 )
 
@@ -284,7 +284,7 @@ def test_extract_review(reviewer):
         extract_review(details, reviewer, widgets)
         mock_extract_widget.assert_called_once_with(details, reviewer, widgets)
 
-def test_extract_load_review():
+def test_expand_load_review():
     reviewer = Mock()
     widgets = Mock()
     details = {"details": "test_file.csv"}
@@ -294,7 +294,9 @@ def test_extract_load_review():
         
         mock_read_data.return_value = (pd.DataFrame({"col": [1, 2, 3]}), {})
         
-        extract_load_review(details, reviewer, widgets)
+        expanded_details = expand_load_review(details)
+        for detail in expanded_details:
+            mock_extract_review(detail, reviewer, widgets)        
         
         mock_read_data.assert_called_once_with("test_file.csv")
         assert mock_extract_review.call_count == 3
