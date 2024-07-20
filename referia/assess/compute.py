@@ -235,6 +235,7 @@ class Compute(lynguine.assess.compute.Compute):
         :type column: str
         :return: None
         """
+        log.debug(f"Running onchange for {column} at index {index} (not yet implemented).")        
         super().run_onchange(index, column, data)
     
     def run_all(self, data, df=None, index=None, pre=False, post=False):

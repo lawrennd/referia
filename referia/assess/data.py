@@ -817,7 +817,7 @@ class CustomDataFrame(data.CustomDataFrame):
                 log.info(f"\"{column}\" not in writeseries columns ... adding.")
                 self._d["series"][column] = data
                 return
-        
+        # TK, need to move away from self._writedata here.
         if self._writedata is not None and column not in self._writedata.columns:
             if not self._strict_columns("scores"):
                 log.info(f"\"{column}\" not in write columns ... adding.")

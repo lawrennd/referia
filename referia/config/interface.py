@@ -140,7 +140,14 @@ class Interface(lynguine.config.interface.Interface):
             data["output"] = data["scores"]
             del data["scores"]
 
-            
+        if "output" in data:
+            if "timestamp_suffix" in data:
+                suffix = data["timestamp_suffix"]
+            else:
+                suffix = modified
+            for column in data["output"]["columns"]:
+                columns.appendcolumn["name"] = column["name"] + suffix
+               
             
             #self._expand_scores()   
 

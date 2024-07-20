@@ -156,6 +156,7 @@ def test_field_widget_on_value_change(mocker):
     parent_mock = mocker.Mock()
     column_name = "test_column"
     new_value = "new_value"
+    old_value = "old_value"
 
     # Create a FieldWidget instance with the mocked widget function
     widget = FieldWidget(function=mock_widget_function, parent=parent_mock, column_name=column_name)
@@ -163,6 +164,7 @@ def test_field_widget_on_value_change(mocker):
     # Mock the change event as an object with a 'new' attribute
     change_event_mock = mocker.Mock()
     type(change_event_mock).new = mocker.PropertyMock(return_value=new_value)
+    type(change_event_mock).old = mocker.PropertyMock(return_value=old_value)
 
     # Call the on_value_change method with the mocked change event
     widget.on_value_change(change_event_mock)

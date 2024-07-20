@@ -28,6 +28,7 @@ from ..util.widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text
 from ..config import interface
 from . import data
 
+import traceback
 
 cntxt = Context(name="referia")
 log = log.Logger(
@@ -36,6 +37,10 @@ log = log.Logger(
     filename=cntxt["logging"]["filename"],
 )
 
+def print_stack():
+    print("Current stack:")
+    for line in traceback.format_stack()[:-1]:  # [:-1] to exclude the print_stack() call itself
+        log.debug(line.strip())
 
 def set_default_values(details, widget_type, reviewer):
     """
@@ -1413,10 +1418,13 @@ class Reviewer:
 
         :return: None
         """
-
-        log.debug(f"Running onchange computes.")
-        log.debug(f"Compute is type \"{type(self._data._compute)}\" containing \"{self._data._compute}\".")
+        log.debug(f"Ruanning onchange computes.")
+        index = self.get_index()
+        column = self.get_column()
         self._data._compute.run_onchange(data=self._data, index=self.get_index(), column=self.get_column())
+
+            
+        
         
     def value_updated(self):
         """
@@ -1436,13 +1444,14 @@ class Reviewer:
         # Update timestamp field.
         log.debug(f"Updating timestamp field.")
         today_val = pd.to_datetime("today")
-        if "timestamp_field" in self._interface:
-            timestamp_field = self._interface["timestamp_field"]
+        if "timestamp_suffix" in self._interface:
+            timestamp_suffix = self._interface["timestamp_suffix"]
         else:
-            timestamp_field = "Timestamp"
+            timestamp_suffix = "modified"
+        timestamp_field = column + "_" + timestamp_suffix
         if timestamp_field not in self._data.columns:
             log.debug(f"Adding \"timestamp\" column as \"{timestamp_field}\".")
-            self._data.add_column(timestamp_field)
+            self._data.add_column_force(timestamp_field)
         self._data.set_dtype(timestamp_field, "datetime64[ns]")
 
         self.set_column(timestamp_field)
@@ -1450,14 +1459,15 @@ class Reviewer:
 
         # Set the created field
         log.debug(f"Setting created field.")
-        if "created_field" in self._interface:
-            created_field = self._interface["created_field"]
+        if "created_suffix" in self._interface:
+            created_suffix = self._interface["created_suffix"]
         else:
-            created_field = "Created"
+            created_suffix = "created"
 
+        created_field = column + "_" + created_suffix
         if created_field not in self._data.columns:
             log.debug(f"Adding created column as \"{created_field}\".")
-            self._data.add_column(created_field)
+            self._data.add_column_force(created_field)
         self._data.set_dtype(created_field, "datetime64[ns]")
 
         if created_field not in self._data.columns or data.empty(self._data.get_value_column(created_field)):

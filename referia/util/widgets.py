@@ -1,6 +1,7 @@
 import os
 import sys
 import glob
+import traceback
 
 import IPython
 import ipywidgets as ipyw
@@ -13,6 +14,7 @@ from .misc import notempty, yyyymmddToDatetime, datetimeToYyyymmdd, filename_to_
 
 from lynguine import log
 from lynguine.config.context import Context
+
 
 cntxt = Context(name="referia")
 log = log.Logger(
@@ -563,16 +565,23 @@ class FieldWidget(ReferiaStatefulWidget):
         :param change: The change event containing keys 'old' and 'new'.
         :type change: dict
         """
+        # Jupyter catches exceptions to prevent notebook crashes.
+        # If there are errors in the code they occur silently. This try catch ensures they are logged.
+        try: 
+            log.debug(f"Widget {self._field_name} value changed from {change.old} to {change.new}")
+            # If the widget is not private and has a parent, update the parent data structure.
+            if not self.private and self._parent is not None:
+                if self.get_column() is not None:
+                    self._parent.set_column(self.get_column())
+                    self._parent.set_value(change.new)
 
-        # If the widget is not private and has a parent, update the parent data structure.
-        if not self.private and self._parent is not None:
-            if self.get_column() is not None:
-                self._parent.set_column(self.get_column())
-                self._parent.set_value(change.new)
-
-        if self._refresh_display:
-            if self._parent is not None:
-                self._parent._widgets.refresh()
+            if self._refresh_display:
+                if self._parent is not None:
+                    self._parent._widgets.refresh()
+        except Exception as e:
+            errmsg = f"An error occurred in on_value_change: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
             
     def has_viewer(self):
         """
