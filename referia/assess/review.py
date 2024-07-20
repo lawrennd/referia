@@ -46,6 +46,7 @@ log = log.Logger(
     filename=cntxt["logging"]["filename"],
 )
 
+
 def set_default_values(details, widget_type, reviewer):
     """
     Set default values for the widget based on provided details.
@@ -57,11 +58,12 @@ def set_default_values(details, widget_type, reviewer):
     :param reviewer: The reviewer object.
     :type reviewer: Reviewer
     """
+    
     store_name = details.get("field") or details.get("cache")
 
     # Default value initialization
-    default_value = details.get("value", 
-                                details.get("args", {}).get("value", 
+    default_value = details.get("value",
+                                details.get("args", {}).get("value",
                                 widget_type(parent=reviewer, field_name=store_name).get_value()))
 
     # Handle 'default' key when it's a dictionary or a string
@@ -70,19 +72,26 @@ def set_default_values(details, widget_type, reviewer):
         default_value = default_details.get("value", default_value)
         source = default_details.get("source")
     elif isinstance(default_details, str):
-        # Interpret string as 'source'
         source = default_details
     else:
         source = None
 
     # Set default value
-    reviewer._default_field_vals[store_name] = default_value
+    if isinstance(reviewer._default_field_vals, pd.Series):
+        reviewer._default_field_vals[store_name] = default_value
+    else:
+        reviewer._default_field_vals[store_name] = default_value
 
-    # Handle default value source
-    if source and source in reviewer._data.columns:
-        reviewer._default_field_source[store_name] = source
-    elif source:
-        log.warning(f"Missing column source \"{source}\" in data.columns proposed for default value.")
+    # Set default source
+    if source:
+        if source in getattr(reviewer._data, 'columns', []):
+            if isinstance(reviewer._default_field_source, pd.Series):
+                reviewer._default_field_source[store_name] = source
+            else:
+                reviewer._default_field_source[store_name] = source
+        else:
+            log.warning(f"Missing column source \"{source}\" in data.columns proposed for default value.")
+
 
 def process_layout_and_local_args(process_details):
     """
@@ -312,13 +321,14 @@ def extract_composite_review(details, reviewer, widgets):
             width = details["width"]
         else:
             width = "800px"
-            criterion = {
-                #"field": "_" + prefix + " Criterion",
-                "type": "Markdown",
-                "args": {
-                    "layout": {"width": width},
-                }
+
+        criterion = {
+            #"field": "_" + prefix + " Criterion",
+            "type": "Markdown",
+            "args": {
+                "layout": {"width": width},
             }
+        }
         if value is not None:
             criterion["args"]["value"] = value
         if display is not None:
@@ -338,19 +348,21 @@ def extract_composite_review(details, reviewer, widgets):
         criterion = json.loads(json.dumps(details))
         criterion["type"] = "Criterion"
         prefix = details["prefix"]
+
         if "width" in details:
             width = details["width"]
         else:
             width = "800px"
-            comment = {
-                "field": prefix + " Comment",
-                "type": "Textarea",
-                "args": {
-                    "value": "",
-                    "description": "Comment",
-                    "layout": {"width": width},
-                }
+            
+        comment = {
+            "field": prefix + " Comment",
+            "type": "Textarea",
+            "args": {
+                "value": "",
+                "description": "Comment",
+                "layout": {"width": width},
             }
+        }
         for sub_score in [criterion, comment]:
             extract_review(sub_score, reviewer, widgets)
         return
@@ -623,6 +635,28 @@ class Reviewer(DisplaySystem):
         self._select_selector = False
         self._create_widgets()
 
+    def set_default_field_value(self, field, value):
+        """
+        Set the default value for the field.
+
+        :param field: The field to set the default value for.
+        :type field: str
+        :param value: The value to set.
+        :type value: any
+        """
+        self._default_field_vals[field] = value
+
+    def set_default_field_source(self, field, source):
+        """
+        Set the default source for the field.
+
+        :param field: The field to set the default source for.
+        :type field: str
+        :param source: The source to set.
+        :type source: str
+        """
+        self._default_field_source[field] = source
+        
     def _create_reload_button(self, config):
         """
         Create the reload button.
