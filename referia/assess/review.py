@@ -21,14 +21,23 @@ from lynguine import log
 from lynguine import access
 from lynguine.util.misc import remove_nan, to_valid_var
 from lynguine.config.context import Context
+from lynguine.assess.display import WidgetCluster, DisplaySystem
 
 
-from ..util.widgets import (IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText, Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag, Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect, SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton, CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton, ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons, ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown, ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown, ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText)
+from ..util.widgets import (
+    IntSlider, FloatSlider, Checkbox, RadioButtons, Text, Textarea, IntText,
+    Combobox, Dropdown, Label, HTML, HTMLMath, DatePicker, Markdown, Flag,
+    Select, SelectMultiple, IndexSelector, IndexSubIndexSelectorSelect,
+    SaveButton, ReloadButton, CreateDocButton, CreateSummaryButton,
+    CreateSummaryDocButton, BoundedFloatText, ScreenCapture, PopulateButton,
+    ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons,
+    ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown,
+    ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown,
+    ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText
+)
 
 from ..config import interface
 from . import data
-
-import traceback
 
 cntxt = Context(name="referia")
 log = log.Logger(
@@ -36,11 +45,6 @@ log = log.Logger(
     level=cntxt["logging"]["level"],
     filename=cntxt["logging"]["filename"],
 )
-
-def print_stack():
-    print("Current stack:")
-    for line in traceback.format_stack()[:-1]:  # [:-1] to exclude the print_stack() call itself
-        log.debug(line.strip())
 
 def set_default_values(details, widget_type, reviewer):
     """
@@ -527,175 +531,19 @@ def nodes(chain, index=None):
         reviewer[key].run()
         oldkey = key
                                 
-class WidgetCluster():
-    """
-    A class to hold a cluster of widgets.
-    """
-    def __init__(self, name, parent, viewer=False, **kwargs):
-        """
-        Create a cluster of widgets.
-
-        :param name: The name of the cluster.
-        :type name: str
-        :param parent: The parent of the cluster.
-        :type parent: Reviewer or WidgetCluster
-        :param viewer: Whether the cluster is a viewer.
-        """
-
-        # _widget_dict contains a dictionary of FieldWidget
-        self._widget_dict = {} 
-        # _widget_list contains a list which has entries as string if it's
-        # in the widget dictionary or a WidgetCluster object if it's a
-        # cluster of widgets.
-        self._widget_list = [] 
-        self._name = name
-        log.debug(f"Setting cluster name to \"{name}\".")
-        self._viewer = viewer
-        self._parent = parent
-        self.add(**kwargs)
-
-    def clear_children(self):
-        """
-        Clear the children of the cluster.
-        """
-        self.close()
-        self._widget_dict = {}
-        self._widget_list = []
-
-    def close(self):
-        """
-        Close the widgets.
-        """
-        for entry in self._widget_list:
-            if isinstance(entry, WidgetCluster):
-                entry.close()
-            else:
-                self._widget_dict[entry].close()
                 
-    def has(self, key):
-        """
-        Check if the cluster has a widget with the given key.
+class LoadWidgetCluster(WidgetCluster):
+    """A widget cluster for loading widgets."""
+    pass
 
-        :param key: The key of the widget.
-        :type key: str
-        :return: Whether the cluster has the widget.
-        :rtype: bool
-        """
-        if key in self.to_dict():
-            return True
-        else:
-            return False
+class GroupWidgetCluster(WidgetCluster):
+    """A widget cluster for grouping widgets."""
+    pass
 
-    def get(self, key):
-        """
-        Get the widget with the given key.
+class CompositeWidgetCluster(WidgetCluster):
+    """A widget cluster for composite widgets."""
+    pass
 
-        :param key: The key of the widget.
-        :type key: str
-        :return: The widget.
-        """
-        return self.to_dict()[key]
-
-    def refresh(self):
-        """
-        Refresh the widgets.
-        """
-        log.debug(f"Widget list is currently \"{self._widget_list}\"")
-        for entry in self._widget_list:
-            if isinstance(entry, WidgetCluster):
-                # If it's a cluster of widgets recursively call refresh.
-                log.debug(f"Refreshing widget cluster \"{entry._name}\"")
-                entry.refresh()
-            elif isinstance(entry, str):
-                # If it's an actual widget call refresh.
-                log.debug(f"Refreshing widget \"{entry}\"")                
-                self._widget_dict[entry].refresh()
-            else:
-                errmsg = f"Invalid entry type \"{type(entry)}\"."
-                log.error(errmsg)
-                raise KeyError(errmsg)
-        log.debug(f"Finished refreshing")
-        
-    def add(self, cluster=None, **kwargs):
-        """
-        Add a widget to the cluster.
-
-        :param cluster: The cluster to be added.
-        :type cluster: WidgetCluster
-        :param kwargs: The widgets to be added.
-        :type kwargs: dict
-        """
-        if cluster is not None:
-            cluster.add(**kwargs)
-            self._widget_list.append(cluster)
-        else:
-            if kwargs != {}:
-                self._widget_list += list(kwargs.keys())
-                # extend the widget dictionary with the provided dictionary.
-                self._widget_dict = {**self._widget_dict, **kwargs}
-        
-    def update(self, **kwargs):
-        """
-        Update the widgets.
-
-        :param kwargs: The widgets to be updated.
-        :type kwargs: dict
-        """
-        for key, item in kwargs.items():
-            if key in self._widget_dict:
-                self._widget_dict[key] = item
-            else:
-                raise ValueError(f"Attempt to update widget \"{key}\" when it doesn't exist.")
-
-    def to_markdown(self,skip=[]):
-        """
-        Convert the widget outputs into text.
-
-        :param skip: The widgets to be skipped.
-        """
-        text = ""
-        for entry in self._widget_list:
-            if isinstance(entry, WidgetCluster):
-                text += entry.to_markdown(skip=skip)
-            else:
-                if type(entry) is str:
-                    entry = [entry]
-                for key in entry:
-                    if key not in skip:
-                        text += self._widget_dict[key].to_markdown()
-                        if text != "":
-                            text+= "\n\n"
-        return text
-            
-    def to_dict(self):
-        """
-        Convert the widget outputs into a dictionary.
-
-        :return: The widgets.
-        :rtype: dict
-        """
-        widgets = {}
-        for entry in self._widget_list:
-            if isinstance(entry, WidgetCluster):
-                widgets = {**widgets, **entry.to_dict()}
-            else:
-                if type(entry) is str:
-                    widgets[entry] = self._widget_dict[entry]
-                else:
-                    for key in entry:
-                        widgets[key] = self._widget_dict[key]
-        return widgets
-
-    def display(self):
-        """
-        Display the widgets
-        """
-        for entry in self._widget_list:
-            if isinstance(entry, WidgetCluster):
-                entry.display()
-            else:
-                self._widget_dict[entry].display()
-                
 class DynamicWidgetCluster(WidgetCluster):
     """
     A class to hold a cluster of widgets that are dynamically reconstructed.
@@ -717,7 +565,6 @@ class DynamicWidgetCluster(WidgetCluster):
         self.from_details()
         super().refresh()
         self.display()
-                
 
     def from_details(self, details=None):
         """
@@ -727,45 +574,15 @@ class DynamicWidgetCluster(WidgetCluster):
         :type details: dict
         """
         if details is None:
-            details=self._details
+            details = self._details
         self.clear_children()
         extract_loop_review(details, self._parent, self)
 
-class LoadWidgetCluster(WidgetCluster):
-    """
-    """
-    def __init__(self, **kwargs):
-        """
-        Create a cluster of widgets.
-        """
-        super().__init__(**kwargs)
-
-class GroupWidgetCluster(WidgetCluster):
-    """
-    """
-    def __init__(self, **kwargs):
-        """
-        Create a cluster of widgets.
-        """
-        super().__init__(**kwargs)
-
-class CompositeWidgetCluster(WidgetCluster):
-    """
-    """
-    def __init__(self, **kwargs):
-        """
-        Create a cluster of widgets.
-        """
-        super().__init__(**kwargs)
-    
 class LoopWidgetCluster(DynamicWidgetCluster):
-    """
-    
-    """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    """A widget cluster for loop widgets."""
+    pass
 
-class Reviewer:
+class Reviewer(DisplaySystem):
     """
     A class to hold the display system.
     """
@@ -784,6 +601,8 @@ class Reviewer:
         :param viewer_inherit: Whether the viewer inherits a parent viewer.
         :type viewer_inherit: bool
         """
+        super().__init__(index, data, interface, system)        
+
         if viewer_inherit:
             append = ["viewer"]
             ignore = []
@@ -793,33 +612,11 @@ class Reviewer:
 
         # Store the map between valid python variable names and data column name
         self._column_names_dict = {"_": "_"} # This initialisation handles case where a function gives no output.
-        # Store the map between valid python variable names and data column names
-        self._widgets = WidgetCluster(name="parent", parent=self)
         self._view_list = []
         self._dynamic_list = []
         self._selector_widget = None
-        self._downstream_displays = []
         self._default_field_vals = pd.Series(dtype=object)
         self._default_field_source = pd.Series(dtype=object)
-
-        if interface is None:
-            raise TypeError("The interface argument is missing in Reviewer.")
-        else:
-            self._interface = interface
-
-        if system is None:
-            raise TypeError("The system argument is missing in Reviewer.")
-        else:
-            self._system = system
-
-        if data is None:
-            raise TypeError("The data argument is missing in Reviewer.")
-        else:
-            self._data = data
-
-        if index is not None:
-            # Widget isn't created yet so set index in data only.
-            self._data.set_index(index)
             
         self._write_score = True
         self._select_subindex = False
@@ -995,110 +792,6 @@ class Reviewer:
         """
         self._dynamic_list.append(label)
         
-    def add_downstream_display(self, display):
-        """
-        Add a display that is downstream of this one to be updated.
-
-        :param display: The display to be updated.
-        :type display: Reviewer
-        """
-        self._downstream_displays.append(display)
-        
-    @property
-    def index(self):
-        """
-        Get the index of the display system.
-
-        :return: The index of the display system.
-        :rtype: int
-        """
-        return self._data.index
-
-    def get_index(self):
-        """
-        Get the index of the display system.
-
-        :return: The index of the display system.
-        :rtype: int
-        """
-        return self._data.get_index()
-
-    def set_index(self, value : str) -> None:
-        """
-        Set the index of the display system.
-
-        :param value: The index of the display system.
-        :type value: str
-        :return: None
-        """
-        oldval = self.get_index()
-        if oldval != value:
-            self._data.set_index(value)
-            if self._selector_widget is not None:
-                self._selector_widget.set_index(value)
-            self.populate_display()
-            for ds in self._downstream_displays:
-                ds.set_index(value)
-            
-    def get_value(self):
-        """
-        Get the value of the focus element in the data of display system.
-
-        :return: The value of the focus element in the data of the display system.
-        :rtype: object
-        """
-        return self._data.get_value()
-
-    def get_value_by_element(self, element):
-        """
-        Get an element of the value."""
-        return self._data.get_value_by_element(element)
-    
-    def set_value_by_element(self, value, element, trigger_update=True):
-        """Set an element of the value."""
-        old_value = self.get_value_by_element(element)
-        column = self.get_column()
-        if value != old_value:
-            log.debug(f"Column is \"{column}\" and element is \"{element}\". Old value is  \"{old_value}\" and new value is \"{value}\".")
-            self._data.set_value_by_element(value, element)
-            if trigger_update:
-                self.value_updated()                            
-        
-    def set_value(self, value, trigger_update=True):
-        """
-        Update a value in one of the output flows.
-
-        :param value: The value to be set.
-        :type value: object
-        :param trigger_update: Whether to trigger an update.
-        :type trigger_update: bool
-        """
-        old_value = self.get_value()
-        column = self.get_column()
-        if value != old_value:
-            log.debug(f"Column is \"{column}\". Old value is \"{old_value}\" and new value is \"{value}\".")
-            self._data.set_value(value)
-            if trigger_update:
-                log.debug("Triggering update.")
-                self.value_updated()
-
-    def get_column(self) -> str:
-        """
-        Get the column of the display system.
-
-        :return: The column of the display system.
-        """
-        return self._data.get_column()
-
-    def set_column(self, column) -> None:
-        """
-        Set the column of the display system.
-
-        :param column: The column of the display system.
-        :type column: valid column (column of the dataframe)
-        """
-        self._data.set_column(column)
-
     def get_selectors(self) -> list:
         """
         Get the list of valid selectors of the display system.
@@ -1314,32 +1007,7 @@ class Reviewer:
             if subindex is not None:
                 self.set_subindex(subindex)
         self.populate_display()
-
-    def save_flows(self) -> None:
-        """
-        Save output flows and reload inputs for any downstream displays.
-        """
-        self._data.save_flows()
-        for ds in self._downstream_displays:
-            ds.load()
-            ds.set_index(self.get_index())
-            ds.populate_display()
-
         
-    def load_input_flows(self) -> None:
-        """
-        Load input flows.
-
-        """
-        self._data.load_input_flows()
-
-    def load_output_flows(self) -> None:
-        """
-        Load output flows.
-        """
-        self._data.load_output_flows()
-        
-            
     def create_document(self, document : dict, summary : bool = False) -> None:
         """
         Create a document from the data we've provided.
