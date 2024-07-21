@@ -57,8 +57,7 @@ Functionality is provided in `system.Sys.edit_files`.
 
 Lists urls that should be opened for providing additional information on the review.
 
-
-`scores`
+`output`
 
 This specifies how the annotation information is to be stored.
 
@@ -70,6 +69,9 @@ Specifies how the code should "count up" how many reviews are complete.
 
 This specifies how to store annotation information which is available with a subindex (such as a time series).
 
+`review'
+
+This specifies a set of widgets to create for human reviewing.
 
 `compute`
 
