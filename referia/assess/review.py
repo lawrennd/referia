@@ -247,7 +247,9 @@ def extract_review(details, reviewer, widgets):
         extract_widget(details, reviewer, widgets)
 
 def view(data):
-    """Provide a view of the data that allows the user to verify some aspect of its quality."""
+    """
+    Provide a view of the data that allows the user to verify some aspect of its quality.
+    """
     fig, ax = plt.subplots(figsize=(8, 5))
     data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8, ax=ax)
     ax.set_xticks(range(0,13))

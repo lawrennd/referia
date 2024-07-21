@@ -3,9 +3,10 @@ import yaml
 import numpy as np
 
 
-from lynguine.util.misc import to_valid_var
+from lynguine.util.misc import to_valid_var, extract_full_filename
 import lynguine
 
+from referia.assess.review import expand_group_review, expand_composite_review, expand_load_review
 
 GSPREAD_AVAILABLE=True
 try:
@@ -140,13 +141,73 @@ class Interface(lynguine.config.interface.Interface):
             data["output"] = data["scores"]
             del data["scores"]
 
-               
+        if "scorer" in data:
+            if "review" not in data:
+                data["review"] = data["scorer"]
+            else:
+                raise ValueError("Cannot have both \"scorer\" and \"review\" in the interface.")
+
+        if "review" in data:
+            data["review"] = self._expand_review_cluster(data["review"])
             
             #self._expand_scores()   
 
         super().__init__(data)
         
+    @classmethod
+    def _expand_review_cluster(cls, review):
+        """
+        Expand the review section of the interface into a lynguine form.
 
+        :param review: The review section of the interface.
+        :type review: dict
+        :return: The expanded review section.
+        :rtype: dict
+        """
+        expanded_review = []
+        for entry in review:
+            cluster = {}
+            if "type" in entry:
+                if entry["type"] == "group":
+                    cluster["type"] = "group"
+                    cluster["entries"] = expand_group_review(entry)
+                elif entry["type"] in [
+                        "Criterion",
+                        "CriterionComment",
+                        "CriterionCommentDate",
+                        "CriterionCommentRedAmberGreen",
+                        "CriterionCommentRaisesMeetsLowers",
+                        "CriterionCommentRaisesMeetsLowersFlag",
+                        "CriterionCommentScore"
+                ]:
+                    cluster["type"] = "composite"
+                    cluster["entries"] = expand_composite_review(entry)                    
+                elif entry["type"] == "load":
+                    cluster["type"] = "load"
+                    cluster["filename"] = extract_full_filename(entry)
+                    cluster["entries"] = expand_load_review(entry)
+                elif entry["type"] == "loop":
+                    cluster["type"] = "loop"
+                    if "start" in entry:
+                        cluster["start"] = entry["start"]
+                    else:
+                        raise ValueError("Missing start entry in loop")                        
+                    if "stop" in entry:
+                        cluster["stop"] = entry["stop"]
+                    else:
+                        raise ValueError("Missing stop entry in loop")
+                    if "step" in entry:
+                        cluster["step"] = entry["step"]
+                    cluster["entries"] = expand_group_review(entry) # expand loop review only used when start and stop known at run-time.                        
+                else:
+                    cluster = entry
+            # Call recursively to expand the review section.      
+            if "entries" in cluster:
+                cluster["entries"] = cls._expand_review_cluster(cluster["entries"])
+            expanded_review.append(cluster)
+            
+        return expanded_review
+    
     def _extract_mapping_columns(self, data):
         """
         Extract mapping and columns from data.
