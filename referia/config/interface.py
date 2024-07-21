@@ -169,6 +169,8 @@ class Interface(lynguine.config.interface.Interface):
             cluster = {}
             if "type" in entry:
                 if entry["type"] == "group":
+                    
+                    #raise ValueError("Got here")
                     cluster["type"] = "group"
                     cluster["entries"] = expand_group_review(entry)
                 elif entry["type"] in [
@@ -184,7 +186,7 @@ class Interface(lynguine.config.interface.Interface):
                     cluster["entries"] = expand_composite_review(entry)                    
                 elif entry["type"] == "load":
                     cluster["type"] = "load"
-                    cluster["filename"] = extract_full_filename(entry)
+                    cluster["filename"] = extract_full_filename(entry["details"])
                     cluster["entries"] = expand_load_review(entry)
                 elif entry["type"] == "loop":
                     cluster["type"] = "loop"
@@ -198,7 +200,13 @@ class Interface(lynguine.config.interface.Interface):
                         raise ValueError("Missing stop entry in loop")
                     if "step" in entry:
                         cluster["step"] = entry["step"]
-                    cluster["entries"] = expand_group_review(entry) # expand loop review only used when start and stop known at run-time.                        
+                    tmp = entry.copy()
+                    body = tmp["body"]
+                    if not isinstance(body, list):
+                        body = [body]
+                    tmp["children"] = body
+                    del tmp["body"]
+                    cluster["entries"] = expand_group_review(tmp) # expand loop review only used when start and stop known at run-time.                        
                 else:
                     cluster = entry
             # Call recursively to expand the review section.      
