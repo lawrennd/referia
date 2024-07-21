@@ -18,8 +18,7 @@ import matplotlib.pyplot as plt
 from ipywidgets import jslink, jsdlink, Layout
 
 from lynguine import log
-from lynguine import access
-from lynguine.util.misc import remove_nan, to_valid_var
+from lynguine.util.misc import to_valid_var
 from lynguine.config.context import Context
 from lynguine.assess.display import WidgetCluster, DisplaySystem
 
@@ -215,31 +214,27 @@ def extract_review(details, reviewer, widgets):
     elif details["type"] == "load":
         load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
         widgets.add(load_widgets)
-        for detail in expand_load_review(details):
+        for detail in details["entries"]:
             extract_review(detail, reviewer, load_widgets)
 
     elif details["type"] == "group":
         group_widgets = GroupWidgetCluster(name="group", parent=reviewer)
         widgets.add(group_widgets)
-        for detail in expand_group_review(details):
+        for detail in details["entries"]:
             extract_review(detail, reviewer, group_widgets)
 
     
-    elif details["type"] in ["Criterion", "CriterionComment", "CriterionCommentDate", "CriterionCommentRedAmberGreen", "CriterionCommentRaisesMeetsLowers", "CriterionCommentRaisesMeetsLowersFlag", "CriterionCommentScore"]:
-        if isinstance(widgets, CompositeWidgetCluster):
-            for sub_score in expand_composite_review(details):
-                extract_review(sub_score, reviewer, widgets)
-        else:
-            composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
-            widgets.add(composite_widget)
-            for sub_score in expand_composite_review(details):
-                extract_review(sub_score, reviewer, composite_widget)
+    elif details["type"] == "composite":
+        composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
+        widgets.add(composite_widget)
+        for sub_score in details["entries"]:
+            extract_review(sub_score, reviewer, composite_widget)
 
 
     elif details["type"] == "loop":
-        loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer)
+        loop_widget = LoopWidgetCluster(name="loop", details=details, parent=reviewer, start=details["start"], stop=details["stop"], step=details["step"])
         widgets.add(loop_widget)
-        for sub_score in expand_loop_review(details, reviewer):
+        for sub_score in details["entries"]:
             extract_review(sub_score, reviewer, loop_widget)
         
     else:
@@ -254,227 +249,6 @@ def view(data):
     data.hist('Score', bins=np.linspace(-.5, 12.5, 14), width=0.8, ax=ax)
     ax.set_xticks(range(0,13))
 
-def expand_load_review(details):
-    """
-    Extract details from a separate file where they're specified.
-
-    :param details: The details of the scoring element.
-    :type details: dict
-    """
-    # This is a link to a widget specificaiton stored in a file
-    if "details" not in details:
-        raise ValueError("Load reviewer needs to provide load details as entry under \"details\"")
-    df,  newdetails = access.io.read_data(details["details"])
-    return_details = []
-    for ind, series in df.iterrows():
-        return_details.append(remove_nan(series.to_dict()))
-    return return_details                      
-
-def expand_group_review(details):
-    """
-    Extract details that are clustered together in a group.
-
-    :param details: The details of the scoring element.
-    :type details: dict
-    """
-    if "children" not in details:
-        raise ValueError("group reviewer needs to provide a list of children under \"children\"")
-    return_details = []
-    for child in details["children"]:
-        if "name" in child and "name" in details and details["name"] is not None:
-            child["name"] = details["name"] + "-" + child["name"]
-        if "prefix" in details and details["prefix"] is not None:
-            if "prefix" in child:
-                child["prefix"] = details["prefix"] + child["prefix"]
-            if "field" in child:
-                child["field"] = details["prefix"] + child["field"]
-        return_details.append(child)
-    return return_details
-
-def expand_composite_review(details):
-    """
-    Extract details for a predefined composition of widgets.
-
-    :param details: The details of the scoring element.
-    :type details: dict
-    """
-    if details["type"] == "Criterion":
-        value = None
-        display = None
-        tally = None
-        liquid = None
-        lis = None
-        join = None
-        prefix = details["prefix"]
-        if "criterion" in details:
-            value = details["criterion"]
-        if "display" in details:
-            display = details["display"]
-        if "liquid" in details:
-            liquid = details["liquid"]
-        if "tally" in details:
-            tally = details["tally"]
-        if "list" in details:
-            lis = details["list"]
-        if "join" in details:
-            liquid = details["join"]
-        if "width" in details:
-            width = details["width"]
-        else:
-            width = "800px"
-
-        criterion = {
-            "type": "Markdown",
-            "args": {
-                "layout": {"width": width},
-            }
-        }
-        if value is not None:
-            criterion["args"]["value"] = value
-        if display is not None:
-            criterion["args"]["display"] = display
-        if liquid is not None:
-            criterion["args"]["liquid"] = liquid
-        if tally is not None:
-            criterion["args"]["tally"] = tally
-        if join is not None:
-            criterion["args"]["join"] = join
-        if lis is not None:
-            criterion["args"]["list"] = lis
-        return [criterion]
-
-    if details["type"] == "CriterionComment":
-        criterion = json.loads(json.dumps(details))
-        criterion["type"] = "Criterion"
-        prefix = details["prefix"]
-
-        if "width" in details:
-            width = details["width"]
-        else:
-            width = "800px"
-            
-        comment = {
-            "field": prefix + " Comment",
-            "type": "Textarea",
-            "args": {
-                "value": "",
-                "description": "Comment",
-                "layout": {"width": width},
-            }
-        }
-        return [criterion, comment]
-
-    if details["type"] == "CriterionCommentDate":
-        criterion = json.loads(json.dumps(details))
-        criterion["type"] = "CriterionComment"
-        prefix = details["prefix"]
-        date = {
-            "field": prefix + " Date",
-            "type": "DatePicker",
-            "args": {
-                "description": "Date",
-            }
-        }
-        return [criterion, date]
-
-
-    if details["type"] == "CriterionCommentRedAmberGreen":
-        criterioncomment = json.loads(json.dumps(details))
-        criterioncomment["type"] = "CriterionComment"
-
-        prefix = details["prefix"]
-        expectation = {
-            "field": prefix + " Traffic",
-            "type": "Dropdown",
-            "args": {
-                "placeholder": "Traffic Signal",
-                "options": [
-                    "",
-                    "Red",
-                    "Amber",
-                    "Green",
-                ],
-                "description": "Traffic Signal",
-            }
-        }
-        return [criterioncomment, expectation]
-    
-    if details["type"] == "CriterionCommentRaisesMeetsLowers":
-        criterioncomment = json.loads(json.dumps(details))
-        criterioncomment["type"] = "CriterionComment"
-
-        prefix = details["prefix"]
-        expectation = {
-            "field": prefix + " Expectation",
-            "type": "Dropdown",
-            "args": {
-                "placeholder": "Against expectations",
-                "options": [
-                    "",
-                    "Raises",
-                    "Meets",
-                    "Lowers",
-                ],
-                "description": "Expectation",
-            }
-        }
-        return [criterioncomment, expectation]
-
-    if details["type"] == "CriterionCommentRaisesMeetsLowersFlag":
-        criterioncommentraisesmeetslowers = json.loads(json.dumps(details))
-        criterioncommentraisesmeetslowers["type"] = "CriterionCommentRaisesMeetsLowers"
-
-        prefix = details["prefix"]
-        flag = {
-            "field": prefix + " Flag",
-            "type": "Flag",
-            "args": {
-                "value": False,
-                "description": "Flag",
-            }
-        }
-        return [criterioncommentraisesmeetslowers, flag]
-
-    
-    if details["type"] == "CriterionCommentScore":
-        criterioncomment = json.loads(json.dumps(details))
-        criterioncomment["type"] = "CriterionComment"
-        if "width" in details:
-            width = details["width"]
-        else:
-            width = "800px"
-
-        prefix = details["prefix"]
-        if "min" in details:
-            minval = details["min"]
-        else:
-            minval = 0
-        if "max" in details:
-            maxval = details["max"]
-        else:
-            maxval = 10
-        if "step" in details:
-            step = details["step"]
-        else:
-            step = 1
-        if "value" in details:
-            value = details["value"]
-        else:
-            value = int(((maxval-minval)/2)/step)*step + minval
-
-        slider = {
-            "field": prefix + " Score",
-            "type": "FloatSlider",
-            "args": {
-                "min": minval,
-                "max": maxval,
-                "step": step,
-                "value": value,
-                "description": "Score",
-                "layout": {"width": width},
-            }
-        }
-        return [criterioncomment, slider]
 
 def expand_loop_review(details, reviewer):
     """
@@ -773,12 +547,6 @@ class Reviewer(DisplaySystem):
 
         self._widgets.add(self._create_reload_button(self._interface))
         # Process the reviewer from the interface file.
-        if "scorer" in self._interface:
-            # Send deprecation warning that name needs updating to reviewer
-            warnmsg = f"Use of the \"scorer\" entry in the interface is deprecated. Use \"review\" to name the entry in _referia.yml"
-            warnings.warn(warnmsg, DeprecationWarning) # stacklevel=2) # Removed stacklevel as doesn't appear on Jupyter.
-            log.warning(warnmsg)
-            self._widgets.add(self._create_review(self._interface["scorer"]))
 
         # Process the review from the interface file.
         if "review" in self._interface:

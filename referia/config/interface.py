@@ -1,12 +1,14 @@
 import os
 import yaml
+import json
 import numpy as np
 
+from lynguine import access
 
-from lynguine.util.misc import to_valid_var, extract_full_filename
+
+from lynguine.util.misc import to_valid_var, extract_full_filename, remove_nan
 import lynguine
 
-from referia.assess.review import expand_group_review, expand_composite_review, expand_load_review
 
 GSPREAD_AVAILABLE=True
 try:
@@ -143,13 +145,13 @@ class Interface(lynguine.config.interface.Interface):
 
         if "scorer" in data:
             if "review" not in data:
-                data["review"] = data["scorer"]
+                data["review"] = data["scorer"].copy()
+                del data["scorer"]
             else:
                 raise ValueError("Cannot have both \"scorer\" and \"review\" in the interface.")
 
         if "review" in data:
             data["review"] = self._expand_review_cluster(data["review"])
-            
             #self._expand_scores()   
 
         super().__init__(data)
@@ -238,7 +240,7 @@ class Interface(lynguine.config.interface.Interface):
     def _process_parent(self):
 
         default_append = ["additional", "global_consts"]
-        default_ignore = ["compute", "scorer"]
+        default_ignore = ["compute", "review"]
         viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(os.path.relpath(os.path.expandvars(self._parent._directory), "assessment.ipynb")) + '" target="_blank">here</a>.'}
 
         # Add links to parent assessment by placing in viewer.
@@ -251,3 +253,224 @@ class Interface(lynguine.config.interface.Interface):
             self._data["viewer"] = [viewelem]
 
             
+def expand_load_review(details):
+    """
+    Extract details from a separate file where they're specified.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    """
+    # This is a link to a widget specification stored in a file
+    if "details" not in details:
+        raise ValueError("Load reviewer needs to provide load details as entry under \"details\"")
+    df,  newdetails = access.io.read_data(details["details"])
+    return_details = []
+    for ind, series in df.iterrows():
+        return_details.append(remove_nan(series.to_dict()))
+    return return_details                      
+
+def expand_group_review(details):
+    """
+    Extract details that are clustered together in a group.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    """
+    if "children" not in details:
+        raise ValueError("group reviewer needs to provide a list of children under \"children\"")
+    return_details = []
+    for child in details["children"]:
+        if "name" in child and "name" in details and details["name"] is not None:
+            child["name"] = details["name"] + "-" + child["name"]
+        if "prefix" in details and details["prefix"] is not None:
+            if "prefix" in child:
+                child["prefix"] = details["prefix"] + child["prefix"]
+            if "field" in child:
+                child["field"] = details["prefix"] + child["field"]
+        return_details.append(child)
+    return return_details
+
+def expand_composite_review(details):
+    """
+    Extract details for a predefined composition of widgets.
+
+    :param details: The details of the scoring element.
+    :type details: dict
+    """
+    if details["type"] == "Criterion":
+        value = None
+        display = None
+        tally = None
+        liquid = None
+        lis = None
+        join = None
+        prefix = details["prefix"]
+        if "criterion" in details:
+            value = details["criterion"]
+        if "display" in details:
+            display = details["display"]
+        if "liquid" in details:
+            liquid = details["liquid"]
+        if "tally" in details:
+            tally = details["tally"]
+        if "list" in details:
+            lis = details["list"]
+        if "join" in details:
+            liquid = details["join"]
+        if "width" in details:
+            width = details["width"]
+        else:
+            width = "800px"
+
+        criterion = {
+            "type": "Markdown",
+            "args": {
+                "layout": {"width": width},
+            }
+        }
+        if value is not None:
+            criterion["args"]["value"] = value
+        if display is not None:
+            criterion["args"]["display"] = display
+        if liquid is not None:
+            criterion["args"]["liquid"] = liquid
+        if tally is not None:
+            criterion["args"]["tally"] = tally
+        if join is not None:
+            criterion["args"]["join"] = join
+        if lis is not None:
+            criterion["args"]["list"] = lis
+        return [criterion]
+
+    if details["type"] == "CriterionComment":
+        criterion = json.loads(json.dumps(details))
+        criterion["type"] = "Criterion"
+        prefix = details["prefix"]
+
+        if "width" in details:
+            width = details["width"]
+        else:
+            width = "800px"
+            
+        comment = {
+            "field": prefix + " Comment",
+            "type": "Textarea",
+            "args": {
+                "value": "",
+                "description": "Comment",
+                "layout": {"width": width},
+            }
+        }
+        return [criterion, comment]
+
+    if details["type"] == "CriterionCommentDate":
+        criterion = json.loads(json.dumps(details))
+        criterion["type"] = "CriterionComment"
+        prefix = details["prefix"]
+        date = {
+            "field": prefix + " Date",
+            "type": "DatePicker",
+            "args": {
+                "description": "Date",
+            }
+        }
+        return [criterion, date]
+
+
+    if details["type"] == "CriterionCommentRedAmberGreen":
+        criterioncomment = json.loads(json.dumps(details))
+        criterioncomment["type"] = "CriterionComment"
+
+        prefix = details["prefix"]
+        expectation = {
+            "field": prefix + " Traffic",
+            "type": "Dropdown",
+            "args": {
+                "placeholder": "Traffic Signal",
+                "options": [
+                    "",
+                    "Red",
+                    "Amber",
+                    "Green",
+                ],
+                "description": "Traffic Signal",
+            }
+        }
+        return [criterioncomment, expectation]
+    
+    if details["type"] == "CriterionCommentRaisesMeetsLowers":
+        criterioncomment = json.loads(json.dumps(details))
+        criterioncomment["type"] = "CriterionComment"
+
+        prefix = details["prefix"]
+        expectation = {
+            "field": prefix + " Expectation",
+            "type": "Dropdown",
+            "args": {
+                "placeholder": "Against expectations",
+                "options": [
+                    "",
+                    "Raises",
+                    "Meets",
+                    "Lowers",
+                ],
+                "description": "Expectation",
+            }
+        }
+        return [criterioncomment, expectation]
+
+    if details["type"] == "CriterionCommentRaisesMeetsLowersFlag":
+        criterioncommentraisesmeetslowers = json.loads(json.dumps(details))
+        criterioncommentraisesmeetslowers["type"] = "CriterionCommentRaisesMeetsLowers"
+
+        prefix = details["prefix"]
+        flag = {
+            "field": prefix + " Flag",
+            "type": "Flag",
+            "args": {
+                "value": False,
+                "description": "Flag",
+            }
+        }
+        return [criterioncommentraisesmeetslowers, flag]
+
+    
+    if details["type"] == "CriterionCommentScore":
+        criterioncomment = json.loads(json.dumps(details))
+        criterioncomment["type"] = "CriterionComment"
+        if "width" in details:
+            width = details["width"]
+        else:
+            width = "800px"
+
+        prefix = details["prefix"]
+        if "min" in details:
+            minval = details["min"]
+        else:
+            minval = 0
+        if "max" in details:
+            maxval = details["max"]
+        else:
+            maxval = 10
+        if "step" in details:
+            step = details["step"]
+        else:
+            step = 1
+        if "value" in details:
+            value = details["value"]
+        else:
+            value = int(((maxval-minval)/2)/step)*step + minval
+
+        slider = {
+            "field": prefix + " Score",
+            "type": "FloatSlider",
+            "args": {
+                "min": minval,
+                "max": maxval,
+                "step": step,
+                "value": value,
+                "description": "Score",
+                "layout": {"width": width},
+            }
+        }
+        return [criterioncomment, slider]

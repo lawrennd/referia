@@ -20,8 +20,9 @@ def Scorer(index=None, data=None, user_file="_referia.yml", directory="."):
     """
 
     interface = Interface.from_file(user_file=user_file, directory=directory)
+    
     if data is None:
-        data = assess.data.CustomDataFrame.from_interface(interface)
+        data = CustomDataFrame.from_flow(interface)
     if index is None:
         index = data.index[0]
     sys = system.Sys(interface)

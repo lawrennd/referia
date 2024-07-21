@@ -11,8 +11,11 @@ from referia.assess.review import (
     Reviewer, LoadWidgetCluster, GroupWidgetCluster,
     CompositeWidgetCluster, DynamicWidgetCluster, LoopWidgetCluster,
     set_default_values, process_layout_and_local_args, extract_widget,
-    extract_review, expand_load_review, expand_group_review,
-    expand_composite_review, expand_loop_review
+    extract_review, expand_loop_review
+)
+from referia.config.interface import (
+    expand_load_review, expand_group_review,
+    expand_composite_review
 )
 
 def test_extract_widget_with_different_widget_types(mocker):
@@ -289,7 +292,7 @@ def test_expand_load_review():
     widgets = Mock()
     details = {"details": "test_file.csv"}
     
-    with patch("referia.assess.review.access.io.read_data") as mock_read_data, \
+    with patch("lynguine.access.io.read_data") as mock_read_data, \
          patch("referia.assess.review.extract_review") as mock_extract_review:
         
         mock_read_data.return_value = (pd.DataFrame({"col": [1, 2, 3]}), {})
