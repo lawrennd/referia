@@ -10,7 +10,7 @@ The referia library provides tools for assisting with assessment, originally wri
 
 The library uses jupyter notebook as an interface. 
 
-The library builds on functionality provided in the [`lynguine`](https://github.com/lawrennd/lynguine/) data oriented architecture library. The main difference between the two is that functionality that is general for the flow-based model the code follows sits in `lynguine`. The `referia` code is the place where functionality that is specific to interacting with the data (such as reviewing) is provided. 
+The library builds on functionality provided in the [`lynguine`](https://github.com/lawrennd/lynguine/) data oriented architecture library. The main difference between the two is that functionality that is general for the flow-based model the code follows sits in `lynguine`. The `referia` code provides convenience functionality for ease of creation of reviewing software.
 
 To install use
 
@@ -57,8 +57,7 @@ Functionality is provided in `system.Sys.edit_files`.
 
 Lists urls that should be opened for providing additional information on the review.
 
-
-`scores`
+`output`
 
 This specifies how the annotation information is to be stored.
 
@@ -70,6 +69,9 @@ Specifies how the code should "count up" how many reviews are complete.
 
 This specifies how to store annotation information which is available with a subindex (such as a time series).
 
+`review'
+
+This specifies a set of widgets to create for human reviewing.
 
 `compute`
 
