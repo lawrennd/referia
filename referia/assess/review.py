@@ -907,35 +907,22 @@ class Reviewer(DisplaySystem):
         # Update timestamp field.
         log.debug(f"Updating timestamp field.")
         today_val = pd.to_datetime("today")
-        if "timestamp_suffix" in self._interface:
-            timestamp_suffix = self._interface["timestamp_suffix"]
-        else:
-            timestamp_suffix = "modified"
-        timestamp_field = column + "_" + timestamp_suffix
-        if timestamp_field not in self._data.columns:
-            log.debug(f"Adding \"timestamp\" column as \"{timestamp_field}\".")
-            self._data.add_column_force(timestamp_field)
-        self._data.set_dtype(timestamp_field, "datetime64[ns]")
 
-        self.set_column(timestamp_field)
-        self.set_value_silently(today_val)
+        # Set the modified field
+        modified_suffix = self._interface["modified_suffix"]
+        modified_field = column + "_" + modified_suffix
+        self._data.set_dtype(modified_field, "datetime64[ns]")
+        self.set_column(modified_field)
+        self.set_value(today_val, trigger_update=False)
 
         # Set the created field
         log.debug(f"Setting created field.")
-        if "created_suffix" in self._interface:
-            created_suffix = self._interface["created_suffix"]
-        else:
-            created_suffix = "created"
-
+        created_suffix = self._interface["created_suffix"]
         created_field = column + "_" + created_suffix
-        if created_field not in self._data.columns:
-            log.debug(f"Adding created column as \"{created_field}\".")
-            self._data.add_column_force(created_field)
         self._data.set_dtype(created_field, "datetime64[ns]")
-
-        if created_field not in self._data.columns or data.empty(self._data.get_value_column(created_field)):
+        if data.empty(self._data.get_value_column(created_field)):
             self.set_column(created_field)
-            self.set_value_silently(today_val)
+            self.set_value(today_val, trigger_update=False)
 
             
         # Combinator is a combined field based on others
@@ -947,7 +934,7 @@ class Reviewer(DisplaySystem):
                     del view["field"] #Prevent data reviewer trying to return field
                     combinator = self._data.viewer_to_value(view)
                     self.set_column(col)
-                    self.set_value_silently(combinator)
+                    self.set_value(combinator, trigger_update=False)
                 else:
                     log.error("Missing key 'field' in combinator view.")
 

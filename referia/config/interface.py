@@ -9,6 +9,17 @@ from lynguine import access
 from lynguine.util.misc import to_valid_var, extract_full_filename, remove_nan
 import lynguine
 
+from lynguine.config.context import Context
+from lynguine.log import Logger
+
+
+ctxt = Context()
+log = Logger(
+    name=__name__,
+    level=ctxt._data["logging"]["level"],
+    filename=ctxt._data["logging"]["filename"],
+)
+
 
 GSPREAD_AVAILABLE=True
 try:
@@ -52,6 +63,14 @@ class Interface(lynguine.config.interface.Interface):
         :type data: dict
         :return: None
         """
+
+        # create suffices for timestamp columns
+        if "modified_suffix" not in data:
+            data["modified_suffix"] = "modified"
+
+        if "created_suffix" not in data:
+            data["created_suffix"] = "created"
+
         if "allocation" in data:
             allocation = data["allocation"]
             mapping, columns = self._extract_mapping_columns(allocation)
@@ -154,6 +173,23 @@ class Interface(lynguine.config.interface.Interface):
             data["review"] = self._expand_review_cluster(data["review"])
             #self._expand_scores()   
 
+        # Extract all fields from the review interface
+        review_columns = self._extract_review_write_fields(data)
+        for column in review_columns.copy():
+            for suffix in [data["modified_suffix"], data["created_suffix"]]:
+                timestamp_column = column + "_" + suffix
+                if timestamp_column not in review_columns:
+                    review_columns.append(timestamp_column)
+        
+        if "output" in data:
+            if "columns" in data["output"]:
+                for column in review_columns:
+                    if column not in data["output"]["columns"]:
+                        log.debug(f"Adding column as \"{column}\" to outputs.")                        
+                        data["output"]["columns"].append(column)
+            else:
+                data["output"]["columns"] = review_columns
+                
         super().__init__(data)
         
     @classmethod
