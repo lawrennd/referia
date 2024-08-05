@@ -465,7 +465,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
         :param value: The value to set.
         :type value: any
         """
-        log.debug(f"Setting widget {self._field_name} to value {value} silently")
+        log.debug(f"Silently setting widget \"{self._field_name}\" to value: {value}")
         # Remove value change observers
         # Formerly self._ipywidget.observe(self.null, names='value')
         observers = self._get_observers().copy()
@@ -600,8 +600,11 @@ class FieldWidget(ReferiaStatefulWidget):
         column = self.get_column()
         if column is not None and self._parent is not None:
             if self.has_viewer():
+                log.debug(f"Widget {self._field_name} has a viewer structure")
+                log.debug(f"Viewer structure is {self._viewer}")
                 # Convert the result using viewer before setting value.
                 value = self._parent._data.viewer_to_value(self._viewer)
+                log.debug(f"Setting widget {self._field_name} to value {value}")
             else:
                 self._parent.set_column(column)
                 value = self._parent.get_value()
@@ -674,17 +677,22 @@ class ElementWidget(FieldWidget):
         Update the widget value from the data.
         """
         log.debug(f"Refreshing widget {self._field_name}")
-        column = self.get_column()
-        if column is not None and self._parent is not None:
-            if self.has_viewer():
-                # Convert the result using viewer before setting value.
-                value = self._parent._data.viewer_to_value(self._viewer)
-                self.set_value(value)
+        try:
+            column = self.get_column()
+            if column is not None and self._parent is not None:
+                if self.has_viewer():
+                    # Convert the result using viewer before setting value.
+                    value = self._parent._data.viewer_to_value(self._viewer)
+                    self.set_value_silently(value)
+                else:
+                    self._parent.set_column(column)
+                    self.set_value_silently(self._parent.get_value_by_element(self.get_element()))
             else:
-                self._parent.set_column(column)
-                self.set_value_silently(self._parent.get_value_by_element(self.get_element()))
-        else:
-            self.reset_value()
+                self.reset_value()
+        except Exception as e:
+            errmsg = f"An error occurred in refresh: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
 
         
 class IndexSelector(ReferiaStatefulWidget):

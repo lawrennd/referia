@@ -20,7 +20,6 @@ from ..assess.compute import Compute
 
 from ..util.misc import renderable
 
-from ..config import interface
 
 cntxt = Context()
 log = Logger(
@@ -60,11 +59,10 @@ def automapping(columns):
 
 class CustomDataFrame(data.CustomDataFrame):
     """Class to hold merged data flows together perform operations on them."""
-    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None, compute=None):
+    def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None, compute=None, interface=None):
 
         # Call the parent class with data, colspecs, index, column, selector
-        log.debug(f"referia.assess.data.CustomDataFrame initialiser called.")
-        super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex, compute=compute)
+        super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex, compute=compute, interface=interface)
         self.augment = False
 
                         
@@ -949,7 +947,7 @@ class CustomDataFrame(data.CustomDataFrame):
                 log.warning(f"No match of regular expression \"{regexp}\" to \"{source}\".")
         return series
     
-    def _finalize_df(self, df : "CustomDataFrame", interface  : Interface, strict_columns : bool = False) -> "CustomDataFrame":
+    def _finalize_df(self, df : "CustomDataFrame", interface  : Interface, strict_columns : bool = None) -> "CustomDataFrame":
         """
         This function augments the raw data and sets the index of the data frame.
         :param df: The data frame to be augmented.
@@ -967,8 +965,14 @@ class CustomDataFrame(data.CustomDataFrame):
         #if "index" not in interface:
         #    interface["index"] = df.index.name
 
-        if strict_columns or ("strict_columns" in self.interface and self.interface["strict_columns"]) or ("strict_columns" in interface and interface["strict_columns"]):
-            strict_columns = True
+        if strict_columns is None:
+            if "strict_columns" in interface and not interface["strict_columns"]:
+                strict_columns = False
+            elif self.interface is not None and "strict_columns" in self.interface and not self.interface["strict_columns"]:
+                strict_columns = False
+            else:
+                strict_columns = True
+                
 
         if strict_columns: # check that index is provided
             # TK: This should happen when interface is loaded and converted

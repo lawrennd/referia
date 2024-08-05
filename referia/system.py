@@ -186,7 +186,10 @@ class Sys():
             browser="Google Chrome.app" 
 
         log.debug(f"Opening url \"{urlname}\".")
-        os.system(f"open -a \"{browser}\" --background \"{urlname}\"")
+        try:
+            os.system(f"open -a \"{browser}\" --background \"{urlname}\"")
+        except Exception as e:
+            log.warning(f"Error opening url \"{urlname}\": {e}")
 
 
     def create_document(self, document, **args):

@@ -41,7 +41,7 @@ def sample_data():
 def test_interface_initialization(sample_data):
     with patch('referia.config.interface.Interface._expand_review_cluster') as mock_expand:
         mock_expand.return_value = sample_data["review"]  # This line might not be necessary
-        interface = Interface(sample_data)
+        interface = Interface(sample_data, directory=".", user_file="test.yml")
         print(mock_expand.call_args)
         assert mock_expand.called_once_with(sample_data["review"])
 

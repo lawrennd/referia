@@ -55,7 +55,7 @@ class Interface(lynguine.config.interface.Interface):
         """
         return "_referia.yml"
     
-    def __init__(self, data=None):
+    def __init__(self, data=None, directory=None, user_file=None):
         """
         Initialise the interface object. The referia interface is converted to a linguine interface.
 
@@ -72,34 +72,51 @@ class Interface(lynguine.config.interface.Interface):
             data["created_suffix"] = "created"
 
         if "allocation" in data:
+            log.debug(f"Converting \"allocation\" in interface to linguine form.")
             allocation = data["allocation"]
-            mapping, columns = self._extract_mapping_columns(allocation)
-            if "mapping" in allocation:
-                del allocation["mapping"]
-            if "columns" in allocation:
-                del allocation["columns"]
-
-                
-            if isinstance(allocation, list):
-                index = None
-                for i, item in enumerate(allocation):
-                    if "index" in item:
-                        if index is None:
-                            index = item["index"]
-                        elif index != item["index"]:
-                            errmsg = "All \"allocation\" items must have the same \"index\"."
-                            log.error(errmsg)
-                            raise ValueError(errmsg)
-                        del item["index"]
-                        allocation[i] = item
-            else:
-                if "index" in allocation:
-                    index = allocation["index"]
-                del allocation["index"]
+            if not isinstance(allocation, list):
                 allocation = [allocation]
+            index = None
+            columns = []
+            mapping = {}
+            for i, item in enumerate(allocation):
+                if "index" in item:
+                    if index is None:
+                        index = item["index"]
+                    elif index != item["index"]:
+                        errmsg = "All \"allocation\" items must have the same \"index\"."
+                        log.error(errmsg)
+                        raise ValueError(errmsg)
+                    del item["index"]
+
+                    # Extract mapping and columns from item
+                    item_mapping, item_columns = self._extract_mapping_columns(item)
+
+                    # Add any columns and mappings that are not already present
+                    for column in item_columns:
+                        if column not in columns:
+                            columns.append(column)
+                    for column in item_mapping:
+                        if column not in mapping:
+                            mapping[column] = item_mapping[column]
+                        else:
+                            # Check if an existing mapping is the same
+                            if mapping[column] != item_mapping[column]:
+                                errmsg = f"\"mapping\" for column \"{column}\" must be the same for all \"allocation\" items."
+                                log.error(errmsg)
+                                raise ValueError(errmsg)
+
+
+                else:
+                    if "index" in item:
+                        index = item["index"]
+                        del item["index"]
+                allocation[i] = item
+
                 
             # If "input" is not present, create it with the list of allocation.
             if "input" not in data:
+                log.debug(f"Creating input structure from allocation via an \"vstack\" representation with index \"{index}\" that is embedded in an \"hstack\".")
                 data["input"] = {
                     "type" : "hstack", # allocation will be concatenated horizontally with additionals
                     "index" : index, # extracted index from allocation elements
@@ -112,6 +129,7 @@ class Interface(lynguine.config.interface.Interface):
                 errmsg = "\"allocation\" is not allowed when \"input\" is present."
                 log.error(errmsg)
                 raise ValueError(errmsg)
+            
             if "mapping" in data["input"]:
                 data["input"]["mapping"] += mapping
             else:
@@ -123,6 +141,7 @@ class Interface(lynguine.config.interface.Interface):
             del data["allocation"]
             
         if "additional" in data:
+            log.debug(f"Processing \"additional\" into linguine input.")
             additional = data["additional"]
             mapping, columns = self._extract_mapping_columns(additional)
             if "mapping" in additional:
@@ -131,6 +150,7 @@ class Interface(lynguine.config.interface.Interface):
                 del additional["columns"]
             if not isinstance(additional, list):
                 additional = [additional]
+            log.debug(f"Concatenating referia \"additional\" onto end of the \"hstack\" of \"input\".")
             data["input"]["specifications"] += additional
             if "mapping" in data["input"]:
                 data["input"]["mapping"] += mapping
@@ -143,16 +163,20 @@ class Interface(lynguine.config.interface.Interface):
             del data["additional"]
 
         if "global_consts" in data:
+            log.debug(f"Adding \"global_consts\" from referia as \"constants\" in the linguine form.")
             constants = data["global_consts"]
             if isinstance(constants, list):
+                log.debug(f"Adding list of constants as an \"hstack\" in the linguine \"constants\" entry.")
                 data["constants"] = {"type": "hstack", "specifications": constants}
             else:
                 data["constants"] = constants
             del data["global_consts"]
 
         if "globals" in data:
+            log.debug(f"Adding \"globals\" from referia as \"parameters\" in the linguine form.")
             parameters = data["globals"]
             if isinstance(parameters, list):
+                log.debug(f"Adding list of parameters as an \"hstack\" in the linguine \"parameters\" entry.")
                 data["parameters"] = {"type": "hstack", "specifications": parameters}
             else:
                 data["parameters"] = parameters
@@ -189,13 +213,14 @@ class Interface(lynguine.config.interface.Interface):
                         data["output"]["columns"].append(column)
             else:
                 data["output"]["columns"] = review_columns
-                
-        super().__init__(data)
+        log.debug(f"End conversion of \"referia\" form into \"linguine\" standard form.")
+        
+        super().__init__(data=data, directory=directory, user_file=user_file)
         
     @classmethod
     def _expand_review_cluster(cls, review):
         """
-        Expand the review section of the interface into a lynguine form.
+        Expand the review section of the interface into a linguine form.
 
         :param review: The review section of the interface.
         :type review: dict
@@ -274,7 +299,8 @@ class Interface(lynguine.config.interface.Interface):
         return mapping, columns
                 
     def _process_parent(self):
-
+        """
+        """
         default_append = ["additional", "global_consts"]
         default_ignore = ["compute", "review"]
         viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(os.path.relpath(os.path.expandvars(self._parent._directory), "assessment.ipynb")) + '" target="_blank">here</a>.'}
@@ -288,6 +314,7 @@ class Interface(lynguine.config.interface.Interface):
         else:
             self._data["viewer"] = [viewelem]
 
+        super()._process_parent()
             
 def expand_load_review(details):
     """
