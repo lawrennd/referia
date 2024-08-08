@@ -5,6 +5,7 @@ import numpy as np
 
 from lynguine import access
 
+import warnings
 
 from lynguine.util.misc import to_valid_var, extract_full_filename, remove_nan
 import lynguine
@@ -64,6 +65,9 @@ class Interface(lynguine.config.interface.Interface):
         :return: None
         """
 
+        self.directory = directory
+        self.user_file = user_file
+        
         # create suffices for timestamp columns
         if "modified_suffix" not in data:
             data["modified_suffix"] = "modified"
@@ -183,16 +187,28 @@ class Interface(lynguine.config.interface.Interface):
             del data["globals"]
 
         if "scores" in data:
-            data["output"] = data["scores"]
-            del data["scores"]
-
-        if "scorer" in data:
-            if "review" not in data:
-                data["review"] = data["scorer"].copy()
-                del data["scorer"]
+            log.debug(f"Converting \"scores\" in referia to \"output\" in linguine.")
+            if "output" not in data:
+                data["output"] = data["scores"]
+                del data["scores"]
             else:
-                raise ValueError("Cannot have both \"scorer\" and \"review\" in the interface.")
-
+                errmsg = "Cannot have both \"scores\" and \"output\" entries in referia."
+                log.error(errmsg)
+                raise ValueError(errmsg)
+        
+        if "scorer" in data:
+            # Give a deprecation warning
+            if "review" not in data:
+                data["review"] = data["scorer"]
+                del data["scorer"]
+                warnmsg = f"The \"scorer\" entry in referia is deprecated, please update the file \"{os.path.join(self.directory, self.user_file)}\"."
+                log.warning(warnmsg)
+                warnings.warn(warnmsg, DeprecationWarning)
+            else:
+                errmsg = "Cannot have both \"scorer\" and \"review\" entries in referia."
+                log.error(errmsg)
+                raise ValueError(errmsg)            
+            
         if "review" in data:
             data["review"] = self._expand_review_cluster(data["review"])
             #self._expand_scores()   
@@ -298,8 +314,11 @@ class Interface(lynguine.config.interface.Interface):
             del data["columns"]
         return mapping, columns
                 
-    def _process_parent(self):
+    def _process_parent(self) -> None:
         """
+        Process the parent interface.
+
+        :return: None
         """
         default_append = ["additional", "global_consts"]
         default_ignore = ["compute", "review"]
@@ -386,6 +405,7 @@ def expand_composite_review(details):
             width = "800px"
 
         criterion = {
+            "name": prefix + " Criterion",
             "type": "Markdown",
             "args": {
                 "layout": {"width": width},

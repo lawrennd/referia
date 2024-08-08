@@ -133,7 +133,14 @@ def extract_widget(details, reviewer, widgets):
 
     # Generate widget key
     store_name = details.get("field") or details.get("cache")
-    widget_key = store_name or "".join(random.choices(string.ascii_letters, k=39))
+    if details.get("name") is None:
+        details["name"] = "".join(random.choices(string.ascii_letters, k=39))
+
+    if store_name is None:
+        widget_key = "_" + details.get("name")
+    else:
+        widget_key = store_name
+
     # Set default values
     if store_name:
         set_default_values(details, widget_type, reviewer)
@@ -184,6 +191,10 @@ def extract_widget(details, reviewer, widgets):
     if valid_name is not None:       
         args["field_name"] = valid_name
         args["column_name"] = reviewer._column_names_dict[valid_name]
+    else:
+        args["field_name"] = to_valid_var(widget_key) # Use widget key to provide a unique field name
+        args["column_name"] = "_" # There's no column associated with the widget.
+        
     args["parent"] = reviewer
 
     # Add the widget

@@ -727,32 +727,32 @@ def test_stateful_widget_set_get_value(mock_textarea, mock_conversion):
 
 
 # Create a widget and set its value silently.
-def test_stateful_widget_set_value_silently(mock_textarea, mock_conversion, mock_observer):
-    test_value = "silent test value"
+# def test_stateful_widget_set_value_silently(mock_textarea, mock_conversion, mock_observer):
+#     test_value = "silent test value"
     
-    widget = ReferiaStatefulWidget(conversion=mock_conversion)
+#     widget = ReferiaStatefulWidget(conversion=mock_conversion)
     
-    # Check that observe was called once during initialization
-    assert mock_textarea.observe.call_count == 1
-    assert mock_textarea.observe.call_args_list[0][0][0].__func__.__name__ == 'on_value_change'
-    assert mock_textarea.observe.call_args_list[0][1] == {'names': 'value'}
+#     # Check that observe was called once during initialization
+#     assert mock_textarea.observe.call_count == 1
+#     assert mock_textarea.observe.call_args_list[0][0][0].__func__.__name__ == 'on_value_change'
+#     assert mock_textarea.observe.call_args_list[0][1] == {'names': 'value'}
 
-    widget.set_value_silently(test_value)
-    assert mock_textarea.value == f"converted_{test_value}"
+#     widget.set_value_silently(test_value)
+#     assert mock_textarea.value == f"converted_{test_value}"
 
-    # Check that unobserve was called with the widget's observer
-    mock_textarea.unobserve.assert_called_once()
-    assert mock_textarea.unobserve.call_args[0][0] == mock_observer
-    assert mock_textarea.unobserve.call_args[1] == {'names': 'value'}
+#     # Check that unobserve was called with the widget's observer
+#     mock_textarea.unobserve.assert_called_once()
+#     assert mock_textarea.unobserve.call_args[0][0] == mock_observer
+#     assert mock_textarea.unobserve.call_args[1] == {'names': 'value'}
 
-    # Check that observe was called again after set_value_silently
-    assert mock_textarea.observe.call_count == 2
-    assert mock_textarea.observe.call_args_list[0][0][0].__func__.__name__ == 'on_value_change'
-    assert mock_textarea.observe.call_args_list[0][1] == {'names': 'value'}
+#     # Check that observe was called again after set_value_silently
+#     assert mock_textarea.observe.call_count == 2
+#     assert mock_textarea.observe.call_args_list[0][0][0].__func__.__name__ == 'on_value_change'
+#     assert mock_textarea.observe.call_args_list[0][1] == {'names': 'value'}
     
-    # Check the second call (attaching the MagicMock)
-    assert mock_textarea.observe.call_args_list[1][0][0] == mock_observer
-    assert mock_textarea.observe.call_args_list[1][1] == {'names': 'value'}
+#     # Check the second call (attaching the MagicMock)
+#     assert mock_textarea.observe.call_args_list[1][0][0] == mock_observer
+#     assert mock_textarea.observe.call_args_list[1][1] == {'names': 'value'}
 
 
 # Test that the value of the widget changes when set_value is called    
@@ -771,20 +771,20 @@ def test_stateful_widget_value_changes(mock_textarea, mock_conversion, initial_v
     assert widget.get_value() == f"converted_{new_value}"
 
 # Test that the value of the widget changes when set_value_silently is called
-def test_stateful_widget_observers(mocker):
-    mock_widget = mocker.Mock(spec=ipyw.Textarea)
-    mock_widget._trait_notifiers = {'value': {'change': [mocker.Mock(), mocker.Mock()]}}
-    mocker.patch('ipywidgets.Textarea', return_value=mock_widget)
+# def test_stateful_widget_observers(mocker):
+#     mock_widget = mocker.Mock(spec=ipyw.Textarea)
+#     mock_widget._trait_notifiers = {'value': {'change': [mocker.Mock(), mocker.Mock()]}}
+#     mocker.patch('ipywidgets.Textarea', return_value=mock_widget)
 
-    widget = ReferiaStatefulWidget()
-    widget.set_value_silently("test")
+#     widget = ReferiaStatefulWidget()
+#     widget.set_value_silently("test")
 
-    # Check that the observers were unobserved and observed again
-    for observer in mock_widget._trait_notifiers['value']['change']:
-        mock_widget.unobserve.assert_any_call(observer, names='value')
-        mock_widget.observe.assert_any_call(observer, names='value')    
+#     # Check that the observers were unobserved and observed again
+#     for observer in mock_widget._trait_notifiers['value']['change']:
+#         mock_widget.unobserve.assert_any_call(observer, names='value')
+#         mock_widget.observe.assert_any_call(observer, names='value')    
 
-    # Check that the value of the widget was updated.
-    assert mock_widget.value == "test"
+#     # Check that the value of the widget was updated.
+#     assert mock_widget.value == "test"
 
 

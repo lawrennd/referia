@@ -369,6 +369,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
         if "field_name" in args:
             self._field_name = args["field_name"]
             del args["field_name"]
+
         if "refresh_display" in args:
             self._refresh_display = args["refresh_display"]
             del args["refresh_display"]
@@ -445,7 +446,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
         :param value: The value to set.
         :type value: any
         """
-        log.debug(f"Setting widget {self._field_name} to value {value}")
+        
         if notempty(value):
             if self._conversion is not None:
                 log.debug(f"Converting value {value} for widget {self._field_name}")             
@@ -469,10 +470,16 @@ class ReferiaStatefulWidget(ReferiaWidget):
         # Remove value change observers
         # Formerly self._ipywidget.observe(self.null, names='value')
         observers = self._get_observers().copy()
-        log.debug(f"Length of obsrervers is {len(observers)}")
+        log.debug(f"Length of observers is {len(observers)}")
+        removed_observers = []
         for observer in observers:
-            log.debug(f"Removing observer {observer} from widget {self._field_name}")
-            self._ipywidget.unobserve(observer, names='value')
+            # Only remove observers that are of the form self.on_value_change
+            log.error(f"Observer is {observer}")
+            if hasattr(observer, "__name__") and observer.__name__ == "on_value_change":
+                log.debug(f"Removing observer {observer} from widget {self._field_name}")
+                self._ipywidget.unobserve(observer, names='value')
+                # Add observer to list of removed observers
+                removed_observers.append(observer)
 
         # Silently change value
         if self._conversion is not None:
@@ -485,7 +492,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
         # Re-add value change observers
         # Formerly self._ipywidget.observe(self.on_value_change, names="value")
         log.debug(f"Length of obsrervers is {len(observers)}")
-        for observer in observers:
+        for observer in removed_observers:
             log.debug(f"Re-adding observer {observer} to widget {self._field_name}")
             self._ipywidget.observe(observer, names='value')        
 
