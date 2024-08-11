@@ -1196,4 +1196,16 @@ class CustomDataFrame(data.CustomDataFrame):
             log.warning(f"Changing column \"{column}\" type to 'object' due to bool input.")
             df[column] = df[column].astype("boolean")
 
+    @classmethod
+    def compute_from_flow(cls, interface) -> Compute:
+        """
+        Construct a compute object from an interface object.
+
+        :param interface: Interface object.
+        :type interface: lynguine.config.interface.Interface or dict.
+        :return: A referia.assess.compute.Compute object.
+        """
+        if not isinstance(interface, (dict, Interface)):
+            raise ValueError("Interface must be a dictionary or of type Interface.")
+        return Compute.from_flow(interface)
            

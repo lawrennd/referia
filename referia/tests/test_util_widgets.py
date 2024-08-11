@@ -6,19 +6,29 @@ import referia
 
 from unittest.mock import MagicMock
 
-from referia.util.widgets import list_stateful_widgets, ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, ScreenCapture, FullSelector, IndexSubIndexSelectorSelect, CreateDocButton, CreateSummaryDocButton, CreateSummaryButton, SaveButton, ReloadButton, PopulateButton, gocf_, gsv_, gwc_, gwu_, gwf_, gwef_, populate_widgets, populate_element_widgets, MyFileChooser
+from referia.util.widgets import list_stateful_widgets, ReferiaWidget, ReferiaStatefulWidget, FieldWidget, ElementWidget, IndexSelector, ReferiaMultiWidget, ScreenCapture, FullSelector, IndexSubIndexSelectorSelect, ReferiaButtonWidget, CreateDocButton, CreateSummaryDocButton, CreateSummaryButton, SaveButton, ReloadButton, PopulateButton, gocf_, gsv_, gwc_, gwu_, gwf_, gwef_, populate_widgets, populate_element_widgets, MyFileChooser
 import ipywidgets as ipyw
 
-def test_widget_initialization_with_default_function(mocker):
+def test_button_widget_initialization_with_default_function(mocker):
     # Mock the ipywidgets.Button
     mock_button = mocker.patch.object(ipyw, 'Button')
 
     # Create an instance of ReferiaWidget without passing the function
-    widget = ReferiaWidget()
+    widget = ReferiaButtonWidget()
 
     # Assert that the default widget function (Button) is used
     assert widget._ipywidget_function == mock_button
 
+def test_stateful_widget_initialization_with_default_function(mocker):
+    # Mock the ipywidgets.Button
+    mock_text = mocker.patch.object(ipyw, 'Textarea')
+
+    # Create an instance of ReferiaWidget without passing the function
+    widget = ReferiaStatefulWidget()
+
+    # Assert that the default widget function (Button) is used
+    assert widget._ipywidget_function == mock_text
+    
 def test_widget_initialization_with_custom_function(mocker):
     custom_function = mocker.Mock()
 
@@ -32,21 +42,25 @@ def test_widget_parent_assignment(mocker):
     parent_mock = mocker.Mock()
 
     # Create widget with a parent argument
-    widget = ReferiaWidget(parent=parent_mock)
+    widget = ReferiaStatefulWidget(parent=parent_mock)
 
     # Assert that the parent is set correctly
     assert widget._parent == parent_mock
 
-def test_widget_private_property_default():
-    widget = ReferiaWidget()
-
-    # Assert that the private property is True by default
-    assert widget.private is True
-
+def test_widget_private_property():
+    args = {"field_name": "_"}
+    widget_private = ReferiaStatefulWidget(**args)
+    args = {"field_name": "not_private"}
+    widget = ReferiaStatefulWidget(**args)
+    # Assert that the private property is True by with an underscore name
+    assert widget_private.private is True
+    # Assert that the private property is False wit a normal name
+    assert widget.private is False
+    
 def test_widget_close_method(mocker):
     mock_close = mocker.patch.object(ipyw.Widget, 'close')
 
-    widget = ReferiaWidget()
+    widget = ReferiaStatefulWidget()
     widget.close()
 
     # Assert that the close method is called
@@ -55,7 +69,7 @@ def test_widget_close_method(mocker):
 def test_widget_display_method(mocker):
     mock_display = mocker.patch('IPython.display.display')
 
-    widget = ReferiaWidget()
+    widget = ReferiaStatefulWidget()
     widget.display()
 
     # Assert that the IPython display function is called with the widget
@@ -154,12 +168,14 @@ def test_field_widget_on_value_change(mocker):
     # Mock the widget function
     mock_widget_function = mocker.Mock()
     parent_mock = mocker.Mock()
+    # Have parent_mock get_column() return column_name
+    parent_mock.get_column.return_value = "test_column"
     column_name = "test_column"
     new_value = "new_value"
     old_value = "old_value"
 
     # Create a FieldWidget instance with the mocked widget function
-    widget = FieldWidget(function=mock_widget_function, parent=parent_mock, column_name=column_name)
+    widget = FieldWidget(function=mock_widget_function, parent=parent_mock, field_name=column_name, column_name=column_name)
 
     # Mock the change event as an object with a 'new' attribute
     change_event_mock = mocker.Mock()
@@ -224,7 +240,7 @@ def test_element_widget_on_value_change(mocker):
     test_element = 3
     new_value = "new_value"
 
-    widget = ElementWidget(function=mock_function, parent=parent_mock, column_name=column_name, element=test_element)
+    widget = ElementWidget(function=mock_function, parent=parent_mock, column_name=column_name, field_name=column_name, element=test_element)
 
     change_event_mock = mocker.Mock()
     type(change_event_mock).new = mocker.PropertyMock(return_value=new_value)
@@ -278,10 +294,6 @@ def test_index_selector_on_value_change(mocker):
     type(change_event_mock).new = mocker.PropertyMock(return_value=2)
 
     selector.on_value_change(change_event_mock)
-
-    # TK: This is triggered twice, but if I repeat
-    # selector.on_value_change it only appears once more.
-    # parent_mock.set_index.assert_called_once_with(2)
     parent_mock.view_series.assert_called_once()
 
 def test_index_selector_set_index(mocker):
@@ -565,9 +577,8 @@ def test_populate_button(mocker):
     button.on_click(None)
 
     parent_mock.populate_display.assert_called_once()
-    compute_mock.run.assert_called_once_with(compute)
-    compute_mock.prep.assert_called_once_with(compute)
-
+    compute_mock.run.assert_called_once_with(data_mock, {"compute" :compute}
+)
 class MockReferiaMultiWidget:
     def __init__(self):
         self._ipywidgets = {}

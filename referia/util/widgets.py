@@ -192,7 +192,8 @@ list_stateful_widgets = [
 
 class ReferiaWidget():
     """
-    Base class for Referia widgets.
+    Base class for Referia widgets. ReferiaWidgets are wrappers around ipywidgets in an effort to avoid dependency injection.
+
     """
     def __init__(self, **args):
         """
@@ -204,12 +205,24 @@ class ReferiaWidget():
         
         self._parent = None
         self.private = True
+
+        # Set the widget function. Should be a valid ipywidget function.
         if "function" in args:
+            log.debug(f"Setting widget function to \"{args['function']}\".")
             self._ipywidget_function = args["function"]
             del args["function"]
         else:
-            self._ipywidget_function = self._default_widget()
+            widget_function = self._default_widget()
+            log.warning(f"No function specified for widget. Setting to default \"{widget_function}\".")
+            self._ipywidget_function = widget_function
 
+
+        # Set the description for the widget.
+        if "description" in args:
+            self._description = args["description"]
+        else:
+            self._description = None
+            
         if "parent" in args:
             self._parent = args["parent"]
             del args["parent"]
@@ -220,17 +233,30 @@ class ReferiaWidget():
                 del args[key]
         self._create_widget(args)
 
-        
-    def _default_widget(self):
+    @property
+    def name(self):
+        """
+        Return the name of the widget.
+        """
+        raise NotImplementedError("Name must be implemented in subclass.")
+    
+    @classmethod    
+    def _default_widget(cls):
         """
         Return the default widget function.
 
         :return: The default widget function.
         :rtype: function
         """
-        return ipyw.Button
+        raise NotImplementedError("Default widget function must be implemented in subclass.")
 
-
+    @property
+    def description(self):
+        """
+        Return the description of the widget.
+        """
+        self._description
+        
     def _create_widget(self, args):
         """
         Create the widget.
@@ -238,21 +264,24 @@ class ReferiaWidget():
         :param args: The arguments for the widget.
         :type args: dict
         """
-        
-        self._ipywidget = self._ipywidget_function(**args)
+
+        log.debug(f"Creating widget with arguments \"{args}\".")
+        self.widget = self._ipywidget_function(**args)
         self._widget_events()
 
     def _widget_events(self):
         """
-        Create any relevant wiget event handlers.
+        Create any relevant widget event handlers.
         """
-        self._ipywidget.on_click(self.on_click)
+
+        log.debug(f"Creating widget events for widget \"{self._ipywidget}.\".")
+        pass
 
     def close(self):
         """
         Close the widget.
         """
-        self._ipywidget.close()
+        self.widget.close()
         
     def on_click(self, b):
         """
@@ -260,13 +289,13 @@ class ReferiaWidget():
 
         :param b: The widget.
         """
-        pass
+        raise NotImplementedError("on_click method must be implemented in subclass.")
 
     def refresh(self):
         """
         Refresh the widget.
         """
-        pass
+        raise NotImplementedError("refresh method must be implemented in subclass.")
 
     @property
     def widget(self):
@@ -274,11 +303,20 @@ class ReferiaWidget():
         Return the ipywidget.
         """
         return self._ipywidget
+
+    @widget.setter
+    def widget(self, value):
+        """
+        Set the ipywidget.
+
+        :param value: The value to set.
+        """
+        self._ipywidget = value
     
     @property
     def private(self):
         """
-        Return whether the widget is private.
+        Return whether the widget is private. A private widget does not update the parent data.
         """
         return self._private
 
@@ -287,7 +325,7 @@ class ReferiaWidget():
         #if not is_bool_dtype(value):
         #    raise ValueError("Private must be set as bool (True/False)")
         """
-        Set whether the widget is private.
+        Set whether the widget is private. A private widget does not update the parent data.
 
         :param value: The value to set.
         :type value: bool
@@ -298,7 +336,7 @@ class ReferiaWidget():
         """
         Display the widget.
         """
-        IPython.display.display(self._ipywidget)
+        IPython.display.display(self.widget)
 
     def null(self, void):
         pass
@@ -336,12 +374,16 @@ class ReferiaStatefulWidget(ReferiaWidget):
         self._viewer = {}
         self._column_name = None
         self._field_name = None
+
+        # Conversion and reversion functions for setting and getting the widget value. They ensure that the widget value is translated to the right format.
         if "conversion" in args:
             self._conversion = args["conversion"]
-            del args["conversion"]
+            del args["conversion"]            
         if "reversion" in args:
             self._reversion = args["reversion"]
             del args["reversion"]
+
+        # Display, tally, list, join, liquid are used for the _viewer structure to generate the widget value. For example liquid allows the use of liquid lanaguage when generating the widget value.    
         if "display" in args:
             self._viewer["display"] = args["display"]
             del args["display"]
@@ -363,12 +405,17 @@ class ReferiaStatefulWidget(ReferiaWidget):
         if "conditions" in args:
             self._viewer["conditions"] = args["conditions"]
             del args["conditions"]
+
+            
         if "column_name" in args:
             self._column_name = args["column_name"]
             del args["column_name"]
         if "field_name" in args:
             self._field_name = args["field_name"]
             del args["field_name"]
+        else:
+            self._field_name = "_No Field Name"
+            
 
         if "refresh_display" in args:
             self._refresh_display = args["refresh_display"]
@@ -377,12 +424,17 @@ class ReferiaStatefulWidget(ReferiaWidget):
             self._refresh_display = False
         
         super().__init__(**args)
+
+        # If there's a value provided in args set the widget value to that value.
         if "value" in args:
             self._default_value = args["value"]
             self.set_value(args["value"]) # TK should this be set silently?
         else:
             self._default_value = self._ipywidget_function().value
-        # Is this a private field (one that doesn't update the parent data)
+
+            
+        # If the widget's field name starts with a "_" then it is assumed to be private
+        # A private field is one that doesn't update parent data when it's changed.
         if self._field_name is not None and self._field_name[0] == "_": 
             self.private = True
         else:
@@ -391,7 +443,17 @@ class ReferiaStatefulWidget(ReferiaWidget):
         if self.private and "description" not in args: 
             args["descripton"] = " "
 
-    def _default_widget(self):
+
+    @property
+    def name(self):
+        """
+        Return the name of the widget.
+        """
+        return self._field_name
+    
+          
+    @classmethod      
+    def _default_widget(cls):
         """
         Return the default widget function.
         """
@@ -401,6 +463,8 @@ class ReferiaStatefulWidget(ReferiaWidget):
         """
         Create any relevant wiget event handlers.
         """
+        super()._widget_events()
+        log.debug(f"Binding on_value_change event for widget {self._ipywidget}.")
         self._ipywidget.observe(self.on_value_change, names="value")
 
     def on_value_change(self, value):
@@ -449,13 +513,13 @@ class ReferiaStatefulWidget(ReferiaWidget):
         
         if notempty(value):
             if self._conversion is not None:
-                log.debug(f"Converting value {value} for widget {self._field_name}")             
+                log.debug(f"Converting value {value} for widget \"{self.name}\".")             
                 value = self._conversion(value)
 
-            log.debug(f"Setting widget {self._field_name} to value {value}")
+            log.debug(f"Setting widget \"{self.name}\" to value {value}.")
             self._ipywidget.value = value
         else:
-            log.debug(f"Widget {self._field_name} has been set to an empty value. Setting to widget's default value.")
+            log.debug(f"Widget \"{self.name}\" has been set to an empty value. Setting to widget's default value.")
             # TK Should it be set to a default value or left as empty?
             self.reset_value()
     
@@ -466,34 +530,34 @@ class ReferiaStatefulWidget(ReferiaWidget):
         :param value: The value to set.
         :type value: any
         """
-        log.debug(f"Silently setting widget \"{self._field_name}\" to value: {value}")
+        log.debug(f"Silently setting widget \"\"{self.name}\"\" to value: {value}.")
         # Remove value change observers
         # Formerly self._ipywidget.observe(self.null, names='value')
         observers = self._get_observers().copy()
-        log.debug(f"Length of observers is {len(observers)}")
+        log.debug(f"Length of observers is {len(observers)}.")
         removed_observers = []
         for observer in observers:
             # Only remove observers that are of the form self.on_value_change
-            log.error(f"Observer is {observer}")
+            log.debug(f"Observer is {observer}.")
             if hasattr(observer, "__name__") and observer.__name__ == "on_value_change":
-                log.debug(f"Removing observer {observer} from widget {self._field_name}")
+                log.debug(f"Removing observer {observer} from widget \"{self.name}\".")
                 self._ipywidget.unobserve(observer, names='value')
                 # Add observer to list of removed observers
                 removed_observers.append(observer)
 
         # Silently change value
         if self._conversion is not None:
-            log.debug(f"Converting value {value} for widget {self._field_name}")
+            log.debug(f"Converting value {value} for widget \"{self.name}\".")
             value = self._conversion(value)
             
-        log.debug(f"Setting widget {self._field_name} to value {value}")
+        log.debug(f"Setting widget \"{self.name}\" to value {value}.")
         self._ipywidget.value = value
 
         # Re-add value change observers
         # Formerly self._ipywidget.observe(self.on_value_change, names="value")
-        log.debug(f"Length of obsrervers is {len(observers)}")
+        log.debug(f"Length of obsrervers is {len(observers)}.")
         for observer in removed_observers:
-            log.debug(f"Re-adding observer {observer} to widget {self._field_name}")
+            log.debug(f"Re-adding observer {observer} to widget \"{self.name}\".")
             self._ipywidget.observe(observer, names='value')        
 
     def _get_observers(self) -> list:
@@ -506,7 +570,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
         try:
             return self._ipywidget._trait_notifiers['value']['change']
         except (AttributeError, KeyError, TypeError):
-            log.debug(f"Widget {self._field_name} has no observers")
+            log.debug(f"Widget \"{self.name}\" has no observers")
             return []
         
     def reset_value(self):
@@ -514,7 +578,7 @@ class ReferiaStatefulWidget(ReferiaWidget):
         Reset value to default for widget.
         """
         value = self._default_value
-        log.debug(f"Setting widget {self.widget} named {self._field_name} to default value {value}.")
+        log.debug(f"Setting widget {self.widget} named \"{self.name}\" to default value {value}.")
         self.set_value_silently(value)
         
     def get_column(self):
@@ -575,7 +639,7 @@ class FieldWidget(ReferiaStatefulWidget):
         # Jupyter catches exceptions to prevent notebook crashes.
         # If there are errors in the code they occur silently. This try catch ensures they are logged.
         try: 
-            log.debug(f"Widget {self._field_name} value changed from {change.old} to {change.new}")
+            log.debug(f"Widget \"{self.name}\" value changed from {change.old} to {change.new}")
             # If the widget is not private and has a parent, update the parent data structure.
             if not self.private and self._parent is not None:
                 if self.get_column() is not None:
@@ -603,15 +667,15 @@ class FieldWidget(ReferiaStatefulWidget):
         """
         Update the widget value from the data.
         """
-        log.debug(f"Refreshing widget {self._field_name}")
+        log.debug(f"Refreshing widget \"{self.name}\".")
         column = self.get_column()
         if column is not None and self._parent is not None:
             if self.has_viewer():
-                log.debug(f"Widget {self._field_name} has a viewer structure")
+                log.debug(f"Widget \"{self.name}\" has a viewer structure")
                 log.debug(f"Viewer structure is {self._viewer}")
                 # Convert the result using viewer before setting value.
                 value = self._parent._data.viewer_to_value(self._viewer)
-                log.debug(f"Setting widget {self._field_name} to value {value}")
+                log.debug(f"Setting widget \"{self.name}\" to value {value}")
             else:
                 self._parent.set_column(column)
                 value = self._parent.get_value()
@@ -683,7 +747,7 @@ class ElementWidget(FieldWidget):
         """
         Update the widget value from the data.
         """
-        log.debug(f"Refreshing widget {self._field_name}")
+        log.debug(f"Refreshing widget {self.name}")
         try:
             column = self.get_column()
             if column is not None and self._parent is not None:
@@ -705,6 +769,8 @@ class ElementWidget(FieldWidget):
 class IndexSelector(ReferiaStatefulWidget):
     """
     Widget for selecting an index from a list of indices.
+
+    This widget is a stateful widget that allows the user to select an index from the index list, typically for pulling up that entry's data.
     """
     def __init__(self, parent):
         """
@@ -720,13 +786,12 @@ class IndexSelector(ReferiaStatefulWidget):
             "function" : ipyw.Dropdown,
         }
         super().__init__(**args)
-
+        self.private = False
     def on_value_change(self, change):
         """
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        super().on_value_change(change)
         if not self.private and self._parent is not None:
             if change.new != self._parent.get_index():
                 self._parent.set_index(change.new)
@@ -1080,8 +1145,56 @@ class IndexSubIndexSelectorSelect(FullSelector):
         """
         self._ipywidgets["index_select"]["set_value"](value)
 
+class ReferiaButtonWidget(ReferiaWidget):
+    """
+    A widget for a button.
+    """
+    def __init__(self, **args):
+        """
+        Initialise the widget.
 
-class CreateDocButton(ReferiaWidget):
+        :param description: The description of the widget.
+        :type description: str
+        """
+        super().__init__(**args)
+
+    @property
+    def name(self):
+        """
+        Return the name of the widget.
+        """
+        return self.description
+        
+    @classmethod
+    def _default_widget(cls):
+        """
+        Return the default widget function.
+        """
+        return ipyw.Button
+
+
+    def _widget_events(self):
+        """
+        Create any relevant wiget event handlers.
+        """
+        super()._widget_events()
+        log.debug(f"Binding widget on_click event for widget {self._ipywidget}.")
+        self._ipywidget.on_click(self.on_click)
+        
+    def on_click(self, b):
+        """
+        When the button is clicked do nothing.
+        """
+        raise NotImplementedError("The on_click method must be implemented in the subclass.")
+
+    def refresh(self):
+        """
+        Refresh the widget.
+        """
+        # Button's do nothing when they are refreshed.
+        pass
+    
+class CreateDocButton(ReferiaButtonWidget):
     """
     Create a document for editing based on the information we have.
     """
@@ -1103,9 +1216,15 @@ class CreateDocButton(ReferiaWidget):
         """
         When the button is clicked create the document.
         """
-        self._parent.create_document(self.document, summary=False)
+        # Place in try except block to catch errors and log them due to Jupyter's silent error handling.
+        try:
+            self._parent.create_document(self.document, summary=False)
+        except Exception as e:
+            errmsg = f"An error occurred in on_click: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
 
-class CreateSummaryDocButton(ReferiaWidget):
+class CreateSummaryDocButton(ReferiaButtonWidget):
     """
     Create a summary document based on all the entries.
     """
@@ -1127,10 +1246,18 @@ class CreateSummaryDocButton(ReferiaWidget):
         """
         When the button is clicked create the document.
         """
-        self._parent.create_document(self.document, summary=True)
+        # Place in try except block to catch errors and log them due to Jupyter's silent error handling.
+        try:
+            self._parent.create_document(self.document, summary=True)
+        except Exception as e:
+            errmsg = f"An error occurred in on_click: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
 
-class CreateSummaryButton(ReferiaWidget):
-    """Create a summary based on all the entries."""
+class CreateSummaryButton(ReferiaButtonWidget):
+    """
+    Create a summary based on all the entries.
+    """
     def __init__(self, **args):
         """
         Initialise the widget.
@@ -1147,44 +1274,70 @@ class CreateSummaryButton(ReferiaWidget):
         self.details = args["details"]
         
     def on_click(self, b):
-        self._parent.create_summary(self.details)
+        """
+        When the button is clicked create the summary.
+        """
+        # Place in try except block to catch errors and log them due to Jupyter's silent error handling.
+        try:
+            self._parent.create_summary(self.details)
+        except Exception as e:
+            errmsg = f"An error occurred in on_click: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
         
         
-class SaveButton(ReferiaWidget):
-    """Write the data to the appropriate storage files."""
+class SaveButton(ReferiaButtonWidget):
+    """
+    Write the data to the appropriate storage files.
+    """
     def __init__(self, **args):
         """
-        Initialise the widget.
+        Initialise the SaveButton widget.
         """
-        args["description"] = "Save Flows"
+        if "description" not in args:
+            args["description"] = "Save Flows"
         super().__init__(**args)
 
     def on_click(self, b):
         """
         When the button is clicked save the flows.
         """
-        self._parent.save_flows()
+        # Place in try except block to catch errors and log them due to Jupyter's silent error handling.
+        try:
+            self._parent.save_flows()
+        except Exception as e:
+            errmsg = f"An error occurred in on_click: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
 
-class ReloadButton(ReferiaWidget):
+class ReloadButton(ReferiaButtonWidget):
     """Reload the data from the appropriate storage files."""
     def __init__(self, **args):
         """
-        Initialise the widget.
+        Initialise the ReloadButton widget.
         """
-        args["description"] = "Reload Flows"
+        if "description" not in args:
+            args["description"] = "Reload Flows"
         super().__init__(**args)
 
     def on_click(self, b):
         """
         When the button is clicked reload the flows.
         """
-        self._parent.load_flows(reload=True)
+        # Place in try except block to catch errors and log them due to Jupyter's silent error handling.
+        try:
+            self._parent.load_flows(reload=True)
+        except Exception as e:
+            errmsg = f"An error occurred in on_click: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
 
-class PopulateButton(ReferiaWidget):
+
+class PopulateButton(ReferiaButtonWidget):
     """Populate the data from a compute."""
     def __init__(self, **args):
         """
-        Initialise the widget.
+        Initialise the PopulateButton widget.
 
         :param target: The target to populate.
         :type target: str
@@ -1193,26 +1346,53 @@ class PopulateButton(ReferiaWidget):
         :param description: The description of the widget.
         :type description: str
         """
-        if "target" in args:
-            args["description"] = "Populate " + args["target"]
-        else:
-            args["description"] = "Populate"
-        if type(args["compute"]) is list:
-            self._compute = args["compute"]
-        else:
-            self._compute = [args["compute"]]
+        if "description" not in args:
+            if "target" in args:
+                args["description"] = "Populate " + args["target"]
+            else:
+                args["description"] = "Populate"
+
+        log.debug(f"Creating PopulateButton with description \"{args['description']}\".")
+
+        if "compute" not in args:
+            errmsg = f"Compute not found in args for PopulateButton \"{args['description']}\"."
+            log.error(errmsg)
+            raise ValueError(errmsg)
+
+        self._compute_interface = {"compute" : args["compute"]}
+        #if isinstance(args["compute"], list):
+        #    self._compute_interface = {"compute" : args["compute"]}
+        #else:
+        #    self._compute_interface = {[args["compute"]]
             
         super().__init__(**args)
 
-    def on_click(self, b):
+    def on_click(self, b : ipyw.Button) -> None:
         """
         When the button is clicked populate the data.
-        """
-        for compute in self._compute:
-            compute["refresh"] = True
-            self._parent._data._compute.run(self._parent._data._compute.prep(compute))
-        self._parent.populate_display()
 
+        :param b: The button that was clicked.
+        :type b: ipyw.Button
+        :return: None
+        """
+        try:
+            log.debug(f"Populating data for \"{self.name}\" and \"{self._compute_interface}\".")
+            self._parent._data._compute.run(self._parent._data, self._compute_interface)            
+            #for compute in self._compute_interface:
+            #    compute["refresh"] = True
+            #    self._parent._data._compute.run(self._parent._data._compute.prep(settings=compute, data=self._parent._data))
+            self._parent.populate_display()
+        except Exception as e:
+            errmsg = f"An error occurred in on_click: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            
+
+
+        #for compute in self._compute:
+        #    compute["refresh"] = True
+        #    self._parent._data._compute.run(self._parent._data._compute.prep(compute))
+        #self._parent.populate_display()
         
             
 def gocf_(key, item, obj, docstr=None):

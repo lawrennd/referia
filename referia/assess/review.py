@@ -129,8 +129,10 @@ def extract_widget(details, reviewer, widgets):
     
     widget_type = globals().get(details["type"])
     if not widget_type:
-        raise Exception(f"Cannot find {details['type']} interaction type.")
+        raise ValueError(f"Cannot find {details['type']} interaction type.")
 
+    if "compute" in details:
+        log.debug(f"Adding widget targeting \"{details.get('field')}\" with compute function.")
     # Generate widget key
     store_name = details.get("field") or details.get("cache")
     if details.get("name") is None:
@@ -198,6 +200,8 @@ def extract_widget(details, reviewer, widgets):
     args["parent"] = reviewer
 
     # Add the widget
+    if "compute" in args:
+        log.debug(f"Adding widget \"{widget_key}\" with compute function of widget_type \"{widget_type}\".")
     widgets.add(**{widget_key: widget_type(**args)})
 
 

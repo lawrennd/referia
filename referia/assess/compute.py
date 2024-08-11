@@ -104,91 +104,91 @@ class Compute(lynguine.assess.compute.Compute):
         super().interface = value
             
 
-    def run(self, compute, data, df=None, index=None, refresh=True):
-        """
-        Run the computation given in compute.
+    # def run(self, data : "CustomDataFrame", interface : Interface) -> None:
+    #     """
+    #     Run the computation given in compute.
 
-        :param compute: The compute to be run.
-        :type compute: lynguine.config.interface.Interface
-        :param df: The data frame to be used.
-        :type df: pandas.DataFrame or lynguine.assess.data.CustomDataFrame
-        :param index: The index to be used.
-        :type index: object
-        :param refresh: Whether to refresh the field.
-        :type refresh: bool
-        :return: The result of the computation.
-        :rtype: object
-        """
+    #     :param compute: The compute to be run.
+    #     :type compute: lynguine.config.interface.Interface
+    #     :param df: The data frame to be used.
+    #     :type df: pandas.DataFrame or lynguine.assess.data.CustomDataFrame
+    #     :param index: The index to be used.
+    #     :type index: object
+    #     :param refresh: Whether to refresh the field.
+    #     :type refresh: bool
+    #     :return: The result of the computation.
+    #     :rtype: object
+    #     """
 
-        #super().run(compute, data, df, index, refresh);
+    #     #super().run(compute, data, df, index, refresh);
         
-        multi_output = False
-        fname = compute["function"].__name__
-        fargs = compute["args"]
-        if index is None:
-            index = data.get_index()
+    #     multi_output = False
+    #     fname = compute["function"].__name__
+    #     fargs = compute["args"]
+    #     if index is None:
+    #         index = data.get_index()
 
-        if "field" in compute:
-            columns = compute["field"]
-            if type(columns) is list:
-                multi_output = True
-            else:
-                columns = [columns]
-        else:
-            columns = None
+    #     if "field" in compute:
+    #         columns = compute["field"]
+    #         if type(columns) is list:
+    #             multi_output = True
+    #         else:
+    #             columns = [columns]
+    #     else:
+    #         columns = None
 
-        # Determine which current values of field aren't set
-        missing_vals = []
-        if columns is not None:
-            for column in columns:
-                if df is None:
-                    if column not in data.columns:
-                        missing_vals.append(True)
-                        continue
-                else:
-                    if column not in df.columns:
-                        missing_vals.append(True)
-                        continue
-                if column == "_": # If the column is called "_" then ignore that argument
-                    missing_vals.append(False)
-                    continue
-                if df is None:
-                    val = data.get_value_column(column)
-                else:
-                    val = df.at[index, column]
-                if type(val) is not list and pd.isna(val):
-                    missing_vals.append(True)
-                else:
-                    missing_vals.append(False)
+    #     # Determine which current values of field aren't set
+    #     missing_vals = []
+    #     if columns is not None:
+    #         for column in columns:
+    #             if df is None:
+    #                 if column not in data.columns:
+    #                     missing_vals.append(True)
+    #                     continue
+    #             else:
+    #                 if column not in df.columns:
+    #                     missing_vals.append(True)
+    #                     continue
+    #             if column == "_": # If the column is called "_" then ignore that argument
+    #                 missing_vals.append(False)
+    #                 continue
+    #             if df is None:
+    #                 val = data.get_value_column(column)
+    #             else:
+    #                 val = df.at[index, column]
+    #             if type(val) is not list and pd.isna(val):
+    #                 missing_vals.append(True)
+    #             else:
+    #                 missing_vals.append(False)
 
-        if refresh or any(missing_vals) or columns is None:
-            if columns is not None:
-                log.debug(f"Running compute function \"{fname}\" storing in field(s) \"{columns}\" with index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
-            else:
-                log.debug(f"Running compute function \"{fname}\" with no field(s) stored for index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+    #     if refresh or any(missing_vals) or columns is None:
+    #         if columns is not None:
+    #             log.debug(f"Running compute function \"{fname}\" storing in field(s) \"{columns}\" with index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
+    #         else:
+    #             log.debug(f"Running compute function \"{fname}\" with no field(s) stored for index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
 
-            new_vals = compute["function"](**fargs)
-        else:
-            return
+    #         new_vals = compute["function"](**fargs)
+    #     else:
+    #         return
 
-        if multi_output and type(new_vals) is not tuple:
-            errmsg = f"Multiple columns provided for return values of \"{fname}\" but return value given is not a tuple."
-            log.error(errmsg)
-            raise ValueError(errmsg)
+    #     if multi_output and type(new_vals) is not tuple:
+    #         errmsg = f"Multiple columns provided for return values of \"{fname}\" but return value given is not a tuple."
+    #         log.error(errmsg)
+    #         raise ValueError(errmsg)
             
-        if columns is None:
-            return new_vals
-        else:
-            if multi_output:
-                new_vals = [*new_vals]
-            else:
-                new_vals = [new_vals]
-            for column, new_val, missing_val in zip(columns, new_vals, missing_vals):
-                if column == "_":
-                    continue
-                if refresh or missing_val and data.ismutable(column):
-                    log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
-                    data.set_value_column(new_val, column)
+    #     if columns is None:
+    #         return new_vals
+    #     else:
+    #         if multi_output:
+    #             new_vals = [*new_vals]
+    #         else:
+    #             new_vals = [new_vals]
+    #         for column, new_val, missing_val in zip(columns, new_vals, missing_vals):
+    #             if column == "_":
+    #                 continue
+    #             if refresh or missing_val and data.ismutable(column):
+    #                 log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
+    #                 data.set_value_column(new_val, column)
   
     def preprocess(self, data, interface):
         """
