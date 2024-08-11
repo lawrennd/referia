@@ -24,13 +24,9 @@ This file provides the source and format of input data (for assessment), the loc
 
 The configuration has the following fields
 
-`allocation`
+`input`
 
-This contains the primary information of data to be assessed.
-
-`additional`
-
-This contains additional secondary information to be merged with the primary information. An array of entries can be include.
+This contains the input data to be assessed.
 
 `viewer`
 
@@ -69,7 +65,7 @@ Specifies how the code should "count up" how many reviews are complete.
 
 This specifies how to store annotation information which is available with a subindex (such as a time series).
 
-`review'
+`review`
 
 This specifies a set of widgets to create for human reviewing.
 
