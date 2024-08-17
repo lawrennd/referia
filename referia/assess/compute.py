@@ -238,22 +238,21 @@ class Compute(lynguine.assess.compute.Compute):
         log.debug(f"Running onchange for {column} at index {index} (not yet implemented).")        
         super().run_onchange(index, column, data)
     
-    def run_all(self, data, df=None, index=None, pre=False, post=False):
+    def run_all(self, data : "CustomDataFrame", pre : bool=False, post : bool=False) -> None:
         """
         Run any computation elements on the data frame.
 
-        :param df: The data frame to be used.
-        :type df: pandas.DataFrame or lynguine.assess.data.CustomDataFrame
-        :param index: The index to be used.
-        :type index: object
+        :param data: The data frame to be used.
+        :type data: lynguine.assess.data.CustomDataFrame
         :param pre: Whether to run precomputes.
         :type pre: bool
         :param post: Whether to run postcomputes.
         :type post: bool
         :return: None
         """
-        super().run_all(data, df, index, pre, post)
-        
+        #super().run_all(data, df, index, pre, post)
+
+        index = data.get_index()
         log.debug(f"Running computes on index=\"{index}\" with pre=\"{pre}\" and post=\"{post}\"")
         computes = []
         if pre:
@@ -263,15 +262,7 @@ class Compute(lynguine.assess.compute.Compute):
             computes += self._computes["postcompute"]
             
         for compute in computes:
-            field = compute["field"]
-            if data.ismutable(field):
-                if compute["refresh"]:
-                    self.run(compute, data, df, index, refresh=True)
-                else:                    
-                    self.run(compute, data, df, index, refresh=False)
-            else:
-                log.warning(f"Attempted to write to unmutable field \"{field}\"")
-    
+            self.run(data, compute)   
 
     def _compute_functions_list(self) -> list[dict]:
         """

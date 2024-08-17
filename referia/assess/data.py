@@ -6,6 +6,8 @@ import pandas as pd
 
 import datetime
 
+import traceback
+
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
 from lynguine.log import Logger
@@ -451,8 +453,13 @@ class CustomDataFrame(data.CustomDataFrame):
         # post-computes are run on the index we're changing from
         if self.get_index() is not None and value != self.get_index():
             log.debug(f"Calling post-compute on index \"{self.get_index()}\".")
-            self.compute_post()
-        
+            try:
+                self.compute_post()
+            except Exception as e:
+                log.error(f"Error in post-compute on index \"{self.get_index()}\".")
+                log.error(e)
+                log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+                raise e
         # Call parent to set index
         orig_index = self.get_index()
         super().set_index(value)
@@ -461,10 +468,22 @@ class CustomDataFrame(data.CustomDataFrame):
         # pre-computes are run on the index we're changing to
         if orig_index is None or self.get_index() != orig_index:
             log.debug(f"Calling pre-compute on index \"{self.get_index()}\".")
-            self.compute_pre()
+            try:
+                self.compute_pre()
+            except Exception as e:
+                log.error(f"Error in pre-compute on index \"{self.get_index()}\".")
+                log.error(e)
+                log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+                raise e
                 
         # If index has changed, check if there is a subseries, if so, use top subindex, if not create a row.
-        self.check_or_set_subseries()
+        try:
+            self.check_or_set_subseries()
+        except Exception as e:
+            log.error(f"Error in check_or_set_subseries.")
+            log.error(e)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            raise e
             
             
 

@@ -12,6 +12,10 @@ from deepdiff import DeepDiff
 def create_test_dataframe(colspecs="data"):
     return referia.assess.data.CustomDataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}, colspecs=colspecs)
 
+def create_test_dataframe2(colspecs="data"):
+    df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]}, index=[3, 4, 5])
+    return referia.assess.data.CustomDataFrame(df, colspecs=colspecs)
+
 def create_merged_dataframe():
     # Sample data for creating a CustomDataFrame instance
     data = {"A": [1, 2], "B": [3, 4], "C": [5, 5], "D": [6, 6], "E": [7, 7], "F": [8, 8]}
@@ -54,7 +58,17 @@ def test_concat():
     df1 = create_test_dataframe()
     df2 = create_test_dataframe()
     result = lynguine.assess.data.concat([df1, df2])
-    assert result.shape == (6, 2)
+    # Because the two dataframes have the same indices
+    assert list(result.colspecs.keys()) == ["series_cache"]
+    assert result.colspecs["series_cache"] == ["A", "B"]
+    assert result.shape == (3, 2) # TK Assuming we are counting one row per index.
+
+    df2 = create_test_dataframe2()
+    result = lynguine.assess.data.concat([df1, df2])
+    # Because the two dataframes have different indices
+    assert list(result.colspecs.keys()) == ["cache"]
+    assert result.colspecs["cache"] == ["A", "B"]
+    assert result.shape == (6, 2) 
 
 def test_merge():
     df1 = referia.assess.data.CustomDataFrame({'key': ['K0', 'K1', 'K2'], 'A': ['A0', 'A1', 'A2']}, colspecs="input")

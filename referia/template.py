@@ -28,7 +28,7 @@ def url_escape(string):
 @string_filter
 def mymarkdownify(string):
     """Filter to convert markdown to html for liquid"""
-    return "Cat" #markdown2html(string.encode("utf8")).encode("utf8")
+    return markdown2html(string.encode("utf8")).encode("utf8")
 
 @string_filter
 def relative_url(string):
@@ -43,8 +43,27 @@ def base_url(string):
 
 
 class Render():
+    """
+    Render a view from a data frame.
+
+    The Render object is used to render a view from a data frame. The view is a dictionary
+    that specifies how to render the data frame. The view can include liquid templates
+    and other renderable fields.
+
+    :param data: The data frame to render.
+    :type data: pd.DataFrame
+    """
     def __init__(self, data):
-        pass
+        """Initialize the Render object."""
+        self._data = data
+
+        # Create a Liquid environment
+        self._liquid_env = lq.Liquid()
+        self._liquid_env.register_filter(url_escape)
+        self._liquid_env.register_filter(mymarkdownify)
+        self._liquid_env.register_filter(relative_url)
+        self._liquid_env.register_filter(base_url)
+        
     
     def _default_mapping(self):
         """Generate the default mapping from config or from columns"""
@@ -179,7 +198,36 @@ class Render():
             return name
 
     def tally_to_value(self, tally, kwargs=None):
-        """Create the text of the view."""
+        """
+        Create the text of the view.
+
+        A tally view has a `begin`, `end`, and `display` field. The `begin` and `end` fields
+        are optional. The `display` field is required. The `display` field is a view
+        that is repeated for subindices in the data frame. The `begin` and `end`
+        fields are views that are displayed once at the beginning and end of the
+        tally view, respectively.
+
+        The `begin`, `end`, and `display` fields can include liquid template variables.
+
+        The subindices from the dataframe are determined by the `which` field in the
+        tally dictionary. The following options are available for the `which` key:
+
+        - pop: The first subindex.
+        - bottom: The last subindex.
+        - previous: The subindex before the current one.
+        - next: The subindex after the current one.
+        - earlier: All subindices before the current one.
+        - later: All subindices after the current one.
+        - others: All subindices except the current one.
+        - all: All subindices.
+
+        If no `which` key is provided, all subindices are returned.
+
+        :param tally: The tally view.
+        :type tally: dict
+        :return: The text of the tally view.
+        :rtype: str
+        """
         return self.tally_values(tally, kwargs)
 
     def tally_to_tmpname(self, tally):
@@ -189,7 +237,20 @@ class Render():
         return name
 
     def conditions(self, view):
-        """Check if the viewer should be displayed."""
+        """
+        Check if a given viewer should be displayed.
+
+        The viewer can have a "conditions" field that contains a list of conditions. Each
+        condition can have a "present" field that contains a "field" key. If the field
+        is not present in the data frame, the viewer is not displayed. Each condition
+        can also have an "equal" field that contains a "field" key and a "value" key. If
+        the field is not equal to the value, the viewer is not displayed.
+        
+        :param view: The viewer to check.
+        :type view: dict
+        :return: Whether the viewer should be displayed.
+        :rtype: bool        
+        """
         if "conditions" not in view:
             return True
         else:
@@ -216,18 +277,39 @@ class Render():
 
 
     def display_to_value(self, display, kwargs=None):
+        """
+        Render a 'format' display template.
+
+        :param display: The display template.
+        :type display: str
+        :param kwargs: The keyword arguments to be passed to the template.
+        :type kwargs: dict
+        :return: The rendered template.
+        :rtype: str
+        """
         if kwargs is None:
             kwargs = self.mapping()
         try:
             return display.format(**kwargs)
         except KeyError as err:
-            raise KeyError(f"The mapping doesn't contain the key {err} requested in \"{display}\". Set the mapping in \"_referia.yml\".") from err
+            raise KeyError(f"The mapping doesn't contain the key \"{err}\" requested in \"{display}\". Set the mapping in \"_referia.yml\".") from err
 
     def liquid_to_tmpname(self, display):
         """Convert a display string to a temp name"""
         return to_camel_case(display.replace("/", "_").replace("{","").replace("}", "").replace("%","-"))
 
     def liquid_to_value(self, display, kwargs=None):
+        """
+        Render a liquid template.
+
+        :param display: The liquid template.
+        :type display: str
+        :param kwargs: The keyword arguments to be passed to the template.
+        :type kwargs: dict
+        :return: The rendered template.
+        :rtype: str
+        """
+        
         if kwargs is None:
             kwargs = self.mapping()
         try:
@@ -249,6 +331,37 @@ class Render():
         return tmpname
 
     def tally_values(self, tally, kwargs=None):
+        """
+        Create the text of the tally view.
+
+        A tally view has a `begin`, `end`, and `display` field. The `begin` and `end` fields
+        are optional. The `display` field is required. The `display` field is a view
+        that is repeated for subindices in the data frame. The `begin` and `end`
+        fields are views that are displayed once at the beginning and end of the
+        tally view, respectively.
+
+        The `begin`, `end`, and `display` fields can include liquid template variables.
+        
+
+        The subindices from the dataframe are determined by the `which` field in the
+        tally dictionary. The following options are available for the `which` key:
+
+        - pop: The first subindex.
+        - bottom: The last subindex.
+        - previous: The subindex before the current one.
+        - next: The subindex after the current one.
+        - earlier: All subindices before the current one.
+        - later: All subindices after the current one.
+        - others: All subindices except the current one.
+        - all: All subindices.
+
+        If no `which` key is provided, all subindices are returned.
+
+        :param tally: The tally view.
+        :type tally: dict
+        :return: The text of the tally view.
+        :rtype: str
+        """
         value = ""
         if "begin" in tally:
             value += tally["begin"]
@@ -269,6 +382,28 @@ class Render():
         return value
 
     def tally_series(self, tally):
+        """
+        Return a series of subindices to be tallied.
+
+        A tally dictionary can specify which subindices to tally. The following
+        options are available for the "which" key in the tally dictionary:
+
+        - pop: The first subindex.
+        - bottom: The last subindex.
+        - previous: The subindex before the current one.
+        - next: The subindex after the current one.
+        - earlier: All subindices before the current one.
+        - later: All subindices after the current one.
+        - others: All subindices except the current one.
+        - all: All subindices.
+
+        If no "which" key is provided, all subindices are returned.
+
+        :param tally: The tally dictionary.
+        :type tally: dict
+        :return: The series of subindices.
+        :rtype: pd.Series
+        """
         orig_subindex = self._data.get_subindex()
         subindices = self._data.get_subindices()
         if subindices is None:

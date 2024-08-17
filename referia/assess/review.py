@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import json
 
+import traceback
+
 import markdown
 import warnings
 
@@ -963,20 +965,33 @@ class Reviewer(DisplaySystem):
         :return: None
         """
         log.debug("Populating display.")
-        self._widgets.refresh()
-        if self._widgets.has("_progress_label"):
-            total = self._data.to_score()
-            if total > 0:
-                scored = self._data.scored()
-                remain = total - scored
-                perc=scored/total*100
+        try:
+            self._widgets.refresh()
+        except Exception as e:
+            log.error(f"Error refreshing widgets: {e}")
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            raise e
+        log.debug("Display populated.")
 
-            else:
-                scored = 0
-                remain = total
-                perc=0
-            message = f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%"
-            self._widgets.to_dict()["_progress_label"].set_value(message)
+        if self._widgets.has("_progress_label"):
+            log.debug("Updating progress label.")
+            try:
+                total = self._data.to_score()
+                if total > 0:
+                    scored = self._data.scored()
+                    remain = total - scored
+                    perc=scored/total*100
+
+                else:
+                    scored = 0
+                    remain = total
+                    perc=0
+                message = f"{remain} to go. Scored {scored} from {total} which is {perc:.3g}%"
+                self._widgets.to_dict()["_progress_label"].set_value(message)
+            except Exception as e:
+                log.error(f"Error updating progress label: {e}")
+                log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+                raise e
 
 
     def view_series(self):

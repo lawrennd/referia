@@ -653,7 +653,8 @@ class FieldWidget(ReferiaStatefulWidget):
             errmsg = f"An error occurred in on_value_change: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
-            
+            raise e
+        
     def has_viewer(self):
         """
         Does the widget have a viewer structure for generating its values.
@@ -677,10 +678,12 @@ class FieldWidget(ReferiaStatefulWidget):
                 value = self._parent._data.viewer_to_value(self._viewer)
                 log.debug(f"Setting widget \"{self.name}\" to value {value}")
             else:
+                log.debug(f"Widget \"{self.name}\" does not have a viewer structure")
                 self._parent.set_column(column)
                 value = self._parent.get_value()
 
             if notempty(value):
+                log.debug(f"Setting widget \"{self.name}\" to value {value}")
                 self.set_value_silently(value)
             else:
                 self.reset_value()
@@ -764,6 +767,7 @@ class ElementWidget(FieldWidget):
             errmsg = f"An error occurred in refresh: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            raise e
 
         
 class IndexSelector(ReferiaStatefulWidget):
@@ -787,6 +791,7 @@ class IndexSelector(ReferiaStatefulWidget):
         }
         super().__init__(**args)
         self.private = False
+        
     def on_value_change(self, change):
         """
         When value of the widget changes update the relevant parent data structure.
@@ -1223,7 +1228,8 @@ class CreateDocButton(ReferiaButtonWidget):
             errmsg = f"An error occurred in on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
-
+            raise e
+        
 class CreateSummaryDocButton(ReferiaButtonWidget):
     """
     Create a summary document based on all the entries.
@@ -1253,7 +1259,8 @@ class CreateSummaryDocButton(ReferiaButtonWidget):
             errmsg = f"An error occurred in on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
-
+            raise e
+        
 class CreateSummaryButton(ReferiaButtonWidget):
     """
     Create a summary based on all the entries.
@@ -1284,7 +1291,7 @@ class CreateSummaryButton(ReferiaButtonWidget):
             errmsg = f"An error occurred in on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
-        
+            raise e
         
 class SaveButton(ReferiaButtonWidget):
     """
@@ -1309,7 +1316,8 @@ class SaveButton(ReferiaButtonWidget):
             errmsg = f"An error occurred in on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
-
+            raise e
+            
 class ReloadButton(ReferiaButtonWidget):
     """Reload the data from the appropriate storage files."""
     def __init__(self, **args):
@@ -1331,7 +1339,7 @@ class ReloadButton(ReferiaButtonWidget):
             errmsg = f"An error occurred in on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
-
+            raise e
 
 class PopulateButton(ReferiaButtonWidget):
     """Populate the data from a compute."""
@@ -1386,7 +1394,7 @@ class PopulateButton(ReferiaButtonWidget):
             errmsg = f"An error occurred in on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
-            
+            raise e
 
 
         #for compute in self._compute:
@@ -1411,12 +1419,18 @@ def gocf_(key, item, obj, docstr=None):
     :rtype: function
     """
     def on_click(b):
-        obj._ipywidgets[key]["on_click_function"]()
-        for other_key, widget in obj._ipywidgets.items():
-            if other_key == key:
-                pass
-            elif "update" in widget:
-                widget["update"]()
+        try:
+            obj._ipywidgets[key]["on_click_function"]()
+            for other_key, widget in obj._ipywidgets.items():
+                if other_key == key:
+                    pass
+                elif "update" in widget:
+                    widget["update"]()
+        except Exception as e:
+            errmsg = f"An error occurred in on_click: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            raise e
     on_click.__doc__ = docstr
     return on_click
             
@@ -1465,12 +1479,18 @@ def gwc_(key, item, obj, docstr=None):
     """
     name = "on_" + key + "_change"
     def on_change(change):
-        obj._ipywidgets[key]["set_value"](change.new)
-        for other_key, widget in obj._ipywidgets.items():
-            if other_key == key:
-                pass
-            elif "update" in widget:
-                widget["update"]()
+        try:
+            obj._ipywidgets[key]["set_value"](change.new)
+            for other_key, widget in obj._ipywidgets.items():
+                if other_key == key:
+                    pass
+                elif "update" in widget:
+                    widget["update"]()
+        except Exception as e:
+            errmsg = f"An error occurred in on_change: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            raise e
 
     on_change.__name__ = name
     on_change.__doc__ = docstr
