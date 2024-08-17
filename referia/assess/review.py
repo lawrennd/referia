@@ -668,12 +668,22 @@ class Reviewer(DisplaySystem):
         self._data.set_subindex(value)
         self.populate_display()
 
-    def add_series_row(self):
+    def add_row(self, index, values=None):
         """
-        Add a row with a generated subindex to the series.
+        Add a row with a given index to the series.
         """
-        self._data.add_series_row()
+        self._data.add_row(index, values)
 
+    def add_series_row(self, values=None):
+        """
+        Add a row with a given index to the series.
+        """
+        current_column = self._data.get_column()
+        self._data.set_column(self._data.get_selector())
+        self._data.add_row(index=self._data.get_index(), values=values)
+        self._data.set_column(current_column)
+        
+        
     def full_selector(self):
         """
         Select a selector and subindex from the data

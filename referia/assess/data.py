@@ -864,29 +864,8 @@ class CustomDataFrame(data.CustomDataFrame):
         # was return df.append(row) before append deprecation
         return pd.concat([df, row])
 
-    def add_row(self, index=None, subindex=None):
-        """Add a row with a given index (and optionally subindex) to the data structure."""
-        if index is None:
-            index = self.get_index()
-        if index is None:
-            log.warning("No index set to add row to.")
-            return
-        selector = self.get_selector()
-        for typ, data in self._d.items():
-            if typ in self.types["output"] or typ in self.types["cache"]:
-                data = self._append_row(data, index)
-                log.info(f"\"{index}\" added as row in Data._writedata.")
-                self.set_index(index)
-                return
-        log.warning("No mutable data found to add row with index \"{index}\" to.")
 
 
-    def add_series_row(self, index=None):
-        """Add a row to the series."""
-        if index is None:
-            index = self.get_index()
-        self._writeseries = self._append_row(self._writeseries, index)
-        log.info(f"\"{index}\" added subseries row in Data._writeseries.")
 
 
     def add_series_column(self, column):
