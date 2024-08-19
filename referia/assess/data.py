@@ -66,6 +66,9 @@ class CustomDataFrame(data.CustomDataFrame):
         # Call the parent class with data, colspecs, index, column, selector
         super().__init__(data=data, colspecs=colspecs, index=index, column=column, selector=selector, subindex=subindex, compute=compute, interface=interface)
         self.augment = False
+        # Add precompute and postcompute lists to the data object
+        self._precompute = []
+        self._postcompute = []
 
                         
     @property
@@ -491,7 +494,13 @@ class CustomDataFrame(data.CustomDataFrame):
         """
         Check if there is a sub-series if so, use top subindex, if not create a row.
         """
-        if self._writeseries is not None:
+        series_present = False
+        for typ in self._d:
+            if typ in self.types["series"]:
+                series_present = True
+
+        
+        if series_present:
             subindices = self.get_subseries()
             if len(subindices) > 0:
                 subindex = self.get_subindex()
@@ -503,27 +512,6 @@ class CustomDataFrame(data.CustomDataFrame):
                 
 
 
-    def set_subindex(self, subindex : str) -> None:
-        """
-        Subindex setter
-
-        :param subindex: The subindex to be set.
-        :type subindex: str
-        :return: None
-        """
-        if subindex is None:
-            self._subindex = None
-            log.debug(f"Subindex set to None.")
-            return
-
-        if self._writeseries is not None and subindex not in self.get_subindices():
-            index = self.get_index()
-            errmsg = f"Subindex \"{subindex}\" under \"{index}\" not available in current series."
-            log.error(errmsg)
-            raise ValueError(errmsg)
-        else:
-            self._subindex=subindex
-            log.debug(f"Subindex \"{subindex}\" selected.")
 
 
     def get_index(self) -> str:
@@ -555,39 +543,21 @@ class CustomDataFrame(data.CustomDataFrame):
         if self.compute is not None:
             self.compute.preprocess(data=self)
 
-    def compute_pre(self):
-        """Run pre-computation on the index."""
-        if self.compute is not None:
-            self.compute.run_all(data=self, pre=True)
+    def compute_pre(self) -> None:
+        """
+        Run pre-computation on the index by finding any pre-compute entries in the review interface.
+        """
+        log.debug(f"Computing pre-compute for index across \"{len(self._precompute)}\" precompute array.")
+        self.compute.run(data=self, interface={"compute" : self._precompute})
         
-    def compute_post(self):
-        """Run post-computation on the index."""
-        if self.compute is not None:
-            self.compute.run_all(data=self, post=True)
-
-    def compute_append(index, row):
-        """Run computation for an appended row."""
-        if self.compute is not None:
-            self.compute.run_all(data=self, df=row, index=index, pre=True)
-        
-
-    def set_selector(self, column):
-        """Set which column of the series is to be used for selection."""
-        # Set to None to indicate that self._writedata is correct place for recording.
-        if column is None:
-            log.warning(f"No column selected for selector, setting to \"None\".")
-            self._selector = None
-            return
-
-        if column not in self.get_selectors():
-            log.info(f"Column \"{column}\" of chosen for selection not in Data._writeseries ... adding.")
-            self.add_column(column)
-            self.set_selector(column)
-        else:
-            self._selector = column
-            log.debug(f"Column \"{column}\" of Data._writeseries selected for selection.")
-            if self.get_subindex() not in self._writeseries[column]:
-                self.set_subindex(None)
+    def compute_post(self) -> None:
+        """
+        Run post-computation on the index by finding any post-compute entries in the review interface.
+        """
+        log.debug(f"Computing post-compute for index across \"{len(self._precompute)}\" postcompute array.")
+        self.compute.run(data=self, interface={"compute" : self._postcompute})
+                    
+      
 
     def get_subindex(self):
         if self._subindex is None and self._writeseries is not None and self._selector is not None:
@@ -723,26 +693,6 @@ class CustomDataFrame(data.CustomDataFrame):
             return None
         return self.__getitem__(column)
         
-
-    def get_subseries_values(self):
-        """
-        Return a pd.Series containing all the values in a column.
-        """
-        column = self.get_column()
-        if column == None:
-            return None
-        index = self.get_index()
-
-        if self.isseries(column):
-            indexer = self._writeseries.index.isin([index])
-            if indexer.sum()>0:
-                return self._writeseries.loc[indexer, column]
-            else:
-                log.warning(f"No data available with this index returning None.")
-                return None
-        else:
-            log.warning(f"\"{column}\" not selected in self._writeseries or in self._writedata or in self._data returning \"None\"")
-            return None
 
     def get_value(self):
         """Return the value of the current cell under focus."""

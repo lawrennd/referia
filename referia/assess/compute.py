@@ -68,26 +68,26 @@ class Compute(lynguine.assess.compute.Compute):
                         self.prep(compute, data)
                     )
                     
-    def prep(self, settings : dict, data : lynguine.assess.data.CustomDataFrame ) -> dict:
-        """
-        Prepare a compute entry for use.
+    # def prep(self, settings : dict, data : lynguine.assess.data.CustomDataFrame ) -> dict:
+    #     """
+    #     Prepare a compute entry for use.
         
-        :param settings: The settings to be used.
-        :type settings: dict
-        :param data: The data to be used.
-        :type data: lynguine.assess.data.CustomDataFrame
-        :return: The prepared compute entry.
-        :rtype: dict
+    #     :param settings: The settings to be used.
+    #     :type settings: dict
+    #     :param data: The data to be used.
+    #     :type data: lynguine.assess.data.CustomDataFrame
+    #     :return: The prepared compute entry.
+    #     :rtype: dict
         
-        """
-        compute_prep = {
-            "function": self.gcf_(function=settings["function"], data=data),
-            "args" : self.gca_(**settings),
-            "refresh" : "refresh" in settings and settings["refresh"],
-        }
-        if "field" in settings:
-            compute_prep["field"] = settings["field"]
-        return compute_prep
+    #     """
+    #     compute_prep = {
+    #         "function": self.gcf_(function=settings["function"], data=data),
+    #         "args" : self.gca_(**settings),
+    #         "refresh" : "refresh" in settings and settings["refresh"],
+    #     }
+    #     if "field" in settings:
+    #         compute_prep["field"] = settings["field"]
+    #     return compute_prep
 
             
     def copy_screen_capture(self) -> bytes:

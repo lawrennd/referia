@@ -219,14 +219,20 @@ def extract_review(details, reviewer, widgets):
     :type widgets: WidgetCluster
     """
 
-        
+    log.debug(f"Extracting review element: {details}")
     if details["type"] == "precompute":
         # These are score items that can be precompute (i.e. not dependent on other rows). Once filled they are not changed.
-        reviewer._precompute.append(details)
-        
+        if isinstance(details["specifications"], list):
+            reviewer._data._precompute.extend(details["specifications"])
+        else:
+            reviewer._data._precompute.append(details["specifications"])
+            
     elif details["type"] == "postcompute":
         # These are score items that are computed every time the row is updated.
-        reviewer._postcompute.append(details)
+        if isinstance(details["specifications"], list):
+            reviewer._data._postcompute.extend(details["specifications"])
+        else:
+            reviewer._data._postcompute.append(details["specifications"])
         
     elif details["type"] == "load":
         load_widgets = LoadWidgetCluster(name="load", parent=reviewer)
@@ -398,7 +404,7 @@ class Reviewer(DisplaySystem):
         :type viewer_inherit: bool
         """
         super().__init__(index, data, interface, system)        
-
+        
         if viewer_inherit:
             append = ["viewer"]
             ignore = []
@@ -419,6 +425,7 @@ class Reviewer(DisplaySystem):
         self._select_selector = False
         self._create_widgets()
 
+              
     def set_default_field_value(self, field, value):
         """
         Set the default value for the field.

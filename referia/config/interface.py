@@ -215,20 +215,27 @@ class Interface(lynguine.config.interface.Interface):
 
         # Extract all fields from the review interface
         review_columns = self._extract_review_write_fields(data)
-        for column in review_columns.copy():
-            for suffix in [data["modified_suffix"], data["created_suffix"]]:
-                timestamp_column = column + "_" + suffix
-                if timestamp_column not in review_columns:
-                    review_columns.append(timestamp_column)
+        modified_columns = {}
+        created_columns = {}
         
-        if "output" in data:
-            if "columns" in data["output"]:
-                for column in review_columns:
-                    if column not in data["output"]["columns"]:
-                        log.debug(f"Adding column as \"{column}\" to outputs.")                        
-                        data["output"]["columns"].append(column)
-            else:
-                data["output"]["columns"] = review_columns
+        for column in review_columns.copy():
+            modified_columns[column] = column + "_" + data["modified_suffix"]
+            created_columns[column] = column + "_" + data["created_suffix"]
+
+        output_types = ["output", "series"]
+        for output_type in output_types:
+            if output_type in data:
+                if "columns" in data[output_type]:
+                    for column in data[output_type]["columns"]:
+                        if column in modified_columns:
+                            if modified_columns[column] not in data[output_type]["columns"]:
+                                data[output_type]["columns"].append(modified_columns[column])
+                                log.debug(f"Adding column as \"{modified_columns[column]}\" to \"{output_type}\" outputs.")
+                        if column in created_columns:
+                            if created_columns[column] not in data[output_type]["columns"]:
+                                data[output_type]["columns"].append(created_columns[column])
+                                log.debug(f"Adding column as \"{created_columns[column]}\" to \"{output_type}\" outputs.")
+        
         log.debug(f"End conversion of \"referia\" form into \"linguine\" standard form.")
         
         super().__init__(data=data, directory=directory, user_file=user_file)

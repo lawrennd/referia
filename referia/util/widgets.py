@@ -650,7 +650,7 @@ class FieldWidget(ReferiaStatefulWidget):
                 if self._parent is not None:
                     self._parent._widgets.refresh()
         except Exception as e:
-            errmsg = f"An error occurred in on_value_change: {str(e)}"
+            errmsg = f"An error occurred in FieldWidget.on_value_change: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
             raise e
@@ -730,12 +730,18 @@ class ElementWidget(FieldWidget):
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        if not self.private and self._parent is not None:
-            self._parent.set_column(self.get_column())
-            self._parent.set_value_by_element(change.new, self.get_element())
-        if self._refresh_display:
-            if self._parent is not None:
-                self._parent.refresh()
+        try:
+            if not self.private and self._parent is not None:
+                self._parent.set_column(self.get_column())
+                self._parent.set_value_by_element(change.new, self.get_element())
+            if self._refresh_display:
+                if self._parent is not None:
+                    self._parent.refresh()
+        except Exception as e:
+            errmsg = f"An error occurred in ElementWidget.on_value_change: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            raise e
 
     def has_viewer(self):
         """
@@ -797,10 +803,16 @@ class IndexSelector(ReferiaStatefulWidget):
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        if not self.private and self._parent is not None:
-            if change.new != self._parent.get_index():
-                self._parent.set_index(change.new)
-                self._parent.view_series()
+        try:
+            if not self.private and self._parent is not None:
+                if change.new != self._parent.get_index():
+                    self._parent.set_index(change.new)
+                    self._parent.view_series()
+        except Exception as e:
+            errmsg = f"An error occurred in IndexSelector.on_value_change: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            raise e
 
     def set_index(self, value):
         """
@@ -1138,9 +1150,15 @@ class IndexSubIndexSelectorSelect(FullSelector):
         When value of the widget changes update the relevant parent data structure.
         :param change: The change event.
         """
-        if not self.private and self._parent is not None:
-            self._parent.set_index(change.new)
-            self._parent.view_series()
+        try:
+            if not self.private and self._parent is not None:
+                self._parent.set_index(change.new)
+                self._parent.view_series()
+        except Exception as e:
+            errmsg = f"An error occurred in IndexSubIndexSelectorSelect.on_value_change: {str(e)}"
+            log.error(errmsg)
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            raise e
 
     def set_index(self, value):
         """
@@ -1225,7 +1243,7 @@ class CreateDocButton(ReferiaButtonWidget):
         try:
             self._parent.create_document(self.document, summary=False)
         except Exception as e:
-            errmsg = f"An error occurred in on_click: {str(e)}"
+            errmsg = f"An error occurred in CreateDocButton.on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
             raise e
@@ -1256,7 +1274,7 @@ class CreateSummaryDocButton(ReferiaButtonWidget):
         try:
             self._parent.create_document(self.document, summary=True)
         except Exception as e:
-            errmsg = f"An error occurred in on_click: {str(e)}"
+            errmsg = f"An error occurred in CreateSummaryDocButton.on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
             raise e
@@ -1288,7 +1306,7 @@ class CreateSummaryButton(ReferiaButtonWidget):
         try:
             self._parent.create_summary(self.details)
         except Exception as e:
-            errmsg = f"An error occurred in on_click: {str(e)}"
+            errmsg = f"An error occurred in CreateSummaryButton.on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
             raise e
@@ -1313,7 +1331,7 @@ class SaveButton(ReferiaButtonWidget):
         try:
             self._parent.save_flows()
         except Exception as e:
-            errmsg = f"An error occurred in on_click: {str(e)}"
+            errmsg = f"An error occurred in SaveButton.on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
             raise e
@@ -1336,7 +1354,7 @@ class ReloadButton(ReferiaButtonWidget):
         try:
             self._parent.load_flows(reload=True)
         except Exception as e:
-            errmsg = f"An error occurred in on_click: {str(e)}"
+            errmsg = f"An error occurred in ReloadButton.on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
             raise e
@@ -1391,7 +1409,7 @@ class PopulateButton(ReferiaButtonWidget):
             #    self._parent._data._compute.run(self._parent._data._compute.prep(settings=compute, data=self._parent._data))
             self._parent.populate_display()
         except Exception as e:
-            errmsg = f"An error occurred in on_click: {str(e)}"
+            errmsg = f"An error occurred in PopulateButton.on_click: {str(e)}"
             log.error(errmsg)
             log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
             raise e
@@ -1456,7 +1474,7 @@ def gsv_(key, item, obj, docstr=None):
             else:
                 obj._ipywidgets[key]["widget"].value = obj._ipywidgets[key]["conversion"](value)
         else:
-            obj._ipywidgets[key]["widget"].value = self._ipywidgets[key]["function"]().value
+            obj._ipywidgets[key]["widget"].value = obj._ipywidgets[key]["function"]().value
         # Perform callback to set the result.
         obj._ipywidgets[key]["result_function"](obj._ipywidgets[key]["widget"].value)
     set_value.__doc__ = docstr
