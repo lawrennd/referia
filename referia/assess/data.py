@@ -815,6 +815,34 @@ class CustomDataFrame(data.CustomDataFrame):
         return pd.concat([df, row])
 
 
+    def add_series_row(self, index=None, values=None):
+        """
+        Add a row to the series.
+
+        This command adds a new row to a series and triggers
+        precomputation for the new row. The subindex is set to None so
+        that the new row is selected.
+
+        :param index: The index of the row to add.
+        :param values: The values to add to the row.
+
+        """
+        if index is None:
+            index = self.get_index()
+        for typ in self.types["series"]:
+            if typ in self._d:
+                series_df = self._d[typ]
+                new_row = pd.DataFrame(index=[index])
+                for col in series_df.columns:
+                    new_row[col] = values.get(col) if values else None
+                # Add new row at end so it is updated when subindex is None
+                log.debug(f"Adding row to series \"{typ}\" in data frame.")
+                self._d[typ] = pd.concat([series_df, new_row])
+        # Set the subindex to None so that last row is now selected.
+        log.debug(f"Set subindex to None to select added row.")
+        self.set_subindex(None)
+        log.debug(f"Triggering pre-computation on this row.")
+        self.compute_pre()
 
 
 

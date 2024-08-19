@@ -685,11 +685,7 @@ class Reviewer(DisplaySystem):
         """
         Add a row with a given index to the series.
         """
-        current_column = self._data.get_column()
-        self._data.set_column(self._data.get_selector())
-        self._data.add_row(index=self._data.get_index(), values=values)
-        self._data.set_column(current_column)
-        
+        self._data.add_series_row(index=self._data.get_index(), values=values)        
         
     def full_selector(self):
         """
