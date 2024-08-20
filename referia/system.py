@@ -266,7 +266,7 @@ class Sys():
 
     def create_document_content(self, document, **args):
         """Create the content for the documents."""
-        access.io.create_document_content(**args)
+        return access.io.create_document_content(**args)
 
     def create_docx(self, document, **args):
         """Create a Microsoft word style document."""
