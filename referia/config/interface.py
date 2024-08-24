@@ -136,7 +136,7 @@ class Interface(lynguine.config.interface.Interface):
                 raise ValueError(errmsg)
             
             if "mapping" in data["input"]:
-                data["input"]["mapping"] += mapping
+                data["input"]["mapping"].update(mapping)
             else:
                 data["input"]["mapping"] = mapping
             if "columns" in data["input"]:
