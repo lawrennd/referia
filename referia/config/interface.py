@@ -124,6 +124,7 @@ class Interface(lynguine.config.interface.Interface):
                 data["input"] = {
                     "type" : "hstack", # allocation will be concatenated horizontally with additionals
                     "index" : index, # extracted index from allocation elements
+                    "mapping" : mapping,
                     "specifications" : [{ 
                         "type": "vstack", # each allocation element will be concatenated vertically
                         "specifications" : allocation
@@ -301,34 +302,34 @@ class Interface(lynguine.config.interface.Interface):
             expanded_review.append(cluster)
             
         return expanded_review
-    
-    def _extract_mapping_columns(self, data):
-        """
-        Extract mapping and columns from data.
 
-        :param data: The data to be processed.
-        :type data: dict
-        :return: The mapping and columns.
-        :rtype: tuple
-        """
-        mapping = {}
-        columns = []
-        if "mapping" in data:
-            mapping = data["mapping"]
-            del data["mapping"]
-        if "columns" in data:
-            columns = data["columns"]
-            del data["columns"]
-        return mapping, columns
-                
     def _process_parent(self) -> None:
         """
         Process the parent interface.
 
         :return: None
         """
-        default_append = ["additional", "global_consts"]
+        
+        default_append = ["viewer"]
         default_ignore = ["compute", "review"]
+
+        
+        if "append" not in self._data["inherit"]:
+            self._data["inherit"]["append"] = default_append
+
+        if "ignore" not in self._data["inherit"]:
+            self._data["inherit"]["ignore"] = default_ignore
+
+        for ignore in default_ignore:
+            if ignore not in self._data["inherit"]["ignore"]:
+                self._data["inherit"]["ignore"].append(ignore)
+                
+        for append in default_append:
+            if append not in self._data["inherit"]["ignore"] and append not in self._data["inherit"]["append"]:
+                self._data["inherit"]["append"].append(append)
+        
+            
+
         viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(os.path.relpath(os.path.expandvars(self._parent._directory), "assessment.ipynb")) + '" target="_blank">here</a>.'}
 
         # Add links to parent assessment by placing in viewer.
