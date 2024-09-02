@@ -156,7 +156,15 @@ class Interface(lynguine.config.interface.Interface):
             if not isinstance(additional, list):
                 additional = [additional]
             log.debug(f"Concatenating referia \"additional\" onto end of the \"hstack\" of \"input\".")
-            data["input"]["specifications"] += additional
+            if "input" not in data:
+                log.debug(f"Creating input structure from additional via an \"hstack\" representation.")
+                data["input"] = {
+                    "type" : "hstack", # additional will be concatenated horizontally with allocation
+                    "specifications" : additional
+                }
+            else:
+                data["input"]["specifications"] += additional
+            
             if "mapping" in data["input"]:
                 data["input"]["mapping"] += mapping
             else:
@@ -171,8 +179,17 @@ class Interface(lynguine.config.interface.Interface):
             log.debug(f"Adding \"global_consts\" from referia as \"constants\" in the linguine form.")
             constants = data["global_consts"]
             if isinstance(constants, list):
+                for i, constant in enumerate(constants):
+                    if "index" in constant:
+                        if i == 0:
+                            index = constant["index"]
+                        elif index != constant["index"]:
+                            errmsg = "All \"global_consts\" items must have the same \"index\"."
+                            log.error(errmsg)
+                            raise ValueError(errmsg)
+                        del constant["index"]
                 log.debug(f"Adding list of constants as an \"hstack\" in the linguine \"constants\" entry.")
-                data["constants"] = {"type": "hstack", "specifications": constants}
+                data["constants"] = {"type": "hstack", "index": index,  "specifications": constants}
             else:
                 data["constants"] = constants
             del data["global_consts"]
@@ -181,8 +198,17 @@ class Interface(lynguine.config.interface.Interface):
             log.debug(f"Adding \"globals\" from referia as \"parameters\" in the linguine form.")
             parameters = data["globals"]
             if isinstance(parameters, list):
+                for i, parameter in enumerate(parameters):
+                    if "index" in parameter:
+                        if i == 0:
+                            index = parameter["index"]
+                        elif index != parameter["index"]:
+                            errmsg = "All \"globals\" items must have the same \"index\"."
+                            log.error(errmsg)
+                            raise ValueError(errmsg)
+                        del parameter["index"]
                 log.debug(f"Adding list of parameters as an \"hstack\" in the linguine \"parameters\" entry.")
-                data["parameters"] = {"type": "hstack", "specifications": parameters}
+                data["parameters"] = {"type": "hstack", "index": index, "specifications": parameters}
             else:
                 data["parameters"] = parameters
             del data["globals"]

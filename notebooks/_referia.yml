@@ -2,40 +2,39 @@ browser: "Google Chrome.app"
 sortby:
   field: index
   ascending: True
-timestamp_field: Timestamp
-created_field: Created
+
 logging:
   level: 10
-allocation:
+
+input:
+  type: hstack
+  index: keyname
+  mapping:
+    keyname: keyname
+    description: Description
+  specifications: 
+  - type: excel
+    filename: gifts.xlsx
+    sheet: Sheet1
+    directory: .
+    header: 0
+  - type: excel
+    filename: details.xlsx
+    sheet: Sheet1
+    directory: .
+    header: 0
+
+
+output:
   index: keyname
   type: excel
-  filename: gifts.xlsx
-  sheet: Sheet1
-  directory: .
-  header: 0
-
-mapping:
-  keyname: keyname
-  description: Description
-  thoughtfulnessComment: Thoughtfulness Comment
-  thoughtfulnessExpectation: Thoughtfulness Expectation
-  expenseComment: Expense Comment
-  expenseExpectation: Expense Expectation
-  overallComment: Overall Comment
-  overallScore: Overall Score
-
-additional:
-  index: keyname
-  type: excel
-  filename: details.xlsx
-  sheet: Sheet1
-  directory: .
-  header: 0
-
-
-scores:
-  index: keyname
-  type: excel
+  mapping:
+    thoughtfulnessComment: Thoughtfulness Comment
+    thoughtfulnessExpectation: Thoughtfulness Expectation
+    expenseComment: Expense Comment
+    expenseExpectation: Expense Expectation
+    overallComment: Overall Comment
+    overallScore: Overall Score
   sheet: Sheet1
   directory: .
   filename: scores.xlsx
@@ -51,29 +50,36 @@ urls:
 - url: ""
   field: AdditionalInfo
 
-scorer:
+review:
 - type: CriterionCommentRaisesMeetsLowers
-  criterion: "<h4>Gift Thoughtfulness</h4>
-<p>How thoughtful was the gift, does it match who you are?</p>"
+  criterion: |
+    #### Gift Thoughtfulness
+
+    How thoughtful was the gift, does it match who you are?
   prefix: Thoughtfulness
 - type: CriterionCommentRaisesMeetsLowers
-  criterion: "<h4>Gift Expense</h4>
-<p>How expensive was the gift?</p>"
+  criterion: |
+    #### Gift Expense
+
+    How expensive was the gift?
   prefix: Expense
 - type: CriterionCommentScore
-  criterion: '<h4>Overall</h4>'
+  criterion: |
+    #### Overall
   prefix: Overall
   value: 5
   min: 0
   max: 10
   step: 1
 - type: CriterionComment
-  criterion: '<h4>Other Comments</h4>'
+  criterion: |
+    #### Other Comments
   prefix: Other
 
 combinator:
 - field: Comment
-  display: "Thoughtfulness: {thoughtfulnessComment} *{thoughtfulnessExpectation} bar*\n
-Expense: {expenseComment} *{expenseExpectation} bar*\n
-\n
-Overall: {overallComment} **Score: {overallScore}**"
+  liquid: |
+    Thoughtfulness: {{thoughtfulnessComment}} *{{thoughtfulnessExpectation}} bar*
+    Expense: {{expenseComment}} *{{expenseExpectation}} bar*
+
+    Overall: {{overallComment}} **Score: {{overallScore}}**
