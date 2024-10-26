@@ -238,31 +238,31 @@ class Compute(lynguine.assess.compute.Compute):
         log.debug(f"Running onchange for {column} at index {index} (not yet implemented).")        
         super().run_onchange(index, column, data)
     
-    def run_all(self, data : "CustomDataFrame", pre : bool=False, post : bool=False) -> None:
-        """
-        Run any computation elements on the data frame.
+    # def run_all(self, data : "CustomDataFrame", pre : bool=False, post : bool=False) -> None:
+    #     """
+    #     Run any computation elements on the data frame.
 
-        :param data: The data frame to be used.
-        :type data: lynguine.assess.data.CustomDataFrame
-        :param pre: Whether to run precomputes.
-        :type pre: bool
-        :param post: Whether to run postcomputes.
-        :type post: bool
-        :return: None
-        """
-        #super().run_all(data, df, index, pre, post)
+    #     :param data: The data frame to be used.
+    #     :type data: lynguine.assess.data.CustomDataFrame
+    #     :param pre: Whether to run precomputes.
+    #     :type pre: bool
+    #     :param post: Whether to run postcomputes.
+    #     :type post: bool
+    #     :return: None
+    #     """
+    #     #super().run_all(data, df, index, pre, post)
 
-        index = data.get_index()
-        log.debug(f"Running computes on index=\"{index}\" with pre=\"{pre}\" and post=\"{post}\"")
-        computes = []
-        if pre:
-            computes += self._computes["precompute"]
-        computes += self._computes["compute"]
-        if post:
-            computes += self._computes["postcompute"]
+    #     index = data.get_index()
+    #     log.debug(f"Running computes on index=\"{index}\" with pre=\"{pre}\" and post=\"{post}\"")
+    #     computes = []
+    #     if pre:
+    #         computes += self._computes["precompute"]
+    #     computes += self._computes["compute"]
+    #     if post:
+    #         computes += self._computes["postcompute"]
             
-        for compute in computes:
-            self.run(data, compute)   
+    #     for compute in computes:
+    #         self.run(data, compute)   
 
     def _compute_functions_list(self) -> list[dict]:
         """

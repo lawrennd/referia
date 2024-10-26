@@ -36,6 +36,6 @@
     Any other comment or issues in the interview.
 - name: disruption-comment
   type: CriterionComment
-  prefix: Disruption Comment
+  prefix: Disruption
   criterion: |
     List any disruptions that occurred to the interview here.

@@ -31,8 +31,7 @@ div.output_scroll {
 }
 
 .output_wrapper .output {
-    overflow-y: visible;
-    height: fit-content;
+    height:auto !important;
 }
 
 
