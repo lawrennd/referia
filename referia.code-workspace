@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {},
+	"notes": {
+		"test_failures": "FIXED: test_run_all in referia/tests/test_assess_compute.py was failing because the run_all method in lynguine.assess.compute.Compute requires an 'interface' parameter that wasn't being passed in the test. The fix was to update the test to include the mock_interface parameter."
+	}
+}

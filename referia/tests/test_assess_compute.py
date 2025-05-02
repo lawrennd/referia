@@ -173,10 +173,10 @@ def test_preprocess(compute_instance, mock_data, mock_interface, mocker):
     # Assert preprocess functionality
 
 # Test run_all method
-def test_run_all(compute_instance, mocker, mock_data):
+def test_run_all(compute_instance, mocker, mock_data, mock_interface):
     mocker.patch.object(compute_instance, 'run', return_value=None)
     mocker.patch.object(compute_instance, '_computes', {'precompute': [], 'compute': [], 'postcompute': []})
-    compute_instance.run_all(mock_data)
+    compute_instance.run_all(mock_data, mock_interface)
     # Assert run_all functionality
 
 # Test _compute_functions_list method
