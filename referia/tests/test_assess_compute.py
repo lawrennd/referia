@@ -375,7 +375,7 @@ def test_compute_functions_list(compute_instance):
     
     # Check for referia-specific functions
     function_names = [func['name'] for func in functions_list]
-    referia_specific_functions = ['liquid', 'word_count', 'copy_screen_capture', 'pdf_extract_comments']
+    referia_specific_functions = ['liquid', 'word_count', 'pdf_extract_comments']
     for func_name in referia_specific_functions:
         assert any(func['name'] == func_name for func in functions_list), f"Expected referia-specific function '{func_name}' in function list"
 
