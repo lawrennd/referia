@@ -2,6 +2,7 @@ import pytest
 from referia.assess.compute import Compute  # Adjust the import as necessary
 from lynguine.assess.data import CustomDataFrame
 from unittest.mock import MagicMock
+import pandas as pd
 
 @pytest.fixture
 def mock_interface(mocker):
@@ -31,6 +32,12 @@ def mock_interface(mocker):
 @pytest.fixture
 def mock_data(mocker):
     return CustomDataFrame({})
+
+@pytest.fixture
+def mock_data_with_indices(mocker):
+    # Create a DataFrame with two indices for testing run_all
+    df = pd.DataFrame({'col1': [1, 2], 'col2': ['a', 'b']})
+    return CustomDataFrame(df)
 
 @pytest.fixture
 def compute_instance(mocker, mock_interface):
@@ -172,12 +179,41 @@ def test_preprocess(compute_instance, mock_data, mock_interface, mocker):
     compute_instance.preprocess(mock_data, mock_interface)
     # Assert preprocess functionality
 
-# Test run_all method
-def test_run_all(compute_instance, mocker, mock_data, mock_interface):
-    mocker.patch.object(compute_instance, 'run', return_value=None)
+# Test run_all method - Updated according to CIP-0001 and with a better understanding of lynguine implementation
+def test_run_all(compute_instance, mocker, mock_data_with_indices, mock_interface):
+    # Setup mocks
+    run_mock = mocker.patch.object(compute_instance, 'run', return_value=None)
     mocker.patch.object(compute_instance, '_computes', {'precompute': [], 'compute': [], 'postcompute': []})
-    compute_instance.run_all(mock_data, mock_interface)
-    # Assert run_all functionality
+    
+    # Call the method being tested with a DataFrame that has indices
+    compute_instance.run_all(mock_data_with_indices, mock_interface)
+    
+    # The run_all method should call run once for each index in the DataFrame
+    # Our mock_data_with_indices has 2 indices
+    assert run_mock.call_count == 2
+    
+    # Reset the mock
+    run_mock.reset_mock()
+    
+    # Test with non-empty compute lists - doesn't affect call count since it's based on indices
+    mocker.patch.object(compute_instance, '_computes', {
+        'precompute': [{'name': 'pre1'}], 
+        'compute': [{'name': 'comp1'}, {'name': 'comp2'}], 
+        'postcompute': [{'name': 'post1'}]
+    })
+    
+    # Call run_all again
+    compute_instance.run_all(mock_data_with_indices, mock_interface)
+    
+    # Should still be called twice (once per index), regardless of compute items
+    assert run_mock.call_count == 2
+    
+    # Verify the method calls
+    expected_calls = [
+        mocker.call(mock_data_with_indices, mock_interface),
+        mocker.call(mock_data_with_indices, mock_interface)
+    ]
+    run_mock.assert_has_calls(expected_calls)
 
 # Test _compute_functions_list method
 def test_compute_functions_list(compute_instance):
