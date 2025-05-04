@@ -19,10 +19,52 @@ Compute Class
 
 The ``Compute`` class extends lynguine's compute framework with referia-specific functionality:
 
-- Additional computation functions for text analysis
-- Extended preprocessing capabilities
-- Document handling functions
-- Custom visualization tools
+Key Features
+^^^^^^^^^^^
+
+- **Data Processing Pipeline**: Supports preprocessing, computation, and postprocessing phases
+- **Template Rendering**: Liquid template rendering for text generation
+- **Text Analysis**: Word counting, summarization, and entity extraction
+- **PDF Processing**: Extract comments and annotations from PDF files
+- **Screen Capture**: Integration with system screen capture for assessment workflows
+
+Function Registry
+^^^^^^^^^^^^^^^
+
+The Compute class maintains a registry of functions that can be used in computation tasks.
+These are available through the ``_compute_functions_list`` method and include:
+
+.. code-block:: python
+
+   # Example of registering a compute function
+   {
+     "name": "word_count",
+     "function": word_count,
+     "default_args": {},
+     "docstr": "Count words in text."
+   }
+
+Usage Example
+^^^^^^^^^^^^
+
+.. code-block:: python
+
+   from referia.config.interface import Interface
+   from referia.assess.compute import Compute
+   from lynguine.assess.data import CustomDataFrame
+   
+   # Create compute instance
+   interface = Interface(config_file="path/to/config.yml")
+   compute = Compute(interface)
+   
+   # Create data
+   data = CustomDataFrame({"text": ["Sample text for analysis"]})
+   
+   # Run computations
+   compute.run_all(data)
+   
+   # Access results
+   print(data)
 
 For details on the base functionality, see :py:class:`lynguine.assess.compute.Compute`.
 
@@ -45,20 +87,21 @@ The review module provides functionality specific to managing review processes.
    :undoc-members:
    :show-inheritance:
 
+Key Features
+^^^^^^^^^^^
+
+- Interactive web-based interface for reviews
+- Customizable widget layouts
+- Integration with computation engine
+- Document generation capabilities
+
 Inheritance Diagram
 -----------------
 
 The following diagram illustrates the inheritance relationships between referia and lynguine classes:
 
-.. code-block:: text
-
-    lynguine.assess.compute.Compute
-        ↑
-        └── referia.assess.compute.Compute
-
-    lynguine.assess.data.CustomDataFrame
-        ↑
-        └── (used directly in referia)
+.. inheritance-diagram:: referia.assess.compute.Compute referia.assess.review.Reviewer
+   :parts: 1
 
 Module Functions
 --------------

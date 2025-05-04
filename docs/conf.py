@@ -30,6 +30,8 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.coverage',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.graphviz',
+    'sphinx.ext.inheritance_diagram',
     'myst_parser',  # For Markdown support
 ]
 
