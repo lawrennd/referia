@@ -40,7 +40,7 @@ Review Classes
 
 The review module provides functionality specific to managing review processes.
 
-.. autoclass:: referia.assess.review.Review
+.. autoclass:: referia.assess.review.Reviewer
    :members:
    :undoc-members:
    :show-inheritance:
