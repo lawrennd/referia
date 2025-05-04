@@ -225,10 +225,12 @@ class Compute(lynguine.assess.compute.Compute):
                     filt = (filt & newfilt)
             data.filter_row(filt)
 
-    def run_onchange(self, index, column, data):
+    def run_onchange(self, data, index, column):
         """
         Run all onchange computations. These are computations that occur when a particular column is modified.
 
+        :param data: The data frame to be used.
+        :type data: lynguine.assess.data.CustomDataFrame
         :param index: The index to be used.
         :type index: object
         :param column: The column to be used.
@@ -236,7 +238,7 @@ class Compute(lynguine.assess.compute.Compute):
         :return: None
         """
         log.debug(f"Running onchange for {column} at index {index} (not yet implemented).")        
-        super().run_onchange(index, column, data)
+        super().run_onchange(data, index, column)
     
     # def run_all(self, data : "CustomDataFrame", pre : bool=False, post : bool=False) -> None:
     #     """
