@@ -43,7 +43,7 @@ def test_interface_initialization(sample_data):
         mock_expand.return_value = sample_data["review"]  # This line might not be necessary
         interface = Interface(sample_data, directory=".", user_file="test.yml")
         print(mock_expand.call_args)
-        assert mock_expand.called_once_with(sample_data["review"])
+        mock_expand.assert_called_once_with(sample_data["review"])
 
 def test_expand_review_cluster(sample_data):
     with patch('lynguine.access.io.read_yaml_file') as mock_open:
