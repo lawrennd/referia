@@ -50,6 +50,15 @@ lynguine = { git = "https://github.com/lawrennd/lynguine.git" }
 gspread_pandas = { version = "*", platform = "darwin" }
 appscript = { version = "*", platform = "darwin" }
 
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+sphinx = ">=5.0.0"
+sphinx-rtd-theme = ">=1.0.0"
+myst-parser = ">=0.18.0"
+toml = ">=0.10.2"
+
 [build]
 # Include if you have any build scripts, though this is rare
 script = "path/to/script"
