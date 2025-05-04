@@ -60,7 +60,71 @@ def automapping(columns):
     return mapping
 
 class CustomDataFrame(data.CustomDataFrame):
-    """Class to hold merged data flows together perform operations on them."""
+    """
+    Enhanced data frame for review and assessment workflows.
+    
+    The CustomDataFrame extends lynguine's CustomDataFrame class to provide 
+    additional functionality specific to referia's review workflows. It manages
+    data storage, computation, and specialized data handling for review processes.
+    
+    .. rubric:: Inheritance
+    
+    This class inherits from lynguine.assess.data.CustomDataFrame and extends it with:
+    
+    * Pre-computation and post-computation hooks
+    * Enhanced data augmentation capabilities
+    * Specialized methods for review data management
+    * Series-based data operations
+    
+    .. rubric:: Key Features
+    
+    * Support for data augmentation with external sources
+    * Series-based data manipulation for reviews
+    * Integration with the referia compute system
+    * Enhanced data preprocessing and postprocessing
+    
+    :param data: Initial data to populate the DataFrame, defaults to None
+    :type data: pd.DataFrame, dict, or similar, optional
+    :param colspecs: Column specifications, defaults to None
+    :type colspecs: dict, optional
+    :param index: Initial index value, defaults to None
+    :type index: str or int, optional
+    :param column: Initial column value, defaults to None
+    :type column: str, optional
+    :param selector: Initial selector value, defaults to None
+    :type selector: str, optional
+    :param subindex: Initial subindex value, defaults to None
+    :type subindex: str or int, optional
+    :param compute: Compute object for data processing, defaults to None
+    :type compute: referia.assess.compute.Compute, optional
+    :param interface: Interface configuration, defaults to None
+    :type interface: referia.config.interface.Interface, optional
+    
+    .. rubric:: Example
+    
+    .. code-block:: python
+    
+        from referia.assess.data import CustomDataFrame
+        
+        # Create a basic data frame
+        data = {"text": ["Sample review text"], "score": [0]}
+        df = CustomDataFrame(data)
+        
+        # Add a column
+        df.add_column("reviewer", "User 1")
+        
+        # Add a series row
+        df.add_series_row(index="review2", values={"text": "Second review", "score": 5})
+        
+        # Access data
+        print(df.get_value_column("text"))
+    
+    .. seealso::
+        :class:`lynguine.assess.data.CustomDataFrame`
+            Parent class with core data frame functionality
+        :class:`referia.assess.compute.Compute`
+            Compute class used with this data frame
+    """
     def __init__(self, data=None, colspecs=None, index=None, column=None, selector=None, subindex=None, compute=None, interface=None):
 
         # Call the parent class with data, colspecs, index, column, selector
@@ -445,11 +509,32 @@ class CustomDataFrame(data.CustomDataFrame):
         
     def set_index(self, value : str) -> None:
         """
-        Index setter
-
-        :param value: The index to be set.
+        Set the current index and trigger associated computations.
+        
+        This method sets the active index for the data frame and triggers a series of
+        operations that ensure the data is properly initialized and processed for the
+        new index. When the index changes, this method:
+        
+        1. Runs post-computation on the previous index (if there was one)
+        2. Sets the new index by calling the parent class method
+        3. Runs pre-computation on the new index
+        4. Checks or initializes series data for the new index
+        
+        The pre-compute and post-compute steps are particularly important for maintaining
+        data consistency and implementing review workflows.
+        
+        :param value: The index value to set as current
         :type value: str
         :return: None
+        :rtype: None
+        
+        .. note::
+            This method automatically triggers computation hooks defined in _precompute
+            and _postcompute lists. These hooks are typically defined in the review
+            configuration.
+            
+        .. seealso::
+            :meth:`compute_pre` and :meth:`compute_post` for the actual computation methods
         """
         
         # If index has changed, run post computes (computes that take place after review).

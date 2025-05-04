@@ -373,7 +373,23 @@ class CompositeWidgetCluster(WidgetCluster):
 
 class DynamicWidgetCluster(WidgetCluster):
     """
-    A class to hold a cluster of widgets that are dynamically reconstructed.
+    A widget cluster that dynamically rebuilds its contents as needed.
+    
+    This class extends the basic WidgetCluster with the ability to reconstruct
+    its child widgets based on configuration details. It's particularly useful
+    for widgets that need to change based on user interaction or data updates.
+    
+    DynamicWidgetCluster stores its configuration details and can refresh itself
+    by recreating its child widgets from these details, allowing for adaptive
+    user interfaces that respond to changing conditions.
+    
+    :param details: Configuration details for the widget cluster
+    :type details: dict
+    :param kwargs: Additional keyword arguments passed to the parent class
+    
+    .. seealso::
+        :class:`LoopWidgetCluster`
+            A specialized dynamic widget cluster for loop-based widget creation
     """
     def __init__(self, details, **kwargs):
         """
@@ -422,16 +438,14 @@ class Reviewer(DisplaySystem):
     in referia. It manages a collection of widgets organized into clusters and
     handles events, data updates, and view rendering.
     
-    :param index: The index of the data to display, defaults to None
-    :type index: str or int, optional
-    :param data: The data to be displayed and manipulated, defaults to None
-    :type data: pd.DataFrame, optional
-    :param interface: The interface configuration defining the review layout, defaults to None
-    :type interface: lynguine.config.interface.Interface, optional
-    :param system: The system configuration, defaults to None
-    :type system: str, optional
-    :param viewer_inherit: Whether the viewer inherits a parent viewer, defaults to True
-    :type viewer_inherit: bool, optional
+    .. rubric:: Inheritance
+    
+    This class inherits from lynguine.assess.display.DisplaySystem and extends it with:
+    
+    * Document generation from templates
+    * Summary creation and aggregation
+    * Advanced widget management and dynamic UI creation
+    * Integration with the referia compute engine
     
     .. rubric:: Key Features
     
@@ -442,7 +456,20 @@ class Reviewer(DisplaySystem):
     * Integration with the Compute engine for data processing
     * Real-time reactivity to data changes
     
+    :param index: The index of the data to display, defaults to None
+    :type index: str or int, optional
+    :param data: The data to be displayed and manipulated, defaults to None
+    :type data: lynguine.assess.data.CustomDataFrame, optional
+    :param interface: The interface configuration defining the review layout, defaults to None
+    :type interface: referia.config.interface.Interface, optional
+    :param system: The system configuration, defaults to None
+    :type system: str, optional
+    :param viewer_inherit: Whether the viewer inherits a parent viewer, defaults to True
+    :type viewer_inherit: bool, optional
+    
     .. rubric:: Example
+    
+    Basic usage:
     
     .. code-block:: python
     
@@ -467,6 +494,8 @@ class Reviewer(DisplaySystem):
             Parent class providing base display functionality
         :class:`referia.assess.compute.Compute`
             Computation engine used with Reviewer
+        :class:`lynguine.assess.data.CustomDataFrame`
+            Data class used with Reviewer
     """
     def __init__(self, index=None, data=None, interface=None, system=None, viewer_inherit=True):
         """
@@ -508,12 +537,24 @@ class Reviewer(DisplaySystem):
               
     def set_default_field_value(self, field, value):
         """
-        Set the default value for the field.
-
-        :param field: The field to set the default value for.
+        Set the default value for a specified field.
+        
+        This method establishes a default value for a data field that will be used
+        when no explicit value is provided. Default values are stored in the 
+        _default_field_vals series and are used to initialize widgets when they
+        are created.
+        
+        :param field: The name of the field to set the default value for
         :type field: str
-        :param value: The value to set.
+        :param value: The default value to assign to the field
         :type value: any
+        :return: None
+        :rtype: None
+        
+        .. code-block:: python
+            
+            # Set a default value for a field
+            reviewer.set_default_field_value("comment", "No comment provided")
         """
         self._default_field_vals[field] = value
 
@@ -860,11 +901,17 @@ class Reviewer(DisplaySystem):
         This is typically the last method called after initializing a Reviewer instance.
         
         :return: None
+        :rtype: None
         
         .. code-block:: python
             
+            # Create and display a reviewer
             reviewer = Reviewer(data=data, interface=interface)
             reviewer.run()  # Displays the interactive interface
+            
+        .. note::
+            This method must be called in a Jupyter notebook environment for the
+            interactive widgets to display properly.
         """
         if self.index is not None:
             if "series" in self._interface:
@@ -976,6 +1023,7 @@ class Reviewer(DisplaySystem):
                         across multiple data indices
         :type summary: bool
         :return: None
+        :rtype: None
         
         .. note::
             Template fields can contain special rendering instructions:
@@ -986,6 +1034,20 @@ class Reviewer(DisplaySystem):
             * "join": Join elements
             * "liquid": Process as liquid template
             * "use": Reference viewer or review content
+            
+        .. code-block:: python
+        
+            # Example document configuration
+            doc_config = {
+                "type": "markdown",
+                "header": "# Review Summary",
+                "body": {"use": "review"},
+                "footer": "Generated on {{date}}",
+                "filename": "review_{{index}}.md"
+            }
+            
+            # Generate the document
+            reviewer.create_document(doc_config)
             
         .. seealso::
             :meth:`template_to_value` for details on template processing
@@ -1067,6 +1129,7 @@ class Reviewer(DisplaySystem):
         configuration.
         
         :return: None
+        :rtype: None
         
         .. note::
             This method is typically called internally by widgets when their
@@ -1088,7 +1151,30 @@ class Reviewer(DisplaySystem):
 
     def value_updated(self):
         """
-        If a value in a row has been updated, modify other values that are dependent on change.
+        Process all updates triggered by a value change in the data.
+        
+        This method is called when a value in a data field is updated and handles
+        all the necessary follow-up actions, including:
+        
+        1. Triggering compute functions that depend on the changed value
+        2. Updating timestamp fields (modified and created dates)
+        3. Updating combinator fields that aggregate multiple values
+        
+        The method follows these steps:
+        - Calls compute_onchange() to trigger dependent computations
+        - Updates the modification timestamp for the changed field
+        - Creates a creation timestamp if one doesn't exist
+        - Updates any combinator fields defined in the interface
+        
+        :return: None
+        :rtype: None
+        
+        .. note::
+            This method is automatically called by widgets when their values change,
+            and typically should not be called directly by users.
+            
+        .. seealso::
+            :meth:`compute_onchange` for the computation part of the update process
         """
 
         # TK Perform updates triggered by value changes.

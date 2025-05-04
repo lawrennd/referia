@@ -71,12 +71,29 @@ For details on the base functionality, see :py:class:`lynguine.assess.compute.Co
 Data Classes
 ----------
 
-Referia uses the ``CustomDataFrame`` class from lynguine directly:
+Referia extends the ``CustomDataFrame`` class from lynguine:
 
-.. autoclass:: lynguine.assess.data.CustomDataFrame
-   :noindex:
-   :members: get_value_column, set_value_column
+.. autoclass:: referia.assess.data.CustomDataFrame
+   :members:
+   :undoc-members:
+   :show-inheritance:
    
+   .. rubric:: Key Methods
+   
+   .. autosummary::
+      :nosignatures:
+      
+      set_index
+      add_series_row
+      compute_pre
+      compute_post
+   
+   For base functionality, see also:
+   
+   .. autoclass:: lynguine.assess.data.CustomDataFrame
+      :noindex:
+      :members: get_value_column, set_value_column
+
 Review Classes
 ------------
 
@@ -100,7 +117,7 @@ Inheritance Diagram
 
 The following diagram illustrates the inheritance relationships between referia and lynguine classes:
 
-.. inheritance-diagram:: referia.assess.compute.Compute referia.assess.review.Reviewer
+.. inheritance-diagram:: referia.assess.compute.Compute referia.assess.review.Reviewer referia.assess.data.CustomDataFrame
    :parts: 1
 
 Module Functions
