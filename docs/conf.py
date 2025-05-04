@@ -38,7 +38,7 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable', None),
     'numpy': ('https://numpy.org/doc/stable', None),
-    'lynguine': ('/Users/neil/lawrennd/lynguine/docs/_build/html', None),  # Local lynguine docs
+    'lynguine': (None, None),  # Disabled local lynguine docs - will be skipped if not found
 }
 
 autodoc_member_order = 'bysource'  # Keep the same order as in the source file
