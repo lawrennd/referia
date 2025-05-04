@@ -1,4 +1,29 @@
-"""This file creates displays that help visualize the data."""
+"""
+Interactive review interfaces for assessment and data annotation.
+
+This module provides classes and functions for creating and managing interactive
+review interfaces. The core class is :class:`Reviewer`, which extends the DisplaySystem
+from lynguine to provide a rich, web-based interface for data review and annotation.
+
+The module implements a widget-based approach to building review interfaces, with
+support for:
+
+* Various input types (text fields, checkboxes, sliders, etc.)
+* Document generation
+* Summary creation
+* Integration with the compute engine
+* Dynamic widget creation and management
+
+Key Components:
+--------------
+* Reviewer: Main class for interactive review interfaces
+* WidgetCluster classes: Organize widgets into logical groups
+* Extract functions: Parse configuration to build widget hierarchies
+* Utility functions: Support widget creation and management
+
+The interfaces are typically defined in YAML configuration files and loaded through
+the Interface class, then passed to a Reviewer instance for display and interaction.
+"""
 
 import string
 import random
@@ -386,7 +411,62 @@ class LoopWidgetCluster(DynamicWidgetCluster):
 
 class Reviewer(DisplaySystem):
     """
-    A class to hold the display system.
+    Interactive review interface for assessment and data annotation.
+    
+    The Reviewer class provides a web-based interactive interface for reviewing, 
+    annotating, and processing data. It extends the DisplaySystem from lynguine
+    and adds functionality for document generation, summaries, and advanced 
+    widget management.
+    
+    This class is the main entry point for creating interactive review interfaces
+    in referia. It manages a collection of widgets organized into clusters and
+    handles events, data updates, and view rendering.
+    
+    :param index: The index of the data to display, defaults to None
+    :type index: str or int, optional
+    :param data: The data to be displayed and manipulated, defaults to None
+    :type data: pd.DataFrame, optional
+    :param interface: The interface configuration defining the review layout, defaults to None
+    :type interface: lynguine.config.interface.Interface, optional
+    :param system: The system configuration, defaults to None
+    :type system: str, optional
+    :param viewer_inherit: Whether the viewer inherits a parent viewer, defaults to True
+    :type viewer_inherit: bool, optional
+    
+    .. rubric:: Key Features
+    
+    * Interactive widget-based UI for data review
+    * Support for various input types (text, checkbox, sliders, etc.)
+    * Document generation from templates
+    * Summary creation and reporting
+    * Integration with the Compute engine for data processing
+    * Real-time reactivity to data changes
+    
+    .. rubric:: Example
+    
+    .. code-block:: python
+    
+        from referia.assess.review import Reviewer
+        from referia.config.interface import Interface
+        from lynguine.assess.data import CustomDataFrame
+        
+        # Create data
+        data = CustomDataFrame({"text": ["Sample review text"], "score": [0]})
+        
+        # Load interface configuration
+        interface = Interface(config_file="review_config.yml")
+        
+        # Create reviewer
+        reviewer = Reviewer(data=data, interface=interface)
+        
+        # Display the review interface
+        reviewer.run()
+    
+    .. seealso::
+        :class:`lynguine.assess.display.DisplaySystem`
+            Parent class providing base display functionality
+        :class:`referia.assess.compute.Compute`
+            Computation engine used with Reviewer
     """
     def __init__(self, index=None, data=None, interface=None, system=None, viewer_inherit=True):
         """
@@ -765,7 +845,26 @@ class Reviewer(DisplaySystem):
 
     def run(self):
         """
-        Run the reviewer to edit the data frame.
+        Display the interactive review interface.
+        
+        This method is the main entry point for displaying and interacting with the
+        review interface. It initializes the appropriate selectors based on configuration,
+        displays the widget hierarchy, and populates the display with current data.
+        
+        When called:
+        1. If an index is set, it displays either the selector or full selector based on configuration
+        2. Renders all widgets in the interface
+        3. Populates the display with current data values
+        4. Initializes series view if configured
+        
+        This is typically the last method called after initializing a Reviewer instance.
+        
+        :return: None
+        
+        .. code-block:: python
+            
+            reviewer = Reviewer(data=data, interface=interface)
+            reviewer.run()  # Displays the interactive interface
         """
         if self.index is not None:
             if "series" in self._interface:
@@ -778,12 +877,36 @@ class Reviewer(DisplaySystem):
 
     def template_to_value(self, template : dict) -> str:
         """
-        Convert a template to values.
-
-        :param template: The template to be converted.
+        Process a template configuration into its rendered text value.
+        
+        This method converts template definitions into actual content by applying
+        the appropriate rendering strategy based on the template type. It handles
+        special template types that reference UI components or data views.
+        
+        :param template: Template configuration dictionary
         :type template: dict
-        :return: The value of the template.
+        :return: The rendered text content
         :rtype: str
+        
+        The template can use special keys:
+        
+        * **use**: Defines a template source type
+          - "viewer": Uses content from the viewer configuration
+          - "scorer"/"review": Uses content from review widgets
+        
+        If no "use" key is present, the template is processed as a standard
+        data view template.
+        
+        .. code-block:: python
+        
+            # Example: Render content from viewer
+            content = reviewer.template_to_value({"use": "viewer"})
+            
+            # Example: Render content from review widgets
+            content = reviewer.template_to_value({"use": "review"})
+            
+            # Example: Render content from a custom view template
+            content = reviewer.template_to_value({"display": {"field": "comments"}})
         """
         if "use" in template:
             if template["use"] == "viewer":
@@ -835,12 +958,37 @@ class Reviewer(DisplaySystem):
         
     def create_document(self, document : dict, summary : bool = False) -> None:
         """
-        Create a document from the data we've provided.
-
-        :param document: The document to be created.
+        Generate a document from templates and data.
+        
+        This method creates documents (such as reports, reviews, or summaries) based on
+        templates defined in the configuration. It processes template fields, renders content
+        from data, and passes the result to the system's document creation mechanism.
+        
+        The document dictionary can contain various fields that define the document's content
+        and structure. Special fields like "header", "body", "footer", and "content" receive
+        special handling, with "body" being copied to "content" and headers/footers being
+        concatenated with the content.
+        
+        :param document: Document configuration dictionary containing template definitions
+                         and other document parameters
         :type document: dict
-        :param summary: Whether the document is a summary.
+        :param summary: Whether to create a summary document that aggregates content
+                        across multiple data indices
         :type summary: bool
+        :return: None
+        
+        .. note::
+            Template fields can contain special rendering instructions:
+            
+            * "tally": Aggregate values
+            * "display": Format for display
+            * "list": Process as list
+            * "join": Join elements
+            * "liquid": Process as liquid template
+            * "use": Reference viewer or review content
+            
+        .. seealso::
+            :meth:`template_to_value` for details on template processing
         """
         args = {}
         for field in document:
@@ -907,18 +1055,37 @@ class Reviewer(DisplaySystem):
 
     def compute_onchange(self):
         """
-        Perform all computations that are triggered by a change in the data.
-
+        Process computation triggered by widget value changes.
+        
+        This method is called when a widget value changes and triggers the compute
+        infrastructure to perform calculations that depend on the changed value.
+        It retrieves the current index and column information and passes them to
+        the compute engine's run_onchange method.
+        
+        This creates a reactive computation network where changes to input values
+        automatically update dependent values based on compute definitions in the
+        configuration.
+        
         :return: None
-        """
-        log.debug(f"Ruanning onchange computes.")
-        index = self.get_index()
-        column = self.get_column()
-        self._data._compute.run_onchange(data=self._data, index=self.get_index(), column=self.get_column())
-
+        
+        .. note::
+            This method is typically called internally by widgets when their
+            values change, not directly by users.
             
-        
-        
+        .. seealso::
+            :meth:`referia.assess.compute.Compute.run_onchange` for details on the
+            computation process
+        """
+        if self.index is not None:
+            # Get the data once
+            data = self._data
+            compute_index = data.get_compute_index(self.index)
+            if "compute" in self._interface and data is not None:
+                if compute_index is not None:
+                    if self.column_name is not None:
+                        self._system.compute.run_onchange(data, compute_index, self.column_name)
+
+
     def value_updated(self):
         """
         If a value in a row has been updated, modify other values that are dependent on change.
@@ -954,7 +1121,7 @@ class Reviewer(DisplaySystem):
             self.set_column(created_field)
             self.set_value(today_val, trigger_update=False)
 
-            
+        
         # Combinator is a combined field based on others
         if "combinator" in self._interface:
             log.debug(f"Updating combinator field.")
@@ -970,7 +1137,7 @@ class Reviewer(DisplaySystem):
 
         self.set_column(column)
 
-    
+        
     def populate_display(self) -> None:
         """
         Update the widgets with defaults or values from the data
@@ -1008,6 +1175,20 @@ class Reviewer(DisplaySystem):
 
 
     def view_series(self):
+        """
+        Display files, URLs and editable files for the current data.
+        
+        This method triggers the system to:
+        1. Clear any temporary files
+        2. Display files associated with the current data
+        3. Display URLs referenced in the data
+        4. Open editors for editable files
+        
+        This is typically called as part of the run method to initialize
+        the full review interface.
+        
+        :return: None
+        """
         self._system.clear_temp_files()
         self._system.view_files(self._data)
         self._system.view_urls(self._data)
