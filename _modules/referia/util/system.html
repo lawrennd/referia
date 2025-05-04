@@ -8,6 +8,7 @@
   <title>referia.util.system &mdash; referia 0.2 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
 
   
       <script src="../../../_static/jquery.js?v=5d32c60e"></script>
@@ -39,7 +40,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">Introduction to Referia</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../introduction.html#what-is-referia">What is Referia?</a></li>
@@ -65,42 +66,6 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../quickstart.html#next-steps">Next Steps</a></li>
 </ul>
 </li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage/basic_concepts.html">Basic Concepts</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/basic_concepts.html#inheritance-from-lynguine">Inheritance from Lynguine</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/basic_concepts.html#compute-framework">Compute Framework</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/basic_concepts.html#data-management">Data Management</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/basic_concepts.html#configuration-system">Configuration System</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/basic_concepts.html#review-process-concepts">Review Process Concepts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/basic_concepts.html#common-workflow">Common Workflow</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage/compute.html">Working with the Compute Framework</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/compute.html#understanding-the-inheritance">Understanding the Inheritance</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/compute.html#basic-usage">Basic Usage</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/compute.html#core-methods-inherited-from-lynguine">Core Methods (Inherited from lynguine)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/compute.html#referia-specific-extensions">Referia-Specific Extensions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/compute.html#available-compute-functions">Available Compute Functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/compute.html#example-configuration">Example Configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/compute.html#advanced-usage">Advanced Usage</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage/assessment.html">Assessment and Review Management</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/assessment.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/assessment.html#the-review-class">The Review Class</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/assessment.html#configuration-for-review-processes">Configuration for Review Processes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/assessment.html#managing-review-data">Managing Review Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/assessment.html#scoring-and-assessment">Scoring and Assessment</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/assessment.html#generating-reports">Generating Reports</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/assessment.html#integration-with-compute-framework">Integration with Compute Framework</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../usage/assessment.html#workflow-example">Workflow Example</a></li>
-</ul>
-</li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
-<ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/assess.html">Assess Module</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#compute-class">Compute Class</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute"><code class="docutils literal notranslate"><span class="pre">Compute</span></code></a><ul>
@@ -123,9 +88,156 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.setup_logger"><code class="docutils literal notranslate"><span class="pre">Compute.setup_logger()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#key-features">Key Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#function-registry">Function Registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#usage-example">Usage Example</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#data-classes">Data Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#data-classes">Data Classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.check_or_set_subseries"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.check_or_set_subseries()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.preprocess"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.preprocess()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.compute_pre"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_pre()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.compute_post"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_post()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.reset_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.reset_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.generate_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.generate_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_series_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_series_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.drop_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.drop_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.filter_rows"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter_rows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_shape"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_shape()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_value_by_element"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_value_by_element()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_value_by_element"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value_by_element()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column_values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.add_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_dtype"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_dtype()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.add_series_row"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add_series_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.add_series_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add_series_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.T"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.T</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.add"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.add_row"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.apply"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.apply()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.augment_with_df"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment_with_df()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.autocache"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.autocache</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.colspecs"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.colspecs</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.coltype"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.coltype()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.columns</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.compute"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.compute_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.compute_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.conditions"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.conditions()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.convert"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.convert()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.describe"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.describe()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.display_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.display_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.display_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.display_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.dot"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.dot()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.drop_duplicates"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.drop_duplicates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.dropna"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.dropna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.dtypes"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.dtypes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.empty"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.empty</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.equals"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.equals()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.fillna"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.fillna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.filter"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_csv"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_dict"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_pandas()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column_type"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_input_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_input_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_output_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_output_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_parameters_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_parameters_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_selector"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_selectors"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_selectors()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_series_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_series_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_subindices"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_subindices()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_subseries"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_subseries()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_subseries_values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_subseries_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_type_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_type_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_value_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_value_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.groupby"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.groupby()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.head"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.head()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.index</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.interface"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.interface</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.ismutable"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.ismutable()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.isna"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.isna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.isnull"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.isnull()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.isparameter"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.isparameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.isseries"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.isseries()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.join"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.join()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.liquid_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.liquid_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.liquid_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.liquid_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.log"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.log</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.mapping"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.mapping()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.mean"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.mean()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.merge"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.merge()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.multiply"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.multiply()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.mutable"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.mutable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.notna"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.notna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.pivot_table"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.pivot_table()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.save_flows"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.save_flows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_selector"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_value_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.shape"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.shape</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.subtract"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.subtract()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sum"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sum()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.summary_view_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.summary_view_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.summary_viewer_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.summary_viewer_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.tail"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tail()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.tally_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tally_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.tally_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tally_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.tally_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tally_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.tally_values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tally_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_clipboard"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_clipboard()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_csv"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_dict"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_excel"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_excel()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_feather"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_feather()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_flow()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_gbq"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_gbq()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_hdf"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_hdf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_html"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_html()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_json"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_latex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_latex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_markdown"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_numpy"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_numpy()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_orc"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_orc()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_pandas()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_parquet"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_parquet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_period"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_period()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_records"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_records()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_sql"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_sql()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_stata"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_stata()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_string"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_string()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_timestamp"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_timestamp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_xarray"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_xarray()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_xml"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_xml()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.view_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.viewer_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.viewer_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.to_score"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_score()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.scored"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.scored()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.compute_from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_from_flow()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#review-classes">Review Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.review.Reviewer"><code class="docutils literal notranslate"><span class="pre">Reviewer</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.review.Reviewer.set_default_field_value"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_default_field_value()</span></code></a></li>
@@ -175,6 +287,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.review.Reviewer.view_series"><code class="docutils literal notranslate"><span class="pre">Reviewer.view_series()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#id1">Key Features</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#inheritance-diagram">Inheritance Diagram</a></li>
@@ -601,9 +714,14 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/util.html#relationship-with-lynguine-utilities">Relationship with Lynguine Utilities</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../../inheritance.html">Inheritance Relationships</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#compute-class">Compute Class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#data-classes">Data Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#configuration-system">Configuration System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#utility-functions">Utility Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#best-practices-for-developers">Best Practices for Developers</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Development</span></p>
-<ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing to Referia</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../contributing.html#development-setup">Development Setup</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../contributing.html#code-structure">Code Structure</a></li>
@@ -612,14 +730,6 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../contributing.html#working-with-both-codebases">Working with Both Codebases</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../contributing.html#pull-request-process">Pull Request Process</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../contributing.html#building-documentation">Building Documentation</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../../../inheritance.html">Inheritance Relationships</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#compute-class">Compute Class</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#data-classes">Data Classes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#configuration-system">Configuration System</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#utility-functions">Utility Functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#best-practices-for-developers">Best Practices for Developers</a></li>
 </ul>
 </li>
 </ul>

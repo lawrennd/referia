@@ -13,46 +13,47 @@ Contents
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting Started
+   :caption: Contents:
 
    introduction
    installation
    quickstart
-
-.. toctree::
-   :maxdepth: 2
-   :caption: User Guide
-
-   usage/basic_concepts
-   usage/compute
-   usage/assessment
-
-.. toctree::
-   :maxdepth: 2
-   :caption: API Reference
-
    modules/assess
    modules/config
    modules/util
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Development
-
-   contributing
    inheritance
+   examples/index
+   contributing
 
-Inheritance from Lynguine
-------------------------
+Module Overview
+--------------
 
-Referia is built on top of the lynguine framework and inherits significant functionality from it.
-The inheritance relationship is particularly important in these areas:
+Referia is organized into several core modules, each with a specific purpose:
 
-- **Compute Framework**: Core computation methods are inherited from ``lynguine.assess.compute.Compute``
-- **Data Management**: Data handling uses ``lynguine.assess.data.CustomDataFrame`` 
-- **Configuration**: Interface and configuration system is based on lynguine's approach
+* :doc:`modules/assess`: Assessment and computation framework
+  
+  * :class:`referia.assess.compute.Compute`: Main computation engine
+  * :class:`referia.assess.review.Reviewer`: Interactive review interface
 
-For more details on the inheritance relationships, see the :doc:`inheritance` page.
+* :doc:`modules/config`: Configuration and interfaces
+  
+  * :class:`referia.config.interface.Interface`: Configuration interface
+
+* :doc:`modules/util`: Utility functions
+  
+  * Text processing
+  * File operations
+  * Visualization
+
+Inheritance Structure
+--------------------
+
+Referia extends the lynguine framework with specialized functionality. The main inheritance relationships are:
+
+* ``referia.assess.compute.Compute`` inherits from ``lynguine.assess.compute.Compute``
+* ``referia.assess.review.Reviewer`` inherits from ``lynguine.assess.display.DisplaySystem``
+
+For a detailed view of these relationships, see the :doc:`inheritance` page.
 
 Indices and tables
 ==================
