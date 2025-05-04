@@ -148,13 +148,28 @@ Building Documentation
 
 To build the documentation:
 
-.. code-block:: bash
+1. Make sure you have all the required dependencies installed:
 
-    cd docs
-    make html
+   .. code-block:: bash
 
-The documentation system uses Sphinx with:
+      # From the repository root
+      poetry install --with dev
 
-- Autodoc for API documentation
-- Intersphinx for linking to lynguine documentation
-- napoleon for parsing Google/NumPy style docstrings 
+2. Navigate to the docs directory and build the HTML documentation:
+
+   .. code-block:: bash
+
+      cd docs
+      poetry run make html
+
+3. The built documentation will be available in ``docs/_build/html/``.
+
+4. For cross-references to lynguine's documentation, make sure you have lynguine's documentation built locally. The configuration expects it to be at ``/Users/neil/lawrennd/lynguine/docs/_build/html/``. You may need to adjust the path in ``conf.py`` if your lynguine repository is in a different location.
+
+   .. code-block:: python
+
+      # In docs/conf.py
+      intersphinx_mapping = {
+          # ...
+          'lynguine': ('/path/to/your/lynguine/docs/_build/html', None),
+      } 
