@@ -24,7 +24,6 @@ from ..util.plot import bar_plot, histogram
 from ..util.files import file_from_re, files_from_re
 
 
-
 from ..exceptions import ComputeError
 
 
@@ -38,6 +37,18 @@ log = Logger(
 )
 
 class Compute(lynguine.assess.compute.Compute):
+    """Compute class that extends the lynguine.assess.compute.Compute base class.
+    
+    This class inherits core computation functionality from lynguine and extends it with 
+    referia-specific methods and functions. The primary computation methods (prep, run, run_all)
+    are inherited from lynguine and should not be reimplemented here.
+    
+    Migration Note:
+    Previously, this class contained its own implementations of prep, run, and run_all methods
+    which have been migrated to the lynguine package. These implementations have been removed
+    as they are now provided by the parent class with updated method signatures.
+    """
+    
     def __init__(self, interface):
         """Initialize the compute object.
         
@@ -50,6 +61,8 @@ class Compute(lynguine.assess.compute.Compute):
     def prep_all(self, interface, data):
         """
         Prepare all compute entries for use.
+        
+        This method extends the parent class method to handle different computation types.
         
         :param interface: The interface to be used.
         :type interface: lynguine.config.interface.Interface
@@ -67,28 +80,6 @@ class Compute(lynguine.assess.compute.Compute):
                     self._computes[comptype].append(
                         self.prep(compute, data)
                     )
-                    
-    # def prep(self, settings : dict, data : lynguine.assess.data.CustomDataFrame ) -> dict:
-    #     """
-    #     Prepare a compute entry for use.
-        
-    #     :param settings: The settings to be used.
-    #     :type settings: dict
-    #     :param data: The data to be used.
-    #     :type data: lynguine.assess.data.CustomDataFrame
-    #     :return: The prepared compute entry.
-    #     :rtype: dict
-        
-    #     """
-    #     compute_prep = {
-    #         "function": self.gcf_(function=settings["function"], data=data),
-    #         "args" : self.gca_(**settings),
-    #         "refresh" : "refresh" in settings and settings["refresh"],
-    #     }
-    #     if "field" in settings:
-    #         compute_prep["field"] = settings["field"]
-    #     return compute_prep
-
             
     def copy_screen_capture(self) -> bytes:
         """
@@ -102,98 +93,17 @@ class Compute(lynguine.assess.compute.Compute):
             image = file.read()
         return image
         super().interface = value
-            
-
-    # def run(self, data : "CustomDataFrame", interface : Interface) -> None:
-    #     """
-    #     Run the computation given in compute.
-
-    #     :param compute: The compute to be run.
-    #     :type compute: lynguine.config.interface.Interface
-    #     :param df: The data frame to be used.
-    #     :type df: pandas.DataFrame or lynguine.assess.data.CustomDataFrame
-    #     :param index: The index to be used.
-    #     :type index: object
-    #     :param refresh: Whether to refresh the field.
-    #     :type refresh: bool
-    #     :return: The result of the computation.
-    #     :rtype: object
-    #     """
-
-    #     #super().run(compute, data, df, index, refresh);
-        
-    #     multi_output = False
-    #     fname = compute["function"].__name__
-    #     fargs = compute["args"]
-    #     if index is None:
-    #         index = data.get_index()
-
-    #     if "field" in compute:
-    #         columns = compute["field"]
-    #         if type(columns) is list:
-    #             multi_output = True
-    #         else:
-    #             columns = [columns]
-    #     else:
-    #         columns = None
-
-    #     # Determine which current values of field aren't set
-    #     missing_vals = []
-    #     if columns is not None:
-    #         for column in columns:
-    #             if df is None:
-    #                 if column not in data.columns:
-    #                     missing_vals.append(True)
-    #                     continue
-    #             else:
-    #                 if column not in df.columns:
-    #                     missing_vals.append(True)
-    #                     continue
-    #             if column == "_": # If the column is called "_" then ignore that argument
-    #                 missing_vals.append(False)
-    #                 continue
-    #             if df is None:
-    #                 val = data.get_value_column(column)
-    #             else:
-    #                 val = df.at[index, column]
-    #             if type(val) is not list and pd.isna(val):
-    #                 missing_vals.append(True)
-    #             else:
-    #                 missing_vals.append(False)
-
-    #     if refresh or any(missing_vals) or columns is None:
-    #         if columns is not None:
-    #             log.debug(f"Running compute function \"{fname}\" storing in field(s) \"{columns}\" with index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
-    #         else:
-    #             log.debug(f"Running compute function \"{fname}\" with no field(s) stored for index=\"{index}\" with refresh=\"{refresh}\" and arguments \"{fargs}\".")
-
-    #         new_vals = compute["function"](**fargs)
-    #     else:
-    #         return
-
-    #     if multi_output and type(new_vals) is not tuple:
-    #         errmsg = f"Multiple columns provided for return values of \"{fname}\" but return value given is not a tuple."
-    #         log.error(errmsg)
-    #         raise ValueError(errmsg)
-            
-    #     if columns is None:
-    #         return new_vals
-    #     else:
-    #         if multi_output:
-    #             new_vals = [*new_vals]
-    #         else:
-    #             new_vals = [new_vals]
-    #         for column, new_val, missing_val in zip(columns, new_vals, missing_vals):
-    #             if column == "_":
-    #                 continue
-    #             if refresh or missing_val and data.ismutable(column):
-    #                 log.debug(f"Setting column {column} in data structure to value {new_val} from compute.")
-    #                 data.set_value_column(new_val, column)
-  
+    
     def preprocess(self, data, interface):
         """
         Run all preprocess computations.
+        
+        This method extends the parent class functionality for preprocessing data.
 
+        :param data: The data to be processed.
+        :type data: lynguine.assess.data.CustomDataFrame
+        :param interface: The interface to be used.
+        :type interface: lynguine.config.interface.Interface
         :return: None
         """
         super().preprocess(data, interface)
@@ -228,6 +138,8 @@ class Compute(lynguine.assess.compute.Compute):
     def run_onchange(self, data, index, column):
         """
         Run all onchange computations. These are computations that occur when a particular column is modified.
+        
+        This method calls the parent class implementation. The parameter order matches the lynguine implementation.
 
         :param data: The data frame to be used.
         :type data: lynguine.assess.data.CustomDataFrame
@@ -240,35 +152,11 @@ class Compute(lynguine.assess.compute.Compute):
         log.debug(f"Running onchange for {column} at index {index} (not yet implemented).")        
         super().run_onchange(data, index, column)
     
-    # def run_all(self, data : "CustomDataFrame", pre : bool=False, post : bool=False) -> None:
-    #     """
-    #     Run any computation elements on the data frame.
-
-    #     :param data: The data frame to be used.
-    #     :type data: lynguine.assess.data.CustomDataFrame
-    #     :param pre: Whether to run precomputes.
-    #     :type pre: bool
-    #     :param post: Whether to run postcomputes.
-    #     :type post: bool
-    #     :return: None
-    #     """
-    #     #super().run_all(data, df, index, pre, post)
-
-    #     index = data.get_index()
-    #     log.debug(f"Running computes on index=\"{index}\" with pre=\"{pre}\" and post=\"{post}\"")
-    #     computes = []
-    #     if pre:
-    #         computes += self._computes["precompute"]
-    #     computes += self._computes["compute"]
-    #     if post:
-    #         computes += self._computes["postcompute"]
-            
-    #     for compute in computes:
-    #         self.run(data, compute)   
-
     def _compute_functions_list(self) -> list[dict]:
         """
         Return a list of compute functions.
+        
+        This method extends the parent class implementation by adding referia-specific compute functions.
 
         :return: A list of compute functions.
         :rtype: list
