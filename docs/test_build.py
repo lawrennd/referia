@@ -16,8 +16,14 @@ Returns:
 import os
 import subprocess
 import sys
+import pytest
+import shutil
 from pathlib import Path
 
+# Check if sphinx-build is available in the path
+sphinx_available = shutil.which('sphinx-build') is not None
+
+@pytest.mark.skipif(not sphinx_available, reason="sphinx-build not available in PATH")
 def test_sphinx_build():
     """Test that the Sphinx documentation builds correctly."""
     docs_dir = Path(__file__).parent

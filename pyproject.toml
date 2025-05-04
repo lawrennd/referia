@@ -7,6 +7,10 @@ pytest = "^6.2.5"
 pytest-cov = "^3.0.0"
 pytest-mock = "^3.3.1"  
 deepdiff = "^6.6.0"
+sphinx = "^8.2.3"
+sphinx-rtd-theme = "^3.0.2"
+myst-parser = "^4.0.1"
+toml = ">=0.10.2"
 
 [tool.poetry]
 name = "referia"
@@ -50,6 +54,8 @@ lynguine = { git = "https://github.com/lawrennd/lynguine.git" }
 gspread_pandas = { version = "*", platform = "darwin" }
 appscript = { version = "*", platform = "darwin" }
 
+# The docs group remains for local development but the dependencies
+# are duplicated in dev-dependencies to ensure they're installed in CI
 [tool.poetry.group.docs]
 optional = true
 
@@ -61,7 +67,7 @@ toml = ">=0.10.2"
 
 
 [tool.poetry.group.dev.dependencies]
-# Documentation dependencies have been moved to the docs group
+# Documentation dependencies have been moved to dev-dependencies section
 
 [build]
 # Include if you have any build scripts, though this is rare
