@@ -37,16 +37,58 @@ log = Logger(
 )
 
 class Compute(lynguine.assess.compute.Compute):
-    """Compute class that extends the lynguine.assess.compute.Compute base class.
+    """
+    Compute class for performing calculations and transformations on data.
     
-    This class inherits core computation functionality from lynguine and extends it with 
-    referia-specific methods and functions. The primary computation methods (prep, run, run_all)
-    are inherited from lynguine and should not be reimplemented here.
+    This class extends the lynguine.assess.compute.Compute base class and provides
+    referia-specific computation functionality. It handles data processing, transformation,
+    and analysis operations needed for review and assessment workflows.
     
-    Migration Note:
-    Previously, this class contained its own implementations of prep, run, and run_all methods
-    which have been migrated to the lynguine package. These implementations have been removed
-    as they are now provided by the parent class with updated method signatures.
+    The Compute class follows a three-phase processing model:
+    
+    1. **Preprocessing**: Prepare data for computation (from parent class)
+    2. **Computation**: Apply operations to data elements (from parent class)
+    3. **Postprocessing**: Finalize results after computation (from parent class)
+    
+    The primary computation methods (prep, run, run_all) are inherited from the lynguine
+    parent class and should not be reimplemented here.
+    
+    .. rubric:: Inheritance
+    
+    This class inherits from lynguine.assess.compute.Compute and extends it with:
+    
+    * Additional text analysis functions (word_count, text_summarizer, etc.)
+    * Referia-specific functionality like screen capture
+    * Extended preprocessing capabilities
+    
+    .. rubric:: Example
+    
+    Basic usage with an interface configuration:
+    
+    .. code-block:: python
+    
+        from referia.config.interface import Interface
+        from referia.assess.compute import Compute
+        from lynguine.assess.data import CustomDataFrame
+        
+        # Create compute instance
+        interface = Interface(config_file="path/to/config.yml")
+        compute = Compute(interface)
+        
+        # Create data
+        data = CustomDataFrame({"text": ["Sample text for analysis"]})
+        
+        # Run computations
+        compute.run_all(data)
+        
+        # Access results
+        print(data)
+    
+    .. seealso::
+        :class:`lynguine.assess.compute.Compute`
+            Parent class providing core computation logic
+        :class:`lynguine.assess.data.CustomDataFrame`
+            Data class used with Compute
     """
     
     def __init__(self, interface):
@@ -137,29 +179,64 @@ class Compute(lynguine.assess.compute.Compute):
 
     def run_onchange(self, data, index, column):
         """
-        Run all onchange computations. These are computations that occur when a particular column is modified.
+        Run computations triggered by changes to a specific data column.
         
-        This method calls the parent class implementation. The parameter order matches the lynguine implementation.
-
-        :param data: The data frame to be used.
+        This method is called when a value in a specific column is modified. It runs any
+        compute functions that are registered to respond to changes in that column.
+        The method passes control to the parent class implementation after logging the event.
+        
+        :param data: The data frame containing the changed value.
         :type data: lynguine.assess.data.CustomDataFrame
-        :param index: The index to be used.
-        :type index: object
-        :param column: The column to be used.
+        :param index: The index of the row where the change occurred.
+        :type index: int, str, or other valid index type
+        :param column: The name of the column where the change occurred.
         :type column: str
         :return: None
+        :rtype: None
+        
+        .. note::
+            This method provides a hook for reactive computations. When integrated with
+            the Reviewer class, it allows for automatic updates to dependent values
+            when input values change.
+            
+        **Example**:
+        
+        .. code-block:: python
+        
+            compute.run_onchange(data, 0, 'score')  # When the 'score' column changes
         """
         log.debug(f"Running onchange for {column} at index {index} (not yet implemented).")        
         super().run_onchange(data, index, column)
     
     def _compute_functions_list(self) -> list[dict]:
         """
-        Return a list of compute functions.
+        Return the registry of available compute functions.
         
-        This method extends the parent class implementation by adding referia-specific compute functions.
-
-        :return: A list of compute functions.
-        :rtype: list
+        This method extends the parent class implementation by adding referia-specific 
+        compute functions to the function registry. Each registered function is available 
+        for use in compute operations defined in interface configurations.
+        
+        :return: A list of dictionaries, each containing:
+                 
+                 * name (str): The name of the function to be used in config files
+                 * function (callable): The actual function to be called
+                 * default_args (dict): Default arguments for the function
+                 * docstr (str, optional): Documentation string for the function
+        :rtype: list of dict
+        
+        .. note::
+            The returned functions include:
+            
+            * liquid: Template rendering using Liquid syntax
+            * word_count: Count words in text
+            * pdf_extract_comments: Extract comments from PDF files
+            * Plus various utility functions (max, len, sum, etc.)
+            
+            This function registry is used internally when processing compute specifications
+            from configuration files. Users typically don't call this method directly.
+            
+        .. seealso::
+            :meth:`lynguine.assess.compute.Compute._compute_functions_list` : Parent method providing base functions
         """
         return super()._compute_functions_list() + [
             {
