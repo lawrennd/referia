@@ -358,16 +358,26 @@ def test_compute_functions_list(compute_instance):
     1. The method returns a properly structured list of functions
     2. Each function entry has the required fields (name, function, default_args)
     3. The functions are callable as expected
+    4. Referia-specific functions like 'liquid' and 'word_count' are included
     """
     functions_list = compute_instance._compute_functions_list()
     
     assert isinstance(functions_list, list)
+    assert len(functions_list) > 0, "Function list should not be empty"
+    
+    # Check structure of each function entry
     for func in functions_list:
         assert isinstance(func, dict)
-        assert 'name' in func
-        assert 'function' in func
-        assert callable(func['function'])
-        assert 'default_args' in func
+        assert 'name' in func, "Each function should have a name"
+        assert 'function' in func, "Each function should have a function implementation"
+        assert callable(func['function']), "Function entry should be callable"
+        assert 'default_args' in func, "Each function should have default_args"
+    
+    # Check for referia-specific functions
+    function_names = [func['name'] for func in functions_list]
+    referia_specific_functions = ['liquid', 'word_count', 'copy_screen_capture', 'pdf_extract_comments']
+    for func_name in referia_specific_functions:
+        assert any(func['name'] == func_name for func in functions_list), f"Expected referia-specific function '{func_name}' in function list"
 
 # Test copy_screen_capture method
 def test_copy_screen_capture(compute_instance, mocker):
@@ -375,16 +385,35 @@ def test_copy_screen_capture(compute_instance, mocker):
     Test the copy_screen_capture method specific to referia.
     
     This method is NOT inherited from lynguine but is added by referia to provide
-    screen capture functionality for assessment workflows. It:
-    1. Locates the most recent screenshot
-    2. Reads the binary image data
+    screen capture functionality for assessment workflows. It follows these steps:
+    1. Locates the most recent screenshot using most_recent_screen_shot utility
+    2. Reads the binary image data from the file
     3. Returns the binary data for use in assessments
     
-    This test verifies the method correctly calls the underlying functions and
-    returns the expected image data.
+    This test verifies the method correctly:
+    1. Calls the underlying most_recent_screen_shot function
+    2. Opens the correct file returned by most_recent_screen_shot
+    3. Reads the file contents as binary data
+    4. Returns the expected image data
     """
-    mocker.patch('referia.assess.compute.most_recent_screen_shot', return_value='screenshot.png')
-    mocker.patch('builtins.open', mocker.mock_open(read_data=b'image_data'))
+    # Mock the most_recent_screen_shot function to return a predictable filename
+    mock_filepath = '/path/to/screenshot.png'
+    mock_screen_shot = mocker.patch('referia.assess.compute.most_recent_screen_shot', return_value=mock_filepath)
+    
+    # Mock the open function to return a file handle that reads our test data
+    mock_image_data = b'test_image_data'
+    mock_open = mocker.patch('builtins.open', mocker.mock_open(read_data=mock_image_data))
+    
+    # Call the method under test
     image = compute_instance.copy_screen_capture()
-    assert image == b'image_data'
+    
+    # Verify the expected calls were made
+    mock_screen_shot.assert_called_once()
+    
+    # Verify open was called with the correct file path and mode
+    mock_open.assert_called_once_with(mock_filepath, 'rb')
+    
+    # Check the result is as expected
+    assert image == mock_image_data, "Image data should match the mocked binary data"
+    assert isinstance(image, bytes), "Return value should be bytes"
        

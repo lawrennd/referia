@@ -50,6 +50,19 @@ lynguine = { git = "https://github.com/lawrennd/lynguine.git" }
 gspread_pandas = { version = "*", platform = "darwin" }
 appscript = { version = "*", platform = "darwin" }
 
+[tool.poetry.group.docs]
+optional = true
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^8.2.3"
+sphinx-rtd-theme = "^3.0.2"
+myst-parser = "^4.0.1"
+toml = ">=0.10.2"
+
+
+[tool.poetry.group.dev.dependencies]
+# Documentation dependencies have been moved to the docs group
+
 [build]
 # Include if you have any build scripts, though this is rare
 script = "path/to/script"
