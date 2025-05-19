@@ -30,7 +30,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.11"
+python = ">=3.11,<4.0"
 XlsxWriter = "*"
 pandas = "*"
 numpy = ">=1.0.0,<2.0.0" # to deal with this https://github.com/explosion/thinc/issues/939
