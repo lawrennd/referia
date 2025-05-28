@@ -40,6 +40,17 @@ we find that `BGN` is not in the mapping. Switching index to Title confirms that
 
 ## Implementation Notes
 
+### Analysis (2025-05-28)
+
+- The index column is set as the DataFrame index and then deleted from the columns after being set, so it is not present in the columns list used to generate the mapping.
+- The mapping is generated from the DataFrame columns, so the index column is excluded by design.
+- This is a common pandas pattern, but for this use case, the index column should be explicitly included in the mapping.
+
+### Decision
+
+- The correct pattern is to explicitly add the index column to the mapping after generating it from the columns.
+- This will ensure that the mapping always includes the index, regardless of whether it is present as a DataFrame column.
+
 [Technical notes about implementation approach]
 
 ## Related
@@ -52,4 +63,10 @@ we find that `BGN` is not in the mapping. Switching index to Title confirms that
 
 ### 2025-05-28
 
-Create stub and minimal example
+Create stub and minimal example.
+
+Reflecting this might be a bug in the underlying lynguine package.
+
+### 2025-05-28
+
+Reviewed the implementation. Decision: explicitly add the index column to the mapping after generating it from the columns. This will ensure the mapping is complete and meets user expectations.
