@@ -44,6 +44,59 @@ def test_row_access():
     df = create_test_dataframe()
     assert all(df.loc[0] == [1, 4])
 
+# Mapping Functionality
+def test_automapping_basic():
+    """Test basic automapping functionality with valid column names."""
+    columns = ['validColumn', 'anotherValidColumn']
+    mapping = referia.assess.data.automapping(columns)
+    assert mapping == {
+        'validColumn': 'validColumn',
+        'anotherValidColumn': 'anotherValidColumn'
+    }
+
+def test_automapping_invalid_names():
+    """Test automapping with invalid variable names."""
+    columns = ['invalid-column', 'space name', '123start']
+    mapping = referia.assess.data.automapping(columns)
+    assert mapping == {
+        'invalidColumn': 'invalid-column',
+        'spaceName': 'space name',
+        'start': '123start'
+    }
+
+def test_automapping_keywords():
+    """Test automapping with Python keywords."""
+    columns = ['class', 'def', 'if']
+    mapping = referia.assess.data.automapping(columns)
+    assert mapping == {
+        'classField': 'class',
+        'defField': 'def',
+        'ifField': 'if'
+    }
+
+def test_automapping_private():
+    """Test automapping with private variable names."""
+    columns = ['_', '_private']
+    mapping = referia.assess.data.automapping(columns)
+    assert mapping == {
+        '_': '_',
+        '_private': '_private'
+    }
+
+def test_automapping_consistency():
+    """Test that automapping produces consistent results with CustomDataFrame mapping."""
+    columns = ['validColumn', 'invalid-column', 'class', '_']
+    df = referia.assess.data.CustomDataFrame({col: [1] for col in columns})
+    
+    # Get mapping from automapping function
+    auto_mapping = referia.assess.data.automapping(columns)
+    
+    # Get mapping from CustomDataFrame
+    df_mapping = df._name_column_map
+    
+    # Compare the mappings
+    assert auto_mapping == df_mapping
+
 # Mathematical Operations
 def test_sum():
     df = create_test_dataframe()

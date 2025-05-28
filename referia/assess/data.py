@@ -22,6 +22,8 @@ from ..assess.compute import Compute
 
 from ..util.misc import renderable
 
+from keyword import iskeyword
+
 
 cntxt = Context()
 log = Logger(
@@ -47,16 +49,43 @@ def empty(val):
 def automapping(columns):
     """
     Generate dictionary of mapping between variable names and column names.
-
+    
+    This is a standalone utility function for creating simple column-to-variable mappings.
+    It uses the same mapping logic as CustomDataFrame but without requiring an instance.
+    
+    For more complex mapping needs, use the CustomDataFrame's mapping functionality:
+    - _name_column_map and _column_name_map for bidirectional mapping
+    - mapping() method for getting/setting mappings with state
+    - update_name_column_map() for maintaining mapping state
+    
     :param columns: The list of column names.
     :type columns: list
     :return: The dictionary of mapping between variable names and column names.
     :rtype: dict
+    
+    .. seealso::
+        :class:`CustomDataFrame`
+            For more complex mapping needs with state management
     """
     mapping = {}
     for column in columns:
-        field = to_camel_case(column)
-        mapping[field] = column
+        if is_valid_var(column):
+            name = column
+        else:
+            # Handle numbers at the start of names
+            if column[0].isdigit():
+                name = ''.join(c for c in column if not c.isdigit())
+            else:
+                name = to_camel_case(column)
+            # If the name is a keyword, append "Field" to it
+            if iskeyword(name):
+                name = f"{name}Field"
+        # Special handling for private variables
+        if column == '_':
+            name = '_'
+        elif column.startswith('_'):
+            name = column
+        mapping[name] = column
     return mapping
 
 class CustomDataFrame(data.CustomDataFrame):
@@ -82,6 +111,18 @@ class CustomDataFrame(data.CustomDataFrame):
     * Series-based data manipulation for reviews
     * Integration with the referia compute system
     * Enhanced data preprocessing and postprocessing
+    
+    .. rubric:: Mapping Functionality
+    
+    The class provides a mapping functionality inherited from lynguine:
+    
+    * Bidirectional mapping between variable names and column names
+    * Stateful mapping management within the data frame
+    * Support for both DataFrame and Series data types
+    * Validation of variable names
+    * Integration with liquid templates and compute functions
+    
+    For simple, stateless mapping needs, use the standalone :func:`automapping` function.
     
     :param data: Initial data to populate the DataFrame, defaults to None
     :type data: pd.DataFrame, dict, or similar, optional
@@ -134,11 +175,15 @@ class CustomDataFrame(data.CustomDataFrame):
         self._precompute = []
         self._postcompute = []
 
+        # Ensure _name_column_map is populated by calling _augment_column_names on each data type
+        for typ in self._d:
+            self._augment_column_names(self._d[typ])
+
                         
     @property
     def _data(self):
         """
-        This property recreates the original structure of data storage for referia where data was stored under _data not _d.
+        This property is a compatability feature that recreates the original structure of data storage for referia where data was stored under _data not _d.
         """
         if len(self._d)>0:
             if "data" in self._d:
