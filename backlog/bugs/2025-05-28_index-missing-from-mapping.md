@@ -1,7 +1,7 @@
 ---
 id: "2025-05-28_index-missing-from-mapping"
 title: "Index isn't picked up by the mapping code"
-status: "Proposed"
+status: "Closed"
 priority: "High"
 effort: "Medium"
 type: "bug"
@@ -51,7 +51,9 @@ we find that `BGN` is not in the mapping. Switching index to Title confirms that
 - The correct pattern is to explicitly add the index column to the mapping after generating it from the columns.
 - This will ensure that the mapping always includes the index, regardless of whether it is present as a DataFrame column.
 
-[Technical notes about implementation approach]
+### Resolution (2025-05-28)
+
+After further investigation, this bug has been identified as being in the underlying lynguine package. The fix needs to be implemented in lynguine's `data.py` file where the mapping generation is handled. A new backlog item has been created in the lynguine repository to track this issue.
 
 ## Related
 
@@ -70,3 +72,7 @@ Reflecting this might be a bug in the underlying lynguine package.
 ### 2025-05-28
 
 Reviewed the implementation. Decision: explicitly add the index column to the mapping after generating it from the columns. This will ensure the mapping is complete and meets user expectations.
+
+### 2025-05-28
+
+Identified that the fix needs to be implemented in lynguine's `data.py` file. Closing this backlog item and creating a new one in the lynguine repository.
