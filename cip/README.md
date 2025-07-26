@@ -1,6 +1,7 @@
 # Code Improvement Proposals (CIPs)
 
 ## Overview
+
 Code Improvement Proposals (CIPs) are documents that describe proposed changes to the referia codebase. They serve as a way to document design decisions, track progress on implementation, and provide context for code changes.
 
 ## Process
@@ -32,30 +33,9 @@ Each CIP can have one of the following statuses:
 - **Completed**: Implementation is complete
 - **Rejected**: Proposal has been rejected
 
-## Git Branching Protocol
-
-To maintain a clean commit history and allow for proper code review, we follow this git branching protocol for CIPs:
-
-1. **Main Branch**: 
-   - Contains the CIP infrastructure (README.md, cip_template.md)
-   - Merged and completed CIPs
-
-2. **Feature Branches**:
-   - Create a branch named `cip-XXXX` for each CIP (e.g., `cip-0001`)
-   - Implement the changes described in the CIP on this branch
-   - Include both the CIP document and the code changes in the branch
-
-3. **Pull Request Process**:
-   - Once implementation is complete, create a PR from your feature branch to main
-   - Add appropriate reviewers
-   - Only merge once approved and all CI checks pass
-
-This approach keeps the main branch clean while allowing for detailed discussion and implementation of each individual CIP.
-
 ## Current CIPs
 
-- [CIP-0002](./cip0002.md): Refactoring Compute Class Inheritance Structure
-- [CIP-0001](./cip0001.md): Standardization of Test Methods for Compute Class
+- [CIP-0001](./cip0001.md): 
 
 ## Creating a Good CIP
 
