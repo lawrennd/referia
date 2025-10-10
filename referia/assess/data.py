@@ -179,6 +179,63 @@ class CustomDataFrame(data.CustomDataFrame):
         for typ in self._d:
             self._augment_column_names(self._d[typ])
 
+    def _is_default_mapping(self, original_name, column):
+        """
+        Check if this is a default mapping that can be overridden.
+        
+        Default mappings are either:
+        1. Identity mappings: column -> column (for valid variable names)
+        2. camelCase mappings: to_camel_case(column) -> column (for invalid variable names)
+        
+        :param original_name: The original variable name in the mapping
+        :type original_name: str
+        :param column: The column name
+        :type column: str
+        :return: True if this is a default mapping that can be overridden
+        :rtype: bool
+        """
+        # Identity mappings (column -> column) are always default mappings
+        if original_name == column:
+            return True
+        
+        # camelCase mappings are default mappings only if the original column wasn't valid
+        auto_generated_name = to_camel_case(column)
+        if original_name == auto_generated_name:
+            # Check if the original column name was a valid variable name
+            # If it was valid, then this is an identity mapping, not a camelCase mapping
+            return not is_valid_var(column)
+        
+        return False
+
+    def update_name_column_map(self, name, column):
+        """
+        Referia's user-friendly version that handles overwriting default mappings.
+        Reuses lynguine's strict logic for non-default cases.
+        
+        This method allows overwriting for default mappings (identity and camelCase for invalid variable names)
+        while maintaining strict behavior for non-default mappings by reusing lynguine's
+        implementation.
+        
+        :param name: The name of the variable
+        :type name: str
+        :param column: The column in the data frame
+        :type column: str
+        """
+        if column in self._column_name_map and self._column_name_map[column] != name:
+            original_name = self._column_name_map[column]
+            
+            if self._is_default_mapping(original_name, column):
+                # Handle default mapping override (implicit behavior)
+                log.warning(f"Overwriting default mapping for column \"{column}\" from \"{original_name}\" to \"{name}\"")
+                if original_name in self._name_column_map:
+                    del self._name_column_map[original_name]
+            else:
+                # For non-default mappings, use lynguine's strict logic
+                return super().update_name_column_map(name, column)
+        
+        # If we get here, either no conflict or we handled the default case
+        self._name_column_map[name] = column
+        self._column_name_map[column] = name
                         
     @property
     def _data(self):
