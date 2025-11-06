@@ -1,0 +1,110 @@
+# Example Configuration for LLM Integration
+# ============================================
+#
+# This example demonstrates how to use LLM capabilities in referia's compute framework.
+# 
+# Prerequisites:
+#   1. Install LLM dependencies: poetry install --with llm
+#   2. Set API key environment variable: export OPENAI_API_KEY="your-key-here"
+#      OR: export ANTHROPIC_API_KEY="your-key-here"
+#
+# Usage:
+#   from referia.config.interface import Interface
+#   from referia.assess.compute import Compute
+#   from lynguine.assess.data import CustomDataFrame
+#   
+#   interface = Interface.from_file("llm_integration_example.yml")
+#   compute = Compute(interface)
+#   data = CustomDataFrame.from_csv("reviews.csv")
+#   compute.run_all(data, interface)
+
+# Optional LLM configuration section
+llm:
+  default_provider: "openai"  # or "anthropic"
+  default_model: "gpt-4o-mini"  # Cost-effective default
+  
+  # API keys (alternatively set via environment variables)
+  # api_keys:
+  #   openai: ${OPENAI_API_KEY}
+  #   anthropic: ${ANTHROPIC_API_KEY}
+  
+  # Rate limiting and retry configuration
+  retry_attempts: 3
+  retry_backoff: 2
+  
+  # Caching configuration
+  cache_enabled: true
+  cache_dir: ".llm_cache"
+  cache_ttl: 3600  # 1 hour in seconds
+  
+  # Budget enforcement (optional)
+  # budget_per_run: 1.00  # Maximum $1 per run
+
+# Compute operations
+compute:
+  # Example 1: Simple text summarisation
+  - function: llm_summarise
+    field: ai_summary
+    row_args:
+      text: review_text
+    args:
+      model: "gpt-4o-mini"
+      temperature: 0.3
+      max_tokens: 150
+  
+  # Example 2: Extract key points
+  - function: llm_extract
+    field: key_points
+    row_args:
+      text: review_text
+    args:
+      extraction_type: "3-5 key points as a bullet list"
+      model: "gpt-4o-mini"
+      temperature: 0.2
+  
+  # Example 3: Classify sentiment
+  - function: llm_classify
+    field: sentiment
+    row_args:
+      text: review_text
+    args:
+      categories: ["positive", "negative", "neutral", "mixed"]
+      model: "gpt-4o-mini"
+      temperature: 0.1
+  
+  # Example 4: Custom completion with system prompt
+  - function: llm_complete
+    field: reviewer_analysis
+    row_args:
+      text: review_text
+    args:
+      model: "gpt-4o-mini"
+      temperature: 0.5
+      system_prompt: "You are an expert academic reviewer. Analyse the quality and depth of this review."
+      max_tokens: 200
+  
+  # Example 5: Using Claude (Anthropic)
+  - function: llm_summarise
+    field: claude_summary
+    row_args:
+      text: review_text
+    args:
+      model: "claude-3-haiku-20240307"  # Cost-effective Claude model
+      temperature: 0.3
+      max_tokens: 150
+
+# Example with preprocessing
+data:
+  source: "reviews.csv"
+
+# You can also use LLM functions in postcompute for aggregations
+postcompute:
+  - function: llm_complete
+    field: overall_assessment
+    column_args:
+      summaries: ai_summary
+    args:
+      model: "gpt-4o-mini"
+      temperature: 0.4
+      system_prompt: "Synthesise these review summaries into an overall assessment."
+
