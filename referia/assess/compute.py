@@ -23,6 +23,14 @@ from ..util.system import most_recent_screen_shot
 from ..util.plot import bar_plot, histogram
 from ..util.files import file_from_re, files_from_re
 
+# LLM integration (optional - graceful fallback if not installed)
+try:
+    from ..util.llm import get_llm_manager, LLMError
+    LLM_AVAILABLE = True
+except ImportError:
+    LLM_AVAILABLE = False
+    get_llm_manager = None
+    LLMError = Exception
 
 from ..exceptions import ComputeError
 
@@ -531,6 +539,225 @@ class Compute(lynguine.assess.compute.Compute):
                 "default_args" : {
                 },
                 "docstr" : "Delete missing entries from dictionary"
+            },
+        ] + (self._llm_functions_list() if LLM_AVAILABLE else [])
+    
+    def _llm_functions_list(self) -> list[dict]:
+        """
+        Return the registry of LLM compute functions.
+        
+        These functions provide Large Language Model capabilities for text analysis,
+        generation, summarisation, and transformation. They require the LLM dependencies
+        to be installed (poetry install --with llm) and appropriate API keys configured.
+        
+        :return: A list of dictionaries, each containing:
+                 
+                 * name (str): The name of the function to be used in config files
+                 * function (callable): The actual function to be called
+                 * default_args (dict): Default arguments for the function
+                 * docstr (str): Documentation string for the function
+        :rtype: list of dict
+        
+        .. note::
+            All LLM functions support these common arguments:
+            
+            * model (str): Model to use (e.g., 'gpt-4o-mini', 'claude-3-haiku-20240307')
+            * temperature (float): Sampling temperature 0-1, higher = more creative
+            * max_tokens (int): Maximum tokens in response
+            * system_prompt (str): System prompt to guide the LLM's behavior
+            * use_cache (bool): Whether to use cached responses (default: True)
+            
+        .. seealso::
+            :class:`referia.util.llm.LLMManager` : Core LLM management class
+        """
+        
+        def llm_complete(text: str, model: str = "gpt-4o-mini", temperature: float = 0.7,
+                        max_tokens: int = None, system_prompt: str = None, **kwargs) -> str:
+            """
+            General-purpose LLM text completion.
+            
+            :param text: Input text/prompt
+            :param model: Model to use
+            :param temperature: Sampling temperature (0-1)
+            :param max_tokens: Maximum tokens in response
+            :param system_prompt: System prompt
+            :return: LLM response text
+            """
+            manager = get_llm_manager(self.interface.get("llm", {}))
+            return manager.call(
+                prompt=text,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                system_prompt=system_prompt,
+                **kwargs
+            )
+        
+        def llm_summarise(text: str, model: str = "gpt-4o-mini", temperature: float = 0.3,
+                         max_tokens: int = 150, system_prompt: str = None, **kwargs) -> str:
+            """
+            Summarise text using an LLM.
+            
+            :param text: Text to summarise
+            :param model: Model to use (default: gpt-4o-mini for cost efficiency)
+            :param temperature: Sampling temperature (default: 0.3 for consistency)
+            :param max_tokens: Maximum tokens in summary
+            :param system_prompt: Custom system prompt
+            :return: Summary text
+            """
+            if system_prompt is None:
+                system_prompt = (
+                    "You are an expert at summarising text concisely while preserving "
+                    "key information. Provide a clear, factual summary."
+                )
+            
+            prompt = f"Summarise the following text:\n\n{text}"
+            manager = get_llm_manager(self.interface.get("llm", {}))
+            return manager.call(
+                prompt=prompt,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                system_prompt=system_prompt,
+                **kwargs
+            )
+        
+        def llm_extract(text: str, extraction_type: str, model: str = "gpt-4o-mini",
+                       temperature: float = 0.2, system_prompt: str = None, **kwargs) -> str:
+            """
+            Extract structured information from text.
+            
+            :param text: Text to extract from
+            :param extraction_type: What to extract (e.g., 'key points', 'action items')
+            :param model: Model to use
+            :param temperature: Sampling temperature (default: 0.2 for precision)
+            :param system_prompt: Custom system prompt
+            :return: Extracted information
+            """
+            if system_prompt is None:
+                system_prompt = (
+                    "You are an expert at extracting structured information from text. "
+                    "Provide clear, factual extractions."
+                )
+            
+            prompt = f"Extract {extraction_type} from the following text:\n\n{text}"
+            manager = get_llm_manager(self.interface.get("llm", {}))
+            return manager.call(
+                prompt=prompt,
+                model=model,
+                temperature=temperature,
+                system_prompt=system_prompt,
+                **kwargs
+            )
+        
+        def llm_classify(text: str, categories: list, model: str = "gpt-4o-mini",
+                        temperature: float = 0.1, system_prompt: str = None, **kwargs) -> str:
+            """
+            Classify text into one of the provided categories.
+            
+            :param text: Text to classify
+            :param categories: List of possible categories
+            :param model: Model to use
+            :param temperature: Sampling temperature (default: 0.1 for consistency)
+            :param system_prompt: Custom system prompt
+            :return: Selected category
+            """
+            if system_prompt is None:
+                system_prompt = (
+                    "You are an expert at classifying text. Select the most appropriate "
+                    "category and respond with only the category name."
+                )
+            
+            categories_str = ", ".join(f"'{c}'" for c in categories)
+            prompt = (
+                f"Classify the following text into one of these categories: {categories_str}\n\n"
+                f"Text: {text}\n\n"
+                f"Category:"
+            )
+            manager = get_llm_manager(self.interface.get("llm", {}))
+            return manager.call(
+                prompt=prompt,
+                model=model,
+                temperature=temperature,
+                system_prompt=system_prompt,
+                **kwargs
+            )
+        
+        def llm_chat(text: str, context: str = None, model: str = "gpt-4o-mini",
+                    temperature: float = 0.7, system_prompt: str = None, **kwargs) -> str:
+            """
+            Chat-style interaction with context.
+            
+            :param text: User message
+            :param context: Previous conversation context
+            :param model: Model to use
+            :param temperature: Sampling temperature
+            :param system_prompt: System prompt
+            :return: Assistant response
+            """
+            if system_prompt is None:
+                system_prompt = "You are a helpful assistant."
+            
+            if context:
+                prompt = f"Context: {context}\n\nUser: {text}\n\nAssistant:"
+            else:
+                prompt = text
+            
+            manager = get_llm_manager(self.interface.get("llm", {}))
+            return manager.call(
+                prompt=prompt,
+                model=model,
+                temperature=temperature,
+                system_prompt=system_prompt,
+                **kwargs
+            )
+        
+        return [
+            {
+                "name": "llm_complete",
+                "function": llm_complete,
+                "default_args": {
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.7,
+                },
+                "docstr": "General-purpose LLM text completion.",
+            },
+            {
+                "name": "llm_summarise",
+                "function": llm_summarise,
+                "default_args": {
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.3,
+                    "max_tokens": 150,
+                },
+                "docstr": "Summarise text using an LLM.",
+            },
+            {
+                "name": "llm_extract",
+                "function": llm_extract,
+                "default_args": {
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.2,
+                },
+                "docstr": "Extract structured information from text using an LLM.",
+            },
+            {
+                "name": "llm_classify",
+                "function": llm_classify,
+                "default_args": {
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.1,
+                },
+                "docstr": "Classify text into categories using an LLM.",
+            },
+            {
+                "name": "llm_chat",
+                "function": llm_chat,
+                "default_args": {
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.7,
+                },
+                "docstr": "Chat-style interaction with context using an LLM.",
             },
         ]
                   
