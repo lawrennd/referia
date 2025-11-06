@@ -185,6 +185,23 @@ class Compute(lynguine.assess.compute.Compute):
                     filt = (filt & newfilt)
             data.filter_row(filt)
 
+    def run(self, data, interface):
+        """
+        Run the compute operations on the data.
+        
+        This method extends the parent class implementation by storing the interface
+        configuration so that LLM functions can access it.
+        
+        :param data: The data to be processed.
+        :type data: lynguine.assess.data.CustomDataFrame
+        :param interface: The interface defining the compute operations.
+        :type interface: lynguine.config.interface.Interface or dict
+        :return: None
+        """
+        # Store interface for LLM functions to access
+        self.interface = interface
+        super().run(data, interface)
+    
     def run_onchange(self, data, index, column):
         """
         Run computations triggered by changes to a specific data column.
@@ -583,7 +600,8 @@ class Compute(lynguine.assess.compute.Compute):
             :param system_prompt: System prompt
             :return: LLM response text
             """
-            manager = get_llm_manager(self.interface.get("llm", {}))
+            llm_config = getattr(self, 'interface', {}).get("llm", {}) if hasattr(self, 'interface') else {}
+            manager = get_llm_manager(llm_config)
             return manager.call(
                 prompt=text,
                 model=model,
@@ -612,7 +630,8 @@ class Compute(lynguine.assess.compute.Compute):
                 )
             
             prompt = f"Summarise the following text:\n\n{text}"
-            manager = get_llm_manager(self.interface.get("llm", {}))
+            llm_config = getattr(self, 'interface', {}).get("llm", {}) if hasattr(self, 'interface') else {}
+            manager = get_llm_manager(llm_config)
             return manager.call(
                 prompt=prompt,
                 model=model,
@@ -641,7 +660,8 @@ class Compute(lynguine.assess.compute.Compute):
                 )
             
             prompt = f"Extract {extraction_type} from the following text:\n\n{text}"
-            manager = get_llm_manager(self.interface.get("llm", {}))
+            llm_config = getattr(self, 'interface', {}).get("llm", {}) if hasattr(self, 'interface') else {}
+            manager = get_llm_manager(llm_config)
             return manager.call(
                 prompt=prompt,
                 model=model,
@@ -674,7 +694,8 @@ class Compute(lynguine.assess.compute.Compute):
                 f"Text: {text}\n\n"
                 f"Category:"
             )
-            manager = get_llm_manager(self.interface.get("llm", {}))
+            llm_config = getattr(self, 'interface', {}).get("llm", {}) if hasattr(self, 'interface') else {}
+            manager = get_llm_manager(llm_config)
             return manager.call(
                 prompt=prompt,
                 model=model,
@@ -703,7 +724,8 @@ class Compute(lynguine.assess.compute.Compute):
             else:
                 prompt = text
             
-            manager = get_llm_manager(self.interface.get("llm", {}))
+            llm_config = getattr(self, 'interface', {}).get("llm", {}) if hasattr(self, 'interface') else {}
+            manager = get_llm_manager(llm_config)
             return manager.call(
                 prompt=prompt,
                 model=model,
