@@ -1,0 +1,246 @@
+# Example: Using LLM to Auto-Generate Thesis Chapter Reviews
+#
+# This configuration demonstrates how to use llm_pdf_review to automatically
+# generate initial comments for thesis chapters. The LLM extracts text from 
+# each chapter PDF and generates contextual reviews.
+#
+# Setup:
+# 1. Install LLM dependencies: cd referia && poetry install --with llm
+# 2. Set API key in .env file: OPENAI_API_KEY=your-key-here
+# 3. Run referia with this config
+
+title: "PhD Thesis Assessment with LLM Auto-Review"
+date: 2025-11-06
+author: Reviewer Name
+
+# LLM Configuration
+llm:
+  default_provider: openai
+  default_model: gpt-4o-mini  # Cost-effective model for reviews
+  cache_enabled: true
+  budget_per_run: 2.00  # $2 budget per assessment run
+
+# Data output
+output:
+  index: Name
+  type: excel
+  sheet: Candidates
+  filename: thesis_review.xlsx
+  directory: ./output
+  header: 0
+  columns:
+    - ch1GeneralComments
+    - ch1DetailedComments
+    - ch2GeneralComments
+    - ch2DetailedComments
+    - ch3GeneralComments
+    - ch3DetailedComments
+
+# Review interface with LLM-powered populate buttons
+review:
+  
+  # Chapter 1 Review
+  - type: Markdown
+    liquid: "### Chapter 1"
+    args:
+      layout:
+        width: 800px
+  
+  - type: Textarea
+    field: ch1GeneralComments
+    args: 
+      description: "General Comments"
+      layout:
+        width: 800px
+  
+  # PopulateButton using LLM to auto-generate general comments
+  - type: PopulateButton
+    args:
+      target: ch1GeneralComments
+      compute:
+        field: ch1GeneralComments
+        function: llm_pdf_review
+        view_args:
+          filename:
+            display: "{Name}_thesis_ch1.pdf"
+        args:
+          directory: $HOME/Documents/theses/examined
+          review_type: "general"  # Options: general, strengths, weaknesses, technical, summary
+          model: gpt-4o-mini
+          max_chars: 30000  # Limit for LLM context window
+  
+  - type: Textarea
+    field: ch1DetailedComments
+    args: 
+      description: "Detailed Comments (from annotations)"
+      layout:
+        width: 800px
+  
+  # Traditional annotation extraction
+  - type: PopulateButton
+    args:
+      target: ch1DetailedComments
+      compute:
+        field: ch1DetailedComments
+        function: pdf_extract_comments
+        view_args:
+          filename:
+            display: "{Name}_thesis_ch1.pdf"
+        args:
+          directory: $HOME/Documents/theses/examined
+          comment_types: ["Highlight", "StrikeOut"]
+        row_args:
+          start_page: Ch1FP
+  
+  # Chapter 2 Review
+  - type: Markdown
+    liquid: "### Chapter 2"
+    args:
+      layout:
+        width: 800px
+  
+  - type: Textarea
+    field: ch2GeneralComments
+    args: 
+      description: "General Comments"
+      layout:
+        width: 800px
+  
+  # Multiple review types for the same chapter
+  - type: PopulateButton
+    args:
+      target: ch2GeneralComments
+      compute:
+        field: ch2GeneralComments
+        function: llm_pdf_review
+        view_args:
+          filename:
+            display: "{Name}_thesis_ch2.pdf"
+        args:
+          directory: $HOME/Documents/theses/examined
+          review_type: "strengths"  # Focus on strengths for this chapter
+          model: gpt-4o-mini
+  
+  - type: Textarea
+    field: ch2DetailedComments
+    args: 
+      description: "Annotations"
+      layout:
+        width: 800px
+  
+  - type: PopulateButton
+    args:
+      target: ch2DetailedComments
+      compute:
+        field: ch2DetailedComments
+        function: pdf_extract_comments
+        view_args:
+          filename:
+            display: "{Name}_thesis_ch2.pdf"
+        args:
+          directory: $HOME/Documents/theses/examined
+          comment_types: ["Highlight", "StrikeOut"]
+        row_args:
+          start_page: Ch2FP
+  
+  # Chapter 3 - Advanced: Custom system prompt
+  - type: Markdown
+    liquid: "### Chapter 3"
+    args:
+      layout:
+        width: 800px
+  
+  - type: Textarea
+    field: ch3GeneralComments
+    args: 
+      description: "General Comments"
+      layout:
+        width: 800px
+  
+  - type: PopulateButton
+    args:
+      target: ch3GeneralComments
+      compute:
+        field: ch3GeneralComments
+        function: llm_pdf_review
+        view_args:
+          filename:
+            display: "{Name}_thesis_ch3.pdf"
+        args:
+          directory: $HOME/Documents/theses/examined
+          model: gpt-4o-mini
+          # Custom system prompt for specific review needs
+          system_prompt: |
+            You are an expert reviewer specializing in methodology chapters.
+            Review the following chapter focusing on:
+            1. Methodological rigor and appropriateness
+            2. Clarity of experimental design
+            3. Statistical approach and justification
+            Keep your review under 200 words and be constructive.
+  
+  - type: Textarea
+    field: ch3DetailedComments
+    args: 
+      description: "Annotations"
+      layout:
+        width: 800px
+  
+  - type: PopulateButton
+    args:
+      target: ch3DetailedComments
+      compute:
+        field: ch3DetailedComments
+        function: pdf_extract_comments
+        view_args:
+          filename:
+            display: "{Name}_thesis_ch3.pdf"
+        args:
+          directory: $HOME/Documents/theses/examined
+          comment_types: ["Highlight", "StrikeOut"]
+        row_args:
+          start_page: Ch3FP
+
+# Additional compute operations (run automatically on data load)
+compute:
+  # Generate summary for each chapter on load (if PDFs exist)
+  - function: llm_pdf_review
+    field: ch1_auto_summary
+    view_args:
+      filename:
+        display: "{Name}_thesis_ch1.pdf"
+    args:
+      directory: $HOME/Documents/theses/examined
+      review_type: "summary"
+      model: gpt-4o-mini
+  
+  - function: llm_pdf_review
+    field: ch2_auto_summary
+    view_args:
+      filename:
+        display: "{Name}_thesis_ch2.pdf"
+    args:
+      directory: $HOME/Documents/theses/examined
+      review_type: "summary"
+      model: gpt-4o-mini
+
+# Notes:
+# 
+# Review Types:
+#   - "general": Balanced, constructive general comments
+#   - "strengths": Focus on positive aspects
+#   - "weaknesses": Constructive areas for improvement
+#   - "technical": Detailed technical assessment
+#   - "summary": Concise summary of content
+#
+# Cost Management:
+#   - gpt-4o-mini: ~$0.15-0.60 per chapter (depending on length)
+#   - Budget is enforced per run to prevent overspending
+#   - Caching reduces costs for repeated reviews
+#
+# Best Practices:
+#   1. Use max_chars to limit context for very long chapters
+#   2. Start with "summary" review_type to get oriented
+#   3. Use "general" for balanced reviews
+#   4. Combine LLM reviews with manual annotations
+#   5. Review and edit LLM output - it's a starting point, not final
+

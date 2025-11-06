@@ -18,7 +18,7 @@ from lynguine.util.dataframe import addmonth, fillna, addyear, ascending, augmen
 
 from lynguine.util.text import render_liquid
 
-from ..util.text import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments
+from ..util.text import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, pdf_extract_text
 from ..util.system import most_recent_screen_shot
 from ..util.plot import bar_plot, histogram
 from ..util.files import file_from_re, files_from_re
@@ -324,6 +324,13 @@ class Compute(lynguine.assess.compute.Compute):
                 "default_args" : {
                 },
                 "docstr" : "Extract comments from a PDF file."
+            },
+            {
+                "name" : "pdf_extract_text",
+                "function" : pdf_extract_text,
+                "default_args" : {
+                },
+                "docstr" : "Extract text content from a PDF file."
             },
             {
                 "name" : "named_entities",
@@ -734,6 +741,90 @@ class Compute(lynguine.assess.compute.Compute):
                 **kwargs
             )
         
+        def llm_pdf_review(filename: str, directory: str = "", review_type: str = "general",
+                          max_chars: int = 30000, model: str = "gpt-4o-mini",
+                          temperature: float = 0.3, system_prompt: str = None, **kwargs) -> str:
+            """
+            Extract text from a PDF and generate an LLM-based review/summary.
+            
+            Combines pdf_extract_text with LLM capabilities to automatically generate
+            reviews or summaries of PDF content. Perfect for thesis chapter reviews,
+            document analysis, or automated commenting.
+            
+            :param filename: PDF filename to review
+            :param directory: Directory containing the PDF
+            :param review_type: Type of review ('general', 'strengths', 'weaknesses', 'technical', 'summary')
+            :param max_chars: Maximum characters to extract from PDF (for LLM context limits)
+            :param model: LLM model to use
+            :param temperature: Sampling temperature
+            :param system_prompt: Custom system prompt (overrides review_type)
+            :return: LLM-generated review text
+            
+            **Example**:
+            
+            .. code-block:: yaml
+            
+                compute:
+                  - function: llm_pdf_review
+                    field: ch1GeneralComments
+                    view_args:
+                      filename:
+                        display: "{Name}_thesis_ch1.pdf"
+                    args:
+                      directory: "$HOME/Documents/theses/examined"
+                      review_type: "general"
+                      model: "gpt-4o-mini"
+            """
+            # Extract text from PDF
+            text = pdf_extract_text(filename, directory=directory, max_chars=max_chars)
+            
+            if not text:
+                return ""
+            
+            # Set system prompt based on review type if not provided
+            if system_prompt is None:
+                prompts = {
+                    "general": (
+                        "You are an expert academic reviewer. Provide a concise, constructive "
+                        "general comment on the following text. Focus on clarity, structure, "
+                        "and key contributions. Keep your response under 200 words."
+                    ),
+                    "strengths": (
+                        "You are an expert academic reviewer. Identify and describe the key "
+                        "strengths of the following text. Focus on methodology, contribution, "
+                        "clarity, and rigor. Keep your response under 200 words."
+                    ),
+                    "weaknesses": (
+                        "You are an expert academic reviewer. Identify constructive areas for "
+                        "improvement in the following text. Be specific and helpful. "
+                        "Keep your response under 200 words."
+                    ),
+                    "technical": (
+                        "You are an expert technical reviewer. Provide a detailed technical "
+                        "assessment of the following text. Focus on methodology, correctness, "
+                        "and technical rigor. Keep your response under 250 words."
+                    ),
+                    "summary": (
+                        "You are an expert at summarizing academic text. Provide a clear, "
+                        "concise summary of the key points, methods, and findings. "
+                        "Keep your response under 150 words."
+                    ),
+                }
+                system_prompt = prompts.get(review_type, prompts["general"])
+            
+            # Generate review using LLM
+            llm_config = getattr(self, 'interface', {}).get("llm", {}) if hasattr(self, 'interface') else {}
+            manager = get_llm_manager(llm_config)
+            
+            return manager.call(
+                prompt=text,
+                model=model,
+                temperature=temperature,
+                system_prompt=system_prompt,
+                max_tokens=300,  # Reasonable length for a review
+                **kwargs
+            )
+        
         return [
             {
                 "name": "llm_complete",
@@ -780,6 +871,17 @@ class Compute(lynguine.assess.compute.Compute):
                     "temperature": 0.7,
                 },
                 "docstr": "Chat-style interaction with context using an LLM.",
+            },
+            {
+                "name": "llm_pdf_review",
+                "function": llm_pdf_review,
+                "default_args": {
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.3,
+                    "max_chars": 30000,
+                    "review_type": "general",
+                },
+                "docstr": "Extract text from PDF and generate LLM-based review/summary.",
             },
         ]
                   
