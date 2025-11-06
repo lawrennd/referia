@@ -51,7 +51,7 @@ except ImportError:
 try:
     from langchain_openai import ChatOpenAI
     from langchain_anthropic import ChatAnthropic
-    from langchain.schema import HumanMessage, SystemMessage, AIMessage
+    from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
