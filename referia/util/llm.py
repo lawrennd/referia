@@ -5,10 +5,24 @@ This module provides Large Language Model capabilities for the referia compute f
 It manages connections to various LLM providers (OpenAI, Anthropic) with retry logic,
 caching, cost tracking, and error handling.
 
+API Key Management:
+    The module supports multiple ways to provide API keys (in order of precedence):
+    
+    1. Direct configuration: config["api_keys"]["openai"] = "sk-..."
+    2. Environment variables: OPENAI_API_KEY, ANTHROPIC_API_KEY
+    3. .env file: Automatically loaded from project root
+    
+    For development, create a .env file in your project root:
+        
+        OPENAI_API_KEY=sk-your-key-here
+        ANTHROPIC_API_KEY=sk-ant-your-key-here
+    
+    Important: Add .env to your .gitignore to avoid committing API keys!
+
 Usage:
     from referia.util.llm import LLMManager, get_llm_manager
     
-    # Get the singleton manager
+    # Get the singleton manager (auto-loads .env)
     manager = get_llm_manager()
     
     # Make an LLM call
@@ -23,6 +37,15 @@ import os
 import logging
 from typing import Optional, Dict, Any, List
 from functools import lru_cache
+
+# Try to load .env file if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    # Load .env file from current directory or parent directories
+    load_dotenv(verbose=False)
+    DOTENV_AVAILABLE = True
+except ImportError:
+    DOTENV_AVAILABLE = False
 
 # LLM imports with graceful fallback if not installed
 try:

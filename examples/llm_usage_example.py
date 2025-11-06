@@ -8,13 +8,21 @@ Prerequisites:
     1. Install LLM dependencies: 
        poetry install --with llm
     
-    2. Set API key:
-       export OPENAI_API_KEY="your-key-here"
-       # OR
-       export ANTHROPIC_API_KEY="your-key-here"
+    2. Set up API keys (choose one method):
+       
+       Method A - Using .env file (RECOMMENDED):
+         cp examples/env_template.txt .env
+         # Edit .env and add your OPENAI_API_KEY
+       
+       Method B - Environment variables:
+         export OPENAI_API_KEY="your-key-here"
+         export ANTHROPIC_API_KEY="your-key-here"
 
 Usage:
     python examples/llm_usage_example.py
+    
+Note:
+    The .env file is automatically loaded when you import referia.util.llm
 """
 
 import os

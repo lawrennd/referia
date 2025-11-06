@@ -4,6 +4,31 @@
 
 Referia now supports Large Language Model (LLM) integration through the compute framework. This enables AI-powered text analysis, generation, summarisation, and transformation operations using a simple declarative configuration.
 
+## Quick Start
+
+Get started in 3 simple steps:
+
+```bash
+# 1. Install LLM dependencies
+poetry install --with llm
+
+# 2. Set up your API key using .env file
+cp examples/env_template.txt .env
+nano .env  # Add your OPENAI_API_KEY
+
+# 3. Use in your configuration
+```
+
+```yaml
+compute:
+  - function: llm_summarise
+    field: summary
+    row_args:
+      text: review_text
+```
+
+That's it! Your LLM integration is ready to use.
+
 ## Installation
 
 LLM capabilities are optional. To install the required dependencies:
@@ -25,6 +50,37 @@ This installs:
 
 ### API Keys
 
+Referia supports multiple ways to provide API keys (in order of precedence):
+
+1. **Direct configuration** (in YAML - not recommended for security)
+2. **Environment variables**
+3. **.env file** (recommended for development)
+
+#### Option 1: Using .env File (Recommended) 🌟
+
+Create a `.env` file in your project root:
+
+```bash
+# Copy the template
+cp examples/env_template.txt .env
+
+# Edit with your actual keys
+nano .env
+```
+
+Your `.env` file should contain:
+
+```bash
+OPENAI_API_KEY=sk-your-actual-key-here
+ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
+```
+
+The `.env` file is automatically loaded when you use referia's LLM features.
+
+**Important:** The `.env` file is already in `.gitignore` to prevent accidentally committing your API keys!
+
+#### Option 2: Environment Variables
+
 Set your API key as an environment variable:
 
 ```bash
@@ -33,6 +89,19 @@ export OPENAI_API_KEY="your-openai-key"
 
 # For Anthropic
 export ANTHROPIC_API_KEY="your-anthropic-key"
+```
+
+To make these permanent, add them to your shell profile (`~/.zshrc` or `~/.bashrc`).
+
+#### Option 3: Configuration File (Not Recommended)
+
+You can also specify keys directly in your interface configuration, but this is **not recommended** for security reasons:
+
+```yaml
+llm:
+  api_keys:
+    openai: "sk-your-key"  # Don't commit this!
+    anthropic: "sk-ant-your-key"
 ```
 
 ### Configuration File

@@ -1,0 +1,26 @@
+# Referia LLM Integration - API Keys Configuration
+# ==================================================
+#
+# Copy this file to your project root as .env:
+#   cp examples/env_template.txt .env
+#
+# Then add your actual API keys. The .env file will be automatically
+# loaded when you use referia's LLM features.
+#
+# IMPORTANT: Never commit your .env file to version control!
+# Make sure .env is listed in your .gitignore
+
+# OpenAI API Key
+# Get your key from: https://platform.openai.com/api-keys
+OPENAI_API_KEY=your-openai-api-key-here
+
+# Anthropic API Key  
+# Get your key from: https://console.anthropic.com/settings/keys
+ANTHROPIC_API_KEY=your-anthropic-api-key-here
+
+# Optional: Set a default model (if not specified in config)
+# DEFAULT_LLM_MODEL=gpt-4o-mini
+
+# Optional: Set a budget limit (if not specified in config)
+# LLM_BUDGET_PER_RUN=1.00
+
