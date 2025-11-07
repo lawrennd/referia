@@ -75,6 +75,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.prep_all"><code class="docutils literal notranslate"><span class="pre">Compute.prep_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.copy_screen_capture"><code class="docutils literal notranslate"><span class="pre">Compute.copy_screen_capture()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.preprocess"><code class="docutils literal notranslate"><span class="pre">Compute.preprocess()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.run_onchange"><code class="docutils literal notranslate"><span class="pre">Compute.run_onchange()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.add_liquid_filters"><code class="docutils literal notranslate"><span class="pre">Compute.add_liquid_filters()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.computes"><code class="docutils literal notranslate"><span class="pre">Compute.computes</span></code></a></li>
@@ -86,7 +87,6 @@
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.postcomputes"><code class="docutils literal notranslate"><span class="pre">Compute.postcomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.precomputes"><code class="docutils literal notranslate"><span class="pre">Compute.precomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.prep"><code class="docutils literal notranslate"><span class="pre">Compute.prep()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.run_all"><code class="docutils literal notranslate"><span class="pre">Compute.run_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.compute.Compute.setup_logger"><code class="docutils literal notranslate"><span class="pre">Compute.setup_logger()</span></code></a></li>
 </ul>
@@ -98,6 +98,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -228,7 +229,6 @@
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
@@ -334,6 +334,7 @@
 <li class="toctree-l3"><a class="reference internal" href="util.html#referia.util.text.list_lengths"><code class="docutils literal notranslate"><span class="pre">list_lengths()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="util.html#referia.util.text.named_entities"><code class="docutils literal notranslate"><span class="pre">named_entities()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="util.html#referia.util.text.text_summarizer"><code class="docutils literal notranslate"><span class="pre">text_summarizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="util.html#referia.util.text.pdf_extract_text"><code class="docutils literal notranslate"><span class="pre">pdf_extract_text()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="util.html#referia.util.text.pdf_extract_comments"><code class="docutils literal notranslate"><span class="pre">pdf_extract_comments()</span></code></a></li>
 </ul>
 </li>
@@ -899,6 +900,25 @@ parent class and should not be reimplemented here.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="referia.assess.compute.Compute.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interface</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/assess/compute.html#Compute.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.compute.Compute.run" title="Link to this definition"></a></dt>
+<dd><p>Run the compute operations on the data.</p>
+<p>This method extends the parent class implementation by storing the interface
+configuration so that LLM functions can access it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>lynguine.assess.data.CustomDataFrame</em>) – The data to be processed.</p></li>
+<li><p><strong>interface</strong> (<em>lynguine.config.interface.Interface</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The interface defining the compute operations.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="referia.assess.compute.Compute.run_onchange">
 <span class="sig-name descname"><span class="pre">run_onchange</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/assess/compute.html#Compute.run_onchange"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.compute.Compute.run_onchange" title="Link to this definition"></a></dt>
 <dd><p>Run computations triggered by changes to a specific data column.</p>
@@ -1120,37 +1140,6 @@ with function, arguments, and refresh flag.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="referia.assess.compute.Compute.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interface</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lynguine/assess/compute.html#Compute.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.compute.Compute.run" title="Link to this definition"></a></dt>
-<dd><p>Run the compute operations on the data.</p>
-<p>This method executes the compute operations specified in the interface on the data.
-First it runs any precompute operations, then the main compute operations,
-and finally any postcompute operations.</p>
-<p>For each compute operation, it:
-1. Prepares the operation with the settings and data
-2. Gets the current value for the target field
-3. Determines whether to compute (based on refresh flag and existing value)
-4. Computes the new value and sets it in the data frame</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>lynguine.assess.data.CustomDataFrame</em>) – The data to be processed.</p></li>
-<li><p><strong>interface</strong> (<em>lynguine.config.interface.Interface</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The interface defining the compute operations.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
-</dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If a compute operation is missing required fields.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2954,6 +2943,24 @@ is returned. The last row is assumed to be the most recent.</p>
 
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.update_name_column_map">
+<span class="sig-name descname"><span class="pre">update_name_column_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/assess/data.html#CustomDataFrame.update_name_column_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.data.CustomDataFrame.update_name_column_map" title="Link to this definition"></a></dt>
+<dd><p>Referia’s user-friendly version that handles overwriting default mappings.
+Reuses lynguine’s strict logic for non-default cases.</p>
+<p>This method allows overwriting for default mappings (identity and camelCase for invalid variable names)
+while maintaining strict behavior for non-default mappings by reusing lynguine’s
+implementation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The name of the variable</p></li>
+<li><p><strong>column</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The column in the data frame</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.augment">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">augment</span></span><a class="headerlink" href="#referia.assess.data.CustomDataFrame.augment" title="Link to this definition"></a></dt>
@@ -4632,23 +4639,6 @@ is returned. The last row is assumed to be the most recent.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.update_name_column_map">
-<span class="sig-name descname"><span class="pre">update_name_column_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lynguine/assess/data.html#CustomDataFrame.update_name_column_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.data.CustomDataFrame.update_name_column_map" title="Link to this definition"></a></dt>
-<dd><p>Update the map from valid variable names to columns in the data frame. Valid variable names are needed e.g. for Liquid filters.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The name of the variable.</p></li>
-<li><p><strong>column</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The column in the data frame.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
 </dd>
 </dl>
 </dd></dl>

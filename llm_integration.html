@@ -1,0 +1,1298 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Integration for Referia &mdash; referia 0.2 Documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=938c9ccc"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            referia
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction to Referia</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#what-is-referia">What is Referia?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#relationship-with-lynguine">Relationship with Lynguine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#documentation-organization">Documentation Organization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installation-from-source">Installation from Source</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installation-with-pip">Installation with pip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#development-installation">Development Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#verifying-the-installation">Verifying the Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#dependencies">Dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#basic-usage">Basic Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#understanding-the-inheritance-structure">Understanding the Inheritance Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#review-configuration">Review Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#working-with-compute-functions">Working with Compute Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#next-steps">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modules/assess.html">Assess Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="modules/assess.html#compute-class">Compute Class</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute"><code class="docutils literal notranslate"><span class="pre">Compute</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.prep_all"><code class="docutils literal notranslate"><span class="pre">Compute.prep_all()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.copy_screen_capture"><code class="docutils literal notranslate"><span class="pre">Compute.copy_screen_capture()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.preprocess"><code class="docutils literal notranslate"><span class="pre">Compute.preprocess()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.run_onchange"><code class="docutils literal notranslate"><span class="pre">Compute.run_onchange()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.add_liquid_filters"><code class="docutils literal notranslate"><span class="pre">Compute.add_liquid_filters()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.computes"><code class="docutils literal notranslate"><span class="pre">Compute.computes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.filter"><code class="docutils literal notranslate"><span class="pre">Compute.filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.from_flow"><code class="docutils literal notranslate"><span class="pre">Compute.from_flow()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.gca_"><code class="docutils literal notranslate"><span class="pre">Compute.gca_()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.gcf_"><code class="docutils literal notranslate"><span class="pre">Compute.gcf_()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.load_liquid"><code class="docutils literal notranslate"><span class="pre">Compute.load_liquid()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.postcomputes"><code class="docutils literal notranslate"><span class="pre">Compute.postcomputes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.precomputes"><code class="docutils literal notranslate"><span class="pre">Compute.precomputes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.prep"><code class="docutils literal notranslate"><span class="pre">Compute.prep()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.run_all"><code class="docutils literal notranslate"><span class="pre">Compute.run_all()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.setup_logger"><code class="docutils literal notranslate"><span class="pre">Compute.setup_logger()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/assess.html#key-features">Key Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/assess.html#function-registry">Function Registry</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/assess.html#usage-example">Usage Example</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/assess.html#data-classes">Data Classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.check_or_set_subseries"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.check_or_set_subseries()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.preprocess"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.preprocess()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.compute_pre"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_pre()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.compute_post"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_post()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.reset_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.reset_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.generate_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.generate_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_series_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_series_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.drop_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.drop_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.filter_rows"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter_rows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_shape"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_shape()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_value_by_element"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_value_by_element()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_value_by_element"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value_by_element()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_column_values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.add_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_dtype"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_dtype()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.add_series_row"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add_series_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.add_series_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add_series_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.T"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.T</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.add"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.add_row"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.add_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.apply"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.apply()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.augment_with_df"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment_with_df()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.autocache"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.autocache</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.colspecs"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.colspecs</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.coltype"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.coltype()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.columns</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.compute"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.compute_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.compute_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.conditions"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.conditions()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.convert"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.convert()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.describe"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.describe()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.display_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.display_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.display_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.display_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.dot"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.dot()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.drop_duplicates"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.drop_duplicates()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.dropna"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.dropna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.dtypes"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.dtypes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.empty"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.empty</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.equals"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.equals()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.fillna"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.fillna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.filter"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.from_csv"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.from_dict"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_pandas()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_column_type"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_input_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_input_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_output_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_output_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_parameters_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_parameters_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_selector"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_selectors"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_selectors()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_series_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_series_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_subindices"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_subindices()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_subseries"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_subseries()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_subseries_values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_subseries_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_type_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_type_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.get_value_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_value_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.groupby"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.groupby()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.head"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.head()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.index</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.interface"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.interface</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.ismutable"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.ismutable()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.isna"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.isna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.isnull"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.isnull()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.isparameter"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.isparameter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.isseries"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.isseries()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.join"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.join()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.liquid_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.liquid_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.liquid_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.liquid_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.log"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.log</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.mapping"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.mapping()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.mean"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.mean()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.merge"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.merge()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.multiply"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.multiply()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.mutable"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.mutable</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.notna"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.notna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.pivot_table"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.pivot_table()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.save_flows"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.save_flows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_selector"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_value_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.shape"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.shape</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.sort_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.sort_values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.subtract"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.subtract()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.sum"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sum()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.summary_view_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.summary_view_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.summary_viewer_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.summary_viewer_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.tail"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tail()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.tally_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tally_series()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.tally_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tally_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.tally_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tally_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.tally_values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.tally_values()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_clipboard"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_clipboard()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_csv"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_csv()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_dict"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_dict()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_excel"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_excel()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_feather"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_feather()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_flow()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_gbq"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_gbq()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_hdf"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_hdf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_html"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_html()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_json"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_json()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_latex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_latex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_markdown"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_numpy"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_numpy()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_orc"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_orc()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_pandas()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_parquet"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_parquet()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_period"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_period()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_records"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_records()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_sql"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_sql()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_stata"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_stata()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_string"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_string()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_timestamp"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_timestamp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_xarray"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_xarray()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_xml"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_xml()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.view_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.viewer_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.viewer_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.to_score"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.to_score()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.scored"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.scored()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.compute_from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.compute_from_flow()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/assess.html#review-classes">Review Classes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer"><code class="docutils literal notranslate"><span class="pre">Reviewer</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_default_field_value"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_default_field_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_default_field_source"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_default_field_source()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.add_views"><code class="docutils literal notranslate"><span class="pre">Reviewer.add_views()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.add_dynamic"><code class="docutils literal notranslate"><span class="pre">Reviewer.add_dynamic()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_selectors"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_selectors()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_selector"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_selector"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_indices"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_indices()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_subindices"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_subindices()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_subindex"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_subindex"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.add_row"><code class="docutils literal notranslate"><span class="pre">Reviewer.add_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.add_series_row"><code class="docutils literal notranslate"><span class="pre">Reviewer.add_series_row()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.full_selector"><code class="docutils literal notranslate"><span class="pre">Reviewer.full_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.select_index"><code class="docutils literal notranslate"><span class="pre">Reviewer.select_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.select_selector"><code class="docutils literal notranslate"><span class="pre">Reviewer.select_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.select_subindex"><code class="docutils literal notranslate"><span class="pre">Reviewer.select_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_select_selector"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_select_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_select_selector"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_select_selector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_select_subindex"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_select_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_select_subindex"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_select_subindex()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_most_recent_screen_capture"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_most_recent_screen_capture()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.run"><code class="docutils literal notranslate"><span class="pre">Reviewer.run()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.template_to_value"><code class="docutils literal notranslate"><span class="pre">Reviewer.template_to_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.load_flows"><code class="docutils literal notranslate"><span class="pre">Reviewer.load_flows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.create_document"><code class="docutils literal notranslate"><span class="pre">Reviewer.create_document()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.create_summary"><code class="docutils literal notranslate"><span class="pre">Reviewer.create_summary()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.compute"><code class="docutils literal notranslate"><span class="pre">Reviewer.compute()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.compute_onchange"><code class="docutils literal notranslate"><span class="pre">Reviewer.compute_onchange()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.value_updated"><code class="docutils literal notranslate"><span class="pre">Reviewer.value_updated()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.populate_display"><code class="docutils literal notranslate"><span class="pre">Reviewer.populate_display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.add_downstream_display"><code class="docutils literal notranslate"><span class="pre">Reviewer.add_downstream_display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_column"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_index"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_value"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.get_value_by_element"><code class="docutils literal notranslate"><span class="pre">Reviewer.get_value_by_element()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.index"><code class="docutils literal notranslate"><span class="pre">Reviewer.index</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.load_input_flows"><code class="docutils literal notranslate"><span class="pre">Reviewer.load_input_flows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.load_output_flows"><code class="docutils literal notranslate"><span class="pre">Reviewer.load_output_flows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.save_flows"><code class="docutils literal notranslate"><span class="pre">Reviewer.save_flows()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_column"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_index"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_value"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.set_value_by_element"><code class="docutils literal notranslate"><span class="pre">Reviewer.set_value_by_element()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.review.Reviewer.view_series"><code class="docutils literal notranslate"><span class="pre">Reviewer.view_series()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/assess.html#id1">Key Features</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/assess.html#inheritance-diagram">Inheritance Diagram</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/assess.html#module-functions">Module Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modules/config.html">Configuration Module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="modules/config.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface"><code class="docutils literal notranslate"><span class="pre">Interface</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.default_config_file"><code class="docutils literal notranslate"><span class="pre">Interface.default_config_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.directory"><code class="docutils literal notranslate"><span class="pre">Interface.directory</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.user_file"><code class="docutils literal notranslate"><span class="pre">Interface.user_file</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.from_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.from_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.from_yaml()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.get"><code class="docutils literal notranslate"><span class="pre">Interface.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.get_cache_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_cache_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.get_output_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_output_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.items"><code class="docutils literal notranslate"><span class="pre">Interface.items()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.keys"><code class="docutils literal notranslate"><span class="pre">Interface.keys()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.to_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.to_yaml()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.update"><code class="docutils literal notranslate"><span class="pre">Interface.update()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.interface.Interface.values"><code class="docutils literal notranslate"><span class="pre">Interface.values()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/config.html#inheritance-relationship">Inheritance Relationship</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/config.html#configuration-file-format">Configuration File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/config.html#usage-example">Usage Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modules/util.html">Utility Modules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="modules/util.html#text-utilities">Text Utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.split_into_sentences"><code class="docutils literal notranslate"><span class="pre">split_into_sentences()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.render_liquid"><code class="docutils literal notranslate"><span class="pre">render_liquid()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.comment_list"><code class="docutils literal notranslate"><span class="pre">comment_list()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.word_count"><code class="docutils literal notranslate"><span class="pre">word_count()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.word_cloud"><code class="docutils literal notranslate"><span class="pre">word_cloud()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.paragraph_split"><code class="docutils literal notranslate"><span class="pre">paragraph_split()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.sentence_split"><code class="docutils literal notranslate"><span class="pre">sentence_split()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.list_lengths"><code class="docutils literal notranslate"><span class="pre">list_lengths()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.named_entities"><code class="docutils literal notranslate"><span class="pre">named_entities()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.text_summarizer"><code class="docutils literal notranslate"><span class="pre">text_summarizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.pdf_extract_text"><code class="docutils literal notranslate"><span class="pre">pdf_extract_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.pdf_extract_comments"><code class="docutils literal notranslate"><span class="pre">pdf_extract_comments()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/util.html#file-utilities">File Utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.files.file_from_re"><code class="docutils literal notranslate"><span class="pre">file_from_re()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.files.files_from_re"><code class="docutils literal notranslate"><span class="pre">files_from_re()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.files.to_valid_file"><code class="docutils literal notranslate"><span class="pre">to_valid_file()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/util.html#plotting-utilities">Plotting Utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.plot.write_figure"><code class="docutils literal notranslate"><span class="pre">write_figure()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.plot.bar_plot"><code class="docutils literal notranslate"><span class="pre">bar_plot()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.plot.histogram"><code class="docutils literal notranslate"><span class="pre">histogram()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/util.html#miscellaneous-utilities">Miscellaneous Utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.identity"><code class="docutils literal notranslate"><span class="pre">identity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.filename_to_binary"><code class="docutils literal notranslate"><span class="pre">filename_to_binary()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.yyyymmddToDatetime"><code class="docutils literal notranslate"><span class="pre">yyyymmddToDatetime()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.datetimeToYyyymmdd"><code class="docutils literal notranslate"><span class="pre">datetimeToYyyymmdd()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.add_one_to_max"><code class="docutils literal notranslate"><span class="pre">add_one_to_max()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.renderable"><code class="docutils literal notranslate"><span class="pre">renderable()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.tallyable"><code class="docutils literal notranslate"><span class="pre">tallyable()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.notempty"><code class="docutils literal notranslate"><span class="pre">notempty()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.draft_combinator"><code class="docutils literal notranslate"><span class="pre">draft_combinator()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.mapping"><code class="docutils literal notranslate"><span class="pre">mapping()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.draft_skills"><code class="docutils literal notranslate"><span class="pre">draft_skills()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.return_longest"><code class="docutils literal notranslate"><span class="pre">return_longest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.misc.return_shortest"><code class="docutils literal notranslate"><span class="pre">return_shortest()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/util.html#system-utilities">System Utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.system.most_recent_screen_shot"><code class="docutils literal notranslate"><span class="pre">most_recent_screen_shot()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/util.html#widget-utilities">Widget Utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.name"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.description"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.close"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.on_click"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.refresh"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.widget"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.widget</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.private"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.display"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.null"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaWidget.to_markdown"><code class="docutils literal notranslate"><span class="pre">ReferiaWidget.to_markdown()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.private"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.name"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.on_value_change"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.on_value_change()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.get_value"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.get_layout"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.get_layout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.get_description"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.get_description()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.set_value"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.set_value_silently"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.set_value_silently()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.reset_value"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.reset_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.get_column"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.to_markdown"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.close"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.description"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.display"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.null"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.on_click"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.refresh"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaStatefulWidget.widget"><code class="docutils literal notranslate"><span class="pre">ReferiaStatefulWidget.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget"><code class="docutils literal notranslate"><span class="pre">FieldWidget</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.on_value_change"><code class="docutils literal notranslate"><span class="pre">FieldWidget.on_value_change()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.has_viewer"><code class="docutils literal notranslate"><span class="pre">FieldWidget.has_viewer()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.refresh"><code class="docutils literal notranslate"><span class="pre">FieldWidget.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.close"><code class="docutils literal notranslate"><span class="pre">FieldWidget.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.description"><code class="docutils literal notranslate"><span class="pre">FieldWidget.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.display"><code class="docutils literal notranslate"><span class="pre">FieldWidget.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.get_column"><code class="docutils literal notranslate"><span class="pre">FieldWidget.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.get_description"><code class="docutils literal notranslate"><span class="pre">FieldWidget.get_description()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.get_layout"><code class="docutils literal notranslate"><span class="pre">FieldWidget.get_layout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.get_value"><code class="docutils literal notranslate"><span class="pre">FieldWidget.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.name"><code class="docutils literal notranslate"><span class="pre">FieldWidget.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.null"><code class="docutils literal notranslate"><span class="pre">FieldWidget.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.on_click"><code class="docutils literal notranslate"><span class="pre">FieldWidget.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.private"><code class="docutils literal notranslate"><span class="pre">FieldWidget.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.reset_value"><code class="docutils literal notranslate"><span class="pre">FieldWidget.reset_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.set_value"><code class="docutils literal notranslate"><span class="pre">FieldWidget.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.set_value_silently"><code class="docutils literal notranslate"><span class="pre">FieldWidget.set_value_silently()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.to_markdown"><code class="docutils literal notranslate"><span class="pre">FieldWidget.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FieldWidget.widget"><code class="docutils literal notranslate"><span class="pre">FieldWidget.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget"><code class="docutils literal notranslate"><span class="pre">ElementWidget</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.get_element"><code class="docutils literal notranslate"><span class="pre">ElementWidget.get_element()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.set_element"><code class="docutils literal notranslate"><span class="pre">ElementWidget.set_element()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.on_value_change"><code class="docutils literal notranslate"><span class="pre">ElementWidget.on_value_change()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.has_viewer"><code class="docutils literal notranslate"><span class="pre">ElementWidget.has_viewer()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.refresh"><code class="docutils literal notranslate"><span class="pre">ElementWidget.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.close"><code class="docutils literal notranslate"><span class="pre">ElementWidget.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.description"><code class="docutils literal notranslate"><span class="pre">ElementWidget.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.display"><code class="docutils literal notranslate"><span class="pre">ElementWidget.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.get_column"><code class="docutils literal notranslate"><span class="pre">ElementWidget.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.get_description"><code class="docutils literal notranslate"><span class="pre">ElementWidget.get_description()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.get_layout"><code class="docutils literal notranslate"><span class="pre">ElementWidget.get_layout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.get_value"><code class="docutils literal notranslate"><span class="pre">ElementWidget.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.name"><code class="docutils literal notranslate"><span class="pre">ElementWidget.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.null"><code class="docutils literal notranslate"><span class="pre">ElementWidget.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.on_click"><code class="docutils literal notranslate"><span class="pre">ElementWidget.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.private"><code class="docutils literal notranslate"><span class="pre">ElementWidget.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.reset_value"><code class="docutils literal notranslate"><span class="pre">ElementWidget.reset_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.set_value"><code class="docutils literal notranslate"><span class="pre">ElementWidget.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.set_value_silently"><code class="docutils literal notranslate"><span class="pre">ElementWidget.set_value_silently()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.to_markdown"><code class="docutils literal notranslate"><span class="pre">ElementWidget.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementWidget.widget"><code class="docutils literal notranslate"><span class="pre">ElementWidget.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector"><code class="docutils literal notranslate"><span class="pre">IndexSelector</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.private"><code class="docutils literal notranslate"><span class="pre">IndexSelector.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.on_value_change"><code class="docutils literal notranslate"><span class="pre">IndexSelector.on_value_change()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.set_index"><code class="docutils literal notranslate"><span class="pre">IndexSelector.set_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.refresh"><code class="docutils literal notranslate"><span class="pre">IndexSelector.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.close"><code class="docutils literal notranslate"><span class="pre">IndexSelector.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.description"><code class="docutils literal notranslate"><span class="pre">IndexSelector.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.display"><code class="docutils literal notranslate"><span class="pre">IndexSelector.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.get_column"><code class="docutils literal notranslate"><span class="pre">IndexSelector.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.get_description"><code class="docutils literal notranslate"><span class="pre">IndexSelector.get_description()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.get_layout"><code class="docutils literal notranslate"><span class="pre">IndexSelector.get_layout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.get_value"><code class="docutils literal notranslate"><span class="pre">IndexSelector.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.name"><code class="docutils literal notranslate"><span class="pre">IndexSelector.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.null"><code class="docutils literal notranslate"><span class="pre">IndexSelector.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.on_click"><code class="docutils literal notranslate"><span class="pre">IndexSelector.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.reset_value"><code class="docutils literal notranslate"><span class="pre">IndexSelector.reset_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.set_value"><code class="docutils literal notranslate"><span class="pre">IndexSelector.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.set_value_silently"><code class="docutils literal notranslate"><span class="pre">IndexSelector.set_value_silently()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.to_markdown"><code class="docutils literal notranslate"><span class="pre">IndexSelector.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSelector.widget"><code class="docutils literal notranslate"><span class="pre">IndexSelector.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.add_stateful"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.add_stateful()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.update_side_effects"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.update_side_effects()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.add_stateless"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.add_stateless()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.display"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.close"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.description"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.get_column"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.get_description"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.get_description()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.get_layout"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.get_layout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.get_value"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.name"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.null"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.on_click"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.on_value_change"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.on_value_change()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.private"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.refresh"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.reset_value"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.reset_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.set_value"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.set_value_silently"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.set_value_silently()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.to_markdown"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaMultiWidget.widget"><code class="docutils literal notranslate"><span class="pre">ReferiaMultiWidget.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture"><code class="docutils literal notranslate"><span class="pre">ScreenCapture</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.add_stateful"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.add_stateful()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.add_stateless"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.add_stateless()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.close"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.description"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.display"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.get_column"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.get_description"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.get_description()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.get_layout"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.get_layout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.get_value"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.name"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.null"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.on_click"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.on_value_change"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.on_value_change()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.private"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.refresh"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.reset_value"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.reset_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.set_value"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.set_value_silently"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.set_value_silently()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.to_markdown"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.update_side_effects"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.update_side_effects()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ScreenCapture.widget"><code class="docutils literal notranslate"><span class="pre">ScreenCapture.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector"><code class="docutils literal notranslate"><span class="pre">FullSelector</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.add_stateful"><code class="docutils literal notranslate"><span class="pre">FullSelector.add_stateful()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.add_stateless"><code class="docutils literal notranslate"><span class="pre">FullSelector.add_stateless()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.close"><code class="docutils literal notranslate"><span class="pre">FullSelector.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.description"><code class="docutils literal notranslate"><span class="pre">FullSelector.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.display"><code class="docutils literal notranslate"><span class="pre">FullSelector.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.get_column"><code class="docutils literal notranslate"><span class="pre">FullSelector.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.get_description"><code class="docutils literal notranslate"><span class="pre">FullSelector.get_description()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.get_layout"><code class="docutils literal notranslate"><span class="pre">FullSelector.get_layout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.get_value"><code class="docutils literal notranslate"><span class="pre">FullSelector.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.name"><code class="docutils literal notranslate"><span class="pre">FullSelector.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.null"><code class="docutils literal notranslate"><span class="pre">FullSelector.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.on_click"><code class="docutils literal notranslate"><span class="pre">FullSelector.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.on_value_change"><code class="docutils literal notranslate"><span class="pre">FullSelector.on_value_change()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.private"><code class="docutils literal notranslate"><span class="pre">FullSelector.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.refresh"><code class="docutils literal notranslate"><span class="pre">FullSelector.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.reset_value"><code class="docutils literal notranslate"><span class="pre">FullSelector.reset_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.set_value"><code class="docutils literal notranslate"><span class="pre">FullSelector.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.set_value_silently"><code class="docutils literal notranslate"><span class="pre">FullSelector.set_value_silently()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.to_markdown"><code class="docutils literal notranslate"><span class="pre">FullSelector.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.update_side_effects"><code class="docutils literal notranslate"><span class="pre">FullSelector.update_side_effects()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.FullSelector.widget"><code class="docutils literal notranslate"><span class="pre">FullSelector.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.on_value_change"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.on_value_change()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.set_index"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.set_index()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.add_stateful"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.add_stateful()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.add_stateless"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.add_stateless()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.close"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.description"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.display"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.get_column"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.get_column()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.get_description"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.get_description()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.get_layout"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.get_layout()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.get_value"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.get_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.name"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.null"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.on_click"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.private"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.refresh"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.reset_value"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.reset_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.set_value"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.set_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.set_value_silently"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.set_value_silently()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.to_markdown"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.update_side_effects"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.update_side_effects()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect.widget"><code class="docutils literal notranslate"><span class="pre">IndexSubIndexSelectorSelect.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.name"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.on_click"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.refresh"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.close"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.description"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.display"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.null"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.private"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.to_markdown"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReferiaButtonWidget.widget"><code class="docutils literal notranslate"><span class="pre">ReferiaButtonWidget.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton"><code class="docutils literal notranslate"><span class="pre">CreateDocButton</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.on_click"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.close"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.description"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.display"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.name"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.null"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.private"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.refresh"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.to_markdown"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateDocButton.widget"><code class="docutils literal notranslate"><span class="pre">CreateDocButton.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.on_click"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.close"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.description"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.display"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.name"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.null"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.private"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.refresh"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.to_markdown"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryDocButton.widget"><code class="docutils literal notranslate"><span class="pre">CreateSummaryDocButton.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.on_click"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.close"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.description"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.display"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.name"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.null"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.private"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.refresh"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.to_markdown"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.CreateSummaryButton.widget"><code class="docutils literal notranslate"><span class="pre">CreateSummaryButton.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton"><code class="docutils literal notranslate"><span class="pre">SaveButton</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.on_click"><code class="docutils literal notranslate"><span class="pre">SaveButton.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.close"><code class="docutils literal notranslate"><span class="pre">SaveButton.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.description"><code class="docutils literal notranslate"><span class="pre">SaveButton.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.display"><code class="docutils literal notranslate"><span class="pre">SaveButton.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.name"><code class="docutils literal notranslate"><span class="pre">SaveButton.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.null"><code class="docutils literal notranslate"><span class="pre">SaveButton.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.private"><code class="docutils literal notranslate"><span class="pre">SaveButton.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.refresh"><code class="docutils literal notranslate"><span class="pre">SaveButton.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.to_markdown"><code class="docutils literal notranslate"><span class="pre">SaveButton.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.SaveButton.widget"><code class="docutils literal notranslate"><span class="pre">SaveButton.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton"><code class="docutils literal notranslate"><span class="pre">ReloadButton</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.on_click"><code class="docutils literal notranslate"><span class="pre">ReloadButton.on_click()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.close"><code class="docutils literal notranslate"><span class="pre">ReloadButton.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.description"><code class="docutils literal notranslate"><span class="pre">ReloadButton.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.display"><code class="docutils literal notranslate"><span class="pre">ReloadButton.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.name"><code class="docutils literal notranslate"><span class="pre">ReloadButton.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.null"><code class="docutils literal notranslate"><span class="pre">ReloadButton.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.private"><code class="docutils literal notranslate"><span class="pre">ReloadButton.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.refresh"><code class="docutils literal notranslate"><span class="pre">ReloadButton.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.to_markdown"><code class="docutils literal notranslate"><span class="pre">ReloadButton.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.ReloadButton.widget"><code class="docutils literal notranslate"><span class="pre">ReloadButton.widget</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton"><code class="docutils literal notranslate"><span class="pre">PopulateButton</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.close"><code class="docutils literal notranslate"><span class="pre">PopulateButton.close()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.description"><code class="docutils literal notranslate"><span class="pre">PopulateButton.description</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.display"><code class="docutils literal notranslate"><span class="pre">PopulateButton.display()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.name"><code class="docutils literal notranslate"><span class="pre">PopulateButton.name</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.null"><code class="docutils literal notranslate"><span class="pre">PopulateButton.null()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.private"><code class="docutils literal notranslate"><span class="pre">PopulateButton.private</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.refresh"><code class="docutils literal notranslate"><span class="pre">PopulateButton.refresh()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.to_markdown"><code class="docutils literal notranslate"><span class="pre">PopulateButton.to_markdown()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.widget"><code class="docutils literal notranslate"><span class="pre">PopulateButton.widget</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/util.html#referia.util.widgets.PopulateButton.on_click"><code class="docutils literal notranslate"><span class="pre">PopulateButton.on_click()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.BoundedFloatText"><code class="docutils literal notranslate"><span class="pre">BoundedFloatText()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Checkbox"><code class="docutils literal notranslate"><span class="pre">Checkbox()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Combobox"><code class="docutils literal notranslate"><span class="pre">Combobox()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.DatePicker"><code class="docutils literal notranslate"><span class="pre">DatePicker()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Dropdown"><code class="docutils literal notranslate"><span class="pre">Dropdown()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementBoundedFloatText"><code class="docutils literal notranslate"><span class="pre">ElementBoundedFloatText()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementCheckbox"><code class="docutils literal notranslate"><span class="pre">ElementCheckbox()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementCombobox"><code class="docutils literal notranslate"><span class="pre">ElementCombobox()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementDatePicker"><code class="docutils literal notranslate"><span class="pre">ElementDatePicker()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementDropdown"><code class="docutils literal notranslate"><span class="pre">ElementDropdown()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementFlag"><code class="docutils literal notranslate"><span class="pre">ElementFlag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementFloatSlider"><code class="docutils literal notranslate"><span class="pre">ElementFloatSlider()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementHTML"><code class="docutils literal notranslate"><span class="pre">ElementHTML()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementHTMLMath"><code class="docutils literal notranslate"><span class="pre">ElementHTMLMath()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementIntSlider"><code class="docutils literal notranslate"><span class="pre">ElementIntSlider()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementIntText"><code class="docutils literal notranslate"><span class="pre">ElementIntText()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementLabel"><code class="docutils literal notranslate"><span class="pre">ElementLabel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementLayout"><code class="docutils literal notranslate"><span class="pre">ElementLayout()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementMarkdown"><code class="docutils literal notranslate"><span class="pre">ElementMarkdown()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementPngImageFile"><code class="docutils literal notranslate"><span class="pre">ElementPngImageFile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementRadioButtons"><code class="docutils literal notranslate"><span class="pre">ElementRadioButtons()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementSelect"><code class="docutils literal notranslate"><span class="pre">ElementSelect()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementSelectMultiple"><code class="docutils literal notranslate"><span class="pre">ElementSelectMultiple()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementText"><code class="docutils literal notranslate"><span class="pre">ElementText()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.ElementTextarea"><code class="docutils literal notranslate"><span class="pre">ElementTextarea()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Flag"><code class="docutils literal notranslate"><span class="pre">Flag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.FloatSlider"><code class="docutils literal notranslate"><span class="pre">FloatSlider()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.HTML"><code class="docutils literal notranslate"><span class="pre">HTML()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.HTMLMath"><code class="docutils literal notranslate"><span class="pre">HTMLMath()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.IntSlider"><code class="docutils literal notranslate"><span class="pre">IntSlider()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.IntText"><code class="docutils literal notranslate"><span class="pre">IntText()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Label"><code class="docutils literal notranslate"><span class="pre">Label()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Layout"><code class="docutils literal notranslate"><span class="pre">Layout()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Markdown"><code class="docutils literal notranslate"><span class="pre">Markdown()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.PngImageFile"><code class="docutils literal notranslate"><span class="pre">PngImageFile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.RadioButtons"><code class="docutils literal notranslate"><span class="pre">RadioButtons()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Select"><code class="docutils literal notranslate"><span class="pre">Select()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.SelectMultiple"><code class="docutils literal notranslate"><span class="pre">SelectMultiple()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Text"><code class="docutils literal notranslate"><span class="pre">Text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.Textarea"><code class="docutils literal notranslate"><span class="pre">Textarea()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.gocf_"><code class="docutils literal notranslate"><span class="pre">gocf_()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.gsv_"><code class="docutils literal notranslate"><span class="pre">gsv_()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.gwc_"><code class="docutils literal notranslate"><span class="pre">gwc_()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.gwu_"><code class="docutils literal notranslate"><span class="pre">gwu_()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.gwf_"><code class="docutils literal notranslate"><span class="pre">gwf_()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.gwef_"><code class="docutils literal notranslate"><span class="pre">gwef_()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.populate_widgets"><code class="docutils literal notranslate"><span class="pre">populate_widgets()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.populate_element_widgets"><code class="docutils literal notranslate"><span class="pre">populate_element_widgets()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.MyFileChooser"><code class="docutils literal notranslate"><span class="pre">MyFileChooser()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.interact"><code class="docutils literal notranslate"><span class="pre">interact()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.interact_manual"><code class="docutils literal notranslate"><span class="pre">interact_manual()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.widgets.interactive"><code class="docutils literal notranslate"><span class="pre">interactive()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/util.html#relationship-with-lynguine-utilities">Relationship with Lynguine Utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="inheritance.html">Inheritance Relationships</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="inheritance.html#compute-class">Compute Class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inheritance.html#data-classes">Data Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inheritance.html#configuration-system">Configuration System</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inheritance.html#utility-functions">Utility Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inheritance.html#best-practices-for-developers">Best Practices for Developers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing to Referia</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#development-setup">Development Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#code-structure">Code Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#documentation-standards">Documentation Standards</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#inheritance-guidelines">Inheritance Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#working-with-both-codebases">Working with Both Codebases</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#pull-request-process">Pull Request Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#building-documentation">Building Documentation</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">referia</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">LLM Integration for Referia</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/llm_integration.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="llm-integration-for-referia">
+<h1>LLM Integration for Referia<a class="headerlink" href="#llm-integration-for-referia" title="Link to this heading"></a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>Referia now supports Large Language Model (LLM) integration through the compute framework. This enables AI-powered text analysis, generation, summarisation, and transformation operations using a simple declarative configuration.</p>
+</section>
+<section id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h2>
+<p>Get started in 3 simple steps:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Install LLM dependencies</span>
+poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>llm
+
+<span class="c1"># 2. Set up your API key using .env file</span>
+cp<span class="w"> </span>examples/env_template.txt<span class="w"> </span>.env
+nano<span class="w"> </span>.env<span class="w">  </span><span class="c1"># Add your OPENAI_API_KEY</span>
+
+<span class="c1"># 3. Use in your configuration</span>
+</pre></div>
+</div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_summarise</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">summary</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
+</pre></div>
+</div>
+<p>That’s it! Your LLM integration is ready to use.</p>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>LLM capabilities are optional. To install the required dependencies:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>llm
+</pre></div>
+</div>
+<p>This installs:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">langchain</span></code> - LLM framework</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">langchain-openai</span></code> - OpenAI integration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">langchain-anthropic</span></code> - Anthropic integration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">openai</span></code> - OpenAI Python SDK</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">anthropic</span></code> - Anthropic Python SDK</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tenacity</span></code> - Retry logic</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">diskcache</span></code> - Response caching</p></li>
+</ul>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<section id="api-keys">
+<h3>API Keys<a class="headerlink" href="#api-keys" title="Link to this heading"></a></h3>
+<p>Referia supports multiple ways to provide API keys (in order of precedence):</p>
+<ol class="arabic simple">
+<li><p><strong>Direct configuration</strong> (in YAML - not recommended for security)</p></li>
+<li><p><strong>Environment variables</strong></p></li>
+<li><p><strong>.env file</strong> (recommended for development)</p></li>
+</ol>
+<section id="option-1-using-env-file-recommended">
+<h4>Option 1: Using .env File (Recommended) 🌟<a class="headerlink" href="#option-1-using-env-file-recommended" title="Link to this heading"></a></h4>
+<p>Create a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file in your project root:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Copy the template</span>
+cp<span class="w"> </span>examples/env_template.txt<span class="w"> </span>.env
+
+<span class="c1"># Edit with your actual keys</span>
+nano<span class="w"> </span>.env
+</pre></div>
+</div>
+<p>Your <code class="docutils literal notranslate"><span class="pre">.env</span></code> file should contain:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-your-actual-key-here
+<span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span>sk-ant-your-actual-key-here
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">.env</span></code> file is automatically loaded when you use referia’s LLM features.</p>
+<p><strong>Important:</strong> The <code class="docutils literal notranslate"><span class="pre">.env</span></code> file is already in <code class="docutils literal notranslate"><span class="pre">.gitignore</span></code> to prevent accidentally committing your API keys!</p>
+</section>
+<section id="option-2-environment-variables">
+<h4>Option 2: Environment Variables<a class="headerlink" href="#option-2-environment-variables" title="Link to this heading"></a></h4>
+<p>Set your API key as an environment variable:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># For OpenAI</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-openai-key&quot;</span>
+
+<span class="c1"># For Anthropic</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-anthropic-key&quot;</span>
+</pre></div>
+</div>
+<p>To make these permanent, add them to your shell profile (<code class="docutils literal notranslate"><span class="pre">~/.zshrc</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code>).</p>
+</section>
+<section id="option-3-configuration-file-not-recommended">
+<h4>Option 3: Configuration File (Not Recommended)<a class="headerlink" href="#option-3-configuration-file-not-recommended" title="Link to this heading"></a></h4>
+<p>You can also specify keys directly in your interface configuration, but this is <strong>not recommended</strong> for security reasons:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">llm</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">api_keys</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">openai</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sk-your-key&quot;</span><span class="w">  </span><span class="c1"># Don&#39;t commit this!</span>
+<span class="w">    </span><span class="nt">anthropic</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sk-ant-your-key&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="configuration-file">
+<h3>Configuration File<a class="headerlink" href="#configuration-file" title="Link to this heading"></a></h3>
+<p>Add an <code class="docutils literal notranslate"><span class="pre">llm</span></code> section to your interface configuration:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">llm</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">default_provider</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;openai&quot;</span><span class="w">  </span><span class="c1"># or &quot;anthropic&quot;</span>
+<span class="w">  </span><span class="nt">default_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">  </span>
+<span class="w">  </span><span class="c1"># Optional: API keys in config (not recommended - use environment variables)</span>
+<span class="w">  </span><span class="c1"># api_keys:</span>
+<span class="w">  </span><span class="c1">#   openai: ${OPENAI_API_KEY}</span>
+<span class="w">  </span>
+<span class="w">  </span><span class="c1"># Retry configuration</span>
+<span class="w">  </span><span class="nt">retry_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">  </span><span class="nt">retry_backoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">  </span>
+<span class="w">  </span><span class="c1"># Caching</span>
+<span class="w">  </span><span class="nt">cache_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">  </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.llm_cache&quot;</span>
+<span class="w">  </span><span class="nt">cache_ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span><span class="w">  </span><span class="c1"># 1 hour</span>
+<span class="w">  </span>
+<span class="w">  </span><span class="c1"># Budget enforcement (optional)</span>
+<span class="w">  </span><span class="nt">budget_per_run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.00</span><span class="w">  </span><span class="c1"># Maximum $1 per run</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="available-functions">
+<h2>Available Functions<a class="headerlink" href="#available-functions" title="Link to this heading"></a></h2>
+<section id="llm-complete">
+<h3>llm_complete<a class="headerlink" href="#llm-complete" title="Link to this heading"></a></h3>
+<p>General-purpose text completion.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_complete</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">response</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prompt_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
+<span class="w">      </span><span class="nt">max_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
+<span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">helpful</span><span class="nv"> </span><span class="s">assistant.&quot;</span>
+</pre></div>
+</div>
+<p><strong>Arguments:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">text</span></code> (required): Input text/prompt</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code>: Model to use (default: “gpt-4o-mini”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">temperature</span></code>: 0-1, higher = more creative (default: 0.7)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_tokens</span></code>: Maximum response length</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">system_prompt</span></code>: System prompt to guide behavior</p></li>
+</ul>
+</section>
+<section id="llm-summarise">
+<h3>llm_summarise<a class="headerlink" href="#llm-summarise" title="Link to this heading"></a></h3>
+<p>Specialised text summarisation.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_summarise</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">summary</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
+<span class="w">      </span><span class="nt">max_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">150</span>
+</pre></div>
+</div>
+<p><strong>Arguments:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">text</span></code> (required): Text to summarise</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code>: Model to use (default: “gpt-4o-mini”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">temperature</span></code>: Sampling temperature (default: 0.3 for consistency)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">max_tokens</span></code>: Maximum summary length (default: 150)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">system_prompt</span></code>: Custom system prompt (optional)</p></li>
+</ul>
+</section>
+<section id="llm-extract">
+<h3>llm_extract<a class="headerlink" href="#llm-extract" title="Link to this heading"></a></h3>
+<p>Extract structured information from text.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_extract</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">key_points</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">document_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">extraction_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3-5</span><span class="nv"> </span><span class="s">key</span><span class="nv"> </span><span class="s">points</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">bullet</span><span class="nv"> </span><span class="s">list&quot;</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
+</pre></div>
+</div>
+<p><strong>Arguments:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">text</span></code> (required): Text to extract from</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">extraction_type</span></code> (required): What to extract (e.g., “key points”, “action items”, “dates”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code>: Model to use (default: “gpt-4o-mini”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">temperature</span></code>: Sampling temperature (default: 0.2 for precision)</p></li>
+</ul>
+</section>
+<section id="llm-classify">
+<h3>llm_classify<a class="headerlink" href="#llm-classify" title="Link to this heading"></a></h3>
+<p>Classify text into categories.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_classify</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sentiment</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">categories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;positive&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;negative&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;neutral&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span>
+</pre></div>
+</div>
+<p><strong>Arguments:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">text</span></code> (required): Text to classify</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">categories</span></code> (required): List of possible categories</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code>: Model to use (default: “gpt-4o-mini”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">temperature</span></code>: Sampling temperature (default: 0.1 for consistency)</p></li>
+</ul>
+</section>
+<section id="llm-chat">
+<h3>llm_chat<a class="headerlink" href="#llm-chat" title="Link to this heading"></a></h3>
+<p>Chat-style interaction with context.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_chat</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">response</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">user_message</span>
+<span class="w">      </span><span class="nt">context</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">conversation_history</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
+<span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">helpful</span><span class="nv"> </span><span class="s">assistant.&quot;</span>
+</pre></div>
+</div>
+<p><strong>Arguments:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">text</span></code> (required): User message</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">context</span></code>: Previous conversation context (optional)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model</span></code>: Model to use (default: “gpt-4o-mini”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">temperature</span></code>: Sampling temperature (default: 0.7)</p></li>
+</ul>
+</section>
+</section>
+<section id="supported-models">
+<h2>Supported Models<a class="headerlink" href="#supported-models" title="Link to this heading"></a></h2>
+<section id="openai-models">
+<h3>OpenAI Models<a class="headerlink" href="#openai-models" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">gpt-4o</span></code>: Most capable, expensive</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gpt-4o-mini</span></code>: <strong>Recommended</strong> - Fast, cheap, high quality</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gpt-4-turbo</span></code>: Previous generation, powerful</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gpt-3.5-turbo</span></code>: Older, cheapest</p></li>
+</ul>
+</section>
+<section id="anthropic-models">
+<h3>Anthropic Models<a class="headerlink" href="#anthropic-models" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">claude-3-5-sonnet-20241022</span></code>: Latest Claude, very capable</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">claude-3-opus-20240229</span></code>: Most powerful Claude</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">claude-3-sonnet-20240229</span></code>: Balanced</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">claude-3-haiku-20240307</span></code>: <strong>Recommended</strong> - Fast and cheap</p></li>
+</ul>
+</section>
+</section>
+<section id="cost-management">
+<h2>Cost Management<a class="headerlink" href="#cost-management" title="Link to this heading"></a></h2>
+<section id="token-tracking">
+<h3>Token Tracking<a class="headerlink" href="#token-tracking" title="Link to this heading"></a></h3>
+<p>The system automatically tracks token usage and costs:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">referia.util.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_llm_manager</span>
+
+<span class="n">manager</span> <span class="o">=</span> <span class="n">get_llm_manager</span><span class="p">()</span>
+<span class="c1"># ... make some calls ...</span>
+
+<span class="n">summary</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_cost_summary</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+<span class="c1"># {</span>
+<span class="c1">#   &quot;total_calls&quot;: 5,</span>
+<span class="c1">#   &quot;total_tokens&quot;: 2500,</span>
+<span class="c1">#   &quot;total_cost&quot;: 0.0042,</span>
+<span class="c1">#   &quot;budget_remaining&quot;: 0.9958</span>
+<span class="c1"># }</span>
+</pre></div>
+</div>
+</section>
+<section id="budget-enforcement">
+<h3>Budget Enforcement<a class="headerlink" href="#budget-enforcement" title="Link to this heading"></a></h3>
+<p>Set a budget limit to prevent runaway costs:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">llm</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">budget_per_run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.00</span><span class="w">  </span><span class="c1"># Maximum $1 per run</span>
+</pre></div>
+</div>
+<p>When the budget is exceeded, a <code class="docutils literal notranslate"><span class="pre">LLMBudgetError</span></code> is raised.</p>
+</section>
+<section id="cost-optimization-tips">
+<h3>Cost Optimization Tips<a class="headerlink" href="#cost-optimization-tips" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Use cheap models</strong>: <code class="docutils literal notranslate"><span class="pre">gpt-4o-mini</span></code> or <code class="docutils literal notranslate"><span class="pre">claude-3-haiku-20240307</span></code> for most tasks</p></li>
+<li><p><strong>Enable caching</strong>: Reuse responses for identical prompts</p></li>
+<li><p><strong>Limit max_tokens</strong>: Set appropriate limits for each task</p></li>
+<li><p><strong>Lower temperature</strong>: Use 0.1-0.3 for deterministic tasks</p></li>
+<li><p><strong>Batch similar operations</strong>: Process multiple items together</p></li>
+</ol>
+</section>
+</section>
+<section id="caching">
+<h2>Caching<a class="headerlink" href="#caching" title="Link to this heading"></a></h2>
+<p>Responses are automatically cached by default to reduce costs and improve performance:</p>
+<ul class="simple">
+<li><p><strong>Cache key</strong>: Hash of (prompt, model, temperature, other parameters)</p></li>
+<li><p><strong>TTL</strong>: Configurable (default: 1 hour)</p></li>
+<li><p><strong>Storage</strong>: Disk-based (using diskcache)</p></li>
+</ul>
+<p>To disable caching for a specific call:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_summarise</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">summary</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">use_cache</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">  </span><span class="c1"># Disable caching for this call</span>
+</pre></div>
+</div>
+</section>
+<section id="error-handling">
+<h2>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading"></a></h2>
+<section id="automatic-retry">
+<h3>Automatic Retry<a class="headerlink" href="#automatic-retry" title="Link to this heading"></a></h3>
+<p>Failed requests are automatically retried with exponential backoff:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">llm</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">retry_attempts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+<span class="w">  </span><span class="nt">retry_backoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span><span class="w">  </span><span class="c1"># Wait 1s, 2s, 4s between retries</span>
+</pre></div>
+</div>
+</section>
+<section id="fallback-functions">
+<h3>Fallback Functions<a class="headerlink" href="#fallback-functions" title="Link to this heading"></a></h3>
+<p>You can specify a fallback function if LLM fails:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_summarise</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">summary</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">fallback_function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">text_summarizer</span><span class="w">  </span><span class="c1"># Use classical summarizer if LLM fails</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
+<section id="example-1-review-summarisation">
+<h3>Example 1: Review Summarisation<a class="headerlink" href="#example-1-review-summarisation" title="Link to this heading"></a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">llm</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">default_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">  </span><span class="nt">cache_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_summarise</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">summary</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
+<span class="w">      </span><span class="nt">max_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
+</pre></div>
+</div>
+</section>
+<section id="example-2-sentiment-analysis">
+<h3>Example 2: Sentiment Analysis<a class="headerlink" href="#example-2-sentiment-analysis" title="Link to this heading"></a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_classify</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sentiment</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">categories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;positive&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;negative&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;neutral&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;mixed&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span>
+</pre></div>
+</div>
+</section>
+<section id="example-3-multi-step-analysis">
+<h3>Example 3: Multi-Step Analysis<a class="headerlink" href="#example-3-multi-step-analysis" title="Link to this heading"></a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="c1"># Step 1: Extract key points</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_extract</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">key_points</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">extraction_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3-5</span><span class="nv"> </span><span class="s">main</span><span class="nv"> </span><span class="s">points</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">bullet</span><span class="nv"> </span><span class="s">list&quot;</span>
+<span class="w">  </span>
+<span class="w">  </span><span class="c1"># Step 2: Generate response based on key points</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_complete</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">response_draft</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">key_points</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Draft</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">addressing</span><span class="nv"> </span><span class="s">these</span><span class="nv"> </span><span class="s">key</span><span class="nv"> </span><span class="s">points.&quot;</span>
+<span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
+</pre></div>
+</div>
+</section>
+<section id="example-4-using-claude">
+<h3>Example 4: Using Claude<a class="headerlink" href="#example-4-using-claude" title="Link to this heading"></a></h3>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_summarise</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">claude_summary</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;claude-3-haiku-20240307&quot;</span>
+<span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="programmatic-usage">
+<h2>Programmatic Usage<a class="headerlink" href="#programmatic-usage" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">referia.util.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_llm_manager</span>
+
+<span class="c1"># Get manager</span>
+<span class="n">manager</span> <span class="o">=</span> <span class="n">get_llm_manager</span><span class="p">({</span>
+    <span class="s2">&quot;cache_enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s2">&quot;budget_per_run&quot;</span><span class="p">:</span> <span class="mf">0.50</span>
+<span class="p">})</span>
+
+<span class="c1"># Make a call</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">call</span><span class="p">(</span>
+    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;Summarise this text: ...&quot;</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+    <span class="n">temperature</span><span class="o">=</span><span class="mf">0.3</span>
+<span class="p">)</span>
+
+<span class="c1"># Check costs</span>
+<span class="n">summary</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_cost_summary</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cost: $</span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">&#39;total_cost&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<section id="langchain-is-not-installed">
+<h3>“LangChain is not installed”<a class="headerlink" href="#langchain-is-not-installed" title="Link to this heading"></a></h3>
+<p>Install LLM dependencies:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>llm
+</pre></div>
+</div>
+</section>
+<section id="api-key-not-found">
+<h3>“API key not found”<a class="headerlink" href="#api-key-not-found" title="Link to this heading"></a></h3>
+<p>Set your API key:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-key&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="budget-exceeded">
+<h3>“Budget exceeded”<a class="headerlink" href="#budget-exceeded" title="Link to this heading"></a></h3>
+<p>Increase your budget or optimize your prompts:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">llm</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">budget_per_run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5.00</span><span class="w">  </span><span class="c1"># Increase limit</span>
+</pre></div>
+</div>
+</section>
+<section id="slow-responses">
+<h3>Slow responses<a class="headerlink" href="#slow-responses" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Enable caching (if not already enabled)</p></li>
+<li><p>Use faster models (gpt-4o-mini, claude-3-haiku-20240307)</p></li>
+<li><p>Reduce max_tokens</p></li>
+<li><p>Consider batching requests</p></li>
+</ol>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Start with cheap models</strong>: Use <code class="docutils literal notranslate"><span class="pre">gpt-4o-mini</span></code> for development</p></li>
+<li><p><strong>Enable caching</strong>: Saves money and improves performance</p></li>
+<li><p><strong>Set budgets</strong>: Prevent unexpected costs</p></li>
+<li><p><strong>Use appropriate temperatures</strong>:</p>
+<ul class="simple">
+<li><p>0.1-0.3 for factual/deterministic tasks</p></li>
+<li><p>0.7-0.9 for creative tasks</p></li>
+</ul>
+</li>
+<li><p><strong>Limit max_tokens</strong>: Set sensible limits for each task</p></li>
+<li><p><strong>Test with small datasets</strong>: Before running on large datasets</p></li>
+<li><p><strong>Monitor costs</strong>: Check <code class="docutils literal notranslate"><span class="pre">get_cost_summary()</span></code> regularly</p></li>
+</ol>
+</section>
+<section id="reference">
+<h2>Reference<a class="headerlink" href="#reference" title="Link to this heading"></a></h2>
+<p>For implementation details, see:</p>
+<ul class="simple">
+<li><p><span class="xref myst">CIP-0006: LLM Integration</span></p></li>
+<li><p><a class="reference download internal" download="" href="_downloads/f605d84fc0c0ac827f11654a524c4535/llm.py"><span class="xref download myst">LLM Manager API</span></a></p></li>
+<li><p><a class="reference download internal" download="" href="_downloads/2caaa2f5ceec7d758152c25e9d3b3d4e/compute.py"><span class="xref download myst">Compute Functions</span></a></p></li>
+</ul>
+</section>
+<section id="support">
+<h2>Support<a class="headerlink" href="#support" title="Link to this heading"></a></h2>
+<p>For issues or questions:</p>
+<ul class="simple">
+<li><p>Check examples: <code class="docutils literal notranslate"><span class="pre">examples/llm_usage_example.py</span></code></p></li>
+<li><p>Review tests: <code class="docutils literal notranslate"><span class="pre">referia/tests/test_llm_integration.py</span></code></p></li>
+<li><p>See CIP-0006 for design decisions and architecture</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

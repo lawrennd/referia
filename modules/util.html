@@ -75,6 +75,7 @@
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.prep_all"><code class="docutils literal notranslate"><span class="pre">Compute.prep_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.copy_screen_capture"><code class="docutils literal notranslate"><span class="pre">Compute.copy_screen_capture()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.preprocess"><code class="docutils literal notranslate"><span class="pre">Compute.preprocess()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.run_onchange"><code class="docutils literal notranslate"><span class="pre">Compute.run_onchange()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.add_liquid_filters"><code class="docutils literal notranslate"><span class="pre">Compute.add_liquid_filters()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.computes"><code class="docutils literal notranslate"><span class="pre">Compute.computes</span></code></a></li>
@@ -86,7 +87,6 @@
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.postcomputes"><code class="docutils literal notranslate"><span class="pre">Compute.postcomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.precomputes"><code class="docutils literal notranslate"><span class="pre">Compute.precomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.prep"><code class="docutils literal notranslate"><span class="pre">Compute.prep()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.run_all"><code class="docutils literal notranslate"><span class="pre">Compute.run_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.compute.Compute.setup_logger"><code class="docutils literal notranslate"><span class="pre">Compute.setup_logger()</span></code></a></li>
 </ul>
@@ -98,6 +98,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="assess.html#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -228,7 +229,6 @@
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="assess.html#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
@@ -334,6 +334,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#referia.util.text.list_lengths"><code class="docutils literal notranslate"><span class="pre">list_lengths()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#referia.util.text.named_entities"><code class="docutils literal notranslate"><span class="pre">named_entities()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#referia.util.text.text_summarizer"><code class="docutils literal notranslate"><span class="pre">text_summarizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.util.text.pdf_extract_text"><code class="docutils literal notranslate"><span class="pre">pdf_extract_text()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#referia.util.text.pdf_extract_comments"><code class="docutils literal notranslate"><span class="pre">pdf_extract_comments()</span></code></a></li>
 </ul>
 </li>
@@ -958,6 +959,41 @@ to incorrect splitting because they are used as markers for splitting.</p>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.util.text.pdf_extract_text">
+<span class="sig-prename descclassname"><span class="pre">referia.util.text.</span></span><span class="sig-name descname"><span class="pre">pdf_extract_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_page</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_page</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_chars</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/util/text.html#pdf_extract_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.util.text.pdf_extract_text" title="Link to this definition"></a></dt>
+<dd><p>Extract text content from a PDF file.</p>
+<p>Uses pdfminer.six to extract text from PDF pages. Useful for feeding
+PDF content to LLM functions for summarization or analysis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The filename of the PDF file.</p></li>
+<li><p><strong>directory</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The directory of the PDF file.</p></li>
+<li><p><strong>start_page</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><em>optional</em>) – Starting page number (1-indexed). If None, starts from page 1.</p></li>
+<li><p><strong>end_page</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><em>optional</em>) – Ending page number (1-indexed). If None, extracts to end of document.</p></li>
+<li><p><strong>max_chars</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><em>optional</em>) – Maximum characters to extract. If None, extracts all text.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Extracted text content.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+<p><strong>Example</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Extract first 5 pages</span>
+<span class="n">text</span> <span class="o">=</span> <span class="n">pdf_extract_text</span><span class="p">(</span><span class="s2">&quot;thesis_ch1.pdf&quot;</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;/path/to/pdfs&quot;</span><span class="p">,</span>
+                       <span class="n">start_page</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">end_page</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="c1"># Extract with character limit (for LLM context windows)</span>
+<span class="n">text</span> <span class="o">=</span> <span class="n">pdf_extract_text</span><span class="p">(</span><span class="s2">&quot;thesis_ch1.pdf&quot;</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;/path/to/pdfs&quot;</span><span class="p">,</span>
+                       <span class="n">max_chars</span><span class="o">=</span><span class="mi">50000</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py function">

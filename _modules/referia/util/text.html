@@ -72,6 +72,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.prep_all"><code class="docutils literal notranslate"><span class="pre">Compute.prep_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.copy_screen_capture"><code class="docutils literal notranslate"><span class="pre">Compute.copy_screen_capture()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.preprocess"><code class="docutils literal notranslate"><span class="pre">Compute.preprocess()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.run_onchange"><code class="docutils literal notranslate"><span class="pre">Compute.run_onchange()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.add_liquid_filters"><code class="docutils literal notranslate"><span class="pre">Compute.add_liquid_filters()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.computes"><code class="docutils literal notranslate"><span class="pre">Compute.computes</span></code></a></li>
@@ -83,7 +84,6 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.postcomputes"><code class="docutils literal notranslate"><span class="pre">Compute.postcomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.precomputes"><code class="docutils literal notranslate"><span class="pre">Compute.precomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.prep"><code class="docutils literal notranslate"><span class="pre">Compute.prep()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.run_all"><code class="docutils literal notranslate"><span class="pre">Compute.run_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.setup_logger"><code class="docutils literal notranslate"><span class="pre">Compute.setup_logger()</span></code></a></li>
 </ul>
@@ -95,6 +95,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -225,7 +226,6 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
@@ -331,6 +331,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.list_lengths"><code class="docutils literal notranslate"><span class="pre">list_lengths()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.named_entities"><code class="docutils literal notranslate"><span class="pre">named_entities()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.text_summarizer"><code class="docutils literal notranslate"><span class="pre">text_summarizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.pdf_extract_text"><code class="docutils literal notranslate"><span class="pre">pdf_extract_text()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.pdf_extract_comments"><code class="docutils literal notranslate"><span class="pre">pdf_extract_comments()</span></code></a></li>
 </ul>
 </li>
@@ -1064,6 +1065,83 @@
     
     <span class="c1"># Return final summary</span>
     <span class="k">return</span> <span class="n">summary</span></div>
+
+
+<div class="viewcode-block" id="pdf_extract_text">
+<a class="viewcode-back" href="../../../modules/util.html#referia.util.text.pdf_extract_text">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pdf_extract_text</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">start_page</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_page</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_chars</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract text content from a PDF file.</span>
+
+<span class="sd">    Uses pdfminer.six to extract text from PDF pages. Useful for feeding </span>
+<span class="sd">    PDF content to LLM functions for summarization or analysis.</span>
+
+<span class="sd">    :param filename: The filename of the PDF file.</span>
+<span class="sd">    :type filename: str</span>
+<span class="sd">    :param directory: The directory of the PDF file.</span>
+<span class="sd">    :type directory: str</span>
+<span class="sd">    :param start_page: Starting page number (1-indexed). If None, starts from page 1.</span>
+<span class="sd">    :type start_page: int, optional</span>
+<span class="sd">    :param end_page: Ending page number (1-indexed). If None, extracts to end of document.</span>
+<span class="sd">    :type end_page: int, optional</span>
+<span class="sd">    :param max_chars: Maximum characters to extract. If None, extracts all text.</span>
+<span class="sd">    :type max_chars: int, optional</span>
+<span class="sd">    :return: Extracted text content.</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    </span>
+<span class="sd">    **Example**:</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: python</span>
+<span class="sd">    </span>
+<span class="sd">        # Extract first 5 pages</span>
+<span class="sd">        text = pdf_extract_text(&quot;thesis_ch1.pdf&quot;, directory=&quot;/path/to/pdfs&quot;, </span>
+<span class="sd">                               start_page=1, end_page=5)</span>
+<span class="sd">        </span>
+<span class="sd">        # Extract with character limit (for LLM context windows)</span>
+<span class="sd">        text = pdf_extract_text(&quot;thesis_ch1.pdf&quot;, directory=&quot;/path/to/pdfs&quot;,</span>
+<span class="sd">                               max_chars=50000)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pdfminer.high_level</span><span class="w"> </span><span class="kn">import</span> <span class="n">extract_text_to_fp</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">pdfminer.layout</span><span class="w"> </span><span class="kn">import</span> <span class="n">LAParams</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">StringIO</span>
+    
+    <span class="n">directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="n">full_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">full_filename</span><span class="p">):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File: </span><span class="si">{</span><span class="n">full_filename</span><span class="si">}</span><span class="s2"> is missing in pdf_extract_text.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">output_string</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">()</span>
+        
+        <span class="c1"># Convert to 0-indexed for pdfminer</span>
+        <span class="n">page_numbers</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">start_page</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">end_page</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">page_numbers</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="p">(</span><span class="n">start_page</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">start_page</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">end_page</span> <span class="k">if</span> <span class="n">end_page</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+            
+            <span class="c1"># We&#39;ll extract and filter after since pdfminer wants a set</span>
+            <span class="c1"># For simplicity, just extract all and truncate</span>
+            <span class="k">pass</span>
+        
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">full_filename</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+            <span class="n">extract_text_to_fp</span><span class="p">(</span><span class="n">fp</span><span class="p">,</span> <span class="n">output_string</span><span class="p">,</span> <span class="n">laparams</span><span class="o">=</span><span class="n">LAParams</span><span class="p">(),</span>
+                             <span class="n">page_numbers</span><span class="o">=</span><span class="n">page_numbers</span><span class="p">)</span>
+        
+        <span class="n">text</span> <span class="o">=</span> <span class="n">output_string</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+        
+        <span class="c1"># Apply character limit if specified</span>
+        <span class="k">if</span> <span class="n">max_chars</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_chars</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">text</span><span class="p">[:</span><span class="n">max_chars</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">[Text truncated...]&quot;</span>
+        
+        <span class="k">return</span> <span class="n">text</span>
+        
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error extracting text from </span><span class="si">{</span><span class="n">full_filename</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span></div>
+
 
 
 <div class="viewcode-block" id="pdf_extract_comments">

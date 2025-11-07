@@ -72,6 +72,7 @@
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.prep_all"><code class="docutils literal notranslate"><span class="pre">Compute.prep_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.copy_screen_capture"><code class="docutils literal notranslate"><span class="pre">Compute.copy_screen_capture()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.preprocess"><code class="docutils literal notranslate"><span class="pre">Compute.preprocess()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.run_onchange"><code class="docutils literal notranslate"><span class="pre">Compute.run_onchange()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.add_liquid_filters"><code class="docutils literal notranslate"><span class="pre">Compute.add_liquid_filters()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.computes"><code class="docutils literal notranslate"><span class="pre">Compute.computes</span></code></a></li>
@@ -83,7 +84,6 @@
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.postcomputes"><code class="docutils literal notranslate"><span class="pre">Compute.postcomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.precomputes"><code class="docutils literal notranslate"><span class="pre">Compute.precomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.prep"><code class="docutils literal notranslate"><span class="pre">Compute.prep()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.run_all"><code class="docutils literal notranslate"><span class="pre">Compute.run_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute.setup_logger"><code class="docutils literal notranslate"><span class="pre">Compute.setup_logger()</span></code></a></li>
 </ul>
@@ -95,6 +95,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="modules/assess.html#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -225,7 +226,6 @@
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
@@ -331,6 +331,7 @@
 <li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.list_lengths"><code class="docutils literal notranslate"><span class="pre">list_lengths()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.named_entities"><code class="docutils literal notranslate"><span class="pre">named_entities()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.text_summarizer"><code class="docutils literal notranslate"><span class="pre">text_summarizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.pdf_extract_text"><code class="docutils literal notranslate"><span class="pre">pdf_extract_text()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/util.html#referia.util.text.pdf_extract_comments"><code class="docutils literal notranslate"><span class="pre">pdf_extract_comments()</span></code></a></li>
 </ul>
 </li>
@@ -1658,6 +1659,8 @@
 </li>
       <li><a href="modules/util.html#referia.util.text.pdf_extract_comments">pdf_extract_comments() (in module referia.util.text)</a>
 </li>
+      <li><a href="modules/util.html#referia.util.text.pdf_extract_text">pdf_extract_text() (in module referia.util.text)</a>
+</li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.pivot_table">pivot_table() (referia.assess.data.CustomDataFrame method)</a>
 </li>
       <li><a href="modules/util.html#referia.util.widgets.PngImageFile">PngImageFile() (in module referia.util.widgets)</a>
@@ -1684,6 +1687,8 @@
         <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.preprocess">(referia.assess.data.CustomDataFrame method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/util.html#referia.util.widgets.CreateDocButton.private">private (referia.util.widgets.CreateDocButton property)</a>
 
       <ul>

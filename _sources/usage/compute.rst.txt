@@ -183,4 +183,19 @@ For more advanced usage, you can:
              field: word_count_histogram
              args:
                column: word_count
-               bins: 10 
+               bins: 10
+
+Future Extensions
+--------------
+
+**LLM Integration (Planned)**
+
+Referia is being extended with Large Language Model capabilities for AI-powered text analysis, summarisation, and generation. Planned functions include:
+
+- ``llm_complete``: General-purpose text completion
+- ``llm_summarise``: AI-powered summarisation
+- ``llm_extract``: Extract structured information
+- ``llm_classify``: Intelligent text classification
+- ``llm_chat``: Conversational interactions
+
+For details, see `CIP-0006: LLM Integration for Compute Framework <../cip/cip0006.md>`_. 

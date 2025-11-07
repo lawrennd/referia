@@ -72,6 +72,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.prep_all"><code class="docutils literal notranslate"><span class="pre">Compute.prep_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.copy_screen_capture"><code class="docutils literal notranslate"><span class="pre">Compute.copy_screen_capture()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.preprocess"><code class="docutils literal notranslate"><span class="pre">Compute.preprocess()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.run_onchange"><code class="docutils literal notranslate"><span class="pre">Compute.run_onchange()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.add_liquid_filters"><code class="docutils literal notranslate"><span class="pre">Compute.add_liquid_filters()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.computes"><code class="docutils literal notranslate"><span class="pre">Compute.computes</span></code></a></li>
@@ -83,7 +84,6 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.postcomputes"><code class="docutils literal notranslate"><span class="pre">Compute.postcomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.precomputes"><code class="docutils literal notranslate"><span class="pre">Compute.precomputes</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.prep"><code class="docutils literal notranslate"><span class="pre">Compute.prep()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.run"><code class="docutils literal notranslate"><span class="pre">Compute.run()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.run_all"><code class="docutils literal notranslate"><span class="pre">Compute.run_all()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute.setup_logger"><code class="docutils literal notranslate"><span class="pre">Compute.setup_logger()</span></code></a></li>
 </ul>
@@ -95,6 +95,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -225,7 +226,6 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
@@ -331,6 +331,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.list_lengths"><code class="docutils literal notranslate"><span class="pre">list_lengths()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.named_entities"><code class="docutils literal notranslate"><span class="pre">named_entities()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.text_summarizer"><code class="docutils literal notranslate"><span class="pre">text_summarizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.pdf_extract_text"><code class="docutils literal notranslate"><span class="pre">pdf_extract_text()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.text.pdf_extract_comments"><code class="docutils literal notranslate"><span class="pre">pdf_extract_comments()</span></code></a></li>
 </ul>
 </li>
@@ -941,6 +942,66 @@
         <span class="c1"># Ensure _name_column_map is populated by calling _augment_column_names on each data type</span>
         <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_augment_column_names</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_is_default_mapping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">original_name</span><span class="p">,</span> <span class="n">column</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check if this is a default mapping that can be overridden.</span>
+<span class="sd">        </span>
+<span class="sd">        Default mappings are either:</span>
+<span class="sd">        1. Identity mappings: column -&gt; column (for valid variable names)</span>
+<span class="sd">        2. camelCase mappings: to_camel_case(column) -&gt; column (for invalid variable names)</span>
+<span class="sd">        </span>
+<span class="sd">        :param original_name: The original variable name in the mapping</span>
+<span class="sd">        :type original_name: str</span>
+<span class="sd">        :param column: The column name</span>
+<span class="sd">        :type column: str</span>
+<span class="sd">        :return: True if this is a default mapping that can be overridden</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Identity mappings (column -&gt; column) are always default mappings</span>
+        <span class="k">if</span> <span class="n">original_name</span> <span class="o">==</span> <span class="n">column</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        
+        <span class="c1"># camelCase mappings are default mappings only if the original column wasn&#39;t valid</span>
+        <span class="n">auto_generated_name</span> <span class="o">=</span> <span class="n">to_camel_case</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">original_name</span> <span class="o">==</span> <span class="n">auto_generated_name</span><span class="p">:</span>
+            <span class="c1"># Check if the original column name was a valid variable name</span>
+            <span class="c1"># If it was valid, then this is an identity mapping, not a camelCase mapping</span>
+            <span class="k">return</span> <span class="ow">not</span> <span class="n">is_valid_var</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="CustomDataFrame.update_name_column_map">
+<a class="viewcode-back" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_name_column_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">column</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Referia&#39;s user-friendly version that handles overwriting default mappings.</span>
+<span class="sd">        Reuses lynguine&#39;s strict logic for non-default cases.</span>
+<span class="sd">        </span>
+<span class="sd">        This method allows overwriting for default mappings (identity and camelCase for invalid variable names)</span>
+<span class="sd">        while maintaining strict behavior for non-default mappings by reusing lynguine&#39;s</span>
+<span class="sd">        implementation.</span>
+<span class="sd">        </span>
+<span class="sd">        :param name: The name of the variable</span>
+<span class="sd">        :type name: str</span>
+<span class="sd">        :param column: The column in the data frame</span>
+<span class="sd">        :type column: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_column_name_map</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_column_name_map</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">!=</span> <span class="n">name</span><span class="p">:</span>
+            <span class="n">original_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_column_name_map</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_default_mapping</span><span class="p">(</span><span class="n">original_name</span><span class="p">,</span> <span class="n">column</span><span class="p">):</span>
+                <span class="c1"># Handle default mapping override (implicit behavior)</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Overwriting default mapping for column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> from </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">original_name</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> to </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">original_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_column_map</span><span class="p">:</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_column_map</span><span class="p">[</span><span class="n">original_name</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># For non-default mappings, use lynguine&#39;s strict logic</span>
+                <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">update_name_column_map</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">column</span><span class="p">)</span>
+        
+        <span class="c1"># If we get here, either no conflict or we handled the default case</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name_column_map</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">column</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_column_name_map</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span></div>
 
                         
     <span class="nd">@property</span>
