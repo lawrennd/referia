@@ -123,6 +123,7 @@ Extracts text from PDF and generates an LLM-based review.
 | `weaknesses` | Constructive areas for improvement | ~200 words |
 | `technical` | Detailed technical/methodological assessment | ~250 words |
 | `summary` | Concise summary of key points | ~150 words |
+| `questions` | Viva-style questions for examining understanding | ~150 words |
 
 **Example:**
 
