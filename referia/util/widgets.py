@@ -1231,6 +1231,9 @@ class CreateDocButton(ReferiaButtonWidget):
         :type document: str
         """
         args["description"] = "Create " + args["type"]
+        # Explicitly set function to suppress warning
+        if "function" not in args:
+            args["function"] = ipyw.Button
         super().__init__(**args)
         self.type = args["type"]
         self.document = args["document"]
@@ -1262,6 +1265,9 @@ class CreateSummaryDocButton(ReferiaButtonWidget):
         :type document: str
         """
         args["description"] = "Create Summary " + args["type"]
+        # Explicitly set function to suppress warning
+        if "function" not in args:
+            args["function"] = ipyw.Button
         super().__init__(**args)
         self.type = args["type"]
         self.document = args["document"]
@@ -1294,6 +1300,9 @@ class CreateSummaryButton(ReferiaButtonWidget):
         """
         
         args["description"] = "Create " + args["type"] + " Summary"
+        # Explicitly set function to suppress warning
+        if "function" not in args:
+            args["function"] = ipyw.Button
         super().__init__(**args)
         self.type = args["type"]
         self.details = args["details"]
@@ -1321,6 +1330,9 @@ class SaveButton(ReferiaButtonWidget):
         """
         if "description" not in args:
             args["description"] = "Save Flows"
+        # Explicitly set function to suppress warning
+        if "function" not in args:
+            args["function"] = ipyw.Button
         super().__init__(**args)
 
     def on_click(self, b):
@@ -1344,6 +1356,9 @@ class ReloadButton(ReferiaButtonWidget):
         """
         if "description" not in args:
             args["description"] = "Reload Flows"
+        # Explicitly set function to suppress warning
+        if "function" not in args:
+            args["function"] = ipyw.Button
         super().__init__(**args)
 
     def on_click(self, b):
@@ -1390,6 +1405,10 @@ class PopulateButton(ReferiaButtonWidget):
         #    self._compute_interface = {"compute" : args["compute"]}
         #else:
         #    self._compute_interface = {[args["compute"]]
+        
+        # Explicitly set function to suppress warning
+        if "function" not in args:
+            args["function"] = ipyw.Button
             
         super().__init__(**args)
 
