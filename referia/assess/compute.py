@@ -809,6 +809,16 @@ class Compute(lynguine.assess.compute.Compute):
                         "concise summary of the key points, methods, and findings. "
                         "Keep your response under 150 words."
                     ),
+                    "questions": (
+
+                        "You are an academic domain expert. You want to explore the authors "
+                        "understanding of their work and the broader context. Provide three "
+                        "general questions and 3 more detailed questions that would allow "
+                        "the author to demonstrate both their general understanding and "
+                        "their detailed understanding of this work."
+                        "Keep your response under 150 words."
+                    ),
+                        
                 }
                 system_prompt = prompts.get(review_type, prompts["general"])
             
