@@ -50,7 +50,7 @@ This enables flexible, exploratory interaction with chapter content - users can 
 Add to `referia/assess/compute.py` in the `_llm_functions_list()` method:
 
 ```python
-def llm_custom_query(prompt_field: str, chapter_file: str, 
+def llm_custom_query(custom_prompt: str, filename: str, 
                      start_page: int, directory: str = "",
                      model: str = "gpt-4o-mini", 
                      max_chars: int = 50000,
@@ -64,8 +64,8 @@ def llm_custom_query(prompt_field: str, chapter_file: str,
     prompt to generate a custom LLM response. This enables flexible 
     exploration of chapter content with arbitrary questions.
     
-    :param prompt_field: Field name containing the user's custom prompt
-    :param chapter_file: PDF filename for the chapter
+    :param custom_prompt: The user's custom prompt/question (extracted from data via row_args)
+    :param filename: PDF filename for the chapter
     :param start_page: Starting page of the chapter
     :param directory: Directory containing the PDF
     :param model: LLM model to use (default: gpt-4o-mini)
@@ -91,10 +91,12 @@ def llm_custom_query(prompt_field: str, chapter_file: str,
             compute:
               field: chapter1CustomResponse
               function: llm_custom_query
-              row_args:
-                prompt_field: chapter1CustomPrompt
-                chapter_file: "{Name}_thesis_chapter1.pdf"
-                start_page: Chapter1FP
+                  view_args:
+                    filename:
+                      display: "{Name}_thesis_chapter1.pdf"
+                  row_args:
+                    custom_prompt: chapter1CustomPrompt
+                    start_page: Chapter1FP
               args:
                 directory: $HOME/Documents/theses/examined/
                 model: "gpt-4o-mini"
@@ -190,10 +192,12 @@ For each chapter, add this three-part pattern:
     compute:
       field: chapter1CustomResponse
       function: llm_custom_query
-      row_args:
-        prompt_field: chapter1CustomPrompt
-        chapter_file: "{Name}_thesis_chapter1.pdf"
-        start_page: Chapter1FP
+                  view_args:
+                    filename:
+                      display: "{Name}_thesis_chapter1.pdf"
+                  row_args:
+                    custom_prompt: chapter1CustomPrompt
+                    start_page: Chapter1FP
       args:
         directory: $HOME/Documents/theses/examined/
         model: "gpt-4o-mini"

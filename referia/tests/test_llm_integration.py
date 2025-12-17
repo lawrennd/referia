@@ -290,7 +290,7 @@ class TestLLMComputeFunctions:
         # Call function (passing the prompt value directly, as row_args would do)
         result = custom_query_func(
             custom_prompt='What are the key contributions?',
-            chapter_file='thesis_chapter1.pdf',
+            filename='thesis_chapter1.pdf',
             start_page=1,
             directory='/test/dir',
             model='gpt-4o-mini'
@@ -338,7 +338,7 @@ class TestLLMComputeFunctions:
         # Call function (passing empty prompt as row_args would extract)
         result = custom_query_func(
             custom_prompt='',  # Empty prompt from the data
-            chapter_file='thesis_chapter1.pdf',
+            filename='thesis_chapter1.pdf',
             start_page=1
         )
         
@@ -377,7 +377,7 @@ class TestLLMComputeFunctions:
         # Call function with None (simulating missing field)
         result = custom_query_func(
             custom_prompt=None,  # Missing/None prompt
-            chapter_file='thesis_chapter1.pdf',
+            filename='thesis_chapter1.pdf',
             start_page=1
         )
         
@@ -416,7 +416,7 @@ class TestLLMComputeFunctions:
         # Call function
         result = custom_query_func(
             custom_prompt='What are the contributions?',
-            chapter_file='missing.pdf',
+            filename='missing.pdf',
             start_page=1
         )
         
@@ -459,7 +459,7 @@ class TestLLMComputeFunctions:
         # Call function
         result = custom_query_func(
             custom_prompt='What are the contributions?',
-            chapter_file='empty.pdf',
+            filename='empty.pdf',
             start_page=1
         )
         
@@ -506,7 +506,7 @@ class TestLLMComputeFunctions:
         # Call function
         result = custom_query_func(
             custom_prompt='What are the contributions?',
-            chapter_file='chapter.pdf',
+            filename='chapter.pdf',
             start_page=1
         )
         
@@ -551,7 +551,7 @@ class TestLLMComputeFunctions:
         custom_system = "You are an expert in technical methodology evaluation."
         result = custom_query_func(
             custom_prompt='Analyze the methodology',
-            chapter_file='chapter.pdf',
+            filename='chapter.pdf',
             start_page=1,
             system_prompt=custom_system
         )
@@ -598,7 +598,7 @@ class TestLLMComputeFunctions:
         # Call function with page range
         result = custom_query_func(
             custom_prompt='Summarize this section',
-            chapter_file='chapter.pdf',
+            filename='chapter.pdf',
             start_page=5,
             end_page=10,
             directory='/test/dir'

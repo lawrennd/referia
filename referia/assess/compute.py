@@ -835,7 +835,7 @@ class Compute(lynguine.assess.compute.Compute):
                 **kwargs
             )
         
-        def llm_custom_query(custom_prompt: str, chapter_file: str, 
+        def llm_custom_query(custom_prompt: str, filename: str, 
                             start_page: int = None, end_page: int = None,
                             directory: str = "",
                             model: str = "gpt-4o-mini", 
@@ -851,7 +851,7 @@ class Compute(lynguine.assess.compute.Compute):
             exploration of chapter content with arbitrary questions.
             
             :param custom_prompt: The user's custom prompt/question (extracted from data via row_args)
-            :param chapter_file: PDF filename for the chapter
+            :param filename: PDF filename for the chapter
             :param start_page: Starting page of the chapter (optional)
             :param end_page: Ending page of the chapter (optional)
             :param directory: Directory containing the PDF
@@ -883,9 +883,11 @@ class Compute(lynguine.assess.compute.Compute):
                     compute:
                       field: chapter1CustomResponse
                       function: llm_custom_query
+                      view_args:
+                        filename:
+                          display: "{Name}_thesis_chapter1.pdf"
                       row_args:
                         custom_prompt: chapter1CustomPrompt
-                        chapter_file: "{Name}_thesis_chapter1.pdf"
                         start_page: Chapter1FP
                       args:
                         directory: $HOME/Documents/theses/examined/
@@ -900,7 +902,7 @@ class Compute(lynguine.assess.compute.Compute):
             # 2. Extract chapter text from PDF
             try:
                 chapter_text = pdf_extract_text(
-                    filename=chapter_file,
+                    filename=filename,
                     directory=directory,
                     start_page=start_page,
                     end_page=end_page,
@@ -908,7 +910,7 @@ class Compute(lynguine.assess.compute.Compute):
                 )
                 
                 if not chapter_text or not chapter_text.strip():
-                    return f"⚠️ Could not extract text from {chapter_file}"
+                    return f"⚠️ Could not extract text from {filename}"
                     
             except Exception as e:
                 log.error(f"Error extracting PDF in llm_custom_query: {str(e)}")
