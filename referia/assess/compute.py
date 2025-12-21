@@ -842,6 +842,7 @@ class Compute(lynguine.assess.compute.Compute):
                             max_chars: int = 50000,
                             temperature: float = 0.7,
                             system_prompt: str = None,
+                            include_query: bool = False,
                             **kwargs) -> str:
             """
             Answer a custom user prompt about a chapter using LLM.
@@ -859,7 +860,8 @@ class Compute(lynguine.assess.compute.Compute):
             :param max_chars: Maximum characters to extract from PDF
             :param temperature: LLM temperature (default: 0.7)
             :param system_prompt: Optional system prompt to guide LLM behavior
-            :return: LLM response text or error message
+            :param include_query: If True, include the question before the response (default: False)
+            :return: LLM response text or error message (with question if include_query=True)
             
             **Example**:
             
@@ -940,7 +942,11 @@ class Compute(lynguine.assess.compute.Compute):
                     **kwargs
                 )
                 
-                return response
+                # Format output with question if requested
+                if include_query:
+                    return f"**Question:** {custom_prompt}\n\n**Response:** {response}"
+                else:
+                    return response
                 
             except LLMError as e:
                 log.error(f"LLM error in llm_custom_query: {str(e)}")
@@ -1015,6 +1021,7 @@ class Compute(lynguine.assess.compute.Compute):
                     "temperature": 0.7,
                     "max_chars": 50000,
                     "directory": "",
+                    "include_query": False,
                 },
                 "docstr": "Answer a custom user prompt about a chapter using LLM.",
             },
