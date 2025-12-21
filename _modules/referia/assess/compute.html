@@ -1614,6 +1614,126 @@
                 <span class="o">**</span><span class="n">kwargs</span>
             <span class="p">)</span>
         
+        <span class="k">def</span><span class="w"> </span><span class="nf">llm_custom_query</span><span class="p">(</span><span class="n">custom_prompt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> 
+                            <span class="n">start_page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">end_page</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                            <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span> 
+                            <span class="n">max_chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50000</span><span class="p">,</span>
+                            <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.7</span><span class="p">,</span>
+                            <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">include_query</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Answer a custom user prompt about a chapter using LLM.</span>
+<span class="sd">            </span>
+<span class="sd">            Extracts text from a PDF chapter and combines it with a user-provided</span>
+<span class="sd">            prompt to generate a custom LLM response. This enables flexible </span>
+<span class="sd">            exploration of chapter content with arbitrary questions.</span>
+<span class="sd">            </span>
+<span class="sd">            :param custom_prompt: The user&#39;s custom prompt/question (extracted from data via row_args)</span>
+<span class="sd">            :param filename: PDF filename for the chapter</span>
+<span class="sd">            :param start_page: Starting page of the chapter (optional)</span>
+<span class="sd">            :param end_page: Ending page of the chapter (optional)</span>
+<span class="sd">            :param directory: Directory containing the PDF</span>
+<span class="sd">            :param model: LLM model to use (default: gpt-4o-mini)</span>
+<span class="sd">            :param max_chars: Maximum characters to extract from PDF</span>
+<span class="sd">            :param temperature: LLM temperature (default: 0.7)</span>
+<span class="sd">            :param system_prompt: Optional system prompt to guide LLM behavior</span>
+<span class="sd">            :param include_query: If True, include the question before the response (default: False)</span>
+<span class="sd">            :return: LLM response text or error message (with question if include_query=True)</span>
+<span class="sd">            </span>
+<span class="sd">            **Example**:</span>
+<span class="sd">            </span>
+<span class="sd">            .. code-block:: yaml</span>
+<span class="sd">            </span>
+<span class="sd">                - type: Textarea</span>
+<span class="sd">                  field: chapter1CustomPrompt</span>
+<span class="sd">                  args:</span>
+<span class="sd">                    description: &quot;Ask a question about Chapter 1&quot;</span>
+<span class="sd">                    placeholder: &quot;e.g., What are the key methodological contributions?&quot;</span>
+<span class="sd">                </span>
+<span class="sd">                - type: Textarea</span>
+<span class="sd">                  field: chapter1CustomResponse</span>
+<span class="sd">                  args:</span>
+<span class="sd">                    description: &quot;LLM Response&quot;</span>
+<span class="sd">                </span>
+<span class="sd">                - type: PopulateButton</span>
+<span class="sd">                  args:</span>
+<span class="sd">                    description: &quot;Ask LLM&quot;</span>
+<span class="sd">                    target: chapter1CustomResponse</span>
+<span class="sd">                    compute:</span>
+<span class="sd">                      field: chapter1CustomResponse</span>
+<span class="sd">                      function: llm_custom_query</span>
+<span class="sd">                      view_args:</span>
+<span class="sd">                        filename:</span>
+<span class="sd">                          display: &quot;{Name}_thesis_chapter1.pdf&quot;</span>
+<span class="sd">                      row_args:</span>
+<span class="sd">                        custom_prompt: chapter1CustomPrompt</span>
+<span class="sd">                        start_page: Chapter1FP</span>
+<span class="sd">                      args:</span>
+<span class="sd">                        directory: $HOME/Documents/theses/examined/</span>
+<span class="sd">                        model: &quot;gpt-4o-mini&quot;</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="c1"># 1. Check the user&#39;s custom prompt</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">custom_prompt</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">str</span><span class="p">(</span><span class="n">custom_prompt</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="k">return</span> <span class="s2">&quot;⚠️ Please enter a question in the prompt field above.&quot;</span>
+            
+            <span class="n">custom_prompt</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">custom_prompt</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            
+            <span class="c1"># 2. Extract chapter text from PDF</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">chapter_text</span> <span class="o">=</span> <span class="n">pdf_extract_text</span><span class="p">(</span>
+                    <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                    <span class="n">directory</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span>
+                    <span class="n">start_page</span><span class="o">=</span><span class="n">start_page</span><span class="p">,</span>
+                    <span class="n">end_page</span><span class="o">=</span><span class="n">end_page</span><span class="p">,</span>
+                    <span class="n">max_chars</span><span class="o">=</span><span class="n">max_chars</span>
+                <span class="p">)</span>
+                
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">chapter_text</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">chapter_text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;⚠️ Could not extract text from </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span>
+                    
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error extracting PDF in llm_custom_query: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;❌ Error extracting PDF: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            
+            <span class="c1"># 3. Combine prompt with chapter text</span>
+            <span class="n">full_prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">custom_prompt</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">---</span><span class="se">\n</span><span class="s2">Chapter text:</span><span class="se">\n</span><span class="si">{</span><span class="n">chapter_text</span><span class="si">}</span><span class="s2">&quot;</span>
+            
+            <span class="c1"># 4. Query LLM</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">llm_config</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;interface&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;llm&quot;</span><span class="p">,</span> <span class="p">{})</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;interface&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+                <span class="n">manager</span> <span class="o">=</span> <span class="n">get_llm_manager</span><span class="p">(</span><span class="n">llm_config</span><span class="p">)</span>
+                
+                <span class="c1"># Use default system prompt if not provided</span>
+                <span class="k">if</span> <span class="n">system_prompt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">system_prompt</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="s2">&quot;You are a helpful assistant analyzing academic thesis chapters. &quot;</span>
+                        <span class="s2">&quot;Provide clear, structured answers to questions about the content. &quot;</span>
+                        <span class="s2">&quot;Be specific and cite relevant parts of the text when appropriate.&quot;</span>
+                    <span class="p">)</span>
+                
+                <span class="n">response</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">call</span><span class="p">(</span>
+                    <span class="n">prompt</span><span class="o">=</span><span class="n">full_prompt</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
+                    <span class="n">system_prompt</span><span class="o">=</span><span class="n">system_prompt</span><span class="p">,</span>
+                    <span class="o">**</span><span class="n">kwargs</span>
+                <span class="p">)</span>
+                
+                <span class="c1"># Format output with question if requested</span>
+                <span class="k">if</span> <span class="n">include_query</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;**Question:** </span><span class="si">{</span><span class="n">custom_prompt</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">**Response:** </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">response</span>
+                
+            <span class="k">except</span> <span class="n">LLMError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;LLM error in llm_custom_query: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;❌ LLM Error: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected error in llm_custom_query: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;❌ Unexpected error: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+        
         <span class="k">return</span> <span class="p">[</span>
             <span class="p">{</span>
                 <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;llm_complete&quot;</span><span class="p">,</span>
@@ -1671,6 +1791,18 @@
                     <span class="s2">&quot;review_type&quot;</span><span class="p">:</span> <span class="s2">&quot;general&quot;</span><span class="p">,</span>
                 <span class="p">},</span>
                 <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="s2">&quot;Extract text from PDF and generate LLM-based review/summary.&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;llm_custom_query&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">llm_custom_query</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.7</span><span class="p">,</span>
+                    <span class="s2">&quot;max_chars&quot;</span><span class="p">:</span> <span class="mi">50000</span><span class="p">,</span>
+                    <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;include_query&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="s2">&quot;Answer a custom user prompt about a chapter using LLM.&quot;</span><span class="p">,</span>
             <span class="p">},</span>
         <span class="p">]</span></div>
 

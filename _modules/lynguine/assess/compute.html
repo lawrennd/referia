@@ -906,7 +906,7 @@
 
 <div class="viewcode-block" id="Compute.gca_">
 <a class="viewcode-back" href="../../../modules/assess.html#referia.assess.compute.Compute.gca_">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">gca_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">{},</span> <span class="n">row_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">view_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">function_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">subseries_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">column_args</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">gca_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">function</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">{},</span> <span class="n">row_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">view_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">function_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">subseries_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">column_args</span><span class="o">=</span><span class="p">{},</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">separator</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Args generator for compute functions.</span>
 
@@ -1133,8 +1133,8 @@
                 <span class="k">continue</span>
             
             <span class="c1"># If we&#39;re not refreshing, need to determine which columns aren&#39;t set so they can be refreshed.</span>
+            <span class="n">missing_vals</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh</span><span class="p">:</span>
-                <span class="n">missing_vals</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
                         <span class="n">missing_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
@@ -1147,6 +1147,9 @@
                         <span class="n">missing_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span> <span class="c1"># The value is missing.</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">missing_vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># When refreshing, treat all columns as if they need updating</span>
+                <span class="n">missing_vals</span> <span class="o">=</span> <span class="p">[</span><span class="kc">True</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">refresh</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">missing_vals</span><span class="p">):</span>
                 <span class="c1"># Compute the function and get the new values  </span>
@@ -1166,12 +1169,39 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">new_vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">new_vals</span><span class="p">]</span>
 
+            <span class="c1"># Get mode and separator parameters for write operation</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="n">compute</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+            <span class="n">separator</span> <span class="o">=</span> <span class="n">compute</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;separator&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">---</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            
             <span class="c1"># Distribute the updated values to the columns</span>
             <span class="k">for</span> <span class="n">column</span><span class="p">,</span> <span class="n">new_val</span><span class="p">,</span> <span class="n">missing_val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">new_vals</span><span class="p">,</span> <span class="n">missing_vals</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">column</span> <span class="o">==</span> <span class="s2">&quot;_&quot;</span><span class="p">:</span>
                     <span class="k">continue</span>
                 <span class="k">if</span> <span class="n">refresh</span> <span class="ow">or</span> <span class="n">missing_val</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">ismutable</span><span class="p">(</span><span class="n">column</span><span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Setting column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> in data structure to value </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">new_val</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> from compute.&quot;</span><span class="p">)</span>
+                    <span class="c1"># Apply write mode logic</span>
+                    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;append&quot;</span> <span class="ow">or</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;prepend&quot;</span><span class="p">:</span>
+                        <span class="c1"># Read current value for append/prepend modes</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">current_val</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_value_column</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+                            <span class="c1"># Check if current value is non-empty</span>
+                            <span class="k">if</span> <span class="n">current_val</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">isna</span><span class="p">(</span><span class="n">current_val</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_val</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                                <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;append&quot;</span><span class="p">:</span>
+                                    <span class="c1"># Append: current + separator + new</span>
+                                    <span class="n">new_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_val</span><span class="p">)</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">new_val</span><span class="p">)</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Appending to column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> with separator.&quot;</span><span class="p">)</span>
+                                <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;prepend&quot;</span><span class="p">:</span>
+                                    <span class="c1"># Prepend: new + separator + current</span>
+                                    <span class="n">new_val</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">new_val</span><span class="p">)</span> <span class="o">+</span> <span class="n">separator</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_val</span><span class="p">)</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Prepending to column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> with separator.&quot;</span><span class="p">)</span>
+                        <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>
+                            <span class="c1"># Column doesn&#39;t exist yet, just use new value</span>
+                            <span class="k">pass</span>
+                    <span class="k">elif</span> <span class="n">mode</span> <span class="o">!=</span> <span class="s2">&quot;replace&quot;</span><span class="p">:</span>
+                        <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Invalid mode &#39;</span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">&#39; specified for compute operation. Valid modes are: &#39;replace&#39;, &#39;append&#39;, &#39;prepend&#39;.&quot;</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                    
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Setting column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> in data structure to value </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">new_val</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> from compute (mode: </span><span class="si">{</span><span class="n">mode</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
                     <span class="n">data</span><span class="o">.</span><span class="n">set_value_column</span><span class="p">(</span><span class="n">new_val</span><span class="p">,</span> <span class="n">column</span><span class="p">)</span>
 
         

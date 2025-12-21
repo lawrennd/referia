@@ -835,6 +835,126 @@ class Compute(lynguine.assess.compute.Compute):
                 **kwargs
             )
         
+        def llm_custom_query(custom_prompt: str, filename: str, 
+                            start_page: int = None, end_page: int = None,
+                            directory: str = "",
+                            model: str = "gpt-4o-mini", 
+                            max_chars: int = 50000,
+                            temperature: float = 0.7,
+                            system_prompt: str = None,
+                            include_query: bool = False,
+                            **kwargs) -> str:
+            """
+            Answer a custom user prompt about a chapter using LLM.
+            
+            Extracts text from a PDF chapter and combines it with a user-provided
+            prompt to generate a custom LLM response. This enables flexible 
+            exploration of chapter content with arbitrary questions.
+            
+            :param custom_prompt: The user's custom prompt/question (extracted from data via row_args)
+            :param filename: PDF filename for the chapter
+            :param start_page: Starting page of the chapter (optional)
+            :param end_page: Ending page of the chapter (optional)
+            :param directory: Directory containing the PDF
+            :param model: LLM model to use (default: gpt-4o-mini)
+            :param max_chars: Maximum characters to extract from PDF
+            :param temperature: LLM temperature (default: 0.7)
+            :param system_prompt: Optional system prompt to guide LLM behavior
+            :param include_query: If True, include the question before the response (default: False)
+            :return: LLM response text or error message (with question if include_query=True)
+            
+            **Example**:
+            
+            .. code-block:: yaml
+            
+                - type: Textarea
+                  field: chapter1CustomPrompt
+                  args:
+                    description: "Ask a question about Chapter 1"
+                    placeholder: "e.g., What are the key methodological contributions?"
+                
+                - type: Textarea
+                  field: chapter1CustomResponse
+                  args:
+                    description: "LLM Response"
+                
+                - type: PopulateButton
+                  args:
+                    description: "Ask LLM"
+                    target: chapter1CustomResponse
+                    compute:
+                      field: chapter1CustomResponse
+                      function: llm_custom_query
+                      view_args:
+                        filename:
+                          display: "{Name}_thesis_chapter1.pdf"
+                      row_args:
+                        custom_prompt: chapter1CustomPrompt
+                        start_page: Chapter1FP
+                      args:
+                        directory: $HOME/Documents/theses/examined/
+                        model: "gpt-4o-mini"
+            """
+            # 1. Check the user's custom prompt
+            if not custom_prompt or not str(custom_prompt).strip():
+                return "⚠️ Please enter a question in the prompt field above."
+            
+            custom_prompt = str(custom_prompt).strip()
+            
+            # 2. Extract chapter text from PDF
+            try:
+                chapter_text = pdf_extract_text(
+                    filename=filename,
+                    directory=directory,
+                    start_page=start_page,
+                    end_page=end_page,
+                    max_chars=max_chars
+                )
+                
+                if not chapter_text or not chapter_text.strip():
+                    return f"⚠️ Could not extract text from {filename}"
+                    
+            except Exception as e:
+                log.error(f"Error extracting PDF in llm_custom_query: {str(e)}")
+                return f"❌ Error extracting PDF: {str(e)}"
+            
+            # 3. Combine prompt with chapter text
+            full_prompt = f"{custom_prompt}\n\n---\nChapter text:\n{chapter_text}"
+            
+            # 4. Query LLM
+            try:
+                llm_config = getattr(self, 'interface', {}).get("llm", {}) if hasattr(self, 'interface') else {}
+                manager = get_llm_manager(llm_config)
+                
+                # Use default system prompt if not provided
+                if system_prompt is None:
+                    system_prompt = (
+                        "You are a helpful assistant analyzing academic thesis chapters. "
+                        "Provide clear, structured answers to questions about the content. "
+                        "Be specific and cite relevant parts of the text when appropriate."
+                    )
+                
+                response = manager.call(
+                    prompt=full_prompt,
+                    model=model,
+                    temperature=temperature,
+                    system_prompt=system_prompt,
+                    **kwargs
+                )
+                
+                # Format output with question if requested
+                if include_query:
+                    return f"**Question:** {custom_prompt}\n\n**Response:** {response}"
+                else:
+                    return response
+                
+            except LLMError as e:
+                log.error(f"LLM error in llm_custom_query: {str(e)}")
+                return f"❌ LLM Error: {str(e)}"
+            except Exception as e:
+                log.error(f"Unexpected error in llm_custom_query: {str(e)}")
+                return f"❌ Unexpected error: {str(e)}"
+        
         return [
             {
                 "name": "llm_complete",
@@ -892,6 +1012,18 @@ class Compute(lynguine.assess.compute.Compute):
                     "review_type": "general",
                 },
                 "docstr": "Extract text from PDF and generate LLM-based review/summary.",
+            },
+            {
+                "name": "llm_custom_query",
+                "function": llm_custom_query,
+                "default_args": {
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.7,
+                    "max_chars": 50000,
+                    "directory": "",
+                    "include_query": False,
+                },
+                "docstr": "Answer a custom user prompt about a chapter using LLM.",
             },
         ]
                   
