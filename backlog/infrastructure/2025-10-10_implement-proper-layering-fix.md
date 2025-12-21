@@ -80,7 +80,7 @@ Implement the correct architectural solution for the mapping initialization timi
 def _is_default_mapping(self, original_name, column):
     """Check if this is a default mapping that can be overridden."""
     from lynguine.util.misc import to_camel_case
-    auto_generated_name = to_camel_case(column)
+    auto_generated_name = to_camel_case(column) # only do this if it's an invalid variable
     return original_name == auto_generated_name or original_name == column
 
 def update_name_column_map(self, name, column):
