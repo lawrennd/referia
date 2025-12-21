@@ -175,9 +175,9 @@ class CustomDataFrame(data.CustomDataFrame):
         self._precompute = []
         self._postcompute = []
 
-        # Ensure _name_column_map is populated by calling _augment_column_names on each data type
-        for typ in self._d:
-            self._augment_column_names(self._d[typ])
+        # CIP-0005: Moved _augment_column_names call to from_flow() override
+        # This ensures explicit interface mappings are applied BEFORE augmentation,
+        # avoiding timing conflicts between identity and interface mappings
 
     def _is_default_mapping(self, original_name, column):
         """
@@ -236,6 +236,34 @@ class CustomDataFrame(data.CustomDataFrame):
         # If we get here, either no conflict or we handled the default case
         self._name_column_map[name] = column
         self._column_name_map[column] = name
+
+    @classmethod
+    def from_flow(cls, interface):
+        """
+        Construct a CustomDataFrame from an interface object.
+        
+        This override ensures proper timing: explicit interface mappings are applied
+        BEFORE column name augmentation, preventing conflicts between identity mappings
+        and explicit interface mappings.
+        
+        CIP-0005 Implementation: This method calls the parent from_flow() first (which
+        applies explicit interface mappings), then augments column names for any columns
+        that don't have explicit mappings.
+        
+        :param interface: Interface object.
+        :type interface: lynguine.config.interface.Interface or dict.
+        :return: A CustomDataFrame object.
+        :rtype: CustomDataFrame
+        """
+        # Call parent from_flow to process the interface (applies explicit mappings)
+        cdf = super().from_flow(interface)
+        
+        # Now augment column names for any columns that don't have explicit mappings
+        # This happens AFTER interface mappings are applied, so no conflicts
+        for typ in cdf._d:
+            cdf._augment_column_names(cdf._d[typ])
+        
+        return cdf
                         
     @property
     def _data(self):

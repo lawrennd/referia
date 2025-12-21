@@ -23,13 +23,11 @@ import referia.config.interface
 class TestFromFlowMappingTiming:
     """Test the proposed from_flow() mapping timing approach for CIP-0005."""
     
-    @pytest.mark.skip(reason="CIP-0005 not yet implemented - will fail with current __init__ mapping creation")
     def test_no_mappings_after_init(self):
         """
         Test that mappings are NOT created in __init__ after CIP-0005 fix.
         
-        Current behavior: FAILS - mappings are created in __init__ (lines 178-180)
-        Expected behavior after CIP-0005: PASSES - no mappings until from_flow()
+        CIP-0005 IMPLEMENTED: Mappings are no longer created in __init__
         """
         # Create a DataFrame with valid column names
         data = pd.DataFrame({'job_title': ['Engineer'], 'name': ['Alice']})
@@ -277,18 +275,15 @@ class TestFromFlowMappingTiming:
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
     
-    @pytest.mark.skip(reason="CIP-0005 not yet implemented - documents expected timing")
     def test_mapping_timing_sequence(self):
         """
         Test that the mapping timing sequence is correct after CIP-0005 fix.
         
-        Expected sequence after CIP-0005:
+        CIP-0005 IMPLEMENTED: Correct sequence is now:
         1. __init__ creates empty mappings
         2. from_flow() calls parent (applies interface mappings)
         3. from_flow() calls _augment_column_names (adds remaining identity mappings)
         4. No conflicts because interface mappings already exist
-        
-        This test documents the expected behavior but will fail until implemented.
         """
         tmpdir = tempfile.mkdtemp()
         
@@ -304,6 +299,7 @@ class TestFromFlowMappingTiming:
             with open(f"{tmpdir}/_referia.yml", 'w') as f:
                 f.write(f"""input:
   type: markdown_directory
+  index: sourceFilename
   mapping:
     jobTitle: job_title
   source:

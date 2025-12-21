@@ -88,6 +88,10 @@ def test_automapping_consistency():
     columns = ['validColumn', 'invalid-column', 'class', '_']
     df = referia.assess.data.CustomDataFrame({col: [1] for col in columns})
     
+    # CIP-0005: After moving augmentation to from_flow(), explicitly augment to populate mappings
+    for typ in df._d:
+        df._augment_column_names(df._d[typ])
+    
     # Get mapping from automapping function
     auto_mapping = referia.assess.data.automapping(columns)
     
