@@ -1,7 +1,7 @@
 ---
 id: "2025-12-21_test-global-consts-loading"
 title: "Add comprehensive test coverage for global_consts loading"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2025-12-21"
 last_updated: "2025-12-21"
@@ -213,9 +213,54 @@ global_consts:
 
 ## Progress Updates
 
-### 2025-12-21
+### 2025-12-21 (Morning)
 
 Task created after completing CIP-0005. Identified during discussion about ensuring standard loading mechanisms have proper test coverage. Current minimal test is insufficient for a critical feature like global_consts.
 
 **Priority**: High - This is foundational infrastructure that needs comprehensive testing before any improvements can be made.
+
+### 2025-12-21 (Afternoon)
+
+**Task completed!** ✅
+
+Created comprehensive test file: `tests/test_global_consts.py` (534 lines, 10 tests)
+
+**Test Results: 3 PASS / 7 FAIL (30% pass rate)**
+
+This is EXPECTED - tests document INTENDED behavior, revealing what's broken.
+
+**✅ What Works:**
+- Empty globals (existing minimal functionality)
+- Invalid type error handling
+- Regression tests pass
+
+**❌ What's Broken (Root Cause Identified):**
+All 7 failures have same root cause: `"If using all scalar values, you must pass an index"`
+
+**Problem**: YAML files with scalar constants like:
+```yaml
+model: gpt-4o-mini
+temperature: 0.3
+max_tokens: 2000
+```
+
+Can't be loaded as DataFrames because pandas requires explicit index when all values are scalars.
+
+**Failed Test Categories:**
+1. Basic loading (YAML files, local data)
+2. Advanced loading (hstack, select)
+3. Integration (compute operations)
+4. Error handling (wrong error messages)
+
+**Impact**: Global_consts feature is essentially non-functional for its intended use case (loading reusable constants). This explains why users struggled with the feature.
+
+**Next Steps**:
+1. These tests now serve as acceptance criteria for fixing global_consts
+2. Fix implementation to handle scalar constants properly
+3. Tests will pass once implementation is correct
+4. Then can proceed with simplification (other backlog item)
+
+**Commit**: `1b4dee4` - "Add comprehensive global_consts tests (7/10 failing as expected)"
+
+**Status changed to Completed** - Test coverage goal achieved. The failures are documentation of what needs fixing, not a testing failure.
 

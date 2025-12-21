@@ -147,8 +147,37 @@ We need to investigate what's going on that this implementation isn't working.
 
 ## Progress Updates
 
-### 2025-12-21
+### 2025-12-21 (Morning)
 - Task created based on user experience attempting to centralize LLM configuration parameters
 - Multiple configuration approaches attempted without success
 - Issue stems from fundamental design where everything is treated as dataframe columns rather than distinguishing between static constants and row-varying data
+
+### 2025-12-21 (Afternoon) - Root Cause Identified
+
+**STATUS CHANGE: BLOCKED BY BUG**
+
+Comprehensive testing and code survey revealed the root cause:
+
+1. ✅ **Created test coverage**: `tests/test_global_consts.py` (10 tests)
+   - Result: 3 PASS / 7 FAIL (30% pass rate)
+   - All 7 failures: Same error (scalar values need index)
+
+2. ✅ **Identified bug location**: `lynguine/access/io.py:333`
+   - `read_yaml()` calls `pd.DataFrame(data)` without index
+   - Pandas raises `ValueError` for all-scalar dictionaries
+   - Bug affects ALL parameter types (constants, global_consts, parameters, globals)
+
+3. ✅ **Created bug backlog**: `bugs/2025-12-21_fix-global-consts-scalar-loading.md`
+   - Severity: HIGH - Primary use case completely broken
+   - Detailed root cause analysis
+   - Three proposed fixes (Option 1 recommended)
+   - Comprehensive documentation
+
+**Finding**: The global_consts feature is not "complex and unintuitive" - it's simply broken at the loading stage. Fixing the bug will immediately make it work as intended.
+
+**Dependencies Updated**:
+- ❌ BLOCKED BY: `bugs/2025-12-21_fix-global-consts-scalar-loading.md`
+- ✅ Tests exist: `backlog/infrastructure/2025-12-21_test-global-consts-loading.md`
+
+**Next Step**: Fix the bug first, then reassess if simplification is still needed
 
