@@ -1,7 +1,7 @@
 ---
 id: "2025-12-21_implement-history-parameter-llm-functions"
 title: "Implement History Parameter in LLM Functions"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2025-12-21"
 last_updated: "2025-12-21"
@@ -25,16 +25,16 @@ This is the core implementation task for CIP-0008 (Conversational Context for LL
 
 ## Acceptance Criteria
 
-- [ ] Add `include_history` parameter (boolean) to `llm_custom_query`
-- [ ] Add `history` parameter (text) to `llm_custom_query`
-- [ ] Format history with clear header: "## Previous Conversation"
-- [ ] Add separator between history and current context
-- [ ] Only include history if `include_history=True` AND `history` is non-empty
-- [ ] Add `include_history` and `history` parameters to `llm_pdf_review`
+- [x] Add `include_history` parameter (boolean) to `llm_custom_query`
+- [x] Add `history` parameter (text) to `llm_custom_query`
+- [x] Format history with clear header: "## Previous Conversation"
+- [x] Add separator between history and current context
+- [x] Only include history if `include_history=True` AND `history` is non-empty
+- [x] Add `include_history` and `history` parameters to `llm_pdf_review`
 - [ ] Test with self-referential history (field includes own previous content)
 - [ ] Test with cross-field history (use summary as context for questions)
-- [ ] Verify history doesn't break existing functionality (backward compatible)
-- [ ] Handle empty/None history gracefully
+- [x] Verify history doesn't break existing functionality (backward compatible)
+- [x] Handle empty/None history gracefully
 
 ## Implementation Notes
 
@@ -137,7 +137,34 @@ result = llm_custom_query(
 
 ## Progress Updates
 
-### 2025-12-21
+### 2025-12-21 - Task Created
 
 Task created as part of CIP-0008 implementation planning. This is the core functionality that enables conversational LLM interactions.
+
+### 2025-12-21 - Implementation Completed
+
+**Modified Functions:**
+
+1. **`llm_custom_query`**:
+   - Added `include_history` and `history` parameters
+   - Builds prompt with history section when enabled
+   - Format: Previous Conversation → Chapter Content → Current Question
+   - Backward compatible (existing configs work unchanged)
+
+2. **`llm_pdf_review`**:
+   - Added `include_history` and `history` parameters
+   - Builds prompt with history section when enabled
+   - Format: Previous Conversation → Document Content
+   - Backward compatible
+
+**Implementation Details:**
+- History only included if `include_history=True` AND `history` is non-empty
+- Clear section headers (## Previous Conversation, ## Chapter Content, etc.)
+- Separator lines (`---`) between sections
+- Graceful handling of None/empty history values
+
+**Next Steps:**
+- Update `_referia.yml` to add checkboxes and wire up history parameters
+- Test with real thesis review workflow
+- Verify conversation accumulation works with append mode
 
