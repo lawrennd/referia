@@ -170,7 +170,7 @@ Task created as part of CIP-0007 implementation planning. Testing should be deve
 
 Created comprehensive test suites with 39 total tests (all passing):
 
-**test_write_modes.py (21 tests)**:
+**test_assess_compute_modes.py (21 tests)**:
 - ✅ Replace mode with existing content, empty field, default behavior
 - ✅ Append mode with existing content, empty field, null field
 - ✅ Prepend mode with existing content, empty field
@@ -181,7 +181,7 @@ Created comprehensive test suites with 39 total tests (all passing):
 - ✅ Very long content (50+ accumulations, 10K+ characters)
 - ✅ Separator edge cases (whitespace, newlines, None)
 
-**test_llm_include_query.py (18 tests)**:
+**test_util_llm_custom_query.py (18 tests)**:
 - ✅ include_query flag behavior (true/false/default)
 - ✅ Formatted Q&A output with markdown
 - ✅ Empty and None query handling
