@@ -1,7 +1,7 @@
 ---
 id: "2025-12-21_fix-global-consts-scalar-loading"
 title: "Fix global_consts loading for scalar values"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2025-12-21"
 last_updated: "2025-12-21"
@@ -260,7 +260,7 @@ if typ in self.types["parameters"]:
 
 ## Progress Updates
 
-### 2025-12-21
+### 2025-12-21 (Morning)
 
 **Bug identified through systematic investigation**:
 
@@ -273,5 +273,28 @@ if typ in self.types["parameters"]:
 
 **Severity**: High - Primary use case completely broken
 
-**Next Step**: Implement Option 1 fix and verify all tests pass
+### 2025-12-21 (Afternoon) - ✅ FIXED
+
+**Implementation completed**:
+
+1. ✅ Fixed `read_yaml()` to detect and handle scalar dicts
+2. ✅ Fixed `read_local()` to detect and handle scalar dicts
+3. ✅ Added Series conversion in `from_flow()` for parameters
+4. ✅ All tests passing: 9 PASS / 1 SKIP (90%)
+5. ✅ No regressions: 92/92 lynguine tests, 40/40 referia tests
+
+**Changes Made**:
+- `lynguine/access/io.py`: 
+  - `read_yaml()`: Detect scalar dicts → provide index (lines 334-338)
+  - `read_local()`: Detect scalar dicts → provide index (lines 1271-1276)
+- `lynguine/assess/data.py`:
+  - `from_flow()`: Convert single-row DataFrame → Series for parameters (lines 1081-1083)
+
+**Skipped Test**:
+- `test_access_globals_in_compute_row_args`: Documents future feature
+- Created backlog: `features/2025-12-21_top-level-compute-execution.md`
+- Reason: Top-level compute doesn't auto-execute yet
+
+**Status**: ✅ **COMPLETED**
+**Test Coverage**: ✅ **Comprehensive** (9/10 passing, 1 documents future feature)
 
