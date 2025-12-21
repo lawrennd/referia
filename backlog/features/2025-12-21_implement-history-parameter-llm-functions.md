@@ -31,8 +31,8 @@ This is the core implementation task for CIP-0008 (Conversational Context for LL
 - [x] Add separator between history and current context
 - [x] Only include history if `include_history=True` AND `history` is non-empty
 - [x] Add `include_history` and `history` parameters to `llm_pdf_review`
-- [ ] Test with self-referential history (field includes own previous content)
-- [ ] Test with cross-field history (use summary as context for questions)
+- [x] Test with self-referential history (field includes own previous content)
+- [x] Test with cross-field history (use summary as context for questions)
 - [x] Verify history doesn't break existing functionality (backward compatible)
 - [x] Handle empty/None history gracefully
 
@@ -163,8 +163,15 @@ Task created as part of CIP-0008 implementation planning. This is the core funct
 - Separator lines (`---`) between sections
 - Graceful handling of None/empty history values
 
+**Tests Created:**
+- Created `test_assess_compute_llm_history.py` with 11 comprehensive tests
+- All tests pass (11/11) ✅
+- Coverage includes backward compatibility, core functionality, edge cases, and integration
+- Validates self-referential history (conversation accumulation)
+- Validates cross-field history (using summary as context for questions)
+
 **Next Steps:**
 - Update `_referia.yml` to add checkboxes and wire up history parameters
 - Test with real thesis review workflow
-- Verify conversation accumulation works with append mode
+- Verify conversation accumulation works with append mode in practice
 
