@@ -40,7 +40,8 @@ Each CIP can have one of the following statuses:
 - [CIP-0003](./cip0003.md): Comprehensive Documentation Standardization and Sphinx Integration
 - [CIP-0004](./cip0004.md): 
 - [CIP-0005](./cip0005.md): Fix Mapping Initialization Timing Conflict with lynguine
-- [CIP-0006](./cip0006.md): LLM Integration for Compute Framework 
+- [CIP-0006](./cip0006.md): LLM Integration for Compute Framework
+- [CIP-0007](./cip0007.md): Append Mode for Compute Operations 
 
 ## Creating a Good CIP
 
