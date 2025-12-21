@@ -743,7 +743,9 @@ class Compute(lynguine.assess.compute.Compute):
         
         def llm_pdf_review(filename: str, directory: str = "", review_type: str = "general",
                           max_chars: int = 30000, model: str = "gpt-4o-mini",
-                          temperature: float = 0.3, system_prompt: str = None, **kwargs) -> str:
+                          temperature: float = 0.3, system_prompt: str = None,
+                          include_history: bool = False, history: str = None,
+                          **kwargs) -> str:
             """
             Extract text from a PDF and generate an LLM-based review/summary.
             
@@ -751,13 +753,18 @@ class Compute(lynguine.assess.compute.Compute):
             reviews or summaries of PDF content. Perfect for thesis chapter reviews,
             document analysis, or automated commenting.
             
+            Optionally includes previous conversation history as context, enabling
+            reviews that build on prior analysis or avoid repetition.
+            
             :param filename: PDF filename to review
             :param directory: Directory containing the PDF
-            :param review_type: Type of review ('general', 'strengths', 'weaknesses', 'technical', 'summary')
+            :param review_type: Type of review ('general', 'strengths', 'weaknesses', 'technical', 'summary', 'questions')
             :param max_chars: Maximum characters to extract from PDF (for LLM context limits)
             :param model: LLM model to use
             :param temperature: Sampling temperature
             :param system_prompt: Custom system prompt (overrides review_type)
+            :param include_history: If True, include conversation history as context (default: False)
+            :param history: Previous conversation text to include as context (optional)
             :return: LLM-generated review text
             
             **Example**:
@@ -780,6 +787,21 @@ class Compute(lynguine.assess.compute.Compute):
             
             if not text:
                 return ""
+            
+            # Build prompt with optional history
+            prompt_parts = []
+            
+            # Add conversation history if enabled and available
+            if include_history and history and str(history).strip():
+                prompt_parts.append("## Previous Conversation\n\n")
+                prompt_parts.append(str(history))
+                prompt_parts.append("\n\n---\n\n")
+            
+            # Add document text
+            prompt_parts.append("## Document Content\n\n")
+            prompt_parts.append(text)
+            
+            full_prompt = "".join(prompt_parts)
             
             # Set system prompt based on review type if not provided
             if system_prompt is None:
@@ -827,7 +849,7 @@ class Compute(lynguine.assess.compute.Compute):
             manager = get_llm_manager(llm_config)
             
             return manager.call(
-                prompt=text,
+                prompt=full_prompt,
                 model=model,
                 temperature=temperature,
                 system_prompt=system_prompt,
@@ -843,6 +865,8 @@ class Compute(lynguine.assess.compute.Compute):
                             temperature: float = 0.7,
                             system_prompt: str = None,
                             include_query: bool = False,
+                            include_history: bool = False,
+                            history: str = None,
                             **kwargs) -> str:
             """
             Answer a custom user prompt about a chapter using LLM.
@@ -850,6 +874,9 @@ class Compute(lynguine.assess.compute.Compute):
             Extracts text from a PDF chapter and combines it with a user-provided
             prompt to generate a custom LLM response. This enables flexible 
             exploration of chapter content with arbitrary questions.
+            
+            Optionally includes previous conversation history as context, enabling
+            follow-up questions that reference earlier exchanges.
             
             :param custom_prompt: The user's custom prompt/question (extracted from data via row_args)
             :param filename: PDF filename for the chapter
@@ -861,6 +888,8 @@ class Compute(lynguine.assess.compute.Compute):
             :param temperature: LLM temperature (default: 0.7)
             :param system_prompt: Optional system prompt to guide LLM behavior
             :param include_query: If True, include the question before the response (default: False)
+            :param include_history: If True, include conversation history as context (default: False)
+            :param history: Previous conversation text to include as context (optional)
             :return: LLM response text or error message (with question if include_query=True)
             
             **Example**:
@@ -918,8 +947,25 @@ class Compute(lynguine.assess.compute.Compute):
                 log.error(f"Error extracting PDF in llm_custom_query: {str(e)}")
                 return f"❌ Error extracting PDF: {str(e)}"
             
-            # 3. Combine prompt with chapter text
-            full_prompt = f"{custom_prompt}\n\n---\nChapter text:\n{chapter_text}"
+            # 3. Build prompt with optional history
+            prompt_parts = []
+            
+            # Add conversation history if enabled and available
+            if include_history and history and str(history).strip():
+                prompt_parts.append("## Previous Conversation\n\n")
+                prompt_parts.append(str(history))
+                prompt_parts.append("\n\n---\n\n")
+            
+            # Add chapter context
+            prompt_parts.append("## Chapter Content\n\n")
+            prompt_parts.append(chapter_text)
+            prompt_parts.append("\n\n---\n\n")
+            
+            # Add current question
+            prompt_parts.append("## Current Question\n\n")
+            prompt_parts.append(custom_prompt)
+            
+            full_prompt = "".join(prompt_parts)
             
             # 4. Query LLM
             try:
