@@ -1,7 +1,7 @@
 ---
 id: "2025-12-21_test-mode-functionality"
 title: "Test Mode Functionality with Various Backends"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2025-12-21"
 last_updated: "2025-12-21"
@@ -162,7 +162,37 @@ Create test fixtures with:
 
 ## Progress Updates
 
-### 2025-12-21
+### 2025-12-21 - Task Created
 
 Task created as part of CIP-0007 implementation planning. Testing should be developed in parallel with implementation to catch issues early.
+
+### 2025-12-21 - Completed
+
+Created comprehensive test suites with 39 total tests (all passing):
+
+**test_write_modes.py (21 tests)**:
+- ✅ Replace mode with existing content, empty field, default behavior
+- ✅ Append mode with existing content, empty field, null field
+- ✅ Prepend mode with existing content, empty field
+- ✅ Multiple appends and prepends (verifying order)
+- ✅ Custom separators (custom string, empty string, unicode)
+- ✅ Invalid mode error handling
+- ✅ Special characters in content
+- ✅ Very long content (50+ accumulations, 10K+ characters)
+- ✅ Separator edge cases (whitespace, newlines, None)
+
+**test_llm_include_query.py (18 tests)**:
+- ✅ include_query flag behavior (true/false/default)
+- ✅ Formatted Q&A output with markdown
+- ✅ Empty and None query handling
+- ✅ Multiline queries and responses
+- ✅ Formatting consistency across multiple calls
+- ✅ Special characters, markdown, unicode, LaTeX math
+- ✅ Very long queries and responses
+- ✅ Integration with append mode for conversation histories
+- ✅ Q&A pair separation and readability
+- ✅ Code blocks in responses
+
+All tests pass, validating the expected behavior before actual implementation.
+Tests provide clear specifications for implementation in lynguine and referia.
 
