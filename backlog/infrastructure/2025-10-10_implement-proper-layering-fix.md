@@ -1,10 +1,10 @@
 ---
 id: "2025-10-10_implement-proper-layering-fix"
 title: "Implement proper layering fix for mapping initialization timing conflict"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2025-10-10"
-last_updated: "2025-10-10"
+last_updated: "2025-12-21"
 owner: "lawrennd"
 github_issue: null
 dependencies: null
@@ -67,9 +67,9 @@ Implement the correct architectural solution for the mapping initialization timi
 - [x] Verify existing functionality still works
 
 ### Phase 4: Documentation (Low risk)
-- [ ] Update CIP-0005 to reflect new approach
-- [ ] Document the proper layering separation
-- [ ] Explain when to use lynguine vs referia behavior
+- [x] Update CIP-0005 to reflect new approach
+- [x] Document the proper layering separation
+- [x] Explain when to use lynguine vs referia behavior
 
 ## Technical Details
 
@@ -107,13 +107,13 @@ def update_name_column_map(self, name, column):
 
 ## Acceptance Criteria
 
-- [ ] lynguine is strict for all mapping conflicts
-- [ ] referia handles default mapping overrides (implicit behavior)
-- [ ] referia reuses lynguine's strict logic for non-default cases
-- [ ] No code duplication between layers
-- [ ] Clear separation of concerns
-- [ ] All existing tests pass
-- [ ] New tests verify proper layering
+- [x] lynguine is strict for all mapping conflicts
+- [x] referia handles default mapping overrides (implicit behavior)
+- [x] referia reuses lynguine's strict logic for non-default cases
+- [x] No code duplication between layers
+- [x] Clear separation of concerns
+- [x] All existing tests pass
+- [x] New tests verify proper layering
 
 ## Related
 
@@ -125,3 +125,14 @@ def update_name_column_map(self, name, column):
 
 ### 2025-10-10
 Task created with Proposed status. Identified the need for proper architectural layering fix.
+
+### 2025-12-21
+**Task completed!** All phases implemented:
+- Phase 1-3: Completed on 2025-10-10 (reverted lynguine, implemented referia override, testing)
+- Phase 4: Documentation updated in CIP-0005
+
+**Note**: This task implemented the **workaround** (referia overrides to handle implicit behavior). The **proper architectural fix** (moving augmentation from `__init__` to `from_flow()`) is tracked separately in CIP-0005 and requires:
+- `2025-12-21_test-coverage-from-flow-mapping.md` (test coverage)
+- `2025-12-21_verify-no-early-mapping-dependencies.md` (dependency survey)
+
+Status changed to Completed.
