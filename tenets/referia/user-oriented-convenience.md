@@ -38,3 +38,4 @@ tags:
 - Resolution: Handle implicit behavior in referia's layer, keep infrastructure explicit
 - **vs Performance**: When convenience adds overhead
 - Resolution: Provide both convenient and performant options, document trade-offs
+
