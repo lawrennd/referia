@@ -68,6 +68,12 @@ class Interface(lynguine.config.interface.Interface):
         self.directory = directory
         self.user_file = user_file
         
+        # Load templates if present (CIP-0006: Template Expansion)
+        self._templates = {}
+        if "templates" in data:
+            log.debug("Loading templates from configuration")
+            self._load_templates(data["templates"], directory)
+        
         # create suffices for timestamp columns
         if "modified_suffix" not in data:
             data["modified_suffix"] = "modified"
@@ -266,6 +272,64 @@ class Interface(lynguine.config.interface.Interface):
         log.debug(f"End conversion of \"referia\" form into \"linguine\" standard form.")
         
         super().__init__(data=data, directory=directory, user_file=user_file)
+    
+    def _load_templates(self, templates_config, directory):
+        """
+        Load template definitions from inline or external sources.
+        
+        Part of CIP-0006: Template Expansion System
+        
+        :param templates_config: Dictionary of template definitions
+        :type templates_config: dict
+        :param directory: Base directory for resolving template file paths
+        :type directory: str
+        :return: None (templates stored in self._templates)
+        """
+        for template_name, template_def in templates_config.items():
+            log.debug(f"Loading template: {template_name}")
+            
+            if 'file' in template_def:
+                # External template - load from file
+                template_path = template_def['file']
+                if not os.path.isabs(template_path):
+                    # Resolve relative path from config directory
+                    template_path = os.path.join(directory, template_path)
+                template_path = os.path.expandvars(template_path)
+                
+                if not os.path.exists(template_path):
+                    raise ValueError(
+                        f"Template file for '{template_name}' not found: {template_path}"
+                    )
+                
+                try:
+                    with open(template_path, 'r') as f:
+                        template_content = yaml.load(f, Loader=yaml.FullLoader)
+                except yaml.YAMLError as e:
+                    raise ValueError(
+                        f"Error parsing YAML in template file '{template_path}': {e}"
+                    )
+                
+                self._templates[template_name] = template_content
+                
+            else:
+                # Inline template - use as-is
+                self._templates[template_name] = template_def
+            
+            # Validate template structure
+            if 'pattern' not in self._templates[template_name]:
+                raise ValueError(
+                    f"Template '{template_name}' must have a 'pattern' key. "
+                    f"Found keys: {list(self._templates[template_name].keys())}"
+                )
+            
+            pattern = self._templates[template_name]['pattern']
+            if not isinstance(pattern, list):
+                raise ValueError(
+                    f"Template '{template_name}' pattern must be a list, "
+                    f"got {type(pattern).__name__}"
+                )
+            
+            log.debug(f"Successfully loaded template '{template_name}' with {len(pattern)} elements")
         
     @classmethod
     def _expand_review_cluster(cls, review):
