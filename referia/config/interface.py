@@ -74,6 +74,14 @@ class Interface(lynguine.config.interface.Interface):
             log.debug("Loading templates from configuration")
             self._load_templates(data["templates"], directory)
         
+        # Expand templates in review section if present
+        if "review" in data and self._templates:
+            log.debug("Expanding templates in review section")
+            data["review"] = self._expand_templates_in_review(data["review"])
+        
+        # Store expanded config for inspection (useful for testing)
+        self._config = data
+        
         # create suffices for timestamp columns
         if "modified_suffix" not in data:
             data["modified_suffix"] = "modified"
@@ -330,6 +338,130 @@ class Interface(lynguine.config.interface.Interface):
                 )
             
             log.debug(f"Successfully loaded template '{template_name}' with {len(pattern)} elements")
+    
+    def _expand_templates_in_review(self, review):
+        """
+        Expand template references in review section.
+        
+        Part of CIP-0006: Template Expansion System
+        
+        :param review: Review configuration (may contain template references)
+        :type review: list
+        :return: Expanded review configuration
+        :rtype: list
+        """
+        expanded_review = []
+        
+        for entry in review:
+            if isinstance(entry, dict) and 'template' in entry:
+                # This is a template reference - expand it
+                template_name = entry['template']
+                instances = entry.get('instances', [])
+                
+                if template_name not in self._templates:
+                    raise ValueError(
+                        f"Template '{template_name}' referenced but not defined. "
+                        f"Available templates: {list(self._templates.keys())}"
+                    )
+                
+                # Expand each instance
+                for instance in instances:
+                    expanded_entries = self._expand_template_instance(
+                        template_name,
+                        instance
+                    )
+                    expanded_review.extend(expanded_entries)
+            else:
+                # Not a template reference - keep as-is
+                expanded_review.append(entry)
+        
+        return expanded_review
+    
+    def _expand_template_instance(self, template_name, instance_params):
+        """
+        Expand a single template instance with parameter substitution.
+        
+        Part of CIP-0006: Template Expansion System
+        
+        :param template_name: Name of template to expand
+        :type template_name: str
+        :param instance_params: Parameters for this instance
+        :type instance_params: dict
+        :return: List of expanded entries
+        :rtype: list
+        """
+        template = self._templates[template_name]
+        pattern = template['pattern']
+        
+        # Deep copy pattern and substitute parameters
+        expanded_pattern = self._substitute_parameters(pattern, instance_params, template_name)
+        
+        return expanded_pattern
+    
+    def _substitute_parameters(self, obj, params, template_name=None):
+        """
+        Recursively substitute parameters in an object structure.
+        
+        Part of CIP-0006: Template Expansion System
+        
+        Replaces {param_name} placeholders with values from params dict.
+        
+        :param obj: Object to substitute in (dict, list, str, or other)
+        :type obj: any
+        :param params: Parameter values
+        :type params: dict
+        :param template_name: Template name (for error messages)
+        :type template_name: str
+        :return: Object with parameters substituted
+        :rtype: same type as obj
+        """
+        import re
+        import copy
+        
+        if isinstance(obj, str):
+            # Find all {param} placeholders
+            placeholders = re.findall(r'\{(\w+)\}', obj)
+            
+            # Check for missing parameters
+            for placeholder in placeholders:
+                if placeholder not in params:
+                    template_info = f" in template '{template_name}'" if template_name else ""
+                    raise ValueError(
+                        f"Parameter '{placeholder}' is required{template_info} "
+                        f"but not provided in instance. "
+                        f"Available parameters: {list(params.keys())}"
+                    )
+            
+            # Substitute all parameters
+            result = obj
+            for param_name, param_value in params.items():
+                placeholder = f"{{{param_name}}}"
+                # Convert to string if needed
+                param_str = str(param_value) if not isinstance(param_value, str) else param_value
+                result = result.replace(placeholder, param_str)
+            
+            return result
+        
+        elif isinstance(obj, dict):
+            # Recursively substitute in dictionary
+            result = {}
+            for key, value in obj.items():
+                # Substitute in both key and value
+                new_key = self._substitute_parameters(key, params, template_name)
+                new_value = self._substitute_parameters(value, params, template_name)
+                result[new_key] = new_value
+            return result
+        
+        elif isinstance(obj, list):
+            # Recursively substitute in list
+            return [
+                self._substitute_parameters(item, params, template_name)
+                for item in obj
+            ]
+        
+        else:
+            # Other types (int, bool, None, etc.) - return as-is
+            return obj
         
     @classmethod
     def _expand_review_cluster(cls, review):
