@@ -419,8 +419,9 @@ class Interface(lynguine.config.interface.Interface):
         import copy
         
         if isinstance(obj, str):
-            # Find all {param} placeholders
-            placeholders = re.findall(r'\{(\w+)\}', obj)
+            # Find all {param} placeholders (but not {{liquid}} templates)
+            # Use negative lookbehind and lookahead to exclude {{ and }}
+            placeholders = re.findall(r'(?<!\{)\{(\w+)\}(?!\})', obj)
             
             # Check for missing parameters
             for placeholder in placeholders:
