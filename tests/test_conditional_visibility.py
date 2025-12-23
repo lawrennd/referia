@@ -1,0 +1,412 @@
+"""
+Integration tests for conditional widget visibility (visible_if feature).
+
+This test suite verifies that:
+1. Widgets with visible_if conditions show/hide based on data values
+2. Visibility updates during refresh cycle
+3. Works with boolean fields (checkboxes)
+4. Works with other field types (string comparisons, etc.)
+5. Template-level visibility propagates to all widgets
+6. Nested visibility conditions work correctly
+"""
+
+import pytest
+import tempfile
+import os
+import pandas as pd
+import yaml
+from pathlib import Path
+
+from referia.config.interface import Interface
+from referia.assess.review import Reviewer
+from referia.system import Sys
+from lynguine.assess.data import CustomDataFrame
+
+
+class TestConditionalVisibility:
+    """Integration tests for visible_if feature."""
+    
+    @pytest.fixture
+    def temp_dir(self):
+        """Create a temporary directory for test files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+    
+    @pytest.fixture
+    def sample_config_with_visibility(self, temp_dir):
+        """Create a test configuration with visible_if conditions."""
+        config = {
+            "templates": {
+                "conditional_section": {
+                    "pattern": [
+                        {
+                            "type": "Markdown",
+                            "liquid": "### %title%"
+                        },
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Summary",
+                            "args": {
+                                "description": "Summary",
+                                "rows": 5
+                            }
+                        },
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Comments",
+                            "args": {
+                                "description": "Comments",
+                                "rows": 3
+                            }
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "conditional_section",
+                    "instances": [
+                        {
+                            "title": "Chapter 1",
+                            "prefix": "ch1"
+                        }
+                    ],
+                    "visible_if": "Ch1Present"
+                },
+                {
+                    "template": "conditional_section",
+                    "instances": [
+                        {
+                            "title": "Chapter 2", 
+                            "prefix": "ch2"
+                        }
+                    ],
+                    "visible_if": "Ch2Present"
+                },
+                {
+                    "type": "Markdown",
+                    "liquid": "### Always Visible",
+                    "visible_if": None  # Explicitly no condition
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx",
+                "strict_columns": False
+            }
+        }
+        
+        config_file = temp_dir / "_referia.yml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config, f)
+        
+        return temp_dir, config_file
+    
+    @pytest.fixture
+    def sample_data(self):
+        """Create sample data with Present fields."""
+        data = pd.DataFrame({
+            "Ch1Present": [True, False, True],
+            "Ch2Present": [False, True, True],
+            "ch1Summary": ["Summary 1A", "Summary 1B", "Summary 1C"],
+            "ch2Summary": ["Summary 2A", "Summary 2B", "Summary 2C"],
+            "ch1Comments": ["Comments 1A", "Comments 1B", "Comments 1C"],
+            "ch2Comments": ["Comments 2A", "Comments 2B", "Comments 2C"],
+        }, index=pd.Index(["doc1", "doc2", "doc3"], name="index"))
+        
+        return data
+    
+    def test_widget_visibility_based_on_boolean_field(self, sample_config_with_visibility, sample_data):
+        """Test that widgets show/hide based on boolean field values."""
+        temp_dir, config_file = sample_config_with_visibility
+        
+        # Load interface and data
+        interface = Interface.from_file(directory=str(temp_dir), user_file="_referia.yml")
+        sys = Sys(interface=interface)
+        
+        # Create CustomDataFrame with sample data
+        df = CustomDataFrame(sample_data, interface=interface)
+        
+        # Create Reviewer
+        reviewer = Reviewer(
+            index="doc1",  # Ch1Present=True, Ch2Present=False
+            data=df,
+            interface=interface,
+            system=sys
+        )
+        
+        # Get widgets - they're in the main widget cluster, not _view_list
+        widgets = reviewer._widgets.to_dict()
+        
+        # Find Chapter 1 and Chapter 2 widgets
+        ch1_widgets = [k for k in widgets.keys() if 'ch1' in k.lower()]
+        ch2_widgets = [k for k in widgets.keys() if 'ch2' in k.lower()]
+        
+        # Chapter 1 should be visible (Ch1Present=True)
+        for widget_key in ch1_widgets:
+            field_widget = widgets[widget_key]
+            # Access the inner ipywidget's layout
+            assert field_widget.widget.layout.display != 'none', \
+                f"Chapter 1 widget '{widget_key}' should be visible when Ch1Present=True"
+        
+        # Chapter 2 should be hidden (Ch2Present=False)
+        for widget_key in ch2_widgets:
+            field_widget = widgets[widget_key]
+            # Access the inner ipywidget's layout
+            assert field_widget.widget.layout.display == 'none', \
+                f"Chapter 2 widget '{widget_key}' should be hidden when Ch2Present=False"
+    
+    def test_visibility_updates_on_index_change(self, sample_config_with_visibility, sample_data):
+        """Test that visibility updates when navigating to different index."""
+        temp_dir, config_file = sample_config_with_visibility
+        
+        # Load interface and data
+        interface = Interface.from_file(directory=str(temp_dir), user_file="_referia.yml")
+        sys = Sys(interface=interface)
+        df = CustomDataFrame(sample_data, interface=interface)
+        
+        # Create Reviewer starting at doc1
+        reviewer = Reviewer(index="doc1", data=df, interface=interface, system=sys)
+        widgets = reviewer._widgets.to_dict()
+        
+        # At doc1: Ch1Present=True, Ch2Present=False
+        ch1_widgets = [k for k in widgets.keys() if 'ch1' in k.lower()]
+        ch2_widgets = [k for k in widgets.keys() if 'ch2' in k.lower()]
+        
+        # Chapter 1 visible, Chapter 2 hidden
+        for widget_key in ch1_widgets:
+            assert widgets[widget_key].widget.layout.display != 'none'
+        for widget_key in ch2_widgets:
+            assert widgets[widget_key].widget.layout.display == 'none'
+        
+        # Change to doc2: Ch1Present=False, Ch2Present=True
+        reviewer.set_index("doc2")
+        reviewer.populate_display()  # This should update visibility
+        
+        # Now Chapter 1 should be hidden, Chapter 2 visible
+        for widget_key in ch1_widgets:
+            assert widgets[widget_key].widget.layout.display == 'none', \
+                f"Chapter 1 should be hidden at doc2 (Ch1Present=False)"
+        for widget_key in ch2_widgets:
+            assert widgets[widget_key].widget.layout.display != 'none', \
+                f"Chapter 2 should be visible at doc2 (Ch2Present=True)"
+    
+    def test_visibility_with_complex_condition(self, temp_dir):
+        """Test visibility with complex condition format (dict with field and equals)."""
+        config = {
+            "review": [
+                {
+                    "type": "Textarea",
+                    "field": "testField",
+                    "visible_if": {
+                        "field": "status",
+                        "equals": "active"
+                    }
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx",
+                "strict_columns": False
+            }
+        }
+        
+        config_file = temp_dir / "_referia.yml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config, f)
+        
+        # Create data
+        data = pd.DataFrame({
+            "status": ["active", "inactive", "active"],
+            "testField": ["A", "B", "C"]
+        }, index=pd.Index(["doc1", "doc2", "doc3"], name="index"))
+        
+        # Load and test
+        interface = Interface.from_file(directory=str(temp_dir), user_file="_referia.yml")
+        sys = Sys(interface=interface)
+        df = CustomDataFrame(data, interface=interface)
+        
+        # Test at doc1 (status=active, should be visible)
+        reviewer = Reviewer(index="doc1", data=df, interface=interface, system=sys)
+        widgets = reviewer._widgets.to_dict()
+        test_widget = widgets.get("testField")
+        
+        assert test_widget is not None
+        assert test_widget.widget.layout.display != 'none', \
+            "Widget should be visible when status='active'"
+        
+        # Test at doc2 (status=inactive, should be hidden)
+        reviewer.set_index("doc2")
+        reviewer.populate_display()
+        
+        assert test_widget.widget.layout.display == 'none', \
+            "Widget should be hidden when status='inactive'"
+    
+    def test_widget_without_visibility_always_visible(self, temp_dir):
+        """Test that widgets without visible_if are always visible."""
+        config = {
+            "review": [
+                {
+                    "type": "Textarea",
+                    "field": "alwaysVisible",
+                    "args": {"description": "Always Visible"}
+                },
+                {
+                    "type": "Textarea",
+                    "field": "conditional",
+                    "visible_if": "showIt",
+                    "args": {"description": "Conditional"}
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx",
+                "strict_columns": False
+            }
+        }
+        
+        config_file = temp_dir / "_referia.yml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config, f)
+        
+        # Create data with showIt=False
+        data = pd.DataFrame({
+            "showIt": [False],
+            "alwaysVisible": ["Always here"],
+            "conditional": ["Sometimes here"]
+        }, index=pd.Index(["doc1"], name="index"))
+        
+        # Load and test
+        interface = Interface.from_file(directory=str(temp_dir), user_file="_referia.yml")
+        sys = Sys(interface=interface)
+        df = CustomDataFrame(data, interface=interface)
+        
+        reviewer = Reviewer(index="doc1", data=df, interface=interface, system=sys)
+        widgets = reviewer._widgets.to_dict()
+        
+        # Widget without condition should be visible
+        assert widgets["alwaysVisible"].widget.layout.display != 'none', \
+            "Widget without visible_if should always be visible"
+        
+        # Widget with condition should be hidden (showIt=False)
+        assert widgets["conditional"].widget.layout.display == 'none', \
+            "Widget with visible_if should be hidden when condition is false"
+    
+    def test_missing_condition_field_hides_widget(self, temp_dir):
+        """Test that widget is hidden if condition field doesn't exist in data."""
+        config = {
+            "review": [
+                {
+                    "type": "Textarea",
+                    "field": "testField",
+                    "visible_if": "nonexistentField"
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx",
+                "strict_columns": False
+            }
+        }
+        
+        config_file = temp_dir / "_referia.yml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config, f)
+        
+        # Create data WITHOUT the condition field
+        data = pd.DataFrame({
+            "testField": ["Value"]
+        }, index=pd.Index(["doc1"], name="index"))
+        
+        # Load and test
+        interface = Interface.from_file(directory=str(temp_dir), user_file="_referia.yml")
+        sys = Sys(interface=interface)
+        df = CustomDataFrame(data, interface=interface)
+        
+        reviewer = Reviewer(index="doc1", data=df, interface=interface, system=sys)
+        widgets = reviewer._widgets.to_dict()
+        
+        # Widget should be hidden when condition field doesn't exist
+        assert widgets["testField"].widget.layout.display == 'none', \
+            "Widget should be hidden when condition field doesn't exist in data"
+
+
+class TestTemplateVisibilityPropagation:
+    """Test that visible_if at template level propagates to all widgets."""
+    
+    @pytest.fixture
+    def temp_dir(self):
+        """Create a temporary directory for test files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+    
+    def test_template_visibility_propagates_to_all_widgets(self, temp_dir):
+        """Test that visible_if on template instance applies to all expanded widgets."""
+        config = {
+            "templates": {
+                "section": {
+                    "pattern": [
+                        {
+                            "type": "Markdown",
+                            "liquid": "### %title%"
+                        },
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Summary"
+                        },
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Comments"
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "section",
+                    "instances": [
+                        {
+                            "title": "Test Section",
+                            "prefix": "test"
+                        }
+                    ],
+                    "visible_if": "showSection"
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx",
+                "strict_columns": False
+            }
+        }
+        
+        config_file = temp_dir / "_referia.yml"
+        with open(config_file, 'w') as f:
+            yaml.dump(config, f)
+        
+        # Create data with showSection=False
+        data = pd.DataFrame({
+            "showSection": [False],
+            "testSummary": ["Summary"],
+            "testComments": ["Comments"]
+        }, index=pd.Index(["doc1"], name="index"))
+        
+        # Load and test
+        interface = Interface.from_file(directory=str(temp_dir), user_file="_referia.yml")
+        sys = Sys(interface=interface)
+        df = CustomDataFrame(data, interface=interface)
+        
+        reviewer = Reviewer(index="doc1", data=df, interface=interface, system=sys)
+        widgets = reviewer._widgets.to_dict()
+        
+        # All widgets from template should be hidden
+        test_widgets = [k for k in widgets.keys() if 'test' in k.lower()]
+        for widget_key in test_widgets:
+            field_widget = widgets[widget_key]
+            assert field_widget.widget.layout.display == 'none', \
+                f"All widgets from template should be hidden when visible_if is false (widget: {widget_key})"
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
+

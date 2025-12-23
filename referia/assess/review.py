@@ -227,7 +227,7 @@ def extract_widget(details, reviewer, widgets):
     args["parent"] = reviewer
 
     # Handle conditional visibility
-    if "visible_if" in details:
+    if "visible_if" in details and details["visible_if"] is not None:
         condition = details["visible_if"]
         
         # Parse condition - support both simple string and dict formats
@@ -242,23 +242,23 @@ def extract_widget(details, reviewer, widgets):
             if field_name is None:
                 raise ValueError(f"visible_if condition must specify 'field' parameter")
         else:
-            raise ValueError(f"visible_if must be a string (field name) or dict (condition)")
+            raise ValueError(f"visible_if must be a string (field name) or dict (condition), got {type(condition)}: {condition}")
         
         # Get current field value to set initial visibility
         try:
-            current_value = reviewer._data.at[reviewer._index, field_name]
-        except (KeyError, AttributeError):
+            current_value = reviewer._data.at[reviewer.get_index(), field_name]
+        except (KeyError, AttributeError) as e:
             # Field doesn't exist yet, default to hidden
-            log.warning(f"Conditional visibility field '{field_name}' not found, widget will be hidden initially")
+            log.warning(f"Conditional visibility field '{field_name}' not found (index={reviewer.get_index()}): {e}. Widget will be hidden initially")
             current_value = None
         
         # Set initial visibility in layout
-        if "layout" not in args["args"]:
-            args["args"]["layout"] = {}
+        if "layout" not in args:
+            args["layout"] = {}
         
         is_visible = current_value == expected_value
         if not is_visible:
-            args["args"]["layout"]["display"] = "none"
+            args["layout"]["display"] = "none"
             log.debug(f"Widget \"{widget_key}\" initially hidden (condition: {field_name}=={expected_value}, actual: {current_value})")
         else:
             log.debug(f"Widget \"{widget_key}\" initially visible (condition: {field_name}=={expected_value})")
@@ -1301,19 +1301,21 @@ class Reviewer(DisplaySystem):
                     
                     # Check condition against current data
                     try:
-                        current_value = self._data.at[self._index, field_name]
+                        current_value = self._data.at[self.get_index(), field_name]
                         is_visible = current_value == expected_value
                         
-                        # Update widget visibility
+                        # Update widget visibility (access inner ipywidget if it's a FieldWidget)
+                        inner_widget = getattr(widget, 'widget', widget)
                         if is_visible:
-                            widget.layout.display = ''
+                            inner_widget.layout.display = ''
                         else:
-                            widget.layout.display = 'none'
+                            inner_widget.layout.display = 'none'
                         
                         log.debug(f"Widget \"{entry}\" visibility: {'visible' if is_visible else 'hidden'} ({field_name}={current_value}, expected={expected_value})")
                     except (KeyError, AttributeError) as e:
                         # Field doesn't exist or can't be accessed, default to hidden
-                        widget.layout.display = 'none'
+                        inner_widget = getattr(widget, 'widget', widget)
+                        inner_widget.layout.display = 'none'
                         log.debug(f"Widget \"{entry}\" hidden (condition field '{field_name}' not accessible: {e})")
     
     def populate_display(self) -> None:
