@@ -266,6 +266,11 @@ class Interface(lynguine.config.interface.Interface):
         output_types = ["output", "series"]
         for output_type in output_types:
             if output_type in data:
+                # If columns not specified, create from review fields
+                if "columns" not in data[output_type] and review_columns:
+                    log.debug(f"No columns specified in {output_type}, auto-generating from review fields")
+                    data[output_type]["columns"] = review_columns.copy()
+                
                 if "columns" in data[output_type]:
                     for column in data[output_type]["columns"]:
                         if column in modified_columns:
@@ -419,16 +424,16 @@ class Interface(lynguine.config.interface.Interface):
         import copy
         
         if isinstance(obj, str):
-            # Find all {param} placeholders (but not {{liquid}} templates)
-            # Use negative lookbehind and lookahead to exclude {{ and }}
-            placeholders = re.findall(r'(?<!\{)\{(\w+)\}(?!\})', obj)
+            # Find all %param% placeholders for template parameters
+            # This syntax is distinct from {{liquid}} and {display} to avoid confusion
+            placeholders = re.findall(r'%(\w+)%', obj)
             
             # Check for missing parameters
             for placeholder in placeholders:
                 if placeholder not in params:
                     template_info = f" in template '{template_name}'" if template_name else ""
                     raise ValueError(
-                        f"Parameter '{placeholder}' is required{template_info} "
+                        f"Parameter '%{placeholder}%' is required{template_info} "
                         f"but not provided in instance. "
                         f"Available parameters: {list(params.keys())}"
                     )
@@ -436,7 +441,7 @@ class Interface(lynguine.config.interface.Interface):
             # Substitute all parameters
             result = obj
             for param_name, param_value in params.items():
-                placeholder = f"{{{param_name}}}"
+                placeholder = f"%{param_name}%"
                 # Convert to string if needed
                 param_str = str(param_value) if not isinstance(param_value, str) else param_value
                 result = result.replace(placeholder, param_str)
