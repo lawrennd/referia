@@ -256,13 +256,20 @@ def extract_widget(details, reviewer, widgets):
         is_visible = current_value == expected_value
         if not is_visible:
             # Handle both dict and Layout object
+            # Set display='none' to hide, and height='0px' to remove vertical space
             if "layout" not in args:
-                args["layout"] = Layout(display="none")
+                args["layout"] = Layout(display="none", height="0px", margin="0px", padding="0px")
             elif isinstance(args["layout"], dict):
                 args["layout"]["display"] = "none"
+                args["layout"]["height"] = "0px"
+                args["layout"]["margin"] = "0px"
+                args["layout"]["padding"] = "0px"
             else:
                 # It's already a Layout object
                 args["layout"].display = "none"
+                args["layout"].height = "0px"
+                args["layout"].margin = "0px"
+                args["layout"].padding = "0px"
             log.debug(f"Widget \"{widget_key}\" initially hidden (condition: {field_name}=={expected_value}, actual: {current_value})")
         else:
             log.debug(f"Widget \"{widget_key}\" initially visible (condition: {field_name}=={expected_value})")
@@ -1311,15 +1318,26 @@ class Reviewer(DisplaySystem):
                         # Update widget visibility (access inner ipywidget if it's a FieldWidget)
                         inner_widget = getattr(widget, 'widget', widget)
                         if is_visible:
+                            # Show: restore to default layout values
                             inner_widget.layout.display = ''
+                            inner_widget.layout.height = ''
+                            inner_widget.layout.margin = ''
+                            inner_widget.layout.padding = ''
                         else:
+                            # Hide: set display=none and collapse all spacing
                             inner_widget.layout.display = 'none'
+                            inner_widget.layout.height = '0px'
+                            inner_widget.layout.margin = '0px'
+                            inner_widget.layout.padding = '0px'
                         
                         log.debug(f"Widget \"{entry}\" visibility: {'visible' if is_visible else 'hidden'} ({field_name}={current_value}, expected={expected_value})")
                     except (KeyError, AttributeError) as e:
                         # Field doesn't exist or can't be accessed, default to hidden
                         inner_widget = getattr(widget, 'widget', widget)
                         inner_widget.layout.display = 'none'
+                        inner_widget.layout.height = '0px'
+                        inner_widget.layout.margin = '0px'
+                        inner_widget.layout.padding = '0px'
                         log.debug(f"Widget \"{entry}\" hidden (condition field '{field_name}' not accessible: {e})")
     
     def populate_display(self) -> None:
