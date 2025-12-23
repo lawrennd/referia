@@ -267,19 +267,15 @@ def extract_widget(details, reviewer, widgets):
     if "compute" in args:
         log.debug(f"Adding widget \"{widget_key}\" with compute function of widget_type \"{widget_type}\".")
     widget = widget_type(**args)
-    widgets.add(**{widget_key: widget})
     
-    # TODO: Reactive visibility updates - ARCHITECTURE TBD
-    # The initial visibility setting above works, but reactive updates need proper integration
-    # with the refresh cycle. Current options being considered:
-    # 1. Hook into WidgetCluster.refresh() to check visibility before refreshing each widget
-    # 2. Create ConditionalWidgetCluster that wraps widgets with conditions
-    # 3. Check visibility in Reviewer.populate_display() before calling refresh
-    # 4. Use data observation mechanism (if exists) instead of widget observation
-    # 
-    # DO NOT implement widget-to-widget observation - this is wrong architecture!
-    # Visibility should be checked against reviewer._data, not by observing other widgets.
-    # See backlog: features/2025-12-23_conditional-widget-visibility.md for details.
+    # Store visibility condition with widget for refresh-time checking
+    if "visible_if" in details:
+        condition = details["visible_if"]
+        # Store the condition on the widget itself for later refresh checks
+        widget._visible_if_condition = condition
+        log.debug(f"Widget \"{widget_key}\" has visibility condition: {condition}")
+    
+    widgets.add(**{widget_key: widget})
 
 
 def extract_review(details, reviewer, widgets):
@@ -1274,6 +1270,52 @@ class Reviewer(DisplaySystem):
         self.set_column(column)
 
         
+    def _update_widget_visibility(self, widgets):
+        """
+        Recursively update widget visibility based on visible_if conditions.
+        
+        Checks each widget's _visible_if_condition (if present) against current data
+        and sets layout.display accordingly.
+        
+        :param widgets: WidgetCluster to check
+        :type widgets: WidgetCluster
+        """
+        for entry in widgets._widget_list:
+            if isinstance(entry, WidgetCluster):
+                # Recursively check nested clusters
+                self._update_widget_visibility(entry)
+            elif isinstance(entry, str):
+                widget = widgets._widget_dict[entry]
+                if hasattr(widget, '_visible_if_condition'):
+                    condition = widget._visible_if_condition
+                    
+                    # Parse condition
+                    if isinstance(condition, str):
+                        field_name = condition
+                        expected_value = True
+                    elif isinstance(condition, dict):
+                        field_name = condition.get("field")
+                        expected_value = condition.get("equals", True)
+                    else:
+                        continue
+                    
+                    # Check condition against current data
+                    try:
+                        current_value = self._data.at[self._index, field_name]
+                        is_visible = current_value == expected_value
+                        
+                        # Update widget visibility
+                        if is_visible:
+                            widget.layout.display = ''
+                        else:
+                            widget.layout.display = 'none'
+                        
+                        log.debug(f"Widget \"{entry}\" visibility: {'visible' if is_visible else 'hidden'} ({field_name}={current_value}, expected={expected_value})")
+                    except (KeyError, AttributeError) as e:
+                        # Field doesn't exist or can't be accessed, default to hidden
+                        widget.layout.display = 'none'
+                        log.debug(f"Widget \"{entry}\" hidden (condition field '{field_name}' not accessible: {e})")
+    
     def populate_display(self) -> None:
         """
         Update the widgets with defaults or values from the data
@@ -1281,6 +1323,15 @@ class Reviewer(DisplaySystem):
         :return: None
         """
         log.debug("Populating display.")
+        
+        # Update widget visibility based on conditions before refreshing
+        try:
+            self._update_widget_visibility(self._widgets)
+        except Exception as e:
+            log.error(f"Error updating widget visibility: {e}")
+            log.error(f"Full traceback:\n{''.join(traceback.format_tb(e.__traceback__))}")
+            # Don't fail the whole populate if visibility update fails
+        
         try:
             self._widgets.refresh()
         except Exception as e:
