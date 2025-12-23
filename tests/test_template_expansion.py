@@ -280,6 +280,260 @@ class TestOutputColumnGeneration:
             assert f"ch{i}Questions_modified" in columns
 
 
+class TestNestedTemplates:
+    """Test nested/recursive template expansion."""
+    
+    def test_single_level_nesting(self):
+        """Test basic one-level template nesting."""
+        config = {
+            "templates": {
+                "comment_section": {
+                    "pattern": [
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Comments"
+                        },
+                        {
+                            "type": "PopulateButton",
+                            "args": {
+                                "target": "%prefix%Comments"
+                            }
+                        }
+                    ]
+                },
+                "chapter_review": {
+                    "pattern": [
+                        {
+                            "type": "Markdown",
+                            "liquid": "### %title%"
+                        },
+                        {
+                            "template": "comment_section",
+                            "instances": [
+                                {"prefix": "%prefix%General"}
+                            ]
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "chapter_review",
+                    "instances": [
+                        {"title": "Chapter 1", "prefix": "ch1"}
+                    ]
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        # Should have markdown + textarea + button
+        assert len(review) == 3
+        assert review[0]['liquid'] == "### Chapter 1"
+        assert review[1]['field'] == "ch1GeneralComments"
+        assert review[2]['args']['target'] == "ch1GeneralComments"
+    
+    def test_multiple_level_nesting(self):
+        """Test multiple levels of template nesting."""
+        config = {
+            "templates": {
+                "base_field": {
+                    "pattern": [
+                        {
+                            "type": "Textarea",
+                            "field": "%field_name%"
+                        }
+                    ]
+                },
+                "field_with_button": {
+                    "pattern": [
+                        {
+                            "template": "base_field",
+                            "instances": [
+                                {"field_name": "%prefix%Field"}
+                            ]
+                        },
+                        {
+                            "type": "PopulateButton",
+                            "args": {
+                                "target": "%prefix%Field"
+                            }
+                        }
+                    ]
+                },
+                "section": {
+                    "pattern": [
+                        {
+                            "type": "Markdown",
+                            "liquid": "### %title%"
+                        },
+                        {
+                            "template": "field_with_button",
+                            "instances": [
+                                {"prefix": "%prefix%"}
+                            ]
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "section",
+                    "instances": [
+                        {"title": "Results", "prefix": "results"}
+                    ]
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        # Should have markdown + textarea + button (3 levels deep)
+        assert len(review) == 3
+        assert review[0]['liquid'] == "### Results"
+        assert review[1]['field'] == "resultsField"
+        assert review[2]['args']['target'] == "resultsField"
+    
+    def test_circular_reference_detection(self):
+        """Test that circular template references are detected."""
+        config = {
+            "templates": {
+                "template_a": {
+                    "pattern": [
+                        {
+                            "template": "template_b",
+                            "instances": [{"param": "value"}]
+                        }
+                    ]
+                },
+                "template_b": {
+                    "pattern": [
+                        {
+                            "template": "template_a",
+                            "instances": [{"param": "value"}]
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "template_a",
+                    "instances": [{"param": "value"}]
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        with pytest.raises(ValueError) as exc_info:
+            Interface(data=config, directory="/tmp", user_file="test.yml")
+        
+        assert "Circular template reference" in str(exc_info.value)
+        assert "template_a" in str(exc_info.value)
+        assert "template_b" in str(exc_info.value)
+    
+    def test_max_depth_exceeded(self):
+        """Test that maximum nesting depth is enforced."""
+        # Create a chain of templates that exceed max depth
+        templates = {}
+        for i in range(15):
+            if i == 14:
+                # Last template has actual content
+                templates[f"level_{i}"] = {
+                    "pattern": [
+                        {"type": "Markdown", "liquid": "Done"}
+                    ]
+                }
+            else:
+                # Each template references the next
+                templates[f"level_{i}"] = {
+                    "pattern": [
+                        {
+                            "template": f"level_{i+1}",
+                            "instances": [{}]
+                        }
+                    ]
+                }
+        
+        config = {
+            "templates": templates,
+            "review": [
+                {
+                    "template": "level_0",
+                    "instances": [{}]
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        with pytest.raises(ValueError) as exc_info:
+            Interface(data=config, directory="/tmp", user_file="test.yml")
+        
+        assert "Maximum template nesting depth" in str(exc_info.value)
+    
+    def test_multiple_nested_instances(self):
+        """Test multiple instances at nested levels."""
+        config = {
+            "templates": {
+                "item": {
+                    "pattern": [
+                        {
+                            "type": "Textarea",
+                            "field": "%name%"
+                        }
+                    ]
+                },
+                "section": {
+                    "pattern": [
+                        {
+                            "template": "item",
+                            "instances": [
+                                {"name": "%prefix%A"},
+                                {"name": "%prefix%B"}
+                            ]
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "section",
+                    "instances": [
+                        {"prefix": "ch1"}
+                    ]
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        # Should expand to 2 textareas
+        assert len(review) == 2
+        assert review[0]['field'] == "ch1A"
+        assert review[1]['field'] == "ch1B"
+
+
 class TestTemplateEscaping:
     """Test escaping of literal percent signs."""
     

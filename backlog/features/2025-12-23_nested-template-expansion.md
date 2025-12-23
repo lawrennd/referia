@@ -1,7 +1,7 @@
 ---
 id: "2025-12-23_nested-template-expansion"
 title: "Add Recursive/Nested Template Expansion Support"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2025-12-23"
 last_updated: "2025-12-23"
@@ -57,13 +57,13 @@ templates:
 
 ## Acceptance Criteria
 
-- [ ] Template patterns can reference other templates using `template` key
-- [ ] Parameters are correctly passed through nested levels
-- [ ] Recursive expansion continues until no more template references exist
-- [ ] Circular references are detected and raise clear error
-- [ ] Maximum recursion depth is configurable (default: 10 to prevent infinite loops)
-- [ ] All existing tests continue to pass
-- [ ] New tests cover nested template scenarios
+- [x] Template patterns can reference other templates using `template` key
+- [x] Parameters are correctly passed through nested levels
+- [x] Recursive expansion continues until no more template references exist
+- [x] Circular references are detected and raise clear error
+- [x] Maximum recursion depth is configurable (default: 10 to prevent infinite loops)
+- [x] All existing tests continue to pass
+- [x] New tests cover nested template scenarios
 
 ## Implementation Notes
 
@@ -139,4 +139,16 @@ def _expand_templates_in_review(self, review):
 - Feature proposed after user inquiry about template nesting capability
 - Current implementation does single-pass expansion only
 - Use cases and implementation approaches documented
+- **Implementation completed:**
+  - Implemented recursive `_expand_templates_in_review()` with depth tracking
+  - Added circular reference detection with clear error messages
+  - Added maximum depth limit (default: 10) to prevent infinite loops
+  - Added 5 comprehensive tests covering:
+    - Single-level nesting
+    - Multiple-level nesting (3 levels deep)
+    - Circular reference detection
+    - Maximum depth exceeded detection
+    - Multiple instances at nested levels
+  - All 16 template expansion tests pass
+  - Feature fully functional and tested
 

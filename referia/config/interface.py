@@ -344,17 +344,34 @@ class Interface(lynguine.config.interface.Interface):
             
             log.debug(f"Successfully loaded template '{template_name}' with {len(pattern)} elements")
     
-    def _expand_templates_in_review(self, review):
+    def _expand_templates_in_review(self, review, depth=0, max_depth=10, expansion_chain=None):
         """
-        Expand template references in review section.
+        Recursively expand template references in review section.
         
         Part of CIP-0006: Template Expansion System
+        Supports nested templates where a template's pattern can reference other templates.
         
         :param review: Review configuration (may contain template references)
         :type review: list
+        :param depth: Current recursion depth (for preventing infinite loops)
+        :type depth: int
+        :param max_depth: Maximum allowed nesting depth
+        :type max_depth: int
+        :param expansion_chain: Stack of template names currently being expanded (for circular detection)
+        :type expansion_chain: list or None
         :return: Expanded review configuration
         :rtype: list
         """
+        if expansion_chain is None:
+            expansion_chain = []
+        
+        if depth > max_depth:
+            chain_str = " -> ".join(expansion_chain)
+            raise ValueError(
+                f"Maximum template nesting depth ({max_depth}) exceeded. "
+                f"Expansion chain: {chain_str}"
+            )
+        
         expanded_review = []
         
         for entry in review:
@@ -369,13 +386,28 @@ class Interface(lynguine.config.interface.Interface):
                         f"Available templates: {list(self._templates.keys())}"
                     )
                 
+                # Check for circular reference
+                if template_name in expansion_chain:
+                    chain_str = " -> ".join(expansion_chain + [template_name])
+                    raise ValueError(
+                        f"Circular template reference detected: {chain_str}"
+                    )
+                
                 # Expand each instance
                 for instance in instances:
                     expanded_entries = self._expand_template_instance(
                         template_name,
                         instance
                     )
-                    expanded_review.extend(expanded_entries)
+                    
+                    # Recursively expand any nested template references
+                    nested_expanded = self._expand_templates_in_review(
+                        expanded_entries,
+                        depth=depth + 1,
+                        max_depth=max_depth,
+                        expansion_chain=expansion_chain + [template_name]
+                    )
+                    expanded_review.extend(nested_expanded)
             else:
                 # Not a template reference - keep as-is
                 expanded_review.append(entry)
