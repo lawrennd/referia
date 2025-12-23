@@ -2,7 +2,7 @@
 id: "2025-12-23_conditional-widget-visibility"
 title: "Conditional Widget/Template Visibility Based on Field Values"
 status: "In Progress"
-priority: "Medium"
+priority: "High"
 created: "2025-12-23"
 last_updated: "2025-12-23"
 owner: ""
@@ -15,6 +15,8 @@ tags:
 - widgets
 - conditional-display
 - referia
+- untested
+notes: "⚠️ CODE WITHOUT PASSING TESTS - NOT ACTUALLY IMPLEMENTED. Configuration parsing works (6 tests pass) but NO integration tests verify actual widget visibility behavior. Integration tests created but all failing due to test setup issues. DO NOT consider implemented until integration tests pass."
 ---
 
 # Task: Conditional Widget/Template Visibility Based on Field Values
@@ -514,6 +516,31 @@ review:
    - No, not needed
    - **Recommendation**: Yes, add debug flag
 
+## ⚠️ CRITICAL ISSUE: UNTESTED CODE
+
+### Why This Is Not Acceptable
+
+**Code without passing tests is NOT implemented.** The current state is:
+- ✅ Configuration parsing code written and tested (6 tests pass)
+- ❌ Runtime visibility code written but ZERO passing integration tests
+- ❌ No verification that widgets actually show/hide correctly
+- ❌ No verification that visibility updates on index change
+- ❌ No verification of fail-safe behavior
+
+**This means:**
+- The feature could be completely broken in production
+- We have no way to catch regressions
+- We cannot confidently use this feature
+- The code is essentially untested hypothesis
+
+**What Must Happen:**
+1. Fix integration test setup (Interface, CustomDataFrame, Reviewer instantiation)
+2. Get ALL integration tests passing
+3. Verify actual widget visibility in browser/notebook
+4. Only THEN mark as "Implemented"
+
+**Lesson:** Never mark code as "Implemented" without passing tests that verify the actual behavior.
+
 ## Progress Updates
 
 ### 2025-12-23
@@ -523,6 +550,7 @@ review:
 - Hybrid approach recommended (widget-level + cluster-level)
 - Implementation plan defined
 - Examples and syntax proposals created
+- **Code written but integration tests all failing - NOT IMPLEMENTED**
 
 #### Initial Implementation Attempt
 
