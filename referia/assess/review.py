@@ -226,10 +226,60 @@ def extract_widget(details, reviewer, widgets):
         
     args["parent"] = reviewer
 
+    # Handle conditional visibility
+    if "visible_if" in details:
+        condition = details["visible_if"]
+        
+        # Parse condition - support both simple string and dict formats
+        if isinstance(condition, str):
+            # Simple format: visible_if: "fieldName" (for boolean fields)
+            field_name = condition
+            expected_value = True
+        elif isinstance(condition, dict):
+            # Complex format: visible_if: {field: "fieldName", equals: value}
+            field_name = condition.get("field")
+            expected_value = condition.get("equals", True)
+            if field_name is None:
+                raise ValueError(f"visible_if condition must specify 'field' parameter")
+        else:
+            raise ValueError(f"visible_if must be a string (field name) or dict (condition)")
+        
+        # Get current field value to set initial visibility
+        try:
+            current_value = reviewer._data.at[reviewer._index, field_name]
+        except (KeyError, AttributeError):
+            # Field doesn't exist yet, default to hidden
+            log.warning(f"Conditional visibility field '{field_name}' not found, widget will be hidden initially")
+            current_value = None
+        
+        # Set initial visibility in layout
+        if "layout" not in args["args"]:
+            args["args"]["layout"] = {}
+        
+        is_visible = current_value == expected_value
+        if not is_visible:
+            args["args"]["layout"]["display"] = "none"
+            log.debug(f"Widget \"{widget_key}\" initially hidden (condition: {field_name}=={expected_value}, actual: {current_value})")
+        else:
+            log.debug(f"Widget \"{widget_key}\" initially visible (condition: {field_name}=={expected_value})")
+    
     # Add the widget
     if "compute" in args:
         log.debug(f"Adding widget \"{widget_key}\" with compute function of widget_type \"{widget_type}\".")
-    widgets.add(**{widget_key: widget_type(**args)})
+    widget = widget_type(**args)
+    widgets.add(**{widget_key: widget})
+    
+    # TODO: Reactive visibility updates - ARCHITECTURE TBD
+    # The initial visibility setting above works, but reactive updates need proper integration
+    # with the refresh cycle. Current options being considered:
+    # 1. Hook into WidgetCluster.refresh() to check visibility before refreshing each widget
+    # 2. Create ConditionalWidgetCluster that wraps widgets with conditions
+    # 3. Check visibility in Reviewer.populate_display() before calling refresh
+    # 4. Use data observation mechanism (if exists) instead of widget observation
+    # 
+    # DO NOT implement widget-to-widget observation - this is wrong architecture!
+    # Visibility should be checked against reviewer._data, not by observing other widgets.
+    # See backlog: features/2025-12-23_conditional-widget-visibility.md for details.
 
 
 def extract_review(details, reviewer, widgets):

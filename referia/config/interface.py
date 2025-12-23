@@ -393,12 +393,23 @@ class Interface(lynguine.config.interface.Interface):
                         f"Circular template reference detected: {chain_str}"
                     )
                 
+                # Check if template instance has visible_if condition
+                template_visible_if = entry.get('visible_if')
+                
                 # Expand each instance
                 for instance in instances:
                     expanded_entries = self._expand_template_instance(
                         template_name,
                         instance
                     )
+                    
+                    # If template instance has visible_if, apply it to all expanded widgets
+                    if template_visible_if is not None:
+                        for expanded_entry in expanded_entries:
+                            if isinstance(expanded_entry, dict):
+                                # Add visible_if to each widget (unless it already has one)
+                                if 'visible_if' not in expanded_entry:
+                                    expanded_entry['visible_if'] = template_visible_if
                     
                     # Recursively expand any nested template references
                     nested_expanded = self._expand_templates_in_review(

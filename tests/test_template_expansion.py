@@ -671,6 +671,225 @@ class TestTemplateErrors:
         assert interface._config is not None
 
 
+class TestConditionalVisibility:
+    """Test conditional widget visibility with visible_if."""
+    
+    def test_visible_if_in_template_instance(self):
+        """Test that visible_if at template instance level is propagated to all widgets."""
+        config = {
+            "templates": {
+                "section": {
+                    "pattern": [
+                        {
+                            "type": "Markdown",
+                            "liquid": "### %title%"
+                        },
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Summary"
+                        },
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Comments"
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "section",
+                    "instances": [
+                        {"title": "Chapter 1", "prefix": "ch1"}
+                    ],
+                    "visible_if": "Ch1Present"
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        # All 3 widgets should have visible_if applied
+        assert len(review) == 3
+        assert review[0].get('visible_if') == "Ch1Present"
+        assert review[1].get('visible_if') == "Ch1Present"
+        assert review[2].get('visible_if') == "Ch1Present"
+    
+    def test_visible_if_simple_boolean_format(self):
+        """Test simple string format for visible_if (boolean field)."""
+        config = {
+            "review": [
+                {
+                    "type": "Textarea",
+                    "field": "testField",
+                    "visible_if": "Ch1Present"  # Simple format
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        assert len(review) == 1
+        assert review[0]['visible_if'] == "Ch1Present"
+    
+    def test_visible_if_complex_condition_format(self):
+        """Test dict format for visible_if with explicit condition."""
+        config = {
+            "review": [
+                {
+                    "type": "Textarea",
+                    "field": "testField",
+                    "visible_if": {
+                        "field": "Status",
+                        "equals": "active"
+                    }
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        assert len(review) == 1
+        assert review[0]['visible_if'] == {"field": "Status", "equals": "active"}
+    
+    def test_visible_if_with_parameter_substitution(self):
+        """Test that %param% in visible_if gets substituted."""
+        config = {
+            "templates": {
+                "section": {
+                    "pattern": [
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Summary",
+                            "visible_if": {
+                                "field": "%prefix%Present",  # Should become ch1Present
+                                "equals": True
+                            }
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "section",
+                    "instances": [
+                        {"prefix": "ch1"}
+                    ]
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        assert len(review) == 1
+        assert review[0]['visible_if'] == {"field": "ch1Present", "equals": True}
+    
+    def test_visible_if_not_overwritten_by_template(self):
+        """Test that widget's own visible_if is not overwritten by template instance visible_if."""
+        config = {
+            "templates": {
+                "section": {
+                    "pattern": [
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Summary",
+                            "visible_if": "WidgetCondition"  # Widget has its own condition
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "section",
+                    "instances": [
+                        {"prefix": "ch1"}
+                    ],
+                    "visible_if": "TemplateCondition"  # Template instance has different condition
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        # Widget's own visible_if should be preserved
+        assert len(review) == 1
+        assert review[0]['visible_if'] == "WidgetCondition"
+    
+    def test_multiple_templates_different_visibility(self):
+        """Test multiple template instances with different visibility conditions."""
+        config = {
+            "templates": {
+                "section": {
+                    "pattern": [
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%Summary"
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "section",
+                    "instances": [
+                        {"prefix": "ch1"}
+                    ],
+                    "visible_if": "Ch1Present"
+                },
+                {
+                    "template": "section",
+                    "instances": [
+                        {"prefix": "ch2"}
+                    ],
+                    "visible_if": "Ch2Present"
+                },
+                {
+                    "template": "section",
+                    "instances": [
+                        {"prefix": "ch3"}
+                    ]
+                    # No visible_if - always visible
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        assert len(review) == 3
+        assert review[0]['visible_if'] == "Ch1Present"
+        assert review[1]['visible_if'] == "Ch2Present"
+        assert 'visible_if' not in review[2]  # No condition, always visible
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
 

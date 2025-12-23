@@ -1,7 +1,7 @@
 ---
 id: "2025-12-23_conditional-widget-visibility"
 title: "Conditional Widget/Template Visibility Based on Field Values"
-status: "Proposed"
+status: "In Progress"
 priority: "Medium"
 created: "2025-12-23"
 last_updated: "2025-12-23"
@@ -69,16 +69,22 @@ review:
 
 ## Acceptance Criteria
 
-- [ ] Widgets can be conditionally displayed based on field values
-- [ ] Template instances can be conditionally displayed based on field values
-- [ ] Visibility updates reactively when condition field changes
-- [ ] Works with boolean fields (checkboxes)
-- [ ] Works with other field types (dropdowns, text comparisons)
-- [ ] Clear YAML syntax for specifying conditions
-- [ ] Nested templates respect visibility of parent
-- [ ] Hidden widgets don't interfere with layout
-- [ ] Documentation and examples provided
-- [ ] Tests cover conditional display scenarios
+- [x] **Configuration**: `visible_if` parameter parsed from YAML
+- [x] **Configuration**: Template instances can specify `visible_if`
+- [x] **Configuration**: Clear YAML syntax for specifying conditions
+- [x] **Configuration**: Simple format (`visible_if: "field"`) and complex (`visible_if: {field: "name", equals: value}`)
+- [x] **Configuration**: Parameter substitution in conditions (`%prefix%Present`)
+- [x] **Configuration**: Widget's own condition preserved (not overwritten by template)
+- [x] **Tests**: Configuration parsing tests (6 tests, all passing)
+- [ ] **Runtime**: Widgets actually show/hide based on field values (NOT TESTED)
+- [ ] **Runtime**: Initial visibility set correctly when widgets created (IMPLEMENTED BUT NOT TESTED)
+- [ ] **Runtime**: Visibility updates reactively when condition field changes (WRONG ARCHITECTURE)
+- [ ] **Runtime**: Works with boolean fields (checkboxes) (NOT TESTED)
+- [ ] **Runtime**: Works with other field types (dropdowns, text comparisons) (NOT TESTED)
+- [ ] **Runtime**: Hidden widgets don't interfere with layout (uses `display: none`) (NOT TESTED)
+- [ ] **Runtime**: Integration tests with real Reviewer/widgets/data (NOT WRITTEN)
+- [ ] **Architecture**: Proper integration with refresh/update cycle (NEEDS DESIGN)
+- [ ] Documentation and examples (to be added to CIP-0009 after implementation complete)
 
 ## Proposed Syntax
 
@@ -501,5 +507,100 @@ review:
 - Hybrid approach recommended (widget-level + cluster-level)
 - Implementation plan defined
 - Examples and syntax proposals created
-- Waiting for review and approval before implementation
+
+#### Initial Implementation Attempt
+
+- ✅ Added `visible_if` parameter handling in `extract_widget()` 
+- ✅ Added template instance-level `visible_if` support in `Interface._expand_templates_in_review()`
+- ✅ Supports both simple format (`visible_if: "fieldName"`) and complex format (`visible_if: {field: "name", equals: value}`)
+- ✅ Parameter substitution works in `visible_if` conditions (`%prefix%Present`)
+- ✅ Widget's own `visible_if` not overwritten by template instance condition
+- ✅ Configuration-level tests: 6 tests, all passing (22 total template tests pass)
+
+#### Architectural Issues Discovered
+
+**Problem**: Current implementation has confused architecture for reactive visibility updates.
+
+**What was implemented** (in `referia/assess/review.py`):
+```python
+# Lines 272-306: Try to observe OTHER widgets for changes
+condition_widget.observe(update_visibility, names='value')
+```
+
+**Why this is wrong**:
+1. **Observing wrong thing**: Trying to observe other widgets instead of the data
+2. **Indirect coupling**: Widget A observing Widget B, but real source of truth is `reviewer._data`
+3. **Fragile**: Relies on finding widgets by name in `_widget_dict`
+4. **Timing issues**: Condition widget might not exist yet when target widget is created
+5. **Unclear lifecycle**: When do observers get registered? When do they fire?
+
+**What SHOULD happen**:
+- Visibility condition checks **data**: `reviewer._data.at[reviewer._index, "Ch1Present"]`
+- Updates happen during **refresh cycle**: Existing `widget.refresh()` or `populate_display()`
+- Or: Hook into data change notification if it exists
+
+#### Open Architectural Questions
+
+1. **Where should visibility be checked?**
+   - Option A: In widget's refresh method (but these are standard ipywidgets, can't modify easily)
+   - Option B: Add wrapper/mixin that checks visibility before delegating to widget
+   - Option C: Check visibility in `WidgetCluster.refresh()` before calling widget refresh
+   - Option D: Store condition metadata, check in `Reviewer.populate_display()`
+   - Option E: Create `ConditionalWidgetCluster` that wraps conditional widgets
+
+2. **When should visibility update?**
+   - During `populate_display()` call (triggered by index change, reload, etc.)?
+   - When specific data field changes (requires data observation mechanism)?
+   - Both?
+
+3. **How to access data from widget context?**
+   - Widgets have `parent=reviewer`, so `widget.parent._data` available?
+   - Should visibility checking be in widget or in cluster/reviewer?
+
+4. **Integration with existing refresh cycle**:
+   - `DisplaySystem.populate_display()` → `self._widgets.refresh()`
+   - `WidgetCluster.refresh()` calls `widget.refresh()` on each widget
+   - Where does visibility check fit?
+
+5. **Should visibility be in widget or metadata?**
+   - Store `visible_if` condition with widget metadata?
+   - Custom widget class that checks condition before display?
+   - External visibility manager?
+
+#### What Works vs What Doesn't
+
+**✅ Works (Configuration Level)**:
+- `visible_if` parsed from YAML correctly
+- Template instance propagates condition to all widgets
+- Parameter substitution in conditions
+- Configuration tests pass
+
+**❌ Doesn't Work Yet (Runtime)**:
+- Actual widget visibility (not tested with real widgets)
+- Reactive updates when data changes
+- Observer registration (current approach is architecturally wrong)
+- Integration with refresh cycle
+
+#### Recommendation for Next Steps
+
+**Before proceeding, need to:**
+1. Review existing widget refresh architecture in lynguine/DisplaySystem
+2. Understand data change notification mechanism (if it exists)
+3. Decide on proper integration point for visibility checks
+4. Possibly refactor to use cluster-level visibility management
+5. Write integration tests with actual Reviewer/widgets/data
+
+**Questions for architect:**
+- Is there a data observation/notification system we should use?
+- Where in the existing architecture should visibility checks happen?
+- Should we create ConditionalWidgetCluster or check in WidgetCluster.refresh()?
+- How do other dynamic behaviors (like refresh) currently work?
+
+#### Files Modified (But Not Committed)
+
+- `referia/assess/review.py`: Added visibility handling (ARCHITECTURE UNCLEAR)
+- `referia/config/interface.py`: Added template-level visibility propagation (WORKS)
+- `tests/test_template_expansion.py`: Added configuration tests (PASS)
+
+**Status**: Configuration parsing works, runtime behavior needs architectural review
 
