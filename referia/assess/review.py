@@ -253,12 +253,16 @@ def extract_widget(details, reviewer, widgets):
             current_value = None
         
         # Set initial visibility in layout
-        if "layout" not in args:
-            args["layout"] = {}
-        
         is_visible = current_value == expected_value
         if not is_visible:
-            args["layout"]["display"] = "none"
+            # Handle both dict and Layout object
+            if "layout" not in args:
+                args["layout"] = Layout(display="none")
+            elif isinstance(args["layout"], dict):
+                args["layout"]["display"] = "none"
+            else:
+                # It's already a Layout object
+                args["layout"].display = "none"
             log.debug(f"Widget \"{widget_key}\" initially hidden (condition: {field_name}=={expected_value}, actual: {current_value})")
         else:
             log.debug(f"Widget \"{widget_key}\" initially visible (condition: {field_name}=={expected_value})")
