@@ -496,7 +496,7 @@ review:
 
 ### 2025-12-23
 
-- Feature proposed based on PhD thesis assessment use case
+- Feature proposed based on long document assessment use case
 - Three implementation approaches documented
 - Hybrid approach recommended (widget-level + cluster-level)
 - Implementation plan defined
