@@ -42,7 +42,8 @@ Each CIP can have one of the following statuses:
 - [CIP-0005](./cip0005.md): Fix Mapping Initialisation Timing Conflict with lynguine
 - [CIP-0006](./cip0006.md): LLM Integration for Compute Framework
 - [CIP-0007](./cip0007.md): Append Mode for Compute Operations
-- [CIP-0008](./cip0008.md): Conversational Context for LLM Functions 
+- [CIP-0008](./cip0008.md): Conversational Context for LLM Functions
+- [CIP-0009](./cip0009.md): Template Expansion System for Referia Interfaces 
 
 ## Creating a Good CIP
 
