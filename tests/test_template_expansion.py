@@ -280,6 +280,82 @@ class TestOutputColumnGeneration:
             assert f"ch{i}Questions_modified" in columns
 
 
+class TestTemplateEscaping:
+    """Test escaping of literal percent signs."""
+    
+    def test_double_percent_becomes_literal(self):
+        """Test that %% is converted to literal % (Windows batch convention)."""
+        config = {
+            "templates": {
+                "test": {
+                    "pattern": [
+                        {
+                            "type": "Markdown",
+                            "liquid": "Success rate: 95%% for %title%"
+                        },
+                        {
+                            "type": "Textarea",
+                            "field": "%prefix%_100%%_complete"
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "test",
+                    "instances": [
+                        {"title": "Chapter 1", "prefix": "ch1"}
+                    ]
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        # %% should become %, %title% should be substituted
+        assert review[0]['liquid'] == "Success rate: 95% for Chapter 1"
+        # %% in field names should also become %
+        assert review[1]['field'] == "ch1_100%_complete"
+    
+    def test_multiple_percent_escapes(self):
+        """Test multiple %% escapes in same string."""
+        config = {
+            "templates": {
+                "test": {
+                    "pattern": [
+                        {
+                            "type": "Markdown",
+                            "liquid": "Values: 10%%, 20%%, 30%% in %section%"
+                        }
+                    ]
+                }
+            },
+            "review": [
+                {
+                    "template": "test",
+                    "instances": [
+                        {"section": "Results"}
+                    ]
+                }
+            ],
+            "output": {
+                "type": "excel",
+                "filename": "test.xlsx"
+            }
+        }
+        
+        interface = Interface(data=config, directory="/tmp", user_file="test.yml")
+        review = interface._config['review']
+        
+        # All %% should become %
+        assert review[0]['liquid'] == "Values: 10%, 20%, 30% in Results"
+
+
 class TestTemplateErrors:
     """Test error handling in template expansion."""
     

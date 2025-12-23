@@ -426,6 +426,7 @@ class Interface(lynguine.config.interface.Interface):
         if isinstance(obj, str):
             # Find all %param% placeholders for template parameters
             # This syntax is distinct from {{liquid}} and {display} to avoid confusion
+            # Note: The regex won't match %% (escaped percent), only %word%
             placeholders = re.findall(r'%(\w+)%', obj)
             
             # Check for missing parameters
@@ -445,6 +446,10 @@ class Interface(lynguine.config.interface.Interface):
                 # Convert to string if needed
                 param_str = str(param_value) if not isinstance(param_value, str) else param_value
                 result = result.replace(placeholder, param_str)
+            
+            # After substitution, unescape %% to % (following Windows batch convention)
+            # This allows literal % signs to be included as %%
+            result = result.replace('%%', '%')
             
             return result
         
