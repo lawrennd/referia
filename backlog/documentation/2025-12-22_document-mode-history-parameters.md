@@ -285,7 +285,7 @@ Task created based on documentation assessment. Both features (mode parameter an
 - Mode parameter: 8/15 tests passing (core functionality validated)
 - History parameters: 11/11 tests passing
 - UI templates: Updated with append mode and history
-- Reference implementation: 3120-line production config in thesis review template
+- Reference implementation: 3120-line production config in long document review template
 
 **Documentation Status**: ❌ Incomplete
 - Core compute framework docs: Missing mode/separator docs

@@ -50,3 +50,8 @@ docs/yaml_frontmatter_examples.md
 
 # LLM cache directory
 .llm_cache/
+.venv-vibesafe/
+.github/copilot-instructions.md
+CLAUDE.md
+AGENTS.md
+scripts/validate_vibesafe_structure.py
