@@ -1,0 +1,130 @@
+/* Referia web review interface — base stylesheet */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --colour-header-bg:   #2c3e50;
+    --colour-header-text: #ecf0f1;
+    --colour-body-bg:     #f4f6f8;
+    --colour-text:        #2c3e50;
+    --colour-muted:       #7f8c8d;
+    --colour-accent:      #2980b9;
+    --colour-success:     #27ae60;
+    --colour-warning:     #e67e22;
+    --colour-error:       #c0392b;
+    --colour-border:      #dce1e7;
+    --colour-white:       #ffffff;
+
+    --radius:   4px;
+    --shadow:   0 1px 3px rgba(0,0,0,0.12);
+    --font:     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+html {
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+body {
+    font-family: var(--font);
+    color: var(--colour-text);
+    background: var(--colour-body-bg);
+    min-height: 100vh;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+
+.site-header {
+    background: var(--colour-header-bg);
+    color: var(--colour-header-text);
+    padding: 0.6rem 1.5rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.site-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.site-meta {
+    font-size: 0.8rem;
+    opacity: 0.75;
+}
+
+.meta-label {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 0.25rem;
+}
+
+/* ── Main content ────────────────────────────────────────── */
+
+main {
+    padding: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* ── Placeholder (scaffold phase) ───────────────────────── */
+
+.placeholder {
+    background: var(--colour-white);
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    max-width: 520px;
+    box-shadow: var(--shadow);
+}
+
+.placeholder p + p {
+    margin-top: 0.75rem;
+}
+
+.hint {
+    color: var(--colour-muted);
+    font-size: 0.875rem;
+}
+
+code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: #eef0f3;
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+}
+
+/* ── Status bar ──────────────────────────────────────────── */
+
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    background: var(--colour-success);
+    color: var(--colour-white);
+    display: none;
+    z-index: 100;
+}
+
+.status-bar.visible {
+    display: block;
+}
+
+.status-bar.error {
+    background: var(--colour-error);
+}
+
+.status-bar.warning {
+    background: var(--colour-warning);
+}

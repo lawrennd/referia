@@ -1,3 +1,6 @@
+[tool.poetry.scripts]
+referia = "referia.cli:main"
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
@@ -52,6 +55,11 @@ lynguine = { git = "https://github.com/lawrennd/lynguine.git", branch = "main" }
 # Note: This is just an example, you might need to adjust for actual requirements.
 gspread_pandas = { version = "*", platform = "darwin" }
 appscript = { version = "*", platform = "darwin" }
+fastapi = "*"
+uvicorn = {version = "*", extras = ["standard"]}
+jinja2 = "*"
+python-multipart = "*"
+aiofiles = "*"
 
 # The docs group remains for local development but the dependencies
 # are duplicated in dev-dependencies to ensure they're installed in CI

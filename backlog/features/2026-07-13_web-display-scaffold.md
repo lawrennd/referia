@@ -1,7 +1,7 @@
 ---
 id: "2026-07-13_web-display-scaffold"
 title: "Web display system: project scaffold and CLI entry point"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-07-13"
 last_updated: "2026-07-13"
@@ -29,13 +29,13 @@ other web display tasks depend.
 
 ## Acceptance Criteria
 
-- [ ] `referia/web/__init__.py` and `referia/web/app.py` exist
-- [ ] `create_app(user_file, directory)` factory returns a FastAPI instance
-- [ ] `GET /` returns a 200 response with a basic HTML page (even if mostly empty)
-- [ ] `referia serve` CLI command starts the app with uvicorn (`poetry run referia serve`)
-- [ ] `fastapi`, `uvicorn[standard]`, `jinja2`, `python-multipart` added to `pyproject.toml` dependencies
-- [ ] Static files directory (`referia/web/static/`) served at `/static`
-- [ ] Templates directory (`referia/web/templates/`) configured for Jinja2
+- [x] `referia/web/__init__.py` and `referia/web/app.py` exist
+- [x] `create_app(user_file, directory)` factory returns a FastAPI instance
+- [x] `GET /` returns a 200 response with a basic HTML page (even if mostly empty)
+- [x] `referia serve` CLI command starts the app with uvicorn (`poetry run referia serve`)
+- [x] `fastapi`, `uvicorn[standard]`, `jinja2`, `python-multipart` added to `pyproject.toml` dependencies
+- [x] Static files directory (`referia/web/static/`) served at `/static`
+- [x] Templates directory (`referia/web/templates/`) configured for Jinja2
 
 ## Implementation Notes
 
@@ -70,3 +70,17 @@ options with sensible defaults (`localhost:8000`).
 ### 2026-07-13
 
 Task created following acceptance of CIP-000B.
+
+### 2026-07-13 (implementation)
+
+Implemented in full:
+
+- `referia/web/__init__.py` — package docstring.
+- `referia/web/app.py` — `create_app()` factory mounting static files, Jinja2 templates,
+  `GET /` and `GET /health` routes.
+- `referia/web/templates/base.html` — minimal HTML shell with HTMX, status bar, placeholder content block.
+- `referia/web/static/style.css` — base stylesheet (header, main, placeholder, status bar).
+- `referia/cli.py` — `main()` entry point with `serve` sub-command accepting `--config`,
+  `--directory`, `--host`, `--port`.
+- `pyproject.toml` — added `fastapi`, `uvicorn[standard]`, `jinja2`, `python-multipart`,
+  `aiofiles`; added `[tool.poetry.scripts]` entry `referia = "referia.cli:main"`.
