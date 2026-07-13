@@ -85,11 +85,22 @@ class WebReviewer:
     """
 
     def __init__(self, user_file: str = "_referia.yml", directory: str = ".") -> None:
+        import os
+        from pathlib import Path
         from referia.config.interface import Interface
         from referia.assess.data import CustomDataFrame
 
-        self._interface = Interface.from_file(user_file, directory)
-        self._data = CustomDataFrame.from_flow(self._interface)
+        self._directory = str(Path(directory).resolve())
+        self._interface = Interface.from_file(user_file, self._directory)
+
+        # Data loading resolves file paths relative to CWD, so temporarily
+        # switch to the review directory for the duration of the load.
+        _orig = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            self._data = CustomDataFrame.from_flow(self._interface)
+        finally:
+            os.chdir(_orig)
 
         indices = list(self._data.index)
         if indices:
