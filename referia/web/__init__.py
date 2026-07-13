@@ -7,3 +7,5 @@ backend; only the rendering layer differs.
 
 Entry point: ``referia serve`` (see ``referia.cli``).
 """
+
+from .render import render_widget, render_viewer, render_form  # noqa: F401
