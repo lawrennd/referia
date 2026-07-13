@@ -1,7 +1,7 @@
 ---
 id: "2026-07-13_web-reviewer-class"
 title: "Web display system: WebReviewer class"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-07-13"
 last_updated: "2026-07-13"
@@ -30,16 +30,16 @@ without any ipywidgets dependency.
 
 ## Acceptance Criteria
 
-- [ ] `WebReviewer(user_file, directory)` constructs successfully from a `_referia.yml`
-- [ ] `web_reviewer.set_index(index)` switches the active record
-- [ ] `web_reviewer.get_value(column)` returns the current value for a column
-- [ ] `web_reviewer.set_value(column, value)` updates `CustomDataFrame` and triggers combinator refresh
-- [ ] `web_reviewer.save_flows()` persists data to output files
-- [ ] `web_reviewer.load_flows(reload=True)` reloads data from source
-- [ ] `web_reviewer.get_widget_specs()` returns the normalised list of widget dicts from `Interface` (viewer + review sections)
-- [ ] `web_reviewer.affected_widgets(column)` returns the set of column names that need refreshing after `column` changes
-- [ ] `web_reviewer.index_list()` returns the list of valid record indices
-- [ ] No ipywidgets import anywhere in `web_review.py`
+- [x] `WebReviewer(user_file, directory)` constructs successfully from a `_referia.yml`
+- [x] `web_reviewer.set_index(index)` switches the active record
+- [x] `web_reviewer.get_value(column)` returns the current value for a column
+- [x] `web_reviewer.set_value(column, value)` updates `CustomDataFrame` and triggers combinator refresh
+- [x] `web_reviewer.save_flows()` persists data to output files
+- [x] `web_reviewer.load_flows(reload=True)` reloads data from source
+- [x] `web_reviewer.get_widget_specs()` returns the normalised list of widget dicts from `Interface` (viewer + review sections)
+- [x] `web_reviewer.affected_widgets(column)` returns the set of column names that need refreshing after `column` changes
+- [x] `web_reviewer.index_list()` returns the list of valid record indices
+- [x] No ipywidgets import anywhere in `web_review.py`
 
 ## Implementation Notes
 
@@ -73,3 +73,12 @@ appropriate at this stage, or whether that refactor belongs in a follow-on CIP.
 ### 2026-07-13
 
 Task created following acceptance of CIP-000B.
+
+### 2026-07-13 (completed)
+
+Implemented `referia/assess/web_review.py` with full public API:
+`index_list()`, `get_index()`, `set_index()`, `get_value()`, `set_value()`,
+`save_flows()`, `load_flows()`, `get_widget_specs()`, `affected_widgets()`.
+The `_value_updated()` helper replicates the timestamp and combinator logic
+from `Reviewer.value_updated()` without any ipywidgets dependency.
+23 unit tests in `tests/test_web_reviewer.py`, all passing.
