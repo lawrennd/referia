@@ -1,4 +1,4 @@
-/* Referia web review interface — base stylesheet */
+/* Referia web review interface — stylesheet */
 
 *, *::before, *::after {
     box-sizing: border-box;
@@ -18,6 +18,7 @@
     --colour-error:       #c0392b;
     --colour-border:      #dce1e7;
     --colour-white:       #ffffff;
+    --colour-panel-bg:    #ffffff;
 
     --radius:   4px;
     --shadow:   0 1px 3px rgba(0,0,0,0.12);
@@ -47,6 +48,9 @@ body {
     align-items: baseline;
     gap: 1.5rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    position: sticky;
+    top: 0;
+    z-index: 50;
 }
 
 .site-title {
@@ -66,40 +70,303 @@ body {
     margin-right: 0.25rem;
 }
 
-/* ── Main content ────────────────────────────────────────── */
+/* ── Main content wrapper ────────────────────────────────── */
 
 main {
-    padding: 1.5rem;
-    max-width: 1400px;
+    padding: 1rem 1.5rem 4rem;
+    max-width: 1600px;
     margin: 0 auto;
 }
 
-/* ── Placeholder (scaffold phase) ───────────────────────── */
+/* ── Index navigation bar ────────────────────────────────── */
 
-.placeholder {
-    background: var(--colour-white);
+.panel-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0 0.75rem;
+    border-bottom: 1px solid var(--colour-border);
+    margin-bottom: 1rem;
+}
+
+.nav-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--colour-muted);
+    white-space: nowrap;
+}
+
+.index-select {
+    font-family: var(--font);
+    font-size: 0.9rem;
+    padding: 0.3rem 0.6rem;
     border: 1px solid var(--colour-border);
     border-radius: var(--radius);
-    padding: 2rem;
-    max-width: 520px;
-    box-shadow: var(--shadow);
+    background: var(--colour-white);
+    min-width: 200px;
+    max-width: 400px;
 }
 
-.placeholder p + p {
-    margin-top: 0.75rem;
-}
-
-.hint {
+.nav-counter {
+    font-size: 0.8rem;
     color: var(--colour-muted);
-    font-size: 0.875rem;
+    white-space: nowrap;
 }
 
-code {
+/* ── Two-column layout ───────────────────────────────────── */
+
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .two-col {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Viewer column ───────────────────────────────────────── */
+
+.viewer-col {
+    background: var(--colour-panel-bg);
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+    overflow-wrap: break-word;
+    /* Stick at top while scrolling through the review form */
+    position: sticky;
+    top: 3.5rem;
+    max-height: calc(100vh - 5rem);
+    overflow-y: auto;
+}
+
+.viewer {
+    margin-bottom: 1rem;
+}
+
+.viewer:last-child {
+    margin-bottom: 0;
+}
+
+.viewer-markdown h1,
+.viewer-markdown h2,
+.viewer-markdown h3 {
+    margin: 0.75rem 0 0.4rem;
+}
+
+.viewer-markdown p {
+    margin-bottom: 0.6rem;
+}
+
+.viewer-markdown ul,
+.viewer-markdown ol {
+    padding-left: 1.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.viewer-markdown code {
     font-family: var(--font-mono);
     font-size: 0.85em;
     background: #eef0f3;
     padding: 0.1em 0.35em;
     border-radius: 3px;
+}
+
+.no-viewer {
+    color: var(--colour-muted);
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+/* ── Review form column ──────────────────────────────────── */
+
+.review-col {
+    background: var(--colour-panel-bg);
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+}
+
+#review-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+/* ── Widget container ────────────────────────────────────── */
+
+.widget-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.widget-description {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--colour-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── Textarea ────────────────────────────────────────────── */
+
+.widget-textarea {
+    width: 100%;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius);
+    resize: vertical;
+    background: var(--colour-white);
+    color: var(--colour-text);
+    line-height: 1.5;
+}
+
+.widget-textarea:focus {
+    outline: 2px solid var(--colour-accent);
+    outline-offset: -1px;
+}
+
+/* ── Text / number inputs ────────────────────────────────── */
+
+.widget-text,
+.widget-number,
+.widget-date,
+.widget-combobox {
+    width: 100%;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius);
+    background: var(--colour-white);
+    color: var(--colour-text);
+}
+
+.widget-text:focus,
+.widget-number:focus,
+.widget-date:focus,
+.widget-combobox:focus {
+    outline: 2px solid var(--colour-accent);
+    outline-offset: -1px;
+}
+
+/* ── Slider ──────────────────────────────────────────────── */
+
+.widget-slider {
+    width: 100%;
+    cursor: pointer;
+    accent-color: var(--colour-accent);
+}
+
+.slider-output {
+    font-size: 0.85rem;
+    color: var(--colour-muted);
+    text-align: right;
+}
+
+/* ── Select / dropdown ───────────────────────────────────── */
+
+.widget-select,
+.widget-select-multiple {
+    width: 100%;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius);
+    background: var(--colour-white);
+    color: var(--colour-text);
+}
+
+.widget-select-multiple {
+    min-height: 5rem;
+}
+
+/* ── Radio buttons ───────────────────────────────────────── */
+
+.widget-radio {
+    border: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+/* ── Checkbox ────────────────────────────────────────────── */
+
+.widget-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.widget-checkbox input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--colour-accent);
+}
+
+/* ── Label / HTML / Markdown display ────────────────────── */
+
+.widget-label-display,
+.widget-html,
+.widget-markdown {
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--colour-text);
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+
+.widget-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 1rem;
+    font-family: var(--font);
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.widget-button:hover {
+    opacity: 0.85;
+}
+
+.save-button {
+    background: var(--colour-success);
+    color: var(--colour-white);
+}
+
+.reload-button {
+    background: var(--colour-accent);
+    color: var(--colour-white);
+}
+
+.populate-button {
+    background: var(--colour-warning);
+    color: var(--colour-white);
 }
 
 /* ── Status bar ──────────────────────────────────────────── */
@@ -110,7 +377,7 @@ code {
     left: 0;
     right: 0;
     padding: 0.4rem 1rem;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     background: var(--colour-success);
     color: var(--colour-white);
     display: none;
@@ -121,10 +388,16 @@ code {
     display: block;
 }
 
-.status-bar.error {
-    background: var(--colour-error);
-}
+.status-ok    { color: var(--colour-success); }
+.status-error { color: var(--colour-error);   }
+.status-warning { color: var(--colour-warning); }
 
-.status-bar.warning {
-    background: var(--colour-warning);
+/* ── code (inline) ───────────────────────────────────────── */
+
+code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: #eef0f3;
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
 }

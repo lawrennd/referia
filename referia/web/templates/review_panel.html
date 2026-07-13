@@ -1,0 +1,34 @@
+<!--
+  review_panel.html — inner content of #review-panel
+
+  Variables expected from the route:
+    index_selector  : HTML string for the <select> nav widget
+    viewer_blocks   : list of HTML strings (viewer column)
+    form_html       : HTML string for the review <form>
+    current_index   : the active record index (for display)
+    position        : 1-based position in the index list
+    total           : total number of records
+-->
+<div class="panel-nav">
+    <div class="nav-selector">
+        <label for="index-select" class="nav-label">Record:</label>
+        {{ index_selector | safe }}
+    </div>
+    <div class="nav-counter">{{ position }} / {{ total }}</div>
+</div>
+
+<div class="two-col">
+    <div class="viewer-col">
+        {% if viewer_blocks %}
+            {% for block in viewer_blocks %}
+            {{ block | safe }}
+            {% endfor %}
+        {% else %}
+            <p class="no-viewer">No viewer configured.</p>
+        {% endif %}
+    </div>
+
+    <div class="review-col">
+        {{ form_html | safe }}
+    </div>
+</div>

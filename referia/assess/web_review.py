@@ -167,18 +167,56 @@ class WebReviewer:
         list has at least a ``"type"`` key and, for field-bearing widgets, a
         ``"field"`` key.
 
-        :return: Ordered list of widget spec dicts.
+        :return: Ordered list of widget spec dicts (viewer first, then review).
         """
         specs: list[dict] = []
-        viewer = self._interface.get("viewer", []) or []
-        review = self._interface.get("review", []) or []
-        if not isinstance(viewer, list):
-            viewer = [viewer]
-        if not isinstance(review, list):
-            review = [review]
-        self._flatten_entries(viewer, specs)
-        self._flatten_entries(review, specs)
+        self._flatten_entries(self._viewer_raw(), specs)
+        self._flatten_entries(self._review_raw(), specs)
         return specs
+
+    def get_viewer_specs(self) -> list[dict]:
+        """Return widget specs from the ``viewer`` section only.
+
+        :return: Flat ordered list of viewer widget spec dicts.
+        """
+        specs: list[dict] = []
+        self._flatten_entries(self._viewer_raw(), specs)
+        return specs
+
+    def get_review_specs(self) -> list[dict]:
+        """Return widget specs from the ``review`` section only.
+
+        :return: Flat ordered list of review widget spec dicts.
+        """
+        specs: list[dict] = []
+        self._flatten_entries(self._review_raw(), specs)
+        return specs
+
+    def render_viewer_html(self, viewer_spec: dict) -> str:
+        """Evaluate *viewer_spec* against the current record and return HTML.
+
+        Uses ``CustomDataFrame.view_to_value()`` to resolve Liquid / display
+        templates, then ``render_viewer()`` to produce the HTML string.
+
+        :param viewer_spec: A viewer spec dict (``liquid``, ``display``, etc.).
+        :return: Rendered HTML string (empty string on evaluation failure).
+        """
+        from referia.web.render import render_viewer as _render_viewer_html
+
+        try:
+            content = self._data.view_to_value(viewer_spec) or ""
+        except Exception as exc:
+            log.debug("Could not evaluate viewer spec %r: %s", viewer_spec, exc)
+            content = ""
+        return _render_viewer_html(viewer_spec, content)
+
+    def _viewer_raw(self) -> list:
+        viewer = self._interface.get("viewer", []) or []
+        return viewer if isinstance(viewer, list) else [viewer]
+
+    def _review_raw(self) -> list:
+        review = self._interface.get("review", []) or []
+        return review if isinstance(review, list) else [review]
 
     def _flatten_entries(self, entries: list, out: list) -> None:
         """Recursively flatten nested review/viewer cluster entries.

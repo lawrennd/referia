@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!--
+        HTMX enables field-level AJAX updates without a full JS framework.
+        TODO: vendor htmx.min.js into /static for offline use.
+    -->
+    <script src="https://unpkg.com/htmx.org@2.0.0" crossorigin="anonymous"></script>
+    <script>
+      /* Auto-show the status bar when HTMX writes to it, then fade after 3 s */
+      document.addEventListener("htmx:afterSettle", function (evt) {
+        var bar = document.getElementById("status-bar");
+        if (!bar) return;
+        if (bar.innerHTML.trim() !== "") {
+          bar.classList.add("visible");
+          clearTimeout(bar._timer);
+          bar._timer = setTimeout(function () {
+            bar.classList.remove("visible");
+          }, 3000);
+        }
+      });
+    </script>
+</head>
+<body>
+    <header class="site-header">
+        <h1 class="site-title">{{ title }}</h1>
+        <div class="site-meta">
+            <span class="meta-label">Config:</span>
+            <span class="meta-value">{{ config }}</span>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <div id="review-panel">
+            {% block content %}
+            {% include "review_panel.html" %}
+            {% endblock %}
+        </div>
+    </main>
+
+    <div id="status-bar" class="status-bar"></div>
+</body>
+</html>

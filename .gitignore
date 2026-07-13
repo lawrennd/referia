@@ -22,8 +22,10 @@ scripts/whats_next.py
 install-whats-next.sh
 whats-next
 
-# VibeSafe templates directory
+# VibeSafe templates directory (but not the web app's Jinja2 templates)
 templates/
+!referia/web/templates/
+!referia/web/templates/**
 
 # AI-Requirements framework (VibeSafe-managed)
 ai-requirements/README.md

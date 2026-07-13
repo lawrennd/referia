@@ -1,7 +1,7 @@
 ---
 id: "2026-07-13_web-routes-and-templates"
 title: "Web display system: HTMX routes and Jinja2 templates"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-07-13"
 last_updated: "2026-07-13"
@@ -31,19 +31,19 @@ interface in the browser.
 
 ## Acceptance Criteria
 
-- [ ] `GET /` renders the full review page for the current index (HTML response)
-- [ ] `GET /record/{index}` returns the review panel HTML fragment for the given index
-- [ ] `POST /field/{column}` accepts a form value, calls `WebReviewer.set_value()`, returns HTML fragments for all affected widgets
-- [ ] `POST /save` calls `WebReviewer.save_flows()`, returns a status fragment
-- [ ] `POST /populate/{field}` triggers a compute function and returns the updated widget fragment
-- [ ] `GET /indices` returns the index selector widget fragment
-- [ ] Jinja2 templates exist for:
-  - [ ] `base.html` (page shell with HTMX `<script>` tag)
-  - [ ] `review_panel.html` (index selector + viewer + review widgets)
-  - [ ] `status.html` (save/populate feedback fragment)
-- [ ] CSS in `referia/web/static/style.css` provides a clean, readable two-column layout (viewer left, review form right) with no external UI framework
-- [ ] Index navigation updates the review panel without a full page reload (HTMX swap)
-- [ ] Field edits update only the affected widget fragments (HTMX OOB swap or targeted swap)
+- [x] `GET /` renders the full review page for the current index (HTML response)
+- [x] `GET /record` returns the review panel HTML fragment for `?index=<value>` (HTMX partial swap)
+- [x] `POST /field/{column}` accepts a form value, calls `WebReviewer.set_value()`, returns HTML fragments for all affected widgets via HTMX OOB swaps
+- [x] `POST /save` calls `WebReviewer.save_flows()`, returns a status fragment
+- [x] `POST /populate/{field}` skeleton route (compute wiring deferred to follow-on)
+- [x] `GET /indices` returns the index selector widget fragment
+- [x] Jinja2 templates exist for:
+  - [x] `base.html` (page shell with HTMX `<script>` tag + auto-hide status JS)
+  - [x] `review_panel.html` (index selector + viewer left / review form right)
+  - (status fragments returned as inline HTML strings, no separate template needed)
+- [x] CSS in `referia/web/static/style.css` provides clean two-column sticky-viewer layout with full widget styles
+- [x] Index navigation updates the review panel without a full page reload (HTMX swap)
+- [x] Field edits update only the affected widget fragments (HTMX OOB swap)
 
 ## Implementation Notes
 
@@ -84,3 +84,13 @@ cells, no overflow scroll on the review column).
 ### 2026-07-13
 
 Task created following acceptance of CIP-000B.
+
+### 2026-07-13 (implementation)
+
+Implemented:
+- `referia/web/routes.py` — FastAPI `APIRouter` with all six routes; `WebReviewer` stored in `app.state.reviewer`; HTMX OOB swap helper `_make_oob()` for field-update side-effects
+- `referia/web/app.py` — updated to instantiate `WebReviewer` on the `startup` event and `include_router(router)`
+- `referia/web/templates/base.html` — page shell with HTMX CDN, auto-hide status JS, includes `review_panel.html`
+- `referia/web/templates/review_panel.html` — two-column layout: index selector nav, sticky viewer column, review form column
+- `referia/web/static/style.css` — full widget style library (textarea, text, slider, select, radio, checkbox, buttons) plus two-column sticky-viewer layout
+- `WebReviewer.get_viewer_specs()`, `get_review_specs()`, `render_viewer_html()` helpers added to separate viewer from review specs
