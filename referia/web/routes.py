@@ -50,7 +50,18 @@ router = APIRouter()
 
 
 def _reviewer(request: Request):
-    return request.app.state.reviewer
+    reviewer = request.app.state.reviewer
+    if reviewer is None:
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Review session could not be initialised. "
+                "Check the server log for startup errors — likely a missing or "
+                "malformed _referia.yml, or a data file that could not be loaded."
+            ),
+        )
+    return reviewer
 
 
 def _templates(request: Request):
