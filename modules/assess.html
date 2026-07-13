@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Assess Module &mdash; referia 0.2 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
 
   
@@ -99,6 +99,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -149,10 +150,10 @@
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.filter"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.from_csv"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_csv()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.from_dict"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_dict()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_pandas()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.get_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.get_column_type"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.get_compute_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_compute_index()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.get_input_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_input_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.get_output_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_output_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.get_parameters_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_parameters_columns()</span></code></a></li>
@@ -1132,7 +1133,7 @@ with function, arguments, and refresh flag.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>settings</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The settings to be used for the computation.</p></li>
-<li><p><strong>data</strong> (<em>lynguine.assess.data.CustomDataFrame</em><em> or </em><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><em>pandas.DataFrame</em></a>) – The data to be used in the computation.</p></li>
+<li><p><strong>data</strong> (<em>lynguine.assess.data.CustomDataFrame</em><em> or </em><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.4)"><em>pandas.DataFrame</em></a>) – The data to be used in the computation.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -1312,6 +1313,67 @@ data storage, computation, and specialized data handling for review processes.</
 <dt class="sig sig-object py">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">CustomDataFrame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colspecs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selector</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subindex</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interface</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">DataObject</span></code></p>
+<p>Enhanced DataFrame for data-oriented architecture with typed column specifications.</p>
+<p>CustomDataFrame extends the DataObject base class to provide flow-based data processing
+with strongly-typed column specifications. It manages data across different types
+(input, output, cache, parameters, series) and supports dynamic column creation,
+mapping management, and compute operations.</p>
+<dl class="simple">
+<dt>Column Specification Types:</dt><dd><ul class="simple">
+<li><p><strong>input</strong>: Immutable data (read-only)</p></li>
+<li><p><strong>output</strong>: Mutable data written to files</p></li>
+<li><p><strong>cache</strong>: Mutable temporary data for intermediate calculations</p></li>
+<li><p><strong>parameters</strong>: Global values without index</p></li>
+<li><p><strong>series</strong>: Data with multiple rows per index value</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Basic usage with dynamic column creation:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a dataframe</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]},</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Add columns using direct assignment (default: cache type)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;B&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Add columns with explicit type using add_column()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">&#39;output_col&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> <span class="n">colspec</span><span class="o">=</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">&#39;cache_col&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">])</span>  <span class="c1"># Default colspec=&#39;cache&#39;</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Drop columns</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">drop_column</span><span class="p">(</span><span class="s1">&#39;cache_col&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Check column types</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">get_column_type</span><span class="p">(</span><span class="s1">&#39;output_col&#39;</span><span class="p">)</span>
+<span class="go">&#39;output&#39;</span>
+</pre></div>
+</div>
+<p>Working with flow-based processing:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.config.interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interface</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create from interface with explicit mappings</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="p">({</span>
+<span class="gp">... </span>    <span class="s1">&#39;input&#39;</span><span class="p">:</span> <span class="p">{</span>
+<span class="gp">... </span>        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;yaml&#39;</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s1">&#39;filename&#39;</span><span class="p">:</span> <span class="s1">&#39;data.yml&#39;</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s1">&#39;mapping&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;jobTitle&#39;</span><span class="p">:</span> <span class="s1">&#39;job_title&#39;</span><span class="p">}</span>
+<span class="gp">... </span>    <span class="p">}</span>
+<span class="gp">... </span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cdf</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_flow</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<ul class="simple">
+<li><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_column()</span></code>: Add a new column with optional type specification</p></li>
+<li><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">drop_column()</span></code>: Remove a column from the dataframe</p></li>
+<li><p><code class="xref py py-meth docutils literal notranslate"><span class="pre">from_flow()</span></code>: Create CustomDataFrame from interface configuration</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">DataObject</span></code>: Base class providing core functionality</p></li>
+</ul>
+</div>
 <dl class="py attribute">
 <dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">types</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'cache':</span> <span class="pre">['cache',</span> <span class="pre">'series_cache',</span> <span class="pre">'parameter_cache',</span> <span class="pre">'global_cache'],</span> <span class="pre">'input':</span> <span class="pre">['input',</span> <span class="pre">'data',</span> <span class="pre">'constants',</span> <span class="pre">'global_consts'],</span> <span class="pre">'output':</span> <span class="pre">['output',</span> <span class="pre">'series',</span> <span class="pre">'writedata',</span> <span class="pre">'writeseries',</span> <span class="pre">'parameters',</span> <span class="pre">'globals'],</span> <span class="pre">'parameters':</span> <span class="pre">['constants',</span> <span class="pre">'global_consts',</span> <span class="pre">'parameters',</span> <span class="pre">'globals',</span> <span class="pre">'parameter_cache',</span> <span class="pre">'global_cache'],</span> <span class="pre">'series':</span> <span class="pre">['series',</span> <span class="pre">'writeseries',</span> <span class="pre">'series_cache']}</span></em></dt>
@@ -1448,7 +1510,7 @@ data storage, computation, and specialized data handling for review processes.</
 <dd class="field-odd"><p>A pandas DataFrame representation of the CustomDataFrame.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)">pandas.DataFrame</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.4)">pandas.DataFrame</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1560,6 +1622,40 @@ data storage, computation, and specialized data handling for review processes.</
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">summary_view_to_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">view</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Create the text of the summary view.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>view</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The summary view to create the text of.</p></li>
+<li><p><strong>kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The mapping to use to populate the summary view.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The text of the summary view.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">view_to_tmpname</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">view</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Convert a view to a name</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>view</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The view to convert to a name.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A name derived from the view./</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">T</span></span></dt>
@@ -1575,23 +1671,6 @@ data storage, computation, and specialized data handling for review processes.</
 <dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span></dt>
 <dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">add_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span></dt>
-<dd><p>Add a new column to the DataFrame.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>column_name</strong> – The name of the new column.</p></li>
-<li><p><strong>data</strong> – The data for the new column.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#NotImplementedError" title="(in Python v3.14)"><strong>NotImplementedError</strong></a> – Indicates the method needs to be implemented in a subclass.</p>
-</dd>
-</dl>
-</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py">
@@ -1713,20 +1792,6 @@ Pandas Series, NumPy array, list, and dictionary to the CustomDataFrame format.<
 
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">drop_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column_name</span></span></em><span class="sig-paren">)</span></dt>
-<dd><p>Drop a column from the DataFrame.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>column_name</strong> – The name of the column to drop.</p>
-</dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#NotImplementedError" title="(in Python v3.14)"><strong>NotImplementedError</strong></a> – Indicates the method needs to be implemented in a subclass.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">drop_duplicates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span></dt>
 <dd></dd></dl>
 
@@ -1737,7 +1802,7 @@ Pandas Series, NumPy array, list, and dictionary to the CustomDataFrame format.<
 
 <dl class="py property">
 <dt class="sig sig-object py">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v2.3.3)"><span class="pre">Series</span></a></em></dt>
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v3.0.4)"><span class="pre">Series</span></a></em></dt>
 <dd><p>Property to return the data types of the columns across all sub-DataFrames.
 :return: A Series containing the data types of the columns.</p>
 </dd></dl>
@@ -1845,6 +1910,28 @@ Pandas Series, NumPy array, list, and dictionary to the CustomDataFrame format.<
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>The column that is the focus for the DataFrame.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">get_compute_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Validate the currently focused index for compute operations.</p>
+<p>Takes the full pandas Index object and returns the currently focused index
+if it’s valid for compute operations, or None otherwise. This acts as a
+validation gate before calling compute.run_onchange().</p>
+<p>This method is used by referia’s compute_onchange() to determine if compute
+operations (like timestamp updates) should run when a field value changes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> (<em>pd.Index</em>) – The pandas Index object containing all dataframe indices</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The currently focused index if valid for compute, None otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)">object</a> or None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2311,23 +2398,6 @@ is returned. The last row is assumed to be the most recent.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">summary_view_to_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">view</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span></dt>
-<dd><p>Create the text of the summary view.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>view</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The summary view to create the text of.</p></li>
-<li><p><strong>kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The mapping to use to populate the summary view.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The text of the summary view.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">tail</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Return the last <cite>n</cite> rows of the DataFrame.</p>
 <dl class="field-list simple">
@@ -2336,6 +2406,23 @@ is returned. The last row is assumed to be the most recent.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The last <cite>n</cite> rows of the DataFrame.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">tally_to_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tally</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Create the text of the view.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tally</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The tally to create the text of.</p></li>
+<li><p><strong>kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The mapping to use to populate the tally.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The text of the tally.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2748,40 +2835,6 @@ is returned. The last row is assumed to be the most recent.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">view_to_tmpname</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">view</span></span></em><span class="sig-paren">)</span></dt>
-<dd><p>Convert a view to a name</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>view</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The view to convert to a name.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A name derived from the view./</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">tally_to_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tally</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">local</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span></dt>
-<dd><p>Create the text of the view.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>tally</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The tally to create the text of.</p></li>
-<li><p><strong>kwargs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The mapping to use to populate the tally.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The text of the tally.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">conditions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">view</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Check if a given data viewer should be displayed.</p>
 <dl class="field-list simple">
@@ -2941,6 +2994,52 @@ is returned. The last row is assumed to be the most recent.</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">add_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colspec</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cache'</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Add a new column to the CustomDataFrame.</p>
+<p>This is a convenience method that wraps the __setitem__ functionality,
+allowing explicit specification of the column type (colspec).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>column_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The name of the new column.</p></li>
+<li><p><strong>data</strong> (<em>pd.Series</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>, or </em><em>array-like</em>) – The data for the new column (pd.Series, list, or array-like).</p></li>
+<li><p><strong>colspec</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The column specification type (default: ‘cache’).
+Must be a valid type from CustomDataFrame.types.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If column already exists or colspec is invalid.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">&#39;new_col&#39;</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">&#39;output_col&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">colspec</span><span class="o">=</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">drop_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column_name</span></span></em><span class="sig-paren">)</span></dt>
+<dd><p>Drop a column from the CustomDataFrame.</p>
+<p>This method removes the column from both the internal data storage
+and the column specifications.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>column_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The name of the column to drop.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If column doesn’t exist.</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">drop_column</span><span class="p">(</span><span class="s1">&#39;unwanted_col&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py method">
@@ -2957,6 +3056,29 @@ implementation.</p>
 <li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The name of the variable</p></li>
 <li><p><strong>column</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The column in the data frame</p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.from_flow">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_flow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">interface</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/assess/data.html#CustomDataFrame.from_flow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.data.CustomDataFrame.from_flow" title="Link to this definition"></a></dt>
+<dd><p>Construct a CustomDataFrame from an interface object.</p>
+<p>This override ensures proper timing: explicit interface mappings are applied
+BEFORE column name augmentation, preventing conflicts between identity mappings
+and explicit interface mappings.</p>
+<p>CIP-0005 Implementation: This method calls the parent from_flow() first (which
+applies explicit interface mappings), then augments column names for any columns
+that don’t have explicit mappings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>interface</strong> (<em>lynguine.config.interface.Interface</em><em> or </em><em>dict.</em>) – Interface object.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A CustomDataFrame object.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#referia.assess.data.CustomDataFrame" title="referia.assess.data.CustomDataFrame">CustomDataFrame</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -3096,15 +3218,21 @@ the focus.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.drop_column">
 <span class="sig-name descname"><span class="pre">drop_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/assess/data.html#CustomDataFrame.drop_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.data.CustomDataFrame.drop_column" title="Link to this definition"></a></dt>
-<dd><p>Drop a column from the DataFrame.</p>
+<dd><p>Drop a column from the CustomDataFrame.</p>
+<p>This method removes the column from both the internal data storage
+and the column specifications.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>column_name</strong> – The name of the column to drop.</p>
+<dd class="field-odd"><p><strong>column_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The name of the column to drop.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#NotImplementedError" title="(in Python v3.14)"><strong>NotImplementedError</strong></a> – Indicates the method needs to be implemented in a subclass.</p>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If column doesn’t exist.</p>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">drop_column</span><span class="p">(</span><span class="s1">&#39;unwanted_col&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="py method">
@@ -3263,7 +3391,7 @@ that the new row is selected.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><em>DataFrame</em></a>) – The DataFrame to augment with.</p></li>
+<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.4)"><em>DataFrame</em></a>) – The DataFrame to augment with.</p></li>
 <li><p><strong>colspecs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The colspecs to use.</p></li>
 </ul>
 </dd>
@@ -3469,7 +3597,7 @@ Pandas Series, NumPy array, list, and dictionary to the CustomDataFrame format.<
 
 <dl class="py property">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.dtypes">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v2.3.3)"><span class="pre">Series</span></a></em><a class="headerlink" href="#referia.assess.data.CustomDataFrame.dtypes" title="Link to this definition"></a></dt>
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v3.0.4)"><span class="pre">Series</span></a></em><a class="headerlink" href="#referia.assess.data.CustomDataFrame.dtypes" title="Link to this definition"></a></dt>
 <dd><p>Property to return the data types of the columns across all sub-DataFrames.
 :return: A Series containing the data types of the columns.</p>
 </dd></dl>
@@ -3531,27 +3659,13 @@ Pandas Series, NumPy array, list, and dictionary to the CustomDataFrame format.<
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.from_flow">
-<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_flow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">interface</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#referia.assess.data.CustomDataFrame.from_flow" title="Link to this definition"></a></dt>
-<dd><p>Construct a CustomDataFrame from a interface object.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>interface</strong> (<em>lynguine.config.interface.Interface</em><em> or </em><em>dict.</em>) – Interface object.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A CustomDataFrame object.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.from_pandas">
 <em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_pandas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colspecs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#referia.assess.data.CustomDataFrame.from_pandas" title="Link to this definition"></a></dt>
 <dd><p>Create a CustomDataFrame from a pandas DataFrame.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><em>DataFrame</em></a>) – DataFrame to create from.</p></li>
+<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.4)"><em>DataFrame</em></a>) – DataFrame to create from.</p></li>
 <li><p><strong>colspecs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – dictionary of the column specifications.</p></li>
 </ul>
 </dd>
@@ -3582,6 +3696,28 @@ Pandas Series, NumPy array, list, and dictionary to the CustomDataFrame format.<
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Column type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.get_compute_index">
+<span class="sig-name descname"><span class="pre">get_compute_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#referia.assess.data.CustomDataFrame.get_compute_index" title="Link to this definition"></a></dt>
+<dd><p>Validate the currently focused index for compute operations.</p>
+<p>Takes the full pandas Index object and returns the currently focused index
+if it’s valid for compute operations, or None otherwise. This acts as a
+validation gate before calling compute.run_onchange().</p>
+<p>This method is used by referia’s compute_onchange() to determine if compute
+operations (like timestamp updates) should run when a field value changes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>index</strong> (<em>pd.Index</em>) – The pandas Index object containing all dataframe indices</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The currently focused index if valid for compute, None otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)">object</a> or None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -3659,7 +3795,7 @@ the focus.</p>
 <dd class="field-odd"><p>The subindices that are the focus for the DataFrame.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Index.html#pandas.Index" title="(in pandas v2.3.3)"><em>Index</em></a></p>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Index.html#pandas.Index" title="(in pandas v3.0.4)"><em>Index</em></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -3673,7 +3809,7 @@ the focus.</p>
 <dd class="field-odd"><p>The subseries that is the focus for the DataFrame.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><em>DataFrame</em></a></p>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.4)"><em>DataFrame</em></a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -4455,7 +4591,7 @@ is returned. The last row is assumed to be the most recent.</p>
 <dd class="field-odd"><p>A pandas DataFrame representation of the CustomDataFrame.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)">pandas.DataFrame</a></p>
+<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.4)">pandas.DataFrame</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -4630,7 +4766,7 @@ is returned. The last row is assumed to be the most recent.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v2.3.3)"><em>DataFrame</em></a>) – A pandas DataFrame to update an existing data frame with.</p></li>
+<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.4)"><em>DataFrame</em></a>) – A pandas DataFrame to update an existing data frame with.</p></li>
 <li><p><strong>colspecs</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – The column specifications to use.</p></li>
 </ul>
 </dd>
@@ -5566,7 +5702,7 @@ size=&quot;6.0, 8.0&quot;;
   &quot;Compute&quot; [fillcolor=white,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.5,margin=&quot;0.1,0.1&quot;,shape=box,style=&quot;setlinewidth(0.5),filled&quot;,tooltip=&quot;The Compute class handles computation operations on data frames.&quot;];
   &quot;Compute&quot; [URL=&quot;#referia.assess.compute.Compute&quot;,fillcolor=white,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.5,margin=&quot;0.1,0.1&quot;,shape=box,style=&quot;setlinewidth(0.5),filled&quot;,target=&quot;_top&quot;,tooltip=&quot;Compute class for performing calculations and transformations on data.&quot;];
   &quot;Compute&quot; -&gt; &quot;Compute&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;CustomDataFrame&quot; [fillcolor=white,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.5,margin=&quot;0.1,0.1&quot;,shape=box,style=&quot;setlinewidth(0.5),filled&quot;];
+  &quot;CustomDataFrame&quot; [fillcolor=white,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.5,margin=&quot;0.1,0.1&quot;,shape=box,style=&quot;setlinewidth(0.5),filled&quot;,tooltip=&quot;Enhanced DataFrame for data-oriented architecture with typed column specifications.&quot;];
   &quot;DataObject&quot; -&gt; &quot;CustomDataFrame&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
   &quot;CustomDataFrame&quot; [URL=&quot;#referia.assess.data.CustomDataFrame&quot;,fillcolor=white,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.5,margin=&quot;0.1,0.1&quot;,shape=box,style=&quot;setlinewidth(0.5),filled&quot;,target=&quot;_top&quot;,tooltip=&quot;Enhanced data frame for review and assessment workflows.&quot;];
   &quot;CustomDataFrame&quot; -&gt; &quot;CustomDataFrame&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];

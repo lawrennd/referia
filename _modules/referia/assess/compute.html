@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>referia.assess.compute &mdash; referia 0.2 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
 
   
@@ -96,6 +96,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -146,10 +147,10 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.filter"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_csv"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_csv()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_dict"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_dict()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_pandas()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column_type"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_compute_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_compute_index()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_input_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_input_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_output_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_output_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_parameters_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_parameters_columns()</span></code></a></li>
@@ -1522,7 +1523,9 @@
         
         <span class="k">def</span><span class="w"> </span><span class="nf">llm_pdf_review</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">review_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;general&quot;</span><span class="p">,</span>
                           <span class="n">max_chars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30000</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
-                          <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+                          <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">,</span> <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                          <span class="n">include_history</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">history</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                          <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Extract text from a PDF and generate an LLM-based review/summary.</span>
 <span class="sd">            </span>
@@ -1530,13 +1533,18 @@
 <span class="sd">            reviews or summaries of PDF content. Perfect for thesis chapter reviews,</span>
 <span class="sd">            document analysis, or automated commenting.</span>
 <span class="sd">            </span>
+<span class="sd">            Optionally includes previous conversation history as context, enabling</span>
+<span class="sd">            reviews that build on prior analysis or avoid repetition.</span>
+<span class="sd">            </span>
 <span class="sd">            :param filename: PDF filename to review</span>
 <span class="sd">            :param directory: Directory containing the PDF</span>
-<span class="sd">            :param review_type: Type of review (&#39;general&#39;, &#39;strengths&#39;, &#39;weaknesses&#39;, &#39;technical&#39;, &#39;summary&#39;)</span>
+<span class="sd">            :param review_type: Type of review (&#39;general&#39;, &#39;strengths&#39;, &#39;weaknesses&#39;, &#39;technical&#39;, &#39;summary&#39;, &#39;questions&#39;)</span>
 <span class="sd">            :param max_chars: Maximum characters to extract from PDF (for LLM context limits)</span>
 <span class="sd">            :param model: LLM model to use</span>
 <span class="sd">            :param temperature: Sampling temperature</span>
 <span class="sd">            :param system_prompt: Custom system prompt (overrides review_type)</span>
+<span class="sd">            :param include_history: If True, include conversation history as context (default: False)</span>
+<span class="sd">            :param history: Previous conversation text to include as context (optional)</span>
 <span class="sd">            :return: LLM-generated review text</span>
 <span class="sd">            </span>
 <span class="sd">            **Example**:</span>
@@ -1559,6 +1567,21 @@
             
             <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="p">:</span>
                 <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+            
+            <span class="c1"># Build prompt with optional history</span>
+            <span class="n">prompt_parts</span> <span class="o">=</span> <span class="p">[]</span>
+            
+            <span class="c1"># Add conversation history if enabled and available</span>
+            <span class="k">if</span> <span class="n">include_history</span> <span class="ow">and</span> <span class="n">history</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">history</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;## Previous Conversation</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">history</span><span class="p">))</span>
+                <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">---</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># Add document text</span>
+            <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;## Document Content</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+            
+            <span class="n">full_prompt</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">prompt_parts</span><span class="p">)</span>
             
             <span class="c1"># Set system prompt based on review type if not provided</span>
             <span class="k">if</span> <span class="n">system_prompt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1606,7 +1629,7 @@
             <span class="n">manager</span> <span class="o">=</span> <span class="n">get_llm_manager</span><span class="p">(</span><span class="n">llm_config</span><span class="p">)</span>
             
             <span class="k">return</span> <span class="n">manager</span><span class="o">.</span><span class="n">call</span><span class="p">(</span>
-                <span class="n">prompt</span><span class="o">=</span><span class="n">text</span><span class="p">,</span>
+                <span class="n">prompt</span><span class="o">=</span><span class="n">full_prompt</span><span class="p">,</span>
                 <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                 <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
                 <span class="n">system_prompt</span><span class="o">=</span><span class="n">system_prompt</span><span class="p">,</span>
@@ -1622,6 +1645,8 @@
                             <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.7</span><span class="p">,</span>
                             <span class="n">system_prompt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                             <span class="n">include_query</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="n">include_history</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="n">history</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                             <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Answer a custom user prompt about a chapter using LLM.</span>
@@ -1629,6 +1654,9 @@
 <span class="sd">            Extracts text from a PDF chapter and combines it with a user-provided</span>
 <span class="sd">            prompt to generate a custom LLM response. This enables flexible </span>
 <span class="sd">            exploration of chapter content with arbitrary questions.</span>
+<span class="sd">            </span>
+<span class="sd">            Optionally includes previous conversation history as context, enabling</span>
+<span class="sd">            follow-up questions that reference earlier exchanges.</span>
 <span class="sd">            </span>
 <span class="sd">            :param custom_prompt: The user&#39;s custom prompt/question (extracted from data via row_args)</span>
 <span class="sd">            :param filename: PDF filename for the chapter</span>
@@ -1640,6 +1668,8 @@
 <span class="sd">            :param temperature: LLM temperature (default: 0.7)</span>
 <span class="sd">            :param system_prompt: Optional system prompt to guide LLM behavior</span>
 <span class="sd">            :param include_query: If True, include the question before the response (default: False)</span>
+<span class="sd">            :param include_history: If True, include conversation history as context (default: False)</span>
+<span class="sd">            :param history: Previous conversation text to include as context (optional)</span>
 <span class="sd">            :return: LLM response text or error message (with question if include_query=True)</span>
 <span class="sd">            </span>
 <span class="sd">            **Example**:</span>
@@ -1697,8 +1727,25 @@
                 <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error extracting PDF in llm_custom_query: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;❌ Error extracting PDF: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
             
-            <span class="c1"># 3. Combine prompt with chapter text</span>
-            <span class="n">full_prompt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">custom_prompt</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">---</span><span class="se">\n</span><span class="s2">Chapter text:</span><span class="se">\n</span><span class="si">{</span><span class="n">chapter_text</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="c1"># 3. Build prompt with optional history</span>
+            <span class="n">prompt_parts</span> <span class="o">=</span> <span class="p">[]</span>
+            
+            <span class="c1"># Add conversation history if enabled and available</span>
+            <span class="k">if</span> <span class="n">include_history</span> <span class="ow">and</span> <span class="n">history</span> <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">history</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;## Previous Conversation</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">history</span><span class="p">))</span>
+                <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">---</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># Add chapter context</span>
+            <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;## Chapter Content</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chapter_text</span><span class="p">)</span>
+            <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">---</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># Add current question</span>
+            <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;## Current Question</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">prompt_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">custom_prompt</span><span class="p">)</span>
+            
+            <span class="n">full_prompt</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">prompt_parts</span><span class="p">)</span>
             
             <span class="c1"># 4. Query LLM</span>
             <span class="k">try</span><span class="p">:</span>

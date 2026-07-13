@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>referia.assess.data &mdash; referia 0.2 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
 
   
@@ -96,6 +96,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -146,10 +147,10 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.filter"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_csv"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_csv()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_dict"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_dict()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_pandas()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column_type"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_compute_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_compute_index()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_input_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_input_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_output_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_output_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_parameters_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_parameters_columns()</span></code></a></li>
@@ -939,9 +940,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_precompute</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_postcompute</span> <span class="o">=</span> <span class="p">[]</span>
 
-        <span class="c1"># Ensure _name_column_map is populated by calling _augment_column_names on each data type</span>
-        <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_augment_column_names</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">])</span>
+        <span class="c1"># CIP-0005: Moved _augment_column_names call to from_flow() override</span>
+        <span class="c1"># This ensures explicit interface mappings are applied BEFORE augmentation,</span>
+        <span class="c1"># avoiding timing conflicts between identity and interface mappings</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_is_default_mapping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">original_name</span><span class="p">,</span> <span class="n">column</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1002,6 +1003,37 @@
         <span class="c1"># If we get here, either no conflict or we handled the default case</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_name_column_map</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">column</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_column_name_map</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span></div>
+
+
+<div class="viewcode-block" id="CustomDataFrame.from_flow">
+<a class="viewcode-back" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_flow</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">interface</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct a CustomDataFrame from an interface object.</span>
+<span class="sd">        </span>
+<span class="sd">        This override ensures proper timing: explicit interface mappings are applied</span>
+<span class="sd">        BEFORE column name augmentation, preventing conflicts between identity mappings</span>
+<span class="sd">        and explicit interface mappings.</span>
+<span class="sd">        </span>
+<span class="sd">        CIP-0005 Implementation: This method calls the parent from_flow() first (which</span>
+<span class="sd">        applies explicit interface mappings), then augments column names for any columns</span>
+<span class="sd">        that don&#39;t have explicit mappings.</span>
+<span class="sd">        </span>
+<span class="sd">        :param interface: Interface object.</span>
+<span class="sd">        :type interface: lynguine.config.interface.Interface or dict.</span>
+<span class="sd">        :return: A CustomDataFrame object.</span>
+<span class="sd">        :rtype: CustomDataFrame</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Call parent from_flow to process the interface (applies explicit mappings)</span>
+        <span class="n">cdf</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">from_flow</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
+        
+        <span class="c1"># Now augment column names for any columns that don&#39;t have explicit mappings</span>
+        <span class="c1"># This happens AFTER interface mappings are applied, so no conflicts</span>
+        <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="n">cdf</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
+            <span class="n">cdf</span><span class="o">.</span><span class="n">_augment_column_names</span><span class="p">(</span><span class="n">cdf</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">])</span>
+        
+        <span class="k">return</span> <span class="n">cdf</span></div>
 
                         
     <span class="nd">@property</span>

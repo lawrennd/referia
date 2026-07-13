@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>lynguine.assess.data &mdash; referia 0.2 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
 
   
@@ -96,6 +96,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -146,10 +147,10 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.filter"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_csv"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_csv()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_dict"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_dict()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_pandas()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column_type"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_compute_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_compute_index()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_input_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_input_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_output_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_output_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_parameters_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_parameters_columns()</span></code></a></li>
@@ -912,6 +913,60 @@
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
  
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_compute_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span> <span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate the currently focused index for compute operations.</span>
+<span class="sd">        </span>
+<span class="sd">        Takes the full pandas Index object and returns the currently focused index</span>
+<span class="sd">        if it&#39;s valid for compute operations, or None otherwise. This acts as a</span>
+<span class="sd">        validation gate before calling compute.run_onchange().</span>
+<span class="sd">        </span>
+<span class="sd">        This method is used by referia&#39;s compute_onchange() to determine if compute</span>
+<span class="sd">        operations (like timestamp updates) should run when a field value changes.</span>
+<span class="sd">        </span>
+<span class="sd">        :param index: The pandas Index object containing all dataframe indices</span>
+<span class="sd">        :type index: pd.Index</span>
+<span class="sd">        :return: The currently focused index if valid for compute, None otherwise</span>
+<span class="sd">        :rtype: object or None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get the currently focused index</span>
+        <span class="n">current_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_index</span><span class="p">()</span>
+        
+        <span class="c1"># If no focused index, nothing to compute</span>
+        <span class="k">if</span> <span class="n">current_index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;No focused index, returning None for compute.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        
+        <span class="c1"># If focused index isn&#39;t in the provided Index, invalid</span>
+        <span class="k">if</span> <span class="n">current_index</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">index</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Focused index </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">current_index</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> not in provided Index, returning None for compute.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        
+        <span class="c1"># If no compute operations defined, no need to run</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;compute&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;No compute attribute, returning None for compute.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+            
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compute</span><span class="p">,</span> <span class="s1">&#39;_computes&#39;</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;No _computes attribute, returning None for compute.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        
+        <span class="c1"># Check if _computes is a dict with any non-empty lists</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">_computes</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">has_computes</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> 
+                <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">_computes</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">has_computes</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;No compute operations defined (all lists empty), returning None for compute.&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">_computes</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;No compute operations defined, returning None for compute.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        
+        <span class="c1"># Return the focused index as valid for compute</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Returning focused index </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">current_index</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> as valid for compute.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">current_index</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">get_column</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1812,7 +1867,11 @@
                         <span class="c1"># Select the data from the dataframe.</span>
                         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Selecting item with index </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;select&#39;</span><span class="p">]</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> for the parameter type </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
                         <span class="n">newds</span> <span class="o">=</span> <span class="n">newdf</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;select&quot;</span><span class="p">]]</span>
-                        <span class="n">newdf</span> <span class="o">=</span> <span class="n">newds</span> 
+                        <span class="n">newdf</span> <span class="o">=</span> <span class="n">newds</span>
+                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">newdf</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">newdf</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="c1"># Convert single-row DataFrame to Series for parameters</span>
+                        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Converting single-row DataFrame to Series for parameter type </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
+                        <span class="n">newdf</span> <span class="o">=</span> <span class="n">newdf</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> 
 
                 <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;series&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
                     <span class="c1"># Remove duplicates in newdf index</span>
@@ -2962,6 +3021,64 @@
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;This is a base class&quot;</span><span class="p">)</span>
     
 <span class="k">class</span><span class="w"> </span><span class="nc">CustomDataFrame</span><span class="p">(</span><span class="n">DataObject</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Enhanced DataFrame for data-oriented architecture with typed column specifications.</span>
+<span class="sd">    </span>
+<span class="sd">    CustomDataFrame extends the DataObject base class to provide flow-based data processing</span>
+<span class="sd">    with strongly-typed column specifications. It manages data across different types</span>
+<span class="sd">    (input, output, cache, parameters, series) and supports dynamic column creation,</span>
+<span class="sd">    mapping management, and compute operations.</span>
+<span class="sd">    </span>
+<span class="sd">    Column Specification Types:</span>
+<span class="sd">        - **input**: Immutable data (read-only)</span>
+<span class="sd">        - **output**: Mutable data written to files</span>
+<span class="sd">        - **cache**: Mutable temporary data for intermediate calculations</span>
+<span class="sd">        - **parameters**: Global values without index</span>
+<span class="sd">        - **series**: Data with multiple rows per index value</span>
+<span class="sd">    </span>
+<span class="sd">    Examples:</span>
+<span class="sd">        Basic usage with dynamic column creation:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; import pandas as pd</span>
+<span class="sd">        &gt;&gt;&gt; from lynguine.assess.data import CustomDataFrame</span>
+<span class="sd">        &gt;&gt;&gt; </span>
+<span class="sd">        &gt;&gt;&gt; # Create a dataframe</span>
+<span class="sd">        &gt;&gt;&gt; df = CustomDataFrame(pd.DataFrame({&#39;A&#39;: [1, 2, 3]}, index=[&#39;a&#39;, &#39;b&#39;, &#39;c&#39;]))</span>
+<span class="sd">        &gt;&gt;&gt; </span>
+<span class="sd">        &gt;&gt;&gt; # Add columns using direct assignment (default: cache type)</span>
+<span class="sd">        &gt;&gt;&gt; df[&#39;B&#39;] = [4, 5, 6]</span>
+<span class="sd">        &gt;&gt;&gt; </span>
+<span class="sd">        &gt;&gt;&gt; # Add columns with explicit type using add_column()</span>
+<span class="sd">        &gt;&gt;&gt; df.add_column(&#39;output_col&#39;, [7, 8, 9], colspec=&#39;output&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; df.add_column(&#39;cache_col&#39;, [10, 11, 12])  # Default colspec=&#39;cache&#39;</span>
+<span class="sd">        &gt;&gt;&gt; </span>
+<span class="sd">        &gt;&gt;&gt; # Drop columns</span>
+<span class="sd">        &gt;&gt;&gt; df.drop_column(&#39;cache_col&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; </span>
+<span class="sd">        &gt;&gt;&gt; # Check column types</span>
+<span class="sd">        &gt;&gt;&gt; df.get_column_type(&#39;output_col&#39;)</span>
+<span class="sd">        &#39;output&#39;</span>
+<span class="sd">        </span>
+<span class="sd">        Working with flow-based processing:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; from lynguine.config.interface import Interface</span>
+<span class="sd">        &gt;&gt;&gt; </span>
+<span class="sd">        &gt;&gt;&gt; # Create from interface with explicit mappings</span>
+<span class="sd">        &gt;&gt;&gt; interface = Interface({</span>
+<span class="sd">        ...     &#39;input&#39;: {</span>
+<span class="sd">        ...         &#39;type&#39;: &#39;yaml&#39;,</span>
+<span class="sd">        ...         &#39;filename&#39;: &#39;data.yml&#39;,</span>
+<span class="sd">        ...         &#39;mapping&#39;: {&#39;jobTitle&#39;: &#39;job_title&#39;}</span>
+<span class="sd">        ...     }</span>
+<span class="sd">        ... })</span>
+<span class="sd">        &gt;&gt;&gt; cdf = CustomDataFrame.from_flow(interface)</span>
+<span class="sd">    </span>
+<span class="sd">    See Also:</span>
+<span class="sd">        - :meth:`add_column`: Add a new column with optional type specification</span>
+<span class="sd">        - :meth:`drop_column`: Remove a column from the dataframe</span>
+<span class="sd">        - :meth:`from_flow`: Create CustomDataFrame from interface configuration</span>
+<span class="sd">        - :class:`DataObject`: Base class providing core functionality</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">types</span> <span class="o">=</span> <span class="p">{</span>
         <span class="c1"># Input types are standard DataFrames but are not mutable.</span>
         <span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="p">[</span>
@@ -3769,9 +3886,24 @@
         
         <span class="k">if</span> <span class="s2">&quot;columns&quot;</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">:</span>
             <span class="c1"># Make sure the listed columns are present.</span>
-            <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;columns&quot;</span><span class="p">]:</span>
-                <span class="k">if</span> <span class="n">column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                    <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="c1"># Use batch operation to avoid DataFrame fragmentation</span>
+            <span class="n">missing_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;columns&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">missing_columns</span><span class="p">:</span>
+                <span class="c1"># Add all missing columns at once to avoid DataFrame fragmentation</span>
+                <span class="c1"># Use pd.concat as recommended by pandas to avoid fragmentation</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;_d&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;_colspecs&#39;</span><span class="p">):</span>
+                    <span class="c1"># CustomDataFrame: add to underlying storage</span>
+                    <span class="k">if</span> <span class="s2">&quot;cache&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">:</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="s2">&quot;cache&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="s2">&quot;cache&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+                    <span class="c1"># Create new DataFrame with missing columns and concat</span>
+                    <span class="n">missing_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">col</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">missing_columns</span><span class="p">},</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="s2">&quot;cache&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="s2">&quot;cache&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="s2">&quot;cache&quot;</span><span class="p">],</span> <span class="n">missing_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">df</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="s2">&quot;cache&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Regular pandas DataFrame: use pd.concat to avoid fragmentation</span>
+                    <span class="n">missing_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="n">col</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">missing_columns</span><span class="p">},</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">missing_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">strict_columns</span><span class="p">:</span>
                 <span class="k">if</span> <span class="s2">&quot;columns&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">:</span>
                     <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;You can&#39;t have strict_columns set to True and not list the columns in the interface structure.&quot;</span>
@@ -3786,9 +3918,20 @@
 
         <span class="c1"># Set the index column</span>
         <span class="k">if</span> <span class="n">index_column_name</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-            <span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">index_column_name</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="n">index_column_name</span><span class="p">)</span>
-            <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="k">del</span> <span class="n">df</span><span class="p">[</span><span class="n">index_column_name</span><span class="p">]</span>            
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;_d&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s1">&#39;_colspecs&#39;</span><span class="p">):</span>
+                <span class="c1"># CustomDataFrame: set index on underlying DataFrames</span>
+                <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">index_column_name</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">][</span><span class="n">index_column_name</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="n">index_column_name</span><span class="p">)</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">index_column_name</span><span class="p">])</span>
+                <span class="c1"># Remove from colspecs</span>
+                <span class="k">for</span> <span class="n">colspec_type</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">index_column_name</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="n">colspec_type</span><span class="p">]:</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="n">colspec_type</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">index_column_name</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Regular pandas DataFrame</span>
+                <span class="n">df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">index_column_name</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="n">index_column_name</span><span class="p">)</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">index_column_name</span><span class="p">])</span>            
                     
         <span class="k">return</span> <span class="n">df</span>
     
@@ -4398,6 +4541,89 @@
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span></div>
 
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_column</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">colspec</span><span class="o">=</span><span class="s1">&#39;cache&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a new column to the CustomDataFrame.</span>
+<span class="sd">        </span>
+<span class="sd">        This is a convenience method that wraps the __setitem__ functionality,</span>
+<span class="sd">        allowing explicit specification of the column type (colspec).</span>
+<span class="sd">        </span>
+<span class="sd">        :param column_name: The name of the new column.</span>
+<span class="sd">        :type column_name: str</span>
+<span class="sd">        :param data: The data for the new column (pd.Series, list, or array-like).</span>
+<span class="sd">        :type data: pd.Series, list, or array-like</span>
+<span class="sd">        :param colspec: The column specification type (default: &#39;cache&#39;).</span>
+<span class="sd">                       Must be a valid type from CustomDataFrame.types.</span>
+<span class="sd">        :type colspec: str</span>
+<span class="sd">        :raises ValueError: If column already exists or colspec is invalid.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; df.add_column(&#39;new_col&#39;, pd.Series([1, 2, 3], index=df.index))</span>
+<span class="sd">            &gt;&gt;&gt; df.add_column(&#39;output_col&#39;, [1, 2, 3], colspec=&#39;output&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">column_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">column_name</span><span class="si">}</span><span class="s2">&#39; already exists&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Validate colspec</span>
+        <span class="n">all_types</span> <span class="o">=</span> <span class="p">[</span><span class="n">typ</span> <span class="k">for</span> <span class="n">typs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="n">typs</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">colspec</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_types</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid colspec &#39;</span><span class="si">{</span><span class="n">colspec</span><span class="si">}</span><span class="s2">&#39;. Must be one of: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">all_types</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Use existing __setitem__ functionality to add the column</span>
+        <span class="c1"># This will add it to &#39;cache&#39; or &#39;cacheseries&#39; by default</span>
+        <span class="bp">self</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+        
+        <span class="c1"># If a specific colspec was requested and it&#39;s not the default,</span>
+        <span class="c1"># move the column to the correct colspec</span>
+        <span class="n">current_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_column_type</span><span class="p">(</span><span class="n">column_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">colspec</span> <span class="o">!=</span> <span class="n">current_type</span><span class="p">:</span>
+            <span class="c1"># Remove from current colspec</span>
+            <span class="k">if</span> <span class="n">current_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colspecs</span> <span class="ow">and</span> <span class="n">column_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="n">current_type</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="n">current_type</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">column_name</span><span class="p">)</span>
+                
+            <span class="c1"># Get the data</span>
+            <span class="n">col_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">current_type</span><span class="p">][</span><span class="n">column_name</span><span class="p">]</span>
+            
+            <span class="c1"># Remove from current data dict</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">current_type</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">current_type</span><span class="p">]</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">column_name</span><span class="p">])</span>
+            
+            <span class="c1"># Add to requested colspec</span>
+            <span class="k">if</span> <span class="n">colspec</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="n">colspec</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">colspec</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">colspec</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+                
+            <span class="bp">self</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="n">colspec</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">column_name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">colspec</span><span class="p">][</span><span class="n">column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">col_data</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">drop_column</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Drop a column from the CustomDataFrame.</span>
+<span class="sd">        </span>
+<span class="sd">        This method removes the column from both the internal data storage</span>
+<span class="sd">        and the column specifications.</span>
+<span class="sd">        </span>
+<span class="sd">        :param column_name: The name of the column to drop.</span>
+<span class="sd">        :type column_name: str</span>
+<span class="sd">        :raises KeyError: If column doesn&#39;t exist.</span>
+<span class="sd">        </span>
+<span class="sd">        Example:</span>
+<span class="sd">            &gt;&gt;&gt; df.drop_column(&#39;unwanted_col&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">column_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">column_name</span><span class="si">}</span><span class="s2">&#39; not found&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Find which colspec contains this column</span>
+        <span class="n">col_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_column_type</span><span class="p">(</span><span class="n">column_name</span><span class="p">)</span>
+        
+        <span class="c1"># Remove from the appropriate dataframe</span>
+        <span class="k">if</span> <span class="n">col_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">col_type</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">col_type</span><span class="p">]</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">column_name</span><span class="p">])</span>
+        
+        <span class="c1"># Remove from colspecs</span>
+        <span class="k">if</span> <span class="n">col_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colspecs</span> <span class="ow">and</span> <span class="n">column_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="n">col_type</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_colspecs</span><span class="p">[</span><span class="n">col_type</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">column_name</span><span class="p">)</span>
     
 <span class="k">def</span><span class="w"> </span><span class="nf">concat</span><span class="p">(</span><span class="n">objs</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>

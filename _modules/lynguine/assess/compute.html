@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>lynguine.assess.compute &mdash; referia 0.2 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=4ae1632d" />
 
   
@@ -96,6 +96,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#data-classes">Data Classes</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_name_column_map"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_name_column_map()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.augment"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.augment</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_series"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_series()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_index()</span></code></a></li>
@@ -146,10 +147,10 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.filter"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_csv"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_csv()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_dict"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_dict()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_flow"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_flow()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.from_pandas()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_column_type"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_column_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_compute_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_compute_index()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_input_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_input_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_output_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_output_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_parameters_columns"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_parameters_columns()</span></code></a></li>
@@ -1132,6 +1133,9 @@
                 <span class="n">compute_prep</span><span class="p">[</span><span class="s2">&quot;function&quot;</span><span class="p">](</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">fargs</span><span class="p">)</span>
                 <span class="k">continue</span>
             
+            <span class="c1"># Get mode parameter early to determine if we need to run compute</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="n">compute</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+            
             <span class="c1"># If we&#39;re not refreshing, need to determine which columns aren&#39;t set so they can be refreshed.</span>
             <span class="n">missing_vals</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh</span><span class="p">:</span>
@@ -1151,7 +1155,10 @@
                 <span class="c1"># When refreshing, treat all columns as if they need updating</span>
                 <span class="n">missing_vals</span> <span class="o">=</span> <span class="p">[</span><span class="kc">True</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="n">refresh</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">missing_vals</span><span class="p">):</span>
+            <span class="c1"># Append/prepend modes must always run to read existing content</span>
+            <span class="n">should_run</span> <span class="o">=</span> <span class="n">refresh</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">missing_vals</span><span class="p">)</span> <span class="ow">or</span> <span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;append&quot;</span><span class="p">,</span> <span class="s2">&quot;prepend&quot;</span><span class="p">]</span>
+            
+            <span class="k">if</span> <span class="n">should_run</span><span class="p">:</span>
                 <span class="c1"># Compute the function and get the new values  </span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running compute function </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> storing in field(s) </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">columns</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> with index=</span><span class="se">\&quot;</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> with refresh=</span><span class="se">\&quot;</span><span class="si">{</span><span class="n">refresh</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> and arguments </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">fargs</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
                     
@@ -1169,15 +1176,21 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">new_vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">new_vals</span><span class="p">]</span>
 
-            <span class="c1"># Get mode and separator parameters for write operation</span>
-            <span class="n">mode</span> <span class="o">=</span> <span class="n">compute</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+            <span class="c1"># Get separator parameter for write operation (mode was retrieved earlier)</span>
             <span class="n">separator</span> <span class="o">=</span> <span class="n">compute</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;separator&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">---</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
             
             <span class="c1"># Distribute the updated values to the columns</span>
             <span class="k">for</span> <span class="n">column</span><span class="p">,</span> <span class="n">new_val</span><span class="p">,</span> <span class="n">missing_val</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">new_vals</span><span class="p">,</span> <span class="n">missing_vals</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">column</span> <span class="o">==</span> <span class="s2">&quot;_&quot;</span><span class="p">:</span>
                     <span class="k">continue</span>
-                <span class="k">if</span> <span class="n">refresh</span> <span class="ow">or</span> <span class="n">missing_val</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">ismutable</span><span class="p">(</span><span class="n">column</span><span class="p">):</span>
+                <span class="c1"># Always write for append/prepend modes, respect refresh/missing_val for replace</span>
+                <span class="n">should_write</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;append&quot;</span><span class="p">,</span> <span class="s2">&quot;prepend&quot;</span><span class="p">])</span> <span class="ow">or</span>  <span class="c1"># Accumulating modes always write</span>
+                    <span class="n">refresh</span> <span class="ow">or</span>                           <span class="c1"># Explicit refresh requested</span>
+                    <span class="n">missing_val</span>                          <span class="c1"># Field is empty</span>
+                <span class="p">)</span>
+                
+                <span class="k">if</span> <span class="n">should_write</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">ismutable</span><span class="p">(</span><span class="n">column</span><span class="p">):</span>
                     <span class="c1"># Apply write mode logic</span>
                     <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;append&quot;</span> <span class="ow">or</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;prepend&quot;</span><span class="p">:</span>
                         <span class="c1"># Read current value for append/prepend modes</span>
