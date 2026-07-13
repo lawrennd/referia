@@ -38,9 +38,9 @@ def create_app(user_file: str = "_referia.yml", directory: str = ".") -> FastAPI
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request):
         return templates.TemplateResponse(
+            request,
             "base.html",
             {
-                "request": request,
                 "title": "Referia Review Interface",
                 "config": user_file,
                 "directory": app.state.directory,
