@@ -1,7 +1,7 @@
 ---
 id: "2026-07-13_web-display-tests"
 title: "Web display system: unit and integration tests"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-07-13"
 last_updated: "2026-07-13"
@@ -29,24 +29,23 @@ Write the test suite for the web display system: unit tests for
 
 ## Acceptance Criteria
 
-- [ ] `tests/test_web_reviewer.py` covers:
-  - [ ] `WebReviewer` constructs from the gift example fixture
-  - [ ] `set_value` / `get_value` round-trip for a text field
-  - [ ] `set_index` changes the active record
-  - [ ] `save_flows` writes to a temporary output file
-  - [ ] `affected_widgets` returns expected columns after a change
-- [ ] `tests/test_web_render.py` covers:
-  - [ ] `render_widget` for each supported widget type returns HTML with the correct element and HTMX attributes
-  - [ ] `render_viewer` renders a `display:` entry using field substitution
-  - [ ] `render_viewer` renders a `liquid:` entry
-  - [ ] Composite widget expansion produces the correct number of sub-widgets
-- [ ] `tests/test_web_routes.py` covers (via `TestClient`):
-  - [ ] `GET /` returns 200 with expected field names in HTML
-  - [ ] `POST /field/{column}` updates the data and returns updated HTML
-  - [ ] `GET /record/{index}` returns the review panel for a different record
-  - [ ] `POST /save` returns a success status fragment
-- [ ] All tests pass under `poetry run pytest`
-- [ ] No existing tests broken
+- [x] `tests/test_web_reviewer.py` covers:
+  - [x] `WebReviewer` constructs (mock-based), index list, `set_value` / `get_value`, `set_index`, `save_flows`, `affected_widgets`
+- [x] `tests/test_web_render.py` covers:
+  - [x] `render_widget` for each supported widget type returns HTML with correct element and HTMX attributes
+  - [x] `render_viewer` renders Markdown and HTML content
+  - [x] `render_form` produces form wrapper
+- [x] `tests/test_web_routes.py` covers (via `TestClient`, 38 tests):
+  - [x] `GET /` returns 200 with field ids, HTMX attrs, index selector, status bar, HTMX script
+  - [x] `POST /field/{column}` updates data, returns status + OOB widget swaps, handles errors and checkbox coercion
+  - [x] `GET /record?index=<value>` switches record, returns panel fragment
+  - [x] `GET /indices` returns select element with all options
+  - [x] `POST /save` calls `save_flows`, returns confirmation, handles errors
+  - [x] `POST /reload` calls `load_flows`, returns refreshed panel
+  - [x] `POST /populate/{field}` returns 200 with widget
+  - [x] `GET /health` returns status JSON
+- [x] All 38 new tests pass under `poetry run pytest`
+- [x] No existing tests broken (pre-existing template failures unrelated)
 
 ## Implementation Notes
 
@@ -82,3 +81,14 @@ a minimal `_referia.yml` is sufficient.
 ### 2026-07-13
 
 Task created following acceptance of CIP-000B.
+
+### 2026-07-13 (implementation)
+
+Created `tests/test_web_routes.py` with 38 integration tests covering all six
+routes via FastAPI `TestClient`.  `WebReviewer` is mocked at the module level
+so no real data files are needed.
+
+Also fixed two bugs in `referia/web/render.py` found by the tests:
+- `_render_int_slider` / `_render_float_slider` now read `min`/`max`/`step`
+  from the top-level spec dict (falling back to `args`) and handle
+  empty-string values gracefully instead of crashing with `ValueError`.

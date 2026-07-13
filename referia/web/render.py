@@ -103,10 +103,15 @@ def _render_text(spec: dict, value: Any) -> str:
 
 def _render_int_slider(spec: dict, value: Any) -> str:
     column = spec.get("field", "")
-    args = spec.get("args", {})
-    min_v, max_v, step = args.get("min", 0), args.get("max", 100), args.get("step", 1)
-    val = int(value) if value is not None else 0
-    label = _label_html(args.get("description", ""))
+    args = spec.get("args", spec)  # fall back to top-level spec keys
+    min_v = args.get("min", 0)
+    max_v = args.get("max", 100)
+    step = args.get("step", 1)
+    try:
+        val = int(value) if value not in (None, "", "None") else 0
+    except (ValueError, TypeError):
+        val = 0
+    label = _label_html(spec.get("description", args.get("description", "")))
     return (
         label
         + f'<input type="range" class="widget-slider" {_htmx_field_attrs(column)} '
@@ -117,12 +122,15 @@ def _render_int_slider(spec: dict, value: Any) -> str:
 
 def _render_float_slider(spec: dict, value: Any) -> str:
     column = spec.get("field", "")
-    args = spec.get("args", {})
+    args = spec.get("args", spec)  # fall back to top-level spec keys
     min_v = args.get("min", 0.0)
     max_v = args.get("max", 1.0)
     step = args.get("step", 0.1)
-    val = float(value) if value is not None else 0.0
-    label = _label_html(args.get("description", ""))
+    try:
+        val = float(value) if value not in (None, "", "None") else 0.0
+    except (ValueError, TypeError):
+        val = 0.0
+    label = _label_html(spec.get("description", args.get("description", "")))
     return (
         label
         + f'<input type="range" class="widget-slider" {_htmx_field_attrs(column)} '
