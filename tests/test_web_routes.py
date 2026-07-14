@@ -117,6 +117,11 @@ class TestGetRoot:
         response = client.get("/")
         assert 'hx-post="/save"' in response.text
 
+    def test_save_button_includes_form_values(self, client):
+        """Save button must carry hx-include so widget state is captured on click."""
+        response = client.get("/")
+        assert 'hx-include="#review-form"' in response.text
+
     def test_html_contains_status_bar(self, client):
         response = client.get("/")
         assert 'id="status-bar"' in response.text
@@ -250,22 +255,117 @@ class TestPostField:
 
 class TestPostSave:
     def test_returns_200(self, client):
-        response = client.post("/save")
+        response = client.post("/save", data={"Comment": "ok", "Score": "5"})
         assert response.status_code == 200
 
     def test_calls_save_flows(self, client, mock_reviewer):
-        client.post("/save")
+        client.post("/save", data={"Comment": "ok", "Score": "5"})
         mock_reviewer.save_flows.assert_called_once()
 
     def test_response_contains_saved_confirmation(self, client):
-        response = client.post("/save")
+        response = client.post("/save", data={"Comment": "ok", "Score": "5"})
         assert "Saved" in response.text or "&#10003;" in response.text
+
+    def test_save_applies_form_values_before_saving(self, client, mock_reviewer):
+        """The save route must call set_value for each form field before save_flows.
+
+        This is the regression test for the bug where the Save button posted
+        no form data, so slider / textarea changes were never persisted even
+        though the user had edited them.
+        """
+        client.post("/save", data={"Comment": "looks good", "Score": "7"})
+        calls = {call.args[0]: call.args[1] for call in mock_reviewer.set_value.call_args_list}
+        assert "Comment" in calls
+        assert calls["Comment"] == "looks good"
+        assert "Score" in calls
+        # IntSlider fields must arrive as int, not str
+        assert calls["Score"] == 7
+        assert isinstance(calls["Score"], int)
+
+    def test_save_applies_int_slider_as_integer(self, client, mock_reviewer):
+        """HTML forms always send strings; IntSlider values must be coerced to int."""
+        client.post("/save", data={"Score": "3"})
+        score_call = next(
+            (c for c in mock_reviewer.set_value.call_args_list if c.args[0] == "Score"),
+            None,
+        )
+        assert score_call is not None
+        assert score_call.args[1] == 3
+        assert isinstance(score_call.args[1], int)
+
+    def test_save_without_form_data_still_calls_save_flows(self, client, mock_reviewer):
+        """Even with no form data the save must not crash and must call save_flows."""
+        response = client.post("/save", data={})
+        assert response.status_code == 200
+        mock_reviewer.save_flows.assert_called_once()
 
     def test_save_failure_returns_200_with_error_message(self, client, mock_reviewer):
         mock_reviewer.save_flows.side_effect = OSError("disk full")
-        response = client.post("/save")
+        response = client.post("/save", data={})
         assert response.status_code == 200
         assert "failed" in response.text.lower() or "Error" in response.text
+
+
+# ---------------------------------------------------------------------------
+# _coerce_form_value
+# ---------------------------------------------------------------------------
+
+
+class TestCoerceFormValue:
+    """Unit tests for the form-value type-coercion helper."""
+
+    def setup_method(self):
+        from referia.web.routes import _coerce_form_value
+        self._coerce = _coerce_form_value
+
+    def test_int_slider_string_becomes_int(self):
+        spec = {"type": "IntSlider", "field": "Score"}
+        assert self._coerce("7", spec) == 7
+        assert isinstance(self._coerce("7", spec), int)
+
+    def test_int_slider_zero_string_becomes_zero_int(self):
+        spec = {"type": "IntSlider", "field": "Score"}
+        assert self._coerce("0", spec) == 0
+        assert isinstance(self._coerce("0", spec), int)
+
+    def test_bounded_int_text_string_becomes_int(self):
+        spec = {"type": "BoundedIntText", "field": "Score"}
+        assert self._coerce("42", spec) == 42
+
+    def test_float_slider_string_becomes_float(self):
+        spec = {"type": "FloatSlider", "field": "Confidence"}
+        result = self._coerce("0.75", spec)
+        assert result == pytest.approx(0.75)
+        assert isinstance(result, float)
+
+    def test_checkbox_truthy_value_becomes_true(self):
+        spec = {"type": "Checkbox", "field": "Flag"}
+        assert self._coerce("on", spec) is True
+        assert self._coerce("true", spec) is True
+
+    def test_checkbox_falsy_value_becomes_false(self):
+        spec = {"type": "Checkbox", "field": "Flag"}
+        assert self._coerce("false", spec) is False
+        assert self._coerce("0", spec) is False
+        assert self._coerce("", spec) is False
+        assert self._coerce(None, spec) is False
+
+    def test_textarea_stays_as_string(self):
+        spec = {"type": "Textarea", "field": "Comment"}
+        assert self._coerce("hello", spec) == "hello"
+        assert isinstance(self._coerce("hello", spec), str)
+
+    def test_none_spec_returns_raw_value_unchanged(self):
+        assert self._coerce("anything", None) == "anything"
+
+    def test_unknown_type_returns_raw_value(self):
+        spec = {"type": "SomeNewWidget", "field": "x"}
+        assert self._coerce("raw", spec) == "raw"
+
+    def test_int_slider_non_numeric_returns_raw(self):
+        """Gracefully handle malformed numeric input rather than crashing."""
+        spec = {"type": "IntSlider", "field": "Score"}
+        assert self._coerce("oops", spec) == "oops"
 
 
 # ---------------------------------------------------------------------------

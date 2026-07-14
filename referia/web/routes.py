@@ -49,6 +49,31 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
+def _coerce_form_value(raw: Any, spec: dict | None) -> Any:
+    """Convert a raw form string to the appropriate Python type for *spec*.
+
+    HTML form submissions are always strings.  This function applies the
+    minimal coercion needed so that ``set_value`` receives a value of the
+    expected type for the widget.
+    """
+    if spec is None:
+        return raw
+    widget_type = spec.get("type", "")
+    if widget_type in {"Checkbox", "Flag"}:
+        return bool(raw and raw not in {"false", "off", "0", ""})
+    if widget_type in {"IntSlider", "BoundedIntText", "IntText"}:
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return raw
+    if widget_type in {"FloatSlider", "BoundedFloatText", "FloatText"}:
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return raw
+    return raw
+
+
 def _reviewer(request: Request):
     reviewer = request.app.state.reviewer
     if reviewer is None:
@@ -246,12 +271,10 @@ async def update_field(request: Request, column: str):
     reviewer = _reviewer(request)
     form = await request.form()
     raw_value = form.get(column)
+    log.debug("update_field: column=%r raw_value=%r form_keys=%s", column, raw_value, list(form.keys()))
 
-    # Basic type coercion: checkbox sends "true"/"on" or nothing
     spec = _find_spec(reviewer, column)
-    value: Any = raw_value
-    if spec and spec.get("type") in {"Checkbox", "Flag"}:
-        value = bool(raw_value and raw_value not in {"false", "off", "0", ""})
+    value: Any = _coerce_form_value(raw_value, spec)
 
     try:
         reviewer.set_value(column, value)
@@ -276,9 +299,25 @@ async def update_field(request: Request, column: str):
 
 @router.post("/save", response_class=HTMLResponse)
 async def save(request: Request):
-    """Persist data to output files and return a status fragment."""
+    """Apply current form values then persist data to output files.
+
+    ``hx-include="#review-form"`` on the Save button causes HTMX to send
+    all widget field values with this request.  We apply each one via
+    ``set_value`` before calling ``save_flows`` so that the user's current
+    widget state is always persisted, regardless of whether the per-field
+    HTMX change events fired beforehand.
+    """
     reviewer = _reviewer(request)
     try:
+        form = await request.form()
+        log.debug("save: received form keys=%s", list(form.keys()))
+        for spec in reviewer.get_review_specs():
+            col = spec.get("field")
+            if col and col in form:
+                raw = form.get(col)
+                value = _coerce_form_value(raw, spec)
+                log.debug("save: applying field %r = %r -> %r", col, raw, value)
+                reviewer.set_value(col, value)
         reviewer.save_flows()
         return HTMLResponse('<span class="status-ok">&#10003; Saved</span>')
     except Exception as exc:
@@ -293,7 +332,7 @@ async def reload_data(request: Request):
     templates = _templates(request)
 
     try:
-        reviewer.load_flows()
+        reviewer.load_flows(reload=True)
     except Exception as exc:
         log.warning("Reload failed: %s", exc)
         return HTMLResponse(f'<span class="status-error">&#10007; Reload failed: {_esc(str(exc))}</span>')

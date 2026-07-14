@@ -111,12 +111,14 @@ def _render_int_slider(spec: dict, value: Any) -> str:
         val = int(value) if value not in (None, "", "None") else 0
     except (ValueError, TypeError):
         val = 0
+    out_id = f"out-{_escape(column)}"
     label = _label_html(spec.get("description", args.get("description", "")))
     return (
         label
         + f'<input type="range" class="widget-slider" {_htmx_field_attrs(column)} '
-        + f'min="{min_v}" max="{max_v}" step="{step}" value="{val}">'
-        + f'<output class="slider-output">{val}</output>'
+        + f'min="{min_v}" max="{max_v}" step="{step}" value="{val}" '
+        + f'oninput="document.getElementById(\'{out_id}\').value=this.value">'
+        + f'<output id="{out_id}" class="slider-output">{val}</output>'
     )
 
 
@@ -130,12 +132,14 @@ def _render_float_slider(spec: dict, value: Any) -> str:
         val = float(value) if value not in (None, "", "None") else 0.0
     except (ValueError, TypeError):
         val = 0.0
+    out_id = f"out-{_escape(column)}"
     label = _label_html(spec.get("description", args.get("description", "")))
     return (
         label
         + f'<input type="range" class="widget-slider" {_htmx_field_attrs(column)} '
-        + f'min="{min_v}" max="{max_v}" step="{step}" value="{val}">'
-        + f'<output class="slider-output">{val}</output>'
+        + f'min="{min_v}" max="{max_v}" step="{step}" value="{val}" '
+        + f'oninput="document.getElementById(\'{out_id}\').value=this.value">'
+        + f'<output id="{out_id}" class="slider-output">{val}</output>'
     )
 
 
@@ -292,9 +296,14 @@ def _render_markdown_widget(spec: dict, value: Any) -> str:
 def _render_save_button(spec: dict, value: Any) -> str:
     args = spec.get("args", {})
     label = args.get("description", "Save")
+    # hx-include captures all current form field values so the save route
+    # can apply the latest widget state before persisting — this ensures
+    # "move slider → click Save" works without relying on per-field HTMX
+    # change events having already fired.
     return (
         f'<button class="widget-button save-button" '
-        f'hx-post="/save" hx-target="#status-bar" hx-swap="innerHTML">'
+        f'hx-post="/save" hx-target="#status-bar" hx-swap="innerHTML" '
+        f'hx-include="#review-form">'
         f"{_escape(label)}</button>"
     )
 

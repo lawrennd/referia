@@ -154,17 +154,46 @@ class WebReviewer:
     # ------------------------------------------------------------------
 
     def save_flows(self) -> None:
-        """Persist current data to the configured output files."""
-        self._data.save_flows()
+        """Persist current data to the configured output files.
+
+        File paths in the interface may be relative; chdir to the review
+        directory so they resolve to the same location used by ``from_flow``.
+        """
+        import os
+
+        _orig = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            self._data.save_flows()
+        finally:
+            os.chdir(_orig)
 
     def load_flows(self, reload: bool = False) -> None:
         """Reload data from the configured source files.
 
-        :param reload: Passed through to ``CustomDataFrame.load_flows()``
-            (currently unused by the infrastructure but kept for API
-            compatibility with ``Reviewer``).
+        Re-creates ``self._data`` from the interface configuration, preserving
+        the current index when *reload* is True.
+
+        :param reload: If True, attempt to restore the active index after
+            reloading.  Defaults to False.
+        :type reload: bool
         """
-        self._data.load_flows()
+        import os
+        from referia.assess.data import CustomDataFrame
+
+        current_index = self._data.get_index() if reload else None
+        _orig = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            self._data = CustomDataFrame.from_flow(self._interface)
+        finally:
+            os.chdir(_orig)
+
+        indices = list(self._data.index)
+        if current_index is not None and current_index in indices:
+            self._data.set_index(current_index)
+        elif indices:
+            self._data.set_index(indices[0])
 
     # ------------------------------------------------------------------
     # Widget spec extraction

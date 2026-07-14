@@ -192,19 +192,143 @@ class TestSetValue:
 
 class TestPersistence:
     def test_save_flows_delegates_to_data(self):
+        import os
+
         reviewer, data, _ = _build_reviewer()
+        reviewer._directory = os.getcwd()  # valid path, chdir is a no-op
         reviewer.save_flows()
         data.save_flows.assert_called_once()
 
     def test_load_flows_delegates_to_data(self):
+        import os
+        from unittest.mock import MagicMock, patch
+
         reviewer, data, _ = _build_reviewer()
-        reviewer.load_flows()
-        data.load_flows.assert_called_once()
+        reviewer._directory = os.getcwd()
+
+        mock_new_data = MagicMock()
+        mock_new_data.index = list(data.index)
+        mock_new_data.get_index.return_value = data.index[0]
+
+        with patch("referia.assess.data.CustomDataFrame.from_flow", return_value=mock_new_data):
+            reviewer.load_flows()
 
     def test_load_flows_reload_kwarg_accepted(self):
+        import os
+        from unittest.mock import MagicMock, patch
+
         reviewer, data, _ = _build_reviewer()
-        reviewer.load_flows(reload=True)
-        data.load_flows.assert_called_once()
+        reviewer._directory = os.getcwd()
+
+        mock_new_data = MagicMock()
+        mock_new_data.index = list(data.index)
+        mock_new_data.get_index.return_value = data.index[0]
+
+        with patch("referia.assess.data.CustomDataFrame.from_flow", return_value=mock_new_data):
+            reviewer.load_flows(reload=True)
+
+    # ------------------------------------------------------------------
+    # chdir tests — the fix for "first save works, later saves don't"
+    # ------------------------------------------------------------------
+
+    def test_save_flows_chdirs_to_review_directory(self):
+        """save_flows must chdir to _directory so relative file paths resolve."""
+        import os
+        from unittest.mock import patch, call
+
+        reviewer, data, _ = _build_reviewer()
+        reviewer._directory = "/fake/review/dir"
+
+        chdir_calls = []
+        orig_getcwd = os.getcwd()
+
+        with patch("os.chdir", side_effect=lambda p: chdir_calls.append(p)) as mock_chdir:
+            with patch("os.getcwd", return_value=orig_getcwd):
+                reviewer.save_flows()
+
+        # First chdir: into the review directory
+        assert chdir_calls[0] == "/fake/review/dir"
+        # Second chdir: back to original
+        assert chdir_calls[1] == orig_getcwd
+
+    def test_save_flows_restores_directory_on_exception(self):
+        """chdir back to original directory even when save_flows raises."""
+        import os
+        from unittest.mock import patch
+
+        reviewer, data, _ = _build_reviewer()
+        reviewer._directory = "/fake/review/dir"
+        data.save_flows.side_effect = OSError("disk full")
+
+        orig = os.getcwd()
+        chdir_calls = []
+
+        with patch("os.chdir", side_effect=lambda p: chdir_calls.append(p)):
+            with patch("os.getcwd", return_value=orig):
+                with pytest.raises(OSError):
+                    reviewer.save_flows()
+
+        # Must still have changed back even on failure
+        assert chdir_calls[-1] == orig
+
+    def test_load_flows_chdirs_to_review_directory(self):
+        """load_flows must chdir to _directory so data files are found."""
+        import os
+        from unittest.mock import patch, MagicMock
+
+        reviewer, data, _ = _build_reviewer()
+        reviewer._directory = "/fake/review/dir"
+
+        chdir_calls = []
+        orig = os.getcwd()
+
+        mock_new_data = MagicMock()
+        mock_new_data.index = ["row0"]
+        mock_new_data.get_index.return_value = "row0"
+
+        with patch("os.chdir", side_effect=lambda p: chdir_calls.append(p)):
+            with patch("os.getcwd", return_value=orig):
+                with patch(
+                    "referia.assess.data.CustomDataFrame.from_flow",
+                    return_value=mock_new_data,
+                ):
+                    reviewer.load_flows()
+
+        assert chdir_calls[0] == "/fake/review/dir"
+        assert chdir_calls[-1] == orig
+
+    def test_save_flows_data_sees_review_directory_as_cwd(self):
+        """data.save_flows() is called only after chdir(_directory), not before.
+
+        Verifies that the chdir to the review directory happens *before*
+        delegating to ``data.save_flows()``, so relative paths inside the data
+        layer resolve against the review directory.
+        """
+        import os
+        from unittest.mock import patch, call
+
+        reviewer, data, _ = _build_reviewer()
+        reviewer._directory = "/fake/review/dir"
+
+        call_log: list[str] = []
+
+        def _fake_chdir(path: str) -> None:
+            call_log.append(f"chdir:{path}")
+
+        def _fake_save_flows() -> None:
+            call_log.append("save_flows")
+
+        data.save_flows.side_effect = _fake_save_flows
+        orig = os.getcwd()
+
+        with patch("os.chdir", side_effect=_fake_chdir):
+            with patch("os.getcwd", return_value=orig):
+                reviewer.save_flows()
+
+        # chdir to review dir must happen before save_flows
+        assert call_log.index(f"chdir:{reviewer._directory}") < call_log.index("save_flows")
+        # restore-chdir must happen after save_flows
+        assert call_log.index(f"chdir:{orig}") > call_log.index("save_flows")
 
 
 # ---------------------------------------------------------------------------
