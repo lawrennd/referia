@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v={{ cache_bust }}">
     <!--
         HTMX enables field-level AJAX updates without a full JS framework.
         TODO: vendor htmx.min.js into /static for offline use.
@@ -21,6 +21,34 @@
           bar._timer = setTimeout(function () {
             bar.classList.remove("visible");
           }, 3000);
+        }
+      });
+
+      /* PopulateButton loading state: dim the button and target textarea while
+         the LLM request is in-flight.  JS is more reliable than CSS selectors
+         that depend on HTMX internals (hx-disabled-elt, htmx-request class). */
+      document.addEventListener("htmx:beforeRequest", function (evt) {
+        var btn = evt.detail.elt;
+        if (!btn.classList || !btn.classList.contains("populate-button")) return;
+        btn.disabled = true;
+        btn._populateLabel = btn.textContent;
+        btn.textContent = btn._populateLabel + " \u2026";  /* " …" */
+        var indicatorSel = btn.getAttribute("hx-indicator");
+        if (indicatorSel) {
+          var target = document.querySelector(indicatorSel);
+          if (target) { target.style.opacity = "0.4"; target.style.transition = "opacity 0.15s"; }
+        }
+      });
+
+      document.addEventListener("htmx:afterRequest", function (evt) {
+        var btn = evt.detail.elt;
+        if (!btn.classList || !btn.classList.contains("populate-button")) return;
+        btn.disabled = false;
+        if (btn._populateLabel !== undefined) { btn.textContent = btn._populateLabel; }
+        var indicatorSel = btn.getAttribute("hx-indicator");
+        if (indicatorSel) {
+          var target = document.querySelector(indicatorSel);
+          if (target) { target.style.opacity = ""; }
         }
       });
     </script>

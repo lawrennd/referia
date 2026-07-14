@@ -217,6 +217,7 @@ async def index(request: Request):
             "title": "Referia Review Interface",
             "config": request.app.state.user_file,
             "directory": request.app.state.directory,
+            "cache_bust": request.app.state.start_time,
             "index_selector": index_selector,
             "viewer_blocks": viewer_blocks,
             "form_html": form_html,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -43,6 +44,7 @@ def create_app(user_file: str = "_referia.yml", directory: str = ".") -> FastAPI
     app.state.user_file = user_file
     app.state.directory = resolved_dir
     app.state.templates = templates
+    app.state.start_time = int(time.time())  # cache-buster for static assets
     app.state.reviewer = None  # populated by _startup; guards against pre-startup requests
 
     @app.on_event("startup")
