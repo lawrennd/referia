@@ -52,18 +52,26 @@
         }
       });
 
-      /* Measure the sticky site-header height and expose it as --header-height so
-         .panel-nav can sit flush below it without hard-coding a pixel value. */
-      function updateHeaderHeight() {
+      /* Measure the sticky header + nav heights and publish as CSS custom properties
+         so dependent rules (panel-nav top, viewer-col top/max-height) stay accurate
+         without hard-coding pixel values.
+         --header-height : height of .site-header
+         --nav-height    : height of .panel-nav
+         --sticky-offset : sum of both (= where content starts below all sticky bars) */
+      function updateStickyHeights() {
         var h = document.querySelector(".site-header");
-        if (h) {
-          document.documentElement.style.setProperty("--header-height", h.offsetHeight + "px");
-        }
+        var n = document.querySelector(".panel-nav");
+        var hh = h ? h.offsetHeight : 0;
+        var nh = n ? n.offsetHeight : 0;
+        var root = document.documentElement;
+        root.style.setProperty("--header-height", hh + "px");
+        root.style.setProperty("--nav-height",    nh + "px");
+        root.style.setProperty("--sticky-offset", (hh + nh) + "px");
       }
-      updateHeaderHeight();
-      window.addEventListener("resize", updateHeaderHeight);
-      /* Re-measure after any HTMX swap (panel reload may change DOM height) */
-      document.addEventListener("htmx:afterSettle", updateHeaderHeight);
+      updateStickyHeights();
+      window.addEventListener("resize", updateStickyHeights);
+      /* Re-measure after HTMX swaps — the nav may change height after a reload */
+      document.addEventListener("htmx:afterSettle", updateStickyHeights);
     </script>
 </head>
 <body>

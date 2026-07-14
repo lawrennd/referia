@@ -72,6 +72,11 @@ body {
 
 /* ── Main content wrapper ────────────────────────────────── */
 
+html {
+    /* Ensure in-page anchor links scroll to a position that clears sticky bars */
+    scroll-padding-top: var(--sticky-offset, 100px);
+}
+
 main {
     padding: 1rem 1.5rem 4rem;
     max-width: 1600px;
@@ -150,10 +155,12 @@ main {
     padding: 1.25rem;
     box-shadow: var(--shadow);
     overflow-wrap: break-word;
-    /* Stick at top while scrolling through the review form */
+    /* Stick below both the site-header and the panel-nav while the review
+       form scrolls on the right.  --sticky-offset is header + nav height,
+       set by JS in base.html; the extra 1rem = main's padding-top gap. */
     position: sticky;
-    top: 3.5rem;
-    max-height: calc(100vh - 5rem);
+    top: calc(var(--sticky-offset, 100px) + 1rem);
+    max-height: calc(100vh - var(--sticky-offset, 100px) - 2rem);
     overflow-y: auto;
 }
 
