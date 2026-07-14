@@ -345,13 +345,39 @@ class TestButtons:
         assert 'hx-indicator="#widget-summary"' in html
 
     def test_populate_button_indicator_uses_args_target_when_present(self):
-        """Complex format: args.target overrides the button's own field name."""
+        """Complex format: args.target is the populate target; URL and indicator use it."""
         html = render_widget({
             "type": "PopulateButton",
             "field": "populate_btn",
             "args": {"target": "notes"},
         })
+        # URL and indicator must both use the args.target, not the button's own field.
+        assert 'hx-post="/populate/notes"' in html
         assert 'hx-indicator="#widget-notes"' in html
+
+    def test_populate_button_no_field_uses_args_target_for_url(self):
+        """Introduction-style format: no top-level field, target from args.target."""
+        html = render_widget({
+            "type": "PopulateButton",
+            "args": {
+                "description": "Generate Summary",
+                "target": "introSummary",
+                "compute": {"field": "introSummary", "function": "llm_pdf_review"},
+            },
+        })
+        assert 'hx-post="/populate/introSummary"' in html
+        assert 'hx-indicator="#widget-introSummary"' in html
+
+    def test_populate_button_args_compute_field_fallback(self):
+        """When args.target absent but args.compute.field present, use compute field."""
+        html = render_widget({
+            "type": "PopulateButton",
+            "args": {
+                "compute": {"field": "chapterSummary", "function": "llm_pdf_review"},
+            },
+        })
+        assert 'hx-post="/populate/chapterSummary"' in html
+        assert 'hx-indicator="#widget-chapterSummary"' in html
 
     def test_button_description(self):
         html = render_widget({"type": "SaveButton", "field": "", "args": {"description": "Save & Continue"}})

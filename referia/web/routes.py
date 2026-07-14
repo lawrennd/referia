@@ -124,10 +124,29 @@ def _find_spec(reviewer, column: str) -> dict | None:
     return None
 
 
+def _populate_button_target(spec: dict) -> str:
+    """Return the effective target field for a PopulateButton spec.
+
+    Handles both formats:
+    * Simple: top-level ``field`` key.
+    * Complex: ``args.target`` or ``args.compute.field``.
+
+    ``args.target`` / ``args.compute.field`` take priority because the
+    top-level ``field`` may be a button identifier, not the populate target.
+    """
+    args = spec.get("args", {})
+    return (
+        args.get("target")
+        or args.get("compute", {}).get("field")
+        or spec.get("field")
+        or ""
+    )
+
+
 def _find_populate_spec(reviewer, field: str) -> dict | None:
-    """Return the PopulateButton spec whose ``field`` matches *field*, or ``None``."""
+    """Return the PopulateButton spec whose effective target field matches *field*."""
     for spec in reviewer.get_widget_specs():
-        if spec.get("field") == field and spec.get("type") == "PopulateButton":
+        if spec.get("type") == "PopulateButton" and _populate_button_target(spec) == field:
             return spec
     return None
 

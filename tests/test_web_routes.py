@@ -406,14 +406,15 @@ def populate_client():
 
 class TestPostPopulate:
     def test_returns_200(self, populate_client):
+        # The URL uses the target field name (args.target), not the button's own field.
         client, _ = populate_client
-        response = client.post("/populate/SummaryBtn")
+        response = client.post("/populate/Summary")
         assert response.status_code == 200
 
     def test_calls_run_populate_with_compute_interface(self, populate_client):
         """Route must call reviewer.run_populate with {"compute": ...}."""
         client, reviewer = populate_client
-        client.post("/populate/SummaryBtn")
+        client.post("/populate/Summary")
         reviewer.run_populate.assert_called_once()
         call_arg = reviewer.run_populate.call_args[0][0]
         assert "compute" in call_arg
@@ -421,7 +422,7 @@ class TestPostPopulate:
     def test_oob_response_targets_the_target_field_not_the_button(self, populate_client):
         """OOB swap must refresh the target Textarea, not re-render the PopulateButton."""
         client, _ = populate_client
-        response = client.post("/populate/SummaryBtn")
+        response = client.post("/populate/Summary")
         # The target widget (Summary textarea) should appear in the OOB response
         assert 'id="widget-Summary"' in response.text
         # The button container should NOT appear (it's a different widget)

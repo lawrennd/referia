@@ -76,15 +76,17 @@ def _label_html(description: str) -> str:
 def _wrap_widget(inner: str, spec: dict, data: dict) -> str:
     """Wrap rendered HTML in a container div with id and visibility.
 
-    PopulateButtons share ``field`` with their target widget, so they get a
-    ``btn-widget-{field}`` id to avoid a duplicate-id collision that would
-    prevent HTMX OOB swaps from targeting the correct element.
+    PopulateButtons use ``_populate_button_target()`` to resolve the target
+    field from either format (top-level ``field`` or ``args.target``/
+    ``args.compute.field``), and get a ``btn-widget-{field}`` id to avoid
+    duplicate-id collisions with their target widget.
     """
-    col = spec.get("field", "")
     widget_type = spec.get("type", "")
     if widget_type == "PopulateButton":
+        col = _populate_button_target(spec)
         css_id = f' id="btn-widget-{_escape(col)}"' if col else ""
     else:
+        col = spec.get("field", "")
         css_id = f' id="widget-{_escape(col)}"' if col else ""
     vis = _visibility_style(spec, data)
     return f'<div class="widget-container"{css_id}{vis}>\n{inner}\n</div>'
@@ -332,14 +334,33 @@ def _render_reload_button(spec: dict, value: Any) -> str:
     )
 
 
+def _populate_button_target(spec: dict) -> str:
+    """Return the target field name for a PopulateButton spec.
+
+    Supports two YAML formats:
+
+    * Simple (top-level ``field``): ``{type: PopulateButton, field: summary, ...}``
+    * Complex (``args.target`` or ``args.compute.field``):
+      ``{type: PopulateButton, args: {target: introSummary, compute: {field: introSummary}}}``
+
+    ``args.target`` / ``args.compute.field`` take priority when present because
+    the top-level ``field`` may be a button identifier, not the populate target.
+    """
+    args = spec.get("args", {})
+    return (
+        args.get("target")
+        or args.get("compute", {}).get("field")
+        or spec.get("field")
+        or ""
+    )
+
+
 def _render_populate_button(spec: dict, value: Any) -> str:
-    column = spec.get("field", "")
     args = spec.get("args", {})
     label = args.get("description", "Populate")
-    col = _escape(column)
-    # Simple format: field IS the target; complex format uses args.target.
-    target = args.get("target", column)
-    indicator = f"widget-{_escape(target)}"
+    target = _populate_button_target(spec)
+    col = _escape(target)
+    indicator = f"widget-{col}"
     return (
         f'<button class="widget-button populate-button" '
         f'hx-post="/populate/{col}" hx-target="#status-bar" hx-swap="innerHTML" '
