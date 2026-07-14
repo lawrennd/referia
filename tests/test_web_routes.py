@@ -117,10 +117,11 @@ class TestGetRoot:
         response = client.get("/")
         assert 'hx-post="/save"' in response.text
 
-    def test_save_button_includes_form_values(self, client):
-        """Save button must carry hx-include so widget state is captured on click."""
+    def test_save_button_has_no_hx_include(self, client):
+        """Save button must NOT use hx-include.  Each field posts its own value
+        via per-field change/blur/mouseup events; Save just flushes to disk."""
         response = client.get("/")
-        assert 'hx-include="#review-form"' in response.text
+        assert 'hx-include="#review-form"' not in response.text
 
     def test_html_contains_status_bar(self, client):
         response = client.get("/")
@@ -266,32 +267,16 @@ class TestPostSave:
         response = client.post("/save", data={"Comment": "ok", "Score": "5"})
         assert "Saved" in response.text or "&#10003;" in response.text
 
-    def test_save_applies_form_values_before_saving(self, client, mock_reviewer):
-        """The save route must call set_value for each form field before save_flows.
+    def test_save_does_not_call_set_value(self, client, mock_reviewer):
+        """Save route must NOT call set_value.
 
-        This is the regression test for the bug where the Save button posted
-        no form data, so slider / textarea changes were never persisted even
-        though the user had edited them.
+        Each field already posted its own value when the user edited it.
+        Save's job is only to flush the in-memory reviewer state to disk
+        via save_flows().  Calling set_value here re-runs computes and
+        can have unforeseen side-effects.
         """
         client.post("/save", data={"Comment": "looks good", "Score": "7"})
-        calls = {call.args[0]: call.args[1] for call in mock_reviewer.set_value.call_args_list}
-        assert "Comment" in calls
-        assert calls["Comment"] == "looks good"
-        assert "Score" in calls
-        # IntSlider fields must arrive as int, not str
-        assert calls["Score"] == 7
-        assert isinstance(calls["Score"], int)
-
-    def test_save_applies_int_slider_as_integer(self, client, mock_reviewer):
-        """HTML forms always send strings; IntSlider values must be coerced to int."""
-        client.post("/save", data={"Score": "3"})
-        score_call = next(
-            (c for c in mock_reviewer.set_value.call_args_list if c.args[0] == "Score"),
-            None,
-        )
-        assert score_call is not None
-        assert score_call.args[1] == 3
-        assert isinstance(score_call.args[1], int)
+        mock_reviewer.set_value.assert_not_called()
 
     def test_save_without_form_data_still_calls_save_flows(self, client, mock_reviewer):
         """Even with no form data the save must not crash and must call save_flows."""

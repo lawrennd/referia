@@ -51,9 +51,10 @@ class TestTextarea:
         html = render_widget(_w("Textarea", "notes"), "")
         assert 'hx-post="/field/notes"' in html
 
-    def test_htmx_trigger(self):
+    def test_htmx_trigger_includes_blur(self):
+        """Textarea must fire on blur so typing → immediate Save click is captured."""
         html = render_widget(_w("Textarea", "notes"), "")
-        assert 'hx-trigger="change"' in html
+        assert "blur" in html
 
     def test_rows_default(self):
         html = render_widget(_w("Textarea", "notes"), "")
@@ -90,6 +91,11 @@ class TestText:
         html = render_widget(_w("Text", "name"), "")
         assert 'hx-post="/field/name"' in html
 
+    def test_htmx_trigger_includes_blur(self):
+        """Text input must fire on blur so typing → immediate Save click is captured."""
+        html = render_widget(_w("Text", "name"), "")
+        assert "blur" in html
+
     def test_value_escaped(self):
         html = render_widget(_w("Text", "x"), '"quoted"')
         assert '"quoted"' not in html
@@ -116,6 +122,16 @@ class TestSliders:
         html = render_widget(_w("FloatSlider", "ratio", args={"min": 0.0, "max": 1.0, "step": 0.1}), 0.5)
         assert 'type="range"' in html
         assert 'step="0.1"' in html
+
+    def test_slider_trigger_includes_mouseup(self):
+        """Sliders must fire on mouseup so drag → release is captured even when
+        the `change` event has not fired yet (common in Chrome/Safari)."""
+        html = render_widget(_w("IntSlider", "score"), 5)
+        assert "mouseup" in html
+
+    def test_float_slider_trigger_includes_mouseup(self):
+        html = render_widget(_w("FloatSlider", "ratio"), 0.5)
+        assert "mouseup" in html
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +314,13 @@ class TestButtons:
         html = render_widget({"type": "SaveButton", "field": "", "args": {}})
         assert "<button" in html
         assert 'hx-post="/save"' in html
+
+    def test_save_button_has_no_hx_include(self):
+        """Save button must NOT use hx-include to gather form data.
+        Each field posts its own value via change/blur/mouseup events;
+        Save just flushes the in-memory state to disk."""
+        html = render_widget({"type": "SaveButton", "field": "", "args": {}})
+        assert "hx-include" not in html
 
     def test_reload_button(self):
         html = render_widget({"type": "ReloadButton", "field": "", "args": {}})

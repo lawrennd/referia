@@ -31,13 +31,20 @@ def _escape(value: Any) -> str:
     return _html.escape(str(value) if value is not None else "")
 
 
-def _htmx_field_attrs(column: str) -> str:
-    """Standard HTMX attributes for a form control that posts on change."""
+def _htmx_field_attrs(column: str, trigger: str = "change") -> str:
+    """Standard HTMX attributes for a form control that posts on the given trigger.
+
+    ``trigger`` should be a valid HTMX event string.  Defaults to ``"change"``.
+    Use ``"change, blur"`` for text-like inputs so that typing then immediately
+    clicking Save is captured.  Use ``"change, mouseup"`` for range sliders so
+    that a drag-and-release is captured even when the browser doesn't fire
+    ``change`` until focus leaves the element.
+    """
     col = _escape(column)
     return (
         f'name="{col}" '
         f'hx-post="/field/{col}" '
-        f'hx-trigger="change" '
+        f'hx-trigger="{trigger}" '
         f'hx-target="#status-bar" '
         f'hx-swap="innerHTML"'
     )
@@ -85,7 +92,7 @@ def _render_textarea(spec: dict, value: Any) -> str:
     label = _label_html(args.get("description", ""))
     return (
         label
-        + f'<textarea class="widget-textarea" {_htmx_field_attrs(column)} rows="{rows}">'
+        + f'<textarea class="widget-textarea" {_htmx_field_attrs(column, "change, blur")} rows="{rows}">'
         + f"{_escape(value)}</textarea>"
     )
 
@@ -96,7 +103,7 @@ def _render_text(spec: dict, value: Any) -> str:
     label = _label_html(args.get("description", ""))
     return (
         label
-        + f'<input type="text" class="widget-text" {_htmx_field_attrs(column)} '
+        + f'<input type="text" class="widget-text" {_htmx_field_attrs(column, "change, blur")} '
         + f'value="{_escape(value)}">'
     )
 
@@ -115,7 +122,7 @@ def _render_int_slider(spec: dict, value: Any) -> str:
     label = _label_html(spec.get("description", args.get("description", "")))
     return (
         label
-        + f'<input type="range" class="widget-slider" {_htmx_field_attrs(column)} '
+        + f'<input type="range" class="widget-slider" {_htmx_field_attrs(column, "change, mouseup")} '
         + f'min="{min_v}" max="{max_v}" step="{step}" value="{val}" '
         + f'oninput="document.getElementById(\'{out_id}\').value=this.value">'
         + f'<output id="{out_id}" class="slider-output">{val}</output>'
@@ -136,7 +143,7 @@ def _render_float_slider(spec: dict, value: Any) -> str:
     label = _label_html(spec.get("description", args.get("description", "")))
     return (
         label
-        + f'<input type="range" class="widget-slider" {_htmx_field_attrs(column)} '
+        + f'<input type="range" class="widget-slider" {_htmx_field_attrs(column, "change, mouseup")} '
         + f'min="{min_v}" max="{max_v}" step="{step}" value="{val}" '
         + f'oninput="document.getElementById(\'{out_id}\').value=this.value">'
         + f'<output id="{out_id}" class="slider-output">{val}</output>'
@@ -296,14 +303,12 @@ def _render_markdown_widget(spec: dict, value: Any) -> str:
 def _render_save_button(spec: dict, value: Any) -> str:
     args = spec.get("args", {})
     label = args.get("description", "Save")
-    # hx-include captures all current form field values so the save route
-    # can apply the latest widget state before persisting — this ensures
-    # "move slider → click Save" works without relying on per-field HTMX
-    # change events having already fired.
+    # Each field posts its own value when the user edits it (change/blur/mouseup).
+    # Save's job is only to flush the in-memory reviewer state to disk; it does
+    # not need to re-collect form values via hx-include.
     return (
         f'<button class="widget-button save-button" '
-        f'hx-post="/save" hx-target="#status-bar" hx-swap="innerHTML" '
-        f'hx-include="#review-form">'
+        f'hx-post="/save" hx-target="#status-bar" hx-swap="innerHTML">'
         f"{_escape(label)}</button>"
     )
 

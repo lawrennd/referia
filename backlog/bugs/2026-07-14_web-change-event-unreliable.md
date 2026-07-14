@@ -1,7 +1,7 @@
 ---
 id: "2026-07-14_web-change-event-unreliable"
 title: "Per-field change events not reliably firing before Save; /save re-runs computes as side effect"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-07-14"
 last_updated: "2026-07-14"
@@ -14,10 +14,10 @@ related_cips: []
 ## Status
 
 - [x] Identified
-- [ ] Root-cause confirmed
-- [ ] Fixed
-- [ ] Tests added
-- [ ] Closed
+- [x] Root-cause confirmed
+- [x] Fixed
+- [x] Tests added
+- [x] Closed
 
 ## Summary
 

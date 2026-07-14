@@ -299,25 +299,18 @@ async def update_field(request: Request, column: str):
 
 @router.post("/save", response_class=HTMLResponse)
 async def save(request: Request):
-    """Apply current form values then persist data to output files.
+    """Persist the current in-memory reviewer state to output files.
 
-    ``hx-include="#review-form"`` on the Save button causes HTMX to send
-    all widget field values with this request.  We apply each one via
-    ``set_value`` before calling ``save_flows`` so that the user's current
-    widget state is always persisted, regardless of whether the per-field
-    HTMX change events fired beforehand.
+    Each field already posted its own value to ``/field/{column}`` when the
+    user edited it (via change, blur, or mouseup HTMX triggers), so the
+    reviewer's in-memory state is already up-to-date by the time Save is
+    clicked.  This route only needs to flush that state to disk.
+
+    Calling ``set_value`` here would re-run compute functions with potentially
+    stale or unintended values, so we deliberately avoid it.
     """
     reviewer = _reviewer(request)
     try:
-        form = await request.form()
-        log.debug("save: received form keys=%s", list(form.keys()))
-        for spec in reviewer.get_review_specs():
-            col = spec.get("field")
-            if col and col in form:
-                raw = form.get(col)
-                value = _coerce_form_value(raw, spec)
-                log.debug("save: applying field %r = %r -> %r", col, raw, value)
-                reviewer.set_value(col, value)
         reviewer.save_flows()
         return HTMLResponse('<span class="status-ok">&#10003; Saved</span>')
     except Exception as exc:
