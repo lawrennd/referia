@@ -369,6 +369,26 @@ main {
     color: var(--colour-white);
 }
 
+/* ── Loading indicators (HTMX in-flight state) ───────────── */
+
+/* hx-disabled-elt="this" disables the button while the request is in flight.
+   Use :disabled so the style is unambiguous regardless of HTMX internals. */
+.populate-button:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.populate-button:disabled::after {
+    content: " …";
+}
+
+/* hx-indicator="#widget-{target}" adds htmx-request to the target container
+   while the request is in flight, fading it to signal it is being updated. */
+.widget-container.htmx-request {
+    opacity: 0.45;
+    transition: opacity 0.15s;
+}
+
 /* ── Status bar ──────────────────────────────────────────── */
 
 .status-bar {

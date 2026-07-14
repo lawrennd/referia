@@ -339,6 +339,20 @@ class TestButtons:
         html = render_widget({"type": "PopulateButton", "field": "summary", "args": {}})
         assert 'hx-post="/populate/summary"' in html
 
+    def test_populate_button_indicator_targets_target_field(self):
+        """hx-indicator should point to the target field's widget container."""
+        html = render_widget({"type": "PopulateButton", "field": "summary", "args": {}})
+        assert 'hx-indicator="#widget-summary"' in html
+
+    def test_populate_button_indicator_uses_args_target_when_present(self):
+        """Complex format: args.target overrides the button's own field name."""
+        html = render_widget({
+            "type": "PopulateButton",
+            "field": "populate_btn",
+            "args": {"target": "notes"},
+        })
+        assert 'hx-indicator="#widget-notes"' in html
+
     def test_button_description(self):
         html = render_widget({"type": "SaveButton", "field": "", "args": {"description": "Save & Continue"}})
         assert "Save &amp; Continue" in html

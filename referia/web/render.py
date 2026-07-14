@@ -337,9 +337,13 @@ def _render_populate_button(spec: dict, value: Any) -> str:
     args = spec.get("args", {})
     label = args.get("description", "Populate")
     col = _escape(column)
+    # Simple format: field IS the target; complex format uses args.target.
+    target = args.get("target", column)
+    indicator = f"widget-{_escape(target)}"
     return (
         f'<button class="widget-button populate-button" '
-        f'hx-post="/populate/{col}" hx-target="#status-bar" hx-swap="innerHTML">'
+        f'hx-post="/populate/{col}" hx-target="#status-bar" hx-swap="innerHTML" '
+        f'hx-indicator="#{indicator}" hx-disabled-elt="this">'
         f"{_escape(label)}</button>"
     )
 
