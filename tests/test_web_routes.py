@@ -56,6 +56,7 @@ def _build_mock_reviewer() -> MagicMock:
     reviewer.render_viewer_html.return_value = "<div class='viewer'>Alice info</div>"
 
     reviewer.get_value.return_value = ""
+    reviewer.get_row_data.return_value = {}
     reviewer.affected_widgets.return_value = {"Comment", "Score"}
     return reviewer
 
@@ -474,6 +475,88 @@ class TestPostPopulate:
         assert "view_args" in cs
         # Plain string args must be wrapped as {"display": ...} view spec dicts
         assert cs["view_args"].get("text") == {"display": "{description}"}
+
+
+# ---------------------------------------------------------------------------
+# visible_if: fields must come from the full row, not just widget fields
+# ---------------------------------------------------------------------------
+
+
+class TestCurrentDataIncludesVisibleIfFields:
+    """Regression tests for the bug where columns used in visible_if conditions
+    were absent from the data dict passed to render_form, causing conditional
+    sections to be permanently hidden in the web interface.
+
+    Before the fix, _current_data() only read values for fields that had
+    associated widgets.  Columns like "abstractPresent" used only in
+    visible_if conditions were missing, so data.get("abstractPresent")
+    returned None and every conditional section was hidden.
+
+    After the fix, _current_data() starts from reviewer.get_row_data() which
+    returns ALL columns for the current record.
+    """
+
+    def test_visible_if_field_included_in_rendered_html(self, mock_reviewer, client):
+        """A widget with visible_if should be VISIBLE when the flag column is True."""
+        mock_reviewer.get_review_specs.return_value = [
+            {
+                "type": "Textarea",
+                "field": "abstractText",
+                "args": {"description": "Abstract"},
+                "visible_if": "abstractPresent",
+            }
+        ]
+        mock_reviewer.get_widget_specs.return_value = [
+            {
+                "type": "Textarea",
+                "field": "abstractText",
+                "args": {"description": "Abstract"},
+                "visible_if": "abstractPresent",
+            }
+        ]
+        # get_row_data returns ALL columns including the non-widget flag
+        mock_reviewer.get_row_data.return_value = {
+            "abstractText": "Some abstract text",
+            "abstractPresent": True,  # flag column — no corresponding widget
+        }
+        mock_reviewer.get_value.side_effect = lambda col: (
+            "Some abstract text" if col == "abstractText" else None
+        )
+
+        response = client.get("/")
+        assert response.status_code == 200
+        # Widget should NOT have display:none (visible because abstractPresent is True)
+        assert 'style="display:none"' not in response.text
+
+    def test_visible_if_field_missing_hides_widget(self, mock_reviewer, client):
+        """When the flag column is absent from row_data, the widget should be hidden."""
+        mock_reviewer.get_review_specs.return_value = [
+            {
+                "type": "Textarea",
+                "field": "forewordText",
+                "args": {"description": "Foreword"},
+                "visible_if": "forewordPresent",
+            }
+        ]
+        mock_reviewer.get_widget_specs.return_value = [
+            {
+                "type": "Textarea",
+                "field": "forewordText",
+                "args": {"description": "Foreword"},
+                "visible_if": "forewordPresent",
+            }
+        ]
+        # get_row_data does NOT include forewordPresent (or it is falsy)
+        mock_reviewer.get_row_data.return_value = {
+            "forewordText": "",
+            # forewordPresent absent → defaults to None → widget hidden
+        }
+        mock_reviewer.get_value.return_value = ""
+
+        response = client.get("/")
+        assert response.status_code == 200
+        # Widget should have display:none because forewordPresent is missing/falsy
+        assert 'style="display:none"' in response.text
 
 
 # ---------------------------------------------------------------------------

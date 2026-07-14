@@ -135,6 +135,35 @@ class WebReviewer:
         self._data.set_column(column)
         return self._data.get_value()
 
+    def get_row_data(self) -> dict:
+        """Return all column values for the current record as a plain dict.
+
+        Unlike :meth:`get_value`, which requires knowing the column name in
+        advance, this returns the entire row so that callers (e.g. the
+        renderer) can look up any column—including those used in
+        ``visible_if`` conditions that have no corresponding widget.
+
+        Values that are ``NaN`` (pandas sentinel for missing floats) are
+        normalised to ``None`` so downstream code can use plain truthiness
+        checks.
+        """
+        import math
+
+        idx = self._data.get_index()
+        try:
+            df = self._data.to_pandas()
+            row = df.loc[idx]
+        except Exception:
+            return {}
+
+        result: dict = {}
+        for col in row.index:
+            val = row[col]
+            if isinstance(val, float) and math.isnan(val):
+                val = None
+            result[col] = val
+        return result
+
     def set_value(self, column: str, value: Any) -> None:
         """Update *column* for the active record and run on-change logic.
 

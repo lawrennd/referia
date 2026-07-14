@@ -1,107 +1,68 @@
 ---
 id: "2026-07-14_web-template-expansion-missing"
-title: "Web interface does not expand templates: section entries"
-status: "Proposed"
+title: "Web interface hides all conditional sections (visible_if flag columns missing from data)"
+status: "Completed"
 priority: "High"
 created: "2026-07-14"
 last_updated: "2026-07-14"
 related_cips: []
-tags: ["web", "templates", "rendering"]
+tags: ["web", "templates", "rendering", "visible_if"]
 ---
 
-# Task: Web interface does not expand `templates:` section entries
+# Task: Web interface hides conditional sections due to missing flag columns in data dict
 
 ## Description
 
-When a `_referia.yml` uses a `templates:` section to define reusable widget
-patterns, the web interface silently ignores those patterns and renders nothing
-for the corresponding `review:` entries.
+When a `_referia.yml` uses the `templates:` section with `visible_if` conditions
+on template instantiations (e.g. `visible_if: "abstractPresent"`), all of those
+conditional sections were permanently hidden in the web interface — even when the
+flag column was `True` in the data.
 
-There are two syntactic forms for instantiating a template, and both are broken:
+Initial analysis wrongly attributed this to `_flatten_entries` not handling
+template expansion.  Investigation revealed that `Interface.__init__` correctly
+expands all templates (both `template:` key form and built-in composite types
+like `CriterionComment`) before the web interface processes the data.  The
+`visible_if` attributes are applied to all expanded widget dicts.
 
-### Form A — `type:` matching a template name
+## Actual root cause
 
-```yaml
-templates:
-  CriterionComment:
-    - type: Markdown
-      ...
-    - type: Textarea
-      ...
+`_current_data()` in `routes.py` built the data dict used by `render_form` by
+iterating only over the widget specs and calling `reviewer.get_value(col)` for
+each widget field.  Columns used in `visible_if` conditions (e.g.
+`"abstractPresent"`, `"forewordPresent"`) that have no associated widget were
+absent from this dict.
 
-review:
-- type: CriterionComment   # should expand the template above
-  field: criterion_1
-  args:
-    label: "Criterion 1"
-```
+`render_form` then evaluated e.g. `data.get("abstractPresent")` → `None` →
+`bool(None)` → `False` → widget hidden.  Every section with a `visible_if`
+condition was therefore hidden regardless of its actual value in the data.
 
-`_flatten_entries` in `WebReviewer` receives `{"type": "CriterionComment", ...}`.
-Because `"CriterionComment"` is not in `_CLUSTER_TYPES` and is not a known
-built-in widget type, it is passed directly to `render_form`, which doesn't know
-how to render it and produces nothing.
+In Jupyter this did not occur because the `review.py` code read visibility
+conditions directly from the full pandas DataFrame row.
 
-### Form B — `template:` key reference
+## Fix
 
-```yaml
-review:
-- template: simple_section   # should expand templates.simple_section
-  args:
-    field: references
-    label: "References"
-```
+1. Added `WebReviewer.get_row_data()` — returns ALL columns for the current
+   record as a plain dict (via `self._data.to_pandas().loc[idx]`), normalising
+   `NaN` values to `None`.
 
-`_flatten_entries` receives `{"template": "simple_section", ...}`.  It has no
-`"type"` key, so `entry_type` is `""`, which is not in `_CLUSTER_TYPES`, so the
-entry is appended as-is — again producing nothing visible in the web UI.
+2. Updated `_current_data()` in `routes.py` to start from `get_row_data()`
+   (providing the full row baseline) and then override with widget-field values
+   from `get_value()`.  This ensures any column referenced in `visible_if`
+   conditions is available.
 
-## Observed behaviour
+## Files changed
 
-Running the thesis assessment config (`examined/introduction/_referia.yml`) in
-the web interface shows only the top-level `viewer:` block (e.g. title/date
-header).  None of the `review:` widgets appear — all of them are either
-`type: CriterionComment` (Form A) or `template: simple_section` (Form B)
-instantiations.
-
-## Root cause
-
-`WebReviewer._flatten_entries` does not read the `templates:` section of the
-interface config.  It has no logic to:
-
-1. Detect that a `type:` value refers to a user-defined template (rather than a
-   built-in widget type).
-2. Look up the template definition in `self._interface.get("templates", {})`.
-3. Substitute the template's widget list, merging in the call-site `args`.
-4. Detect and handle the `template:` key (Form B) as an alternative invocation
-   syntax.
-
-The Jupyter path handles template expansion at a different layer (inside
-`lynguine`/`referia`'s config/interface machinery), so it works correctly there.
-The web interface bypasses that machinery and needs to implement equivalent
-expansion itself.
+- `referia/assess/web_review.py` — `get_row_data()` method added
+- `referia/web/routes.py` — `_current_data()` updated to start from `get_row_data()`
+- `tests/test_web_reviewer.py` — `TestGetRowData` test class added
+- `tests/test_web_routes.py` — `TestCurrentDataIncludesVisibleIfFields` added
 
 ## Acceptance Criteria
 
-- [ ] `type: CriterionComment` entries in `review:` expand to the widgets
-      defined in `templates.CriterionComment`, with `args` substituted where
-      referenced.
-- [ ] `template: simple_section` entries expand to the widgets defined in
-      `templates.simple_section`, with `args` substituted.
-- [ ] Expanded widgets appear correctly in the web review form.
-- [ ] Unknown `type:` values (not built-in, not in `templates:`) produce a
-      visible warning widget rather than silent omission.
-- [ ] Tests cover both Form A and Form B expansion in `WebReviewer`.
-
-## Implementation Notes
-
-- `WebReviewer._flatten_entries` is the right place to add expansion; it already
-  handles recursive cluster flattening.
-- The `templates:` dict is available via `self._interface.get("templates", {})`.
-- Template `args` substitution may need to resolve Liquid-style placeholders
-  (e.g. `{label}`) in field names and widget properties — scope to be confirmed
-  by inspecting how the Jupyter path handles it.
-- Consider: what happens when a template references another template (circular
-  reference guard needed).
+- [x] `visible_if: "flagColumn"` sections are visible when `flagColumn` is `True`
+- [x] `visible_if: "flagColumn"` sections are hidden when `flagColumn` is absent/falsy
+- [x] All 158 web interface tests pass
+- [x] No regressions in existing behaviour
 
 ## Related
 

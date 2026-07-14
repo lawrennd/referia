@@ -83,6 +83,11 @@ def _make_data(index_vals=None, col_vals=None):
     data.set_dtype.return_value = None
     data.viewer_to_value.return_value = "combined"
 
+    def _to_pandas():
+        return pd.DataFrame(storage, index=index_vals)
+
+    data.to_pandas.side_effect = _to_pandas
+
     return data, storage
 
 
@@ -450,3 +455,47 @@ class TestCombinatorUpdate:
         data.viewer_to_value.assert_called_once_with({"liquid": "{{a}} {{b}}"})
         # and the result stored in "total"
         assert storage.get("total") == "combined_value"
+
+
+class TestGetRowData:
+    """Tests for WebReviewer.get_row_data().
+
+    get_row_data() must return ALL column values for the current row,
+    not just those that have associated widgets.  This is required so that
+    visible_if conditions can be evaluated against flag columns (e.g.
+    "abstractPresent") that exist only in the data source, not as widgets.
+    """
+
+    def test_returns_widget_fields(self):
+        reviewer, _, storage = _build_reviewer(
+            col_vals={"score": 5, "comment": "good"},
+        )
+        result = reviewer.get_row_data()
+        assert result["score"] == 5
+        assert result["comment"] == "good"
+
+    def test_returns_non_widget_flag_fields(self):
+        """Columns used in visible_if but with no widget must appear in the result."""
+        reviewer, _, storage = _build_reviewer(
+            col_vals={"score": 5, "abstractPresent": True, "forewordPresent": False},
+        )
+        result = reviewer.get_row_data()
+        assert result["abstractPresent"] == True  # noqa: E712 (numpy bool compat)
+        assert result["forewordPresent"] == False  # noqa: E712 (numpy bool compat)
+
+    def test_nan_values_normalised_to_none(self):
+        """NaN (unset float columns) must be normalised to None."""
+        import math
+
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"score": float("nan")},
+        )
+        result = reviewer.get_row_data()
+        assert result["score"] is None
+
+    def test_empty_row_on_bad_index(self):
+        """If the current index can't be located, return an empty dict."""
+        reviewer, data, _ = _build_reviewer(col_vals={"score": 1})
+        data.to_pandas.side_effect = KeyError("missing")
+        result = reviewer.get_row_data()
+        assert result == {}

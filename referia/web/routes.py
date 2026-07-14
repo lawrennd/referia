@@ -94,9 +94,14 @@ def _templates(request: Request):
 
 
 def _current_data(reviewer) -> dict:
-    """Return the current record's data as a plain dict for widget rendering."""
-    idx = reviewer.get_index()
-    data: dict = {}
+    """Return the current record's data as a plain dict for widget rendering.
+
+    Starts from the full row so that columns referenced in ``visible_if``
+    conditions (which may not have a corresponding widget) are available.
+    Widget-field values are then refreshed via :meth:`get_value` to pick up
+    any in-flight changes that haven't been persisted yet.
+    """
+    data: dict = reviewer.get_row_data()
     for spec in reviewer.get_widget_specs():
         col = spec.get("field")
         if col:
