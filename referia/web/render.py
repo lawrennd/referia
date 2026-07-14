@@ -74,9 +74,18 @@ def _label_html(description: str) -> str:
 
 
 def _wrap_widget(inner: str, spec: dict, data: dict) -> str:
-    """Wrap rendered HTML in a container div with id and visibility."""
+    """Wrap rendered HTML in a container div with id and visibility.
+
+    PopulateButtons share ``field`` with their target widget, so they get a
+    ``btn-widget-{field}`` id to avoid a duplicate-id collision that would
+    prevent HTMX OOB swaps from targeting the correct element.
+    """
     col = spec.get("field", "")
-    css_id = f' id="widget-{_escape(col)}"' if col else ""
+    widget_type = spec.get("type", "")
+    if widget_type == "PopulateButton":
+        css_id = f' id="btn-widget-{_escape(col)}"' if col else ""
+    else:
+        css_id = f' id="widget-{_escape(col)}"' if col else ""
     vis = _visibility_style(spec, data)
     return f'<div class="widget-container"{css_id}{vis}>\n{inner}\n</div>'
 

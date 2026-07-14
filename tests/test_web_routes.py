@@ -433,19 +433,45 @@ class TestPostPopulate:
         assert response.status_code == 200
 
     def test_no_compute_spec_returns_warning(self, populate_client):
-        """A PopulateButton missing args.compute must return a helpful message."""
+        """A PopulateButton missing args.compute and top-level function must warn."""
         client, reviewer = populate_client
         reviewer.get_widget_specs.return_value = [
             {
                 "type": "PopulateButton",
                 "field": "BadBtn",
                 "args": {"description": "Bad", "target": "Summary"},
-                # no "compute" key
+                # no "compute" key and no top-level "function"
             }
         ]
         reviewer.get_review_specs.return_value = reviewer.get_widget_specs.return_value
         response = client.post("/populate/BadBtn")
         assert response.status_code == 200
+
+    def test_simple_format_calls_run_populate(self, populate_client):
+        """Simple format (top-level function:) must also call reviewer.run_populate."""
+        client, reviewer = populate_client
+        reviewer.get_widget_specs.return_value = [
+            {"type": "Textarea", "field": "summary", "args": {}},
+            {
+                "type": "PopulateButton",
+                "field": "summary",          # same field as target (simple format)
+                "function": "llm_summarise",
+                "args": {"text": "{description}"},
+                # no nested args.compute
+            },
+        ]
+        reviewer.get_review_specs.return_value = reviewer.get_widget_specs.return_value
+        reviewer.get_value.return_value = "generated"
+
+        response = client.post("/populate/summary")
+        assert response.status_code == 200
+        reviewer.run_populate.assert_called_once()
+        call_arg = reviewer.run_populate.call_args[0][0]
+        # The simple format should build a compute spec with view_args
+        assert "compute" in call_arg
+        cs = call_arg["compute"]
+        assert cs.get("function") == "llm_summarise"
+        assert "view_args" in cs
 
 
 # ---------------------------------------------------------------------------

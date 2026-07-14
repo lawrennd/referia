@@ -108,9 +108,21 @@ def _current_data(reviewer) -> dict:
 
 
 def _find_spec(reviewer, column: str) -> dict | None:
-    """Return the widget spec for *column*, or ``None`` if not found."""
+    """Return the first widget spec whose ``field`` matches *column*.
+
+    Skips PopulateButton specs because they share ``field`` with their target
+    widget; use :func:`_find_populate_spec` to locate buttons specifically.
+    """
     for spec in reviewer.get_widget_specs():
-        if spec.get("field") == column:
+        if spec.get("field") == column and spec.get("type") != "PopulateButton":
+            return spec
+    return None
+
+
+def _find_populate_spec(reviewer, field: str) -> dict | None:
+    """Return the PopulateButton spec whose ``field`` matches *field*, or ``None``."""
+    for spec in reviewer.get_widget_specs():
+        if spec.get("field") == field and spec.get("type") == "PopulateButton":
             return spec
     return None
 
@@ -365,16 +377,43 @@ async def populate_field(request: Request, field: str):
     exactly as the Jupyter ``PopulateButton.on_click`` does.
     """
     reviewer = _reviewer(request)
-    btn_spec = _find_spec(reviewer, field)
+    btn_spec = _find_populate_spec(reviewer, field)
 
-    if btn_spec is None or btn_spec.get("type") != "PopulateButton":
+    if btn_spec is None:
         return HTMLResponse(
             f'<span class="status-warning">&#9888; No PopulateButton found for field {_esc(field)}</span>'
         )
 
     args = btn_spec.get("args", {})
+
+    # --- Build compute_spec from whichever format the YAML uses ---
+    #
+    # Format A (complex):  args.compute holds a full compute spec dict
+    #   - type: PopulateButton
+    #     args:
+    #       target: summary
+    #       compute: {field: summary, function: llm_summarise, ...}
+    #
+    # Format B (simple):  function/args are at the top level of the spec
+    #   - type: PopulateButton
+    #     field: summary          ← target field
+    #     function: llm_summarise
+    #     args: {text: "{description}"}   ← treated as view_args (templates)
     compute_spec = args.get("compute")
     target = args.get("target", field)
+
+    if compute_spec is None:
+        # Format B: build compute_spec from top-level keys
+        top_fn = btn_spec.get("function")
+        if top_fn:
+            compute_spec = {
+                "field": target,
+                "function": top_fn,
+                # args in the simple format are Liquid/display templates so we
+                # use view_args so the compute engine resolves them against data.
+                "view_args": args,
+                "refresh": True,
+            }
 
     if compute_spec is None:
         return HTMLResponse(

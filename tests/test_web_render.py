@@ -36,6 +36,15 @@ class TestWidgetContainer:
         html = render_widget({"type": "SaveButton", "field": "", "args": {}})
         assert "id=" not in html
 
+    def test_populate_button_uses_btn_prefix_not_widget_prefix(self):
+        """PopulateButton must not collide with its target field's widget-{field} id."""
+        html = render_widget(
+            {"type": "PopulateButton", "field": "summary", "args": {"description": "Go"}},
+            None,
+        )
+        assert 'id="btn-widget-summary"' in html
+        assert 'id="widget-summary"' not in html
+
 
 # ---------------------------------------------------------------------------
 # Textarea
