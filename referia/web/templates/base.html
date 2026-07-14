@@ -51,6 +51,19 @@
           if (target) { target.style.opacity = ""; }
         }
       });
+
+      /* Measure the sticky site-header height and expose it as --header-height so
+         .panel-nav can sit flush below it without hard-coding a pixel value. */
+      function updateHeaderHeight() {
+        var h = document.querySelector(".site-header");
+        if (h) {
+          document.documentElement.style.setProperty("--header-height", h.offsetHeight + "px");
+        }
+      }
+      updateHeaderHeight();
+      window.addEventListener("resize", updateHeaderHeight);
+      /* Re-measure after any HTMX swap (panel reload may change DOM height) */
+      document.addEventListener("htmx:afterSettle", updateHeaderHeight);
     </script>
 </head>
 <body>
