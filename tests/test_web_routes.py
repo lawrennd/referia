@@ -377,15 +377,75 @@ class TestPostReload:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture
+def populate_client():
+    """TestClient with a PopulateButton wired up in the review specs."""
+    reviewer = _build_mock_reviewer()
+    reviewer.get_review_specs.return_value = [
+        {"type": "Textarea", "field": "Summary", "args": {"description": "Summary"}},
+        {
+            "type": "PopulateButton",
+            "field": "SummaryBtn",
+            "args": {
+                "description": "Generate",
+                "target": "Summary",
+                "compute": {"field": "Summary", "function": "llm_summarise"},
+            },
+        },
+    ]
+    reviewer.get_widget_specs.return_value = reviewer.get_review_specs.return_value
+    reviewer.get_value.return_value = "generated text"
+    reviewer.run_populate.return_value = None
+
+    with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+        app = create_app(user_file="_referia.yml", directory="/tmp")
+        with TestClient(app) as c:
+            yield c, reviewer
+
+
 class TestPostPopulate:
-    def test_returns_200(self, client):
-        response = client.post("/populate/Comment")
+    def test_returns_200(self, populate_client):
+        client, _ = populate_client
+        response = client.post("/populate/SummaryBtn")
         assert response.status_code == 200
 
-    def test_response_acknowledges_field(self, client):
-        response = client.post("/populate/Comment")
-        # Should return the current widget value at minimum
-        assert "widget-Comment" in response.text or "Populate" in response.text
+    def test_calls_run_populate_with_compute_interface(self, populate_client):
+        """Route must call reviewer.run_populate with {"compute": ...}."""
+        client, reviewer = populate_client
+        client.post("/populate/SummaryBtn")
+        reviewer.run_populate.assert_called_once()
+        call_arg = reviewer.run_populate.call_args[0][0]
+        assert "compute" in call_arg
+
+    def test_oob_response_targets_the_target_field_not_the_button(self, populate_client):
+        """OOB swap must refresh the target Textarea, not re-render the PopulateButton."""
+        client, _ = populate_client
+        response = client.post("/populate/SummaryBtn")
+        # The target widget (Summary textarea) should appear in the OOB response
+        assert 'id="widget-Summary"' in response.text
+        # The button container should NOT appear (it's a different widget)
+        assert 'id="widget-SummaryBtn"' not in response.text
+
+    def test_unknown_populate_field_returns_200(self, populate_client):
+        """An unknown field must not crash the server."""
+        client, _ = populate_client
+        response = client.post("/populate/NonExistent")
+        assert response.status_code == 200
+
+    def test_no_compute_spec_returns_warning(self, populate_client):
+        """A PopulateButton missing args.compute must return a helpful message."""
+        client, reviewer = populate_client
+        reviewer.get_widget_specs.return_value = [
+            {
+                "type": "PopulateButton",
+                "field": "BadBtn",
+                "args": {"description": "Bad", "target": "Summary"},
+                # no "compute" key
+            }
+        ]
+        reviewer.get_review_specs.return_value = reviewer.get_widget_specs.return_value
+        response = client.post("/populate/BadBtn")
+        assert response.status_code == 200
 
 
 # ---------------------------------------------------------------------------

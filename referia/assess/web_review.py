@@ -299,6 +299,30 @@ class WebReviewer:
     # Internal on-change logic (mirrors Reviewer.value_updated without widgets)
     # ------------------------------------------------------------------
 
+    def run_populate(self, compute_interface: dict) -> None:
+        """Run an on-demand compute as triggered by a PopulateButton.
+
+        Mirrors the Jupyter PopulateButton.on_click behaviour::
+
+            self._parent._data._compute.run(
+                self._parent._data, {"compute": args["compute"]}
+            )
+
+        File paths in compute functions may be relative; chdir to the review
+        directory so they resolve correctly.
+
+        :param compute_interface: Dict of the form ``{"compute": <spec>}`` as
+            constructed from the PopulateButton's ``args.compute`` entry.
+        """
+        import os
+
+        _orig = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            self._data._compute.run(self._data, compute_interface)
+        finally:
+            os.chdir(_orig)
+
     def _value_updated(self, column: str) -> None:
         """Run on-change side-effects for *column* without touching widgets.
 

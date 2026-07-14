@@ -357,17 +357,45 @@ async def reload_data(request: Request):
 
 @router.post("/populate/{field}", response_class=HTMLResponse)
 async def populate_field(request: Request, field: str):
-    """Trigger an on-demand compute for *field* and return the refreshed widget.
+    """Run the compute attached to a PopulateButton and refresh the target widget.
 
-    Full compute-engine integration is deferred; this route currently returns a
-    'not implemented' status fragment.
+    *field* is the PopulateButton's own field name (used in the URL).  The
+    button spec's ``args.target`` names the field to update, and
+    ``args.compute`` is the compute spec forwarded to the compute engine —
+    exactly as the Jupyter ``PopulateButton.on_click`` does.
     """
     reviewer = _reviewer(request)
-    spec = _find_spec(reviewer, field)
-    status = '<span class="status-warning">&#9888; Populate not yet wired to compute engine</span>'
-    if spec is None:
-        return HTMLResponse(status)
-    val = reviewer.get_value(field)
+    btn_spec = _find_spec(reviewer, field)
+
+    if btn_spec is None or btn_spec.get("type") != "PopulateButton":
+        return HTMLResponse(
+            f'<span class="status-warning">&#9888; No PopulateButton found for field {_esc(field)}</span>'
+        )
+
+    args = btn_spec.get("args", {})
+    compute_spec = args.get("compute")
+    target = args.get("target", field)
+
+    if compute_spec is None:
+        return HTMLResponse(
+            '<span class="status-warning">&#9888; PopulateButton has no compute spec</span>'
+        )
+
+    try:
+        reviewer.run_populate({"compute": compute_spec})
+    except Exception as exc:
+        log.warning("Populate failed for %r: %s", field, exc)
+        return HTMLResponse(
+            f'<span class="status-error">&#10007; Populate failed: {_esc(str(exc))}</span>'
+        )
+
+    # Re-render the target field widget so the user sees the new value.
+    target_spec = _find_spec(reviewer, target)
+    if target_spec is None:
+        return HTMLResponse('<span class="status-ok">&#10003; Populated</span>')
+
+    val = reviewer.get_value(target)
     data = _current_data(reviewer)
-    widget_html = render_widget(spec, val, data)
+    widget_html = render_widget(target_spec, val, data)
+    status = '<span class="status-ok">&#10003; Populated</span>'
     return HTMLResponse(status + "\n" + _make_oob(widget_html))
