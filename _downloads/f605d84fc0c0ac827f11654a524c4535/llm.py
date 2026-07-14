@@ -40,9 +40,33 @@ from functools import lru_cache
 
 # Try to load .env file if python-dotenv is available
 try:
-    from dotenv import load_dotenv
-    # Load .env file from current directory or parent directories
-    load_dotenv(verbose=False)
+    from dotenv import load_dotenv, find_dotenv
+    # find_dotenv() walks the directory tree, which can time out on network-backed
+    # filesystems such as OneDrive on macOS, where even locally-cached files pass
+    # through the FileProvider daemon and trigger a network round-trip.
+    # Strategy:
+    #   1. Try find_dotenv() first (respects project-level .env files).
+    #   2. Fall back to ~/.env, which is always on a local filesystem.
+    #   3. Catch OSError (TimeoutError is a subclass) at every step so the
+    #      module loads even when all .env paths are unreachable.
+    _loaded = False
+    try:
+        _dotenv_path = find_dotenv(raise_error_if_not_found=False)
+        if _dotenv_path:
+            load_dotenv(dotenv_path=_dotenv_path, verbose=False)
+            _loaded = True
+    except OSError:
+        pass
+
+    if not _loaded:
+        # Fallback: ~/.env lives on a local (non-network) filesystem.
+        _home_env = os.path.join(os.path.expanduser("~"), ".env")
+        if os.path.isfile(_home_env):
+            try:
+                load_dotenv(dotenv_path=_home_env, verbose=False)
+            except OSError:
+                pass
+
     DOTENV_AVAILABLE = True
 except ImportError:
     DOTENV_AVAILABLE = False
