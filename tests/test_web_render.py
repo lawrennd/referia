@@ -478,3 +478,66 @@ class TestRenderForm:
         specs = [_w("Text", "missing")]
         html = render_form(specs, {})
         assert 'value=""' in html
+
+
+# ---------------------------------------------------------------------------
+# Criterion widget
+# ---------------------------------------------------------------------------
+
+class TestCriterionWidget:
+    """Criterion widgets display read-only criterion text from a liquid: key."""
+
+    def test_renders_liquid_column_reference(self):
+        """{{colName}} in liquid: is replaced with data value."""
+        spec = {"type": "Criterion", "liquid": "{{summaryText}}"}
+        html = render_widget(spec, None, data={"summaryText": "Be concise and clear."})
+        assert "Be concise and clear." in html
+        assert "widget-criterion" in html
+
+    def test_renders_multiline_liquid(self):
+        spec = {"type": "Criterion", "liquid": "**Strong**: {{criterion}}\n"}
+        html = render_widget(spec, None, data={"criterion": "Meets expectations"})
+        assert "Meets expectations" in html
+
+    def test_missing_column_renders_empty(self):
+        spec = {"type": "Criterion", "liquid": "{{missingCol}}"}
+        html = render_widget(spec, None, data={})
+        assert "widget-criterion" in html
+        # Missing key renders as empty string — no raw {{missingCol}} in output
+        assert "{{missingCol}}" not in html
+
+    def test_no_liquid_renders_empty_criterion(self):
+        spec = {"type": "Criterion"}
+        html = render_widget(spec, None, data={})
+        assert "widget-criterion" in html
+
+    def test_static_markdown_in_liquid(self):
+        """Static text (after %param% substitution) renders as markdown."""
+        spec = {"type": "Criterion", "liquid": "### Introduction"}
+        html = render_widget(spec, None, data={})
+        # Should render as an <h3>
+        assert "<h3>" in html
+
+
+# ---------------------------------------------------------------------------
+# Markdown widget top-level liquid: key
+# ---------------------------------------------------------------------------
+
+class TestMarkdownTopLevelLiquid:
+    """Markdown widgets pick up content from the top-level liquid: key."""
+
+    def test_renders_static_liquid_content(self):
+        spec = {"type": "Markdown", "liquid": "### Chapter 1"}
+        html = render_widget(spec, None, data={})
+        assert "<h3>" in html
+        assert "Chapter 1" in html
+
+    def test_liquid_takes_priority_over_args_description(self):
+        spec = {
+            "type": "Markdown",
+            "liquid": "### From Liquid",
+            "args": {"description": "From args"},
+        }
+        html = render_widget(spec, None, data={})
+        assert "From Liquid" in html
+        assert "From args" not in html

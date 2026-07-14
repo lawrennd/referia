@@ -17,6 +17,7 @@ render_form(specs, data) -> str
 """
 
 import html as _html
+import re
 from typing import Any
 
 from lynguine.util.misc import markdown2html
@@ -305,10 +306,43 @@ def _render_html(spec: dict, value: Any) -> str:
     return f'<div class="widget-html">{content}</div>'
 
 
+def _evaluate_liquid(template: str, data: dict) -> str:
+    """Substitute ``{{key}}`` Liquid-style references with values from *data*.
+
+    Only handles simple column references (``{{columnName}}``).  More complex
+    Liquid constructs are left as-is so they do not silently break.
+    """
+    def _sub(match: re.Match) -> str:
+        key = match.group(1).strip()
+        val = data.get(key)
+        return str(val) if val is not None else ""
+
+    return re.sub(r"\{\{\s*(\w+)\s*\}\}", _sub, template)
+
+
 def _render_markdown_widget(spec: dict, value: Any) -> str:
     args = spec.get("args", {})
-    content = args.get("value", args.get("description", str(value) if value else ""))
+    # top-level liquid: key is used for section headers produced by template expansion
+    content = (
+        spec.get("liquid")
+        or args.get("value")
+        or args.get("description")
+        or (str(value) if value else "")
+    )
     return f'<div class="widget-markdown">{markdown2html(content) if content else ""}</div>'
+
+
+def _render_criterion(spec: dict, value: Any, data: dict | None = None) -> str:
+    """Render a Criterion widget — the read-only criterion text shown above a comment box.
+
+    The criterion text lives in the top-level ``liquid:`` key and may contain
+    ``{{columnName}}`` Liquid references that are resolved against the current
+    row data.  The result is rendered as Markdown.
+    """
+    template = spec.get("liquid", "") or ""
+    if data is not None and template:
+        template = _evaluate_liquid(template, data)
+    return f'<div class="widget-criterion">{markdown2html(template) if template else ""}</div>'
 
 
 def _render_save_button(spec: dict, value: Any) -> str:
@@ -373,6 +407,9 @@ def _render_populate_button(spec: dict, value: Any) -> str:
 # Dispatch table — maps _referia.yml type strings → renderer functions
 # ---------------------------------------------------------------------------
 
+# Renderers in this set receive (spec, value, data) instead of (spec, value).
+_DATA_AWARE_RENDERERS: frozenset[str] = frozenset({"Criterion"})
+
 _RENDERERS: dict[str, Any] = {
     "Textarea": _render_textarea,
     "Text": _render_text,
@@ -396,6 +433,7 @@ _RENDERERS: dict[str, Any] = {
     "SaveButton": _render_save_button,
     "ReloadButton": _render_reload_button,
     "PopulateButton": _render_populate_button,
+    "Criterion": _render_criterion,
 }
 
 
@@ -421,7 +459,11 @@ def render_widget(spec: dict, value: Any = None, data: dict | None = None) -> st
     renderer = _RENDERERS.get(widget_type)
     if renderer is None:
         return f'<!-- unsupported widget type: {_escape(widget_type)} -->'
-    inner = renderer(spec, value)
+    # Criterion renderers need the full row data to evaluate Liquid expressions.
+    if widget_type in _DATA_AWARE_RENDERERS:
+        inner = renderer(spec, value, data)
+    else:
+        inner = renderer(spec, value)
     return _wrap_widget(inner, spec, data)
 
 
