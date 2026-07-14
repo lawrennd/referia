@@ -320,11 +320,21 @@ def _evaluate_liquid(template: str, data: dict) -> str:
     return re.sub(r"\{\{\s*(\w+)\s*\}\}", _sub, template)
 
 
-def _render_markdown_widget(spec: dict, value: Any) -> str:
+def _render_markdown_widget(spec: dict, value: Any, data: dict | None = None) -> str:
     args = spec.get("args", {})
-    # top-level liquid: key is used for section headers produced by template expansion
+    # Content priority:
+    #   1. top-level liquid: — set by %param% template expansion (e.g. "### Introduction")
+    #      This is already resolved; no further Liquid evaluation needed.
+    #   2. args.liquid — set by CriterionComment expansion (contains {{columnName}} Liquid refs)
+    #      Requires Liquid evaluation against the current row data.
+    #   3. args.value / args.description — static configured content
+    #   4. the field's data value
+    args_liquid = args.get("liquid")
+    if args_liquid and data is not None:
+        args_liquid = _evaluate_liquid(args_liquid, data)
     content = (
         spec.get("liquid")
+        or args_liquid
         or args.get("value")
         or args.get("description")
         or (str(value) if value else "")
@@ -408,7 +418,7 @@ def _render_populate_button(spec: dict, value: Any) -> str:
 # ---------------------------------------------------------------------------
 
 # Renderers in this set receive (spec, value, data) instead of (spec, value).
-_DATA_AWARE_RENDERERS: frozenset[str] = frozenset({"Criterion"})
+_DATA_AWARE_RENDERERS: frozenset[str] = frozenset({"Criterion", "Markdown"})
 
 _RENDERERS: dict[str, Any] = {
     "Textarea": _render_textarea,

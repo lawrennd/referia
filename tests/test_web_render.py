@@ -541,3 +541,24 @@ class TestMarkdownTopLevelLiquid:
         html = render_widget(spec, None, data={})
         assert "From Liquid" in html
         assert "From args" not in html
+
+    def test_args_liquid_with_column_reference(self):
+        """CriterionComment expansion puts liquid: inside args; column refs must resolve."""
+        spec = {
+            "name": "Summary Criterion",
+            "type": "Markdown",
+            "args": {"layout": {"width": "800px"}, "liquid": "{{introductionSummaryCriterion}}\n"},
+        }
+        data = {"introductionSummaryCriterion": "**Thesis summary** should be concise."}
+        html = render_widget(spec, None, data=data)
+        assert "Thesis summary" in html
+        assert "{{introductionSummaryCriterion}}" not in html
+
+    def test_args_liquid_missing_column_is_empty(self):
+        """Missing column in args.liquid resolves to empty string — no raw {{key}} shown."""
+        spec = {
+            "type": "Markdown",
+            "args": {"liquid": "{{missingColumn}}\n"},
+        }
+        html = render_widget(spec, None, data={})
+        assert "{{missingColumn}}" not in html
