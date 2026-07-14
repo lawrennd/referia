@@ -160,29 +160,86 @@ pip install python-multipart
 
 ## Review: Was This the Right Fix?
 
-**Yes, for the immediate problem.**  The three issues above are real and the
-fixes are targeted.
+**Partially.** The fix restored persistence correctness (values are now saved
+correctly) and the type coercion (`_coerce_form_value`) was clearly missing and
+needed.  However the "apply all form values on Save" approach has two
+significant problems that make it the wrong long-term solution.
 
-**Possible alternative approaches and their trade-offs:**
+### Problem A — It buries the actual bug in the per-field `change` path
 
-| Approach | Trade-off |
-|---|---|
-| Keep per-field `hx-trigger="change"` updates as the *only* path to in-memory state, rely on them having fired before Save | Fragile: browsers do not always fire `change` for sliders before a button click; requires careful ordering of HTMX requests |
-| Optimistic UI: read the stored value from the DOM on Save via JavaScript | Requires more JavaScript; harder to test; increases coupling between front-end state and server |
-| Use WebSocket / SSE for real-time sync | Significantly more complex; unnecessary for the batch-review use case |
-| Make `/save` re-read from the output file after writing to confirm | Useful for audit but does not solve the root cause |
+The fact that `hx-include` was *necessary* to make Save work means the
+per-field `hx-trigger="change"` events were **not reliably updating in-memory
+state before Save was clicked**.  That is a bug in the primary update path.
 
-The chosen approach (include all form values in the Save POST and apply them
-server-side before persisting) is the simplest correct solution: it makes the
-Save button a complete, idempotent snapshot of reviewer state.
+The `hx-include` fix makes the symptoms disappear without fixing the root cause.
+If the change-event path is unreliable, it will continue to fail silently —
+computed field refreshes (OOB swaps) will not appear in the browser, but the
+user will not notice because Save eventually applies the value correctly.
 
-**Potential risks:**
+### Problem B — Re-running computes on Save has unintended side effects
 
-- If a field is in the review spec but absent from the form (e.g. a hidden
-  widget), the route silently skips it — by design, consistent with how HTML
-  forms work.
-- The coercion function handles only the widget types currently used.  New
-  widget types should extend `_coerce_form_value` and add tests.
+The `/save` route calls `reviewer.set_value(col, value)` for every form field,
+which calls `_value_updated`, which runs combinator computes and updates
+timestamps.  This means **computes run twice** when the full change-event path
+did fire:
+
+1. Once when the `change` event fires → `/field/{column}` → `set_value` →
+   `_value_updated` → computes.
+2. Again when Save fires → `/save` → `set_value` → `_value_updated` →
+   computes.
+
+The `value != old_value` guard in `set_value` prevents re-running if the stored
+value is identical.  But this guard is not sufficient for:
+
+- **Timestamps** (e.g. `modified_at`): a combinator that writes the current
+  time will produce a *different* value each time it runs.  The guard checks the
+  *input* field value, not the computed timestamp.  If the input field value
+  hasn't changed but `modified_at` is updated, the guard correctly suppresses
+  the re-run — but only if the `if value != old_value` check is on the correct
+  field.  This needs careful verification.
+- **LLM computes** (via `PopulateButton`): not triggered by `set_value` today,
+  but if compute integration is ever wired through `_value_updated`, running LLM
+  calls twice would be costly and could produce different outputs each time.
+- **Any impure compute function**: one that reads external state, increments a
+  counter, or writes to a secondary file.
+
+### What the correct fix looks like
+
+The underlying problem is that `<input type="range">` (slider) fires `change`
+only on **mouseup**, not during drag.  If the user drags a slider and clicks
+Save in a single mouse gesture (without releasing the slider first), the
+`change` event may not fire before the Save POST.
+
+Correct fixes, in order of preference:
+
+1. **Fix the slider trigger** — use `hx-trigger="change mouseup"` or a
+   `mouseup` listener specifically on range inputs so the per-field POST always
+   fires before Save.  Then remove the "apply form values" logic from `/save`
+   entirely; `/save` calls only `reviewer.save_flows()`.
+
+2. **Use `hx-sync` to serialise requests** — add
+   `hx-sync="closest form:queue last"` to the Save button so HTMX waits for all
+   in-flight field-update requests to complete before firing the Save POST.
+   Then `/save` does not need to re-apply values.
+
+3. **Separate value-setting from compute-triggering in `/save`** — if `/save`
+   must apply form values as a fallback, it should write raw values directly
+   into the data store (bypassing `_value_updated`) rather than going through
+   `set_value`.  This avoids re-running computes at the cost of slightly more
+   complex code.
+
+### Current status
+
+The fix in this commit is a pragmatic stopgap that restores correctness for
+the common case.  It should be revisited:
+
+- The per-field `change` event reliability needs investigation and fixing.
+- The `/save` route should be reverted to `reviewer.save_flows()` only once the
+  change-event path is trustworthy.
+- The compute-safety of the current `/save` implementation needs verification
+  against the `value != old_value` guard in `set_value`.
+
+See also: `backlog/documentation/2026-07-14_web-interface-event-architecture.md`
 
 ## Progress Updates
 
