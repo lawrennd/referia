@@ -57,7 +57,10 @@
          without hard-coding pixel values.
          --header-height : height of .site-header
          --nav-height    : height of .panel-nav
-         --sticky-offset : sum of both (= where content starts below all sticky bars) */
+         --sticky-offset : sum of both (= where content starts below all sticky bars)
+
+         IMPORTANT: called via DOMContentLoaded (not immediately) so the body
+         elements actually exist when the measurements are taken. */
       function updateStickyHeights() {
         var h = document.querySelector(".site-header");
         var n = document.querySelector(".panel-nav");
@@ -68,7 +71,7 @@
         root.style.setProperty("--nav-height",    nh + "px");
         root.style.setProperty("--sticky-offset", (hh + nh) + "px");
       }
-      updateStickyHeights();
+      document.addEventListener("DOMContentLoaded", updateStickyHeights);
       window.addEventListener("resize", updateStickyHeights);
       /* Re-measure after HTMX swaps — the nav may change height after a reload */
       document.addEventListener("htmx:afterSettle", updateStickyHeights);

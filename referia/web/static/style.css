@@ -29,6 +29,10 @@
 html {
     font-size: 15px;
     line-height: 1.5;
+    /* Prevent in-page anchors from scrolling to a position hidden under sticky bars.
+       --sticky-offset is the combined height of .site-header + .panel-nav,
+       set by updateStickyHeights() in base.html. */
+    scroll-padding-top: var(--sticky-offset, 100px);
 }
 
 body {
@@ -72,11 +76,6 @@ body {
 
 /* ── Main content wrapper ────────────────────────────────── */
 
-html {
-    /* Ensure in-page anchor links scroll to a position that clears sticky bars */
-    scroll-padding-top: var(--sticky-offset, 100px);
-}
-
 main {
     padding: 1rem 1.5rem 4rem;
     max-width: 1600px;
@@ -89,20 +88,19 @@ main {
     display: flex;
     align-items: center;
     gap: 1rem;
-    padding: 0.5rem 0.25rem 0.75rem;
+    padding: 0.5rem 0 0.75rem;
     border-bottom: 1px solid var(--colour-border);
     margin-bottom: 1rem;
-    /* Stick just below the site header (height measured by JS → --header-height) */
+    /* Stick just below the site header.
+       --header-height is set by updateStickyHeights() in base.html.
+       IMPORTANT: no negative margins here — they break position:sticky in
+       Chromium/Safari when the margin box exceeds the containing block. */
     position: sticky;
     top: var(--header-height, 0px);
     z-index: 40;
-    background: var(--colour-bg);
-    /* Negative side margins + matching padding cancel out main's padding so the
-       background fills edge-to-edge behind the nav bar when scrolling. */
-    margin-left: -1.5rem;
-    margin-right: -1.5rem;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    /* --colour-bg is not defined; use --colour-body-bg so the nav is opaque
+       and content scrolling behind it is hidden. */
+    background: var(--colour-body-bg);
     box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 

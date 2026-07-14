@@ -148,11 +148,27 @@ class WebReviewer:
         checks.
         """
         import math
+        import pandas as pd
 
         idx = self._data.get_index()
         try:
             df = self._data.to_pandas()
             row = df.loc[idx]
+            if isinstance(row, pd.DataFrame):
+                # Subseries: multiple rows share the same primary index.
+                # Pick the row that matches the active subindex so we return
+                # the data for the currently-selected sub-entry rather than
+                # the first one arbitrarily.
+                try:
+                    subindex = self._data.get_subindex()
+                    selector = self._data.get_selector()
+                    if selector and subindex is not None and selector in row.columns:
+                        matching = row[row[selector] == subindex]
+                        row = matching.iloc[0] if not matching.empty else row.iloc[0]
+                    else:
+                        row = row.iloc[0]
+                except Exception:
+                    row = row.iloc[0]
         except Exception:
             return {}
 

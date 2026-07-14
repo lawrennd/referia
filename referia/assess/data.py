@@ -721,7 +721,7 @@ class CustomDataFrame(data.CustomDataFrame):
                 subindex = self.get_subindex()
                 selector = self.get_selector()
                 if subindex is None or not subindex in subindices[selector]:
-                    self.set_subindex(subindices[selector][0])
+                    self.set_subindex(subindices[selector].iloc[0])
             else:
                 self.add_series_row(self._index)
                 
