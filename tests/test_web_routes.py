@@ -472,6 +472,8 @@ class TestPostPopulate:
         cs = call_arg["compute"]
         assert cs.get("function") == "llm_summarise"
         assert "view_args" in cs
+        # Plain string args must be wrapped as {"display": ...} view spec dicts
+        assert cs["view_args"].get("text") == {"display": "{description}"}
 
 
 # ---------------------------------------------------------------------------

@@ -406,12 +406,18 @@ async def populate_field(request: Request, field: str):
         # Format B: build compute_spec from top-level keys
         top_fn = btn_spec.get("function")
         if top_fn:
+            # The compute engine's view_args processor calls data.view_to_value(view)
+            # for each entry, which requires a view spec dict, not a raw string.
+            # Wrap any plain string values as {"display": value} so that Liquid
+            # templates like "{description}" are resolved against the current row.
+            view_args = {
+                k: ({"display": v} if isinstance(v, str) else v)
+                for k, v in args.items()
+            }
             compute_spec = {
                 "field": target,
                 "function": top_fn,
-                # args in the simple format are Liquid/display templates so we
-                # use view_args so the compute engine resolves them against data.
-                "view_args": args,
+                "view_args": view_args,
                 "refresh": True,
             }
 
