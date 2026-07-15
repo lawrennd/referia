@@ -2,7 +2,7 @@
 author: Neil D. Lawrence
 created: "2026-07-15"
 last_updated: "2026-07-15"  # refined URL scheme and index query parameter spec
-status: Proposed
+status: Accepted
 related_requirements: []
 related_cips: ["000B"]
 tags: ["web", "multi-config", "routing", "ecosystem", "architecture"]
@@ -14,7 +14,7 @@ compressed: false
 ## Status
 
 - [x] Proposed
-- [ ] Accepted
+- [x] Accepted
 - [ ] In Progress
 - [ ] Implemented
 - [ ] Closed
