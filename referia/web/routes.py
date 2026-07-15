@@ -647,7 +647,22 @@ async def root_populate(request: Request, config_path: str, field: str):
 
 @root_router.get("/{config_path:path}", response_class=HTMLResponse)
 async def root_index(request: Request, config_path: str):
-    """Render the full review page for a root-mode config path."""
+    """Render the full review page for a root-mode config path.
+
+    Redirects to a trailing-slash URL when none is present so that relative
+    hrefs in viewer HTML (e.g. ``../pdfpages``) resolve correctly in the
+    browser.  Without the slash the browser treats the last path segment as a
+    file, stripping it before resolving ``..``-relative links.
+    """
+    from fastapi.responses import RedirectResponse
+
+    # Ensure trailing slash so relative URLs in viewer HTML work correctly.
+    if config_path and not config_path.endswith("/"):
+        return RedirectResponse(
+            url=request.url.path + "/",
+            status_code=301,
+        )
+
     reviewer = _root_reviewer(request, config_path)
     ctx = _panel_response_context(reviewer)
     prefix = _config_path_prefix(config_path)

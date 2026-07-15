@@ -253,11 +253,20 @@ def _make_root_app_with_config(tmp_path, config_path: str, mock_reviewer=None):
 
 
 class TestRootRouterRoutes:
-    def test_root_index_returns_full_page(self, tmp_path):
+    def test_root_index_redirects_to_trailing_slash(self, tmp_path):
+        """GET /reviews/intro should redirect to /reviews/intro/ for correct relative URL resolution."""
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro")
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app, follow_redirects=False) as client:
+                resp = client.get("/reviews/intro")
+        assert resp.status_code == 301
+        assert resp.headers["location"].endswith("/reviews/intro/")
+
+    def test_root_index_trailing_slash_returns_full_page(self, tmp_path):
         app, _ = _make_root_app_with_config(tmp_path, "reviews/intro")
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
-                resp = client.get("/reviews/intro")
+                resp = client.get("/reviews/intro/")
         assert resp.status_code == 200
         assert "<!DOCTYPE html>" in resp.text
 
@@ -265,7 +274,7 @@ class TestRootRouterRoutes:
         app, _ = _make_root_app_with_config(tmp_path, "reviews/intro")
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
-                resp = client.get("/reviews/intro")
+                resp = client.get("/reviews/intro/")
         assert "/reviews/intro" in resp.text
 
     def test_root_record_fragment_200(self, tmp_path):
