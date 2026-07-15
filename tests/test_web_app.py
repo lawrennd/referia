@@ -133,12 +133,13 @@ class TestRootServerMode:
             with TestClient(app):
                 MockRev.assert_not_called()
 
-    def test_single_config_routes_return_503_in_root_mode(self, tmp_path):
-        """In root mode, the existing single-config routes return 503 (no reviewer)."""
+    def test_root_slash_returns_listing_in_root_mode(self, tmp_path):
+        """In root mode, GET / returns the directory listing (not 503)."""
         app = create_app(root=str(tmp_path))
-        with TestClient(app, raise_server_exceptions=False) as client:
+        with TestClient(app) as client:
             resp = client.get("/")
-        assert resp.status_code == 503
+        assert resp.status_code == 200
+        assert "Reviews under" in resp.text
 
 
 # ---------------------------------------------------------------------------
@@ -302,13 +303,13 @@ class TestRootRouterRoutes:
         """A directory with no _referia.yml but sub-configs shows a listing page."""
         sub = tmp_path / "group" / "project"
         sub.mkdir(parents=True)
-        (sub / "_referia.yml").write_text("title: test")
+        (sub / "_referia.yml").write_text("title: My Project")
         app = create_app(root=str(tmp_path))
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
                 resp = client.get("/group/")
         assert resp.status_code == 200
-        assert "group/project" in resp.text
+        assert "project" in resp.text
 
     def test_root_listing_links_are_clickable_urls(self, tmp_path):
         """Listing entries link to the correct root-relative URL."""
@@ -321,6 +322,45 @@ class TestRootRouterRoutes:
                 resp = client.get("/a/")
         assert "/a/b/" in resp.text
 
+    def test_root_listing_shows_title_from_yml(self, tmp_path):
+        """Title from _referia.yml is shown in the listing."""
+        sub = tmp_path / "reviews" / "thesis"
+        sub.mkdir(parents=True)
+        (sub / "_referia.yml").write_text("title: PhD Thesis Reviews\ndescription: Examining 2024 cohort")
+        app = create_app(root=str(tmp_path))
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app) as client:
+                resp = client.get("/reviews/")
+        assert "PhD Thesis Reviews" in resp.text
+        assert "Examining 2024 cohort" in resp.text
+
+    def test_root_listing_groups_by_subdirectory(self, tmp_path):
+        """Configs sharing an immediate parent are grouped under a section heading."""
+        for name in ("intro", "pdfpages"):
+            d = tmp_path / "theses" / name
+            d.mkdir(parents=True)
+            (d / "_referia.yml").write_text(f"title: {name}")
+        app = create_app(root=str(tmp_path))
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app) as client:
+                resp = client.get("/")
+        # Group heading links to the intermediate directory
+        assert "/theses/" in resp.text
+        assert "intro" in resp.text
+        assert "pdfpages" in resp.text
+
+    def test_root_listing_intermediate_dir_heading_is_clickable(self, tmp_path):
+        """The group heading href navigates to the subdirectory listing."""
+        sub = tmp_path / "group" / "deep" / "project"
+        sub.mkdir(parents=True)
+        (sub / "_referia.yml").write_text("title: Deep Project")
+        app = create_app(root=str(tmp_path))
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app) as client:
+                resp = client.get("/group/")
+        # The group heading should link to /group/deep/
+        assert 'href="/group/deep/"' in resp.text
+
     def test_health_not_swallowed_by_root_catchall(self, tmp_path):
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
@@ -328,12 +368,13 @@ class TestRootRouterRoutes:
         assert resp.status_code == 200
         assert resp.json()["mode"] == "root-server"
 
-    def test_single_config_slash_still_returns_503_in_root_mode(self, tmp_path):
-        """GET / (no config path) hits the single-config route, which returns 503."""
+    def test_root_slash_returns_listing_not_503(self, tmp_path):
+        """GET / in root mode renders the listing page, not a 503 error."""
         app = create_app(root=str(tmp_path))
-        with TestClient(app, raise_server_exceptions=False) as client:
+        with TestClient(app) as client:
             resp = client.get("/")
-        assert resp.status_code == 503
+        assert resp.status_code == 200
+        assert "Reviews under" in resp.text
 
 
 # ---------------------------------------------------------------------------

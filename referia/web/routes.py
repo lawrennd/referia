@@ -256,7 +256,16 @@ def _make_oob(widget_html: str) -> str:
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    """Render the full review page for the current record."""
+    """Render the full review page for the current record.
+
+    In root-server mode (``app.state.root`` is set) there is no single
+    reviewer, so instead we render a directory listing of all configs found
+    under the root.
+    """
+    if getattr(request.app.state, "root", None) is not None:
+        configs = _list_sub_configs(request.app.state.root, "")
+        return _render_directory_listing("", configs)
+
     reviewer = _reviewer(request)
     ctx = _panel_response_context(reviewer)
     return _templates(request).TemplateResponse(
@@ -483,53 +492,138 @@ def _root_reviewer(request: Request, config_path: str):
     return _get_cached_reviewer(request.app.state, config_file, user_file)
 
 
-def _list_sub_configs(root: str, url_path: str) -> list[dict]:
-    """Return all ``_referia.yml`` configs discoverable under *url_path* within *root*.
+def _read_config_meta(yml_path: Path) -> dict:
+    """Return display metadata from a ``_referia.yml`` without loading WebReviewer.
 
-    Each entry has ``url`` (root-relative URL with trailing slash) and
-    ``name`` (the leaf directory name) for use in a directory-listing page.
+    Reads only ``title`` and ``description`` via ``yaml.safe_load``.  Any
+    parse error silently returns an empty dict so a bad yml never breaks the
+    listing page.
+    """
+    try:
+        import yaml  # type: ignore[import]
+        with open(yml_path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh)
+        if not isinstance(data, dict):
+            return {}
+        return {
+            "title": data.get("title") or data.get("name"),
+            "description": data.get("description"),
+        }
+    except Exception:
+        return {}
+
+
+def _list_sub_configs(root: str, url_path: str) -> list[dict]:
+    """Return all ``_referia.yml`` configs under *url_path* grouped for display.
+
+    Each entry in the returned list represents one config and contains:
+
+    * ``url``         — root-relative URL with trailing slash (links to the review)
+    * ``label``       — display label (path relative to the immediate group dir)
+    * ``title``       — human-readable title from ``_referia.yml``, or leaf name
+    * ``description`` — short description from ``_referia.yml``, or ``None``
+    * ``group``       — name of the immediate child of *search_base* (grouping key)
+    * ``group_url``   — root-relative URL with trailing slash for the group dir
     """
     root_path = Path(root)
     clean = url_path.strip("/")
     search_base = root_path / clean if clean else root_path
     if not search_base.is_dir():
         return []
+
     configs = []
     for yml in sorted(search_base.rglob("_referia.yml")):
         try:
-            rel = yml.parent.relative_to(root_path)
+            rel_from_root = yml.parent.relative_to(root_path)
+            rel_from_base = yml.parent.relative_to(search_base)
         except ValueError:
             continue
+
+        parts = rel_from_base.parts
+        # Immediate child of search_base is the group key.
+        if parts:
+            group_name = parts[0]
+            group_abs = search_base / parts[0]
+            label = str(Path(*parts[1:])) if len(parts) > 1 else parts[0]
+        else:
+            # Config is at the search_base itself — no meaningful group.
+            group_name = ""
+            group_abs = search_base
+            label = yml.parent.name
+
+        try:
+            group_rel_from_root = group_abs.relative_to(root_path)
+            group_url = "/" + str(group_rel_from_root) + "/"
+        except ValueError:
+            group_url = "/"
+
+        meta = _read_config_meta(yml)
         configs.append({
-            "path": str(rel),
-            "url": "/" + str(rel) + "/",
-            "name": yml.parent.name,
+            "url": "/" + str(rel_from_root) + "/",
+            "label": label,
+            "title": meta.get("title") or yml.parent.name,
+            "description": meta.get("description"),
+            "group": group_name,
+            "group_url": group_url,
         })
     return configs
 
 
 def _render_directory_listing(url_path: str, configs: list[dict]) -> HTMLResponse:
-    """Return a simple HTML directory-listing page for configs under *url_path*."""
-    title = url_path.strip("/") or "Referia"
-    items = "\n".join(
-        f'<li><a href="{c["url"]}">{c["path"]}</a></li>' for c in configs
-    )
+    """Return an HTML directory-listing page with sections grouped by subdirectory."""
+    breadcrumb = url_path.strip("/")
+    page_title = breadcrumb or "Referia"
+
+    # Build ordered groups preserving discovery order.
+    groups: dict[str, dict] = {}
+    for c in configs:
+        g = c["group"]
+        if g not in groups:
+            groups[g] = {"name": g, "url": c["group_url"], "entries": []}
+        groups[g]["entries"].append(c)
+
+    sections: list[str] = []
+    for gdata in groups.values():
+        items_html = "\n".join(
+            '<li>'
+            f'<a href="{e["url"]}">{_esc(e["title"])}</a>'
+            + (f'<span class="desc">{_esc(e["description"])}</span>'
+               if e.get("description") else "")
+            + "</li>"
+            for e in gdata["entries"]
+        )
+        if gdata["name"]:
+            heading = (
+                f'<h2><a href="{gdata["url"]}">'
+                f'{_esc(gdata["name"])}/</a></h2>'
+            )
+        else:
+            heading = ""
+        sections.append(f"<section>{heading}<ul>{items_html}</ul></section>")
+
+    body = "\n".join(sections)
+    label = f"/{_esc(breadcrumb)}" if breadcrumb else "root"
     html = f"""<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><title>{_esc(title)}</title>
+<head><meta charset="utf-8"><title>{_esc(page_title)}</title>
 <style>
-  body {{ font-family: system-ui, sans-serif; max-width: 640px; margin: 3rem auto; }}
-  h1 {{ font-size: 1.4rem; }}
-  ul {{ line-height: 2; }}
-  a {{ color: #3a6ea5; text-decoration: none; }}
-  a:hover {{ text-decoration: underline; }}
+  body{{font-family:system-ui,sans-serif;max-width:720px;margin:3rem auto;padding:0 1.5rem;}}
+  h1{{font-size:1.4rem;margin-bottom:1.5rem;}}
+  h2{{font-size:1.05rem;color:#555;margin:1.5rem 0 .4rem;
+      border-bottom:1px solid #e0e0e0;padding-bottom:.3rem;}}
+  h2 a{{color:#2e6da4;text-decoration:none;}}
+  h2 a:hover{{text-decoration:underline;}}
+  ul{{list-style:none;padding:0 0 0 1rem;margin:.2rem 0;}}
+  li{{padding:.25rem 0;line-height:1.4;}}
+  li a{{color:#1a4f7a;font-weight:500;text-decoration:none;}}
+  li a:hover{{text-decoration:underline;}}
+  .desc{{display:block;font-size:.85rem;color:#666;margin-top:.1rem;}}
+  section{{margin-bottom:.5rem;}}
 </style>
 </head>
 <body>
-<h1>Available reviews under <code>/{_esc(title)}</code></h1>
-<ul>
-{items}
-</ul>
+<h1>Reviews under <code>{label}</code></h1>
+{body}
 </body>
 </html>"""
     return HTMLResponse(html)
