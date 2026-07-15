@@ -57,20 +57,26 @@ Two sources:
 
 ## Proposed fix
 
-In `WebReviewer.render_viewer_html()` (or in the route that renders the
-viewer), post-process the returned HTML with a regex / BeautifulSoup pass
-that:
+The fix belongs at the point of generation, not as a post-processing pass on
+the final HTML.  Three possible sources, each with its own fix:
 
-1. For each `<a href="…">` in viewer HTML:
-   - Resolve the href against the config directory (absolute path).
-   - If the resolved path is under the server root, replace the href with the
-     root-relative URL path (i.e. strip the root prefix and ensure a leading
-     `/`).
-   - If not under root, leave unchanged (external or genuinely relative link).
+1. **Hardcoded path in a `liquid:` viewer entry** — e.g.
+   `[here](../../../Library/…/pdfpages)`.  Fix: change to the correct
+   relative path between the two config directories (e.g. `../pdfpages`).
+   A correct relative filesystem path is also a correct relative URL in
+   root-server mode.
 
-This post-processing should only run in root-server mode (when
-`app.state.root` is set) and should be applied to viewer HTML only (not the
-review form).
+2. **Data column value interpolated via `{{ ColumnName }}`** — the
+   spreadsheet cell holds a filesystem path.  Fix: pass `url_root` and
+   `config_dir` into `render_viewer_html()` so that Liquid substitution can
+   convert a filesystem path value to its root-relative URL equivalent
+   *before* it enters the HTML.
+
+3. **Compute function using `os.path.relpath()`** — the function computes a
+   relative path with the wrong base.  Fix: make the function produce a
+   root-relative URL string when called in web context.
+
+Post-processing the rendered HTML is explicitly ruled out as too fragile.
 
 ## Acceptance criteria
 
