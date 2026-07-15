@@ -1,7 +1,7 @@
 ---
 id: "2026-07-15_cip000C-path-router"
 title: "Add catch-all path router for config-based routing"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-07-15"
 last_updated: "2026-07-15"

@@ -110,10 +110,11 @@ def create_app(
                 )
                 app.state.reviewer = None
 
-    # Register HTMX routes
-    from referia.web.routes import router
-    app.include_router(router)
-
+    # Register HTMX routes.
+    # /health is registered first, then the single-config router, then the
+    # root_router (if in root-server mode).  Order matters because Starlette
+    # uses first-match routing and root_router's catch-all
+    # ``GET /{config_path:path}`` would otherwise swallow /health.
     @app.get("/health")
     async def health():
         if app.state.root is not None:
@@ -131,5 +132,12 @@ def create_app(
             "config": app.state.user_file,
             "directory": app.state.directory,
         }
+
+    from referia.web.routes import router
+    app.include_router(router)
+
+    if root is not None:
+        from referia.web.routes import root_router
+        app.include_router(root_router)
 
     return app

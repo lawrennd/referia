@@ -11,6 +11,21 @@
     -->
     <script src="https://unpkg.com/htmx.org@2.0.0" crossorigin="anonymous"></script>
     <script>
+      /* Root-server mode: CONFIG_PATH is the URL prefix for this config (e.g.
+         "/theses/examined/introduction").  In single-config mode it is empty.
+         The htmx:configRequest listener prepends it to every HTMX request path
+         so render.py never needs to know about path prefixes.             */
+      (function() {
+        var BASE = "{{ config_path_prefix | default('') }}";
+        if (!BASE) return;
+        document.addEventListener("htmx:configRequest", function(evt) {
+          var path = evt.detail.path;
+          if (path && path.charAt(0) === "/" && path.indexOf(BASE + "/") !== 0) {
+            evt.detail.path = BASE + path;
+          }
+        });
+      })();
+
       /* Auto-show the status bar when HTMX writes to it, then fade after 3 s */
       document.addEventListener("htmx:afterSettle", function (evt) {
         var bar = document.getElementById("status-bar");

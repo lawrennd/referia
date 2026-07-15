@@ -1,7 +1,7 @@
 ---
 id: "2026-07-15_cip000C-reviewer-cache"
 title: "Reviewer cache with mtime invalidation"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-07-15"
 last_updated: "2026-07-15"
