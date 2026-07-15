@@ -1,7 +1,7 @@
 ---
 id: "2026-07-15_web-viewer-links-filesystem-relative"
 title: "Viewer HTML links use filesystem-relative paths, breaking root-server mode"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-07-15"
 last_updated: "2026-07-15"
