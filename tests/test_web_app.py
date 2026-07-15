@@ -361,6 +361,91 @@ class TestRootRouterRoutes:
         # The group heading should link to /group/deep/
         assert 'href="/group/deep/"' in resp.text
 
+    # ── new listing-page feature tests ──────────────────────────────────────
+
+    def test_listing_has_parent_link_for_non_root(self, tmp_path):
+        """Listing pages below root contain a '..' link to the parent directory."""
+        sub = tmp_path / "theses" / "intro"
+        sub.mkdir(parents=True)
+        (sub / "_referia.yml").write_text("title: Intro")
+        app = create_app(root=str(tmp_path))
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app) as client:
+                resp = client.get("/theses/")
+        assert resp.status_code == 200
+        assert "href=\"/\"" in resp.text  # parent link to root
+
+    def test_root_listing_has_no_parent_link(self, tmp_path):
+        """Root listing page has no '..' link."""
+        sub = tmp_path / "reviews" / "phd"
+        sub.mkdir(parents=True)
+        (sub / "_referia.yml").write_text("title: PhD")
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/")
+        assert resp.status_code == 200
+        assert "&uarr;" not in resp.text  # no up-arrow
+
+    def test_listing_shows_date_from_yml(self, tmp_path):
+        """Date field from _referia.yml is shown in the listing."""
+        sub = tmp_path / "group" / "project"
+        sub.mkdir(parents=True)
+        (sub / "_referia.yml").write_text("title: Test\ndate: '2024-03-15'")
+        app = create_app(root=str(tmp_path))
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app) as client:
+                resp = client.get("/group/")
+        assert "2024-03-15" in resp.text
+
+    def test_listing_shows_current_badge(self, tmp_path):
+        """current: true in _referia.yml shows a 'current' badge."""
+        sub = tmp_path / "group" / "active"
+        sub.mkdir(parents=True)
+        (sub / "_referia.yml").write_text("title: Active\ncurrent: true")
+        app = create_app(root=str(tmp_path))
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app) as client:
+                resp = client.get("/group/")
+        assert "current" in resp.text
+
+    def test_current_only_filter_hides_non_current(self, tmp_path):
+        """?current=1 hides entries where current is false/absent."""
+        for name, yml in [("active", "title: A\ncurrent: true"), ("done", "title: B")]:
+            d = tmp_path / name
+            d.mkdir()
+            (d / "_referia.yml").write_text(yml)
+        app = create_app(root=str(tmp_path))
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app) as client:
+                resp = client.get("/?current=1")
+        assert "title: A" not in resp.text  # raw yml not shown
+        assert ">A<" in resp.text or "active" in resp.text.lower()
+        # The non-current entry should not be visible
+        assert ">B<" not in resp.text
+
+    def test_after_filter_excludes_old_entries(self, tmp_path):
+        """?after=2025-01-01 hides configs with dates before that."""
+        for name, date in [("old", "2023-06-01"), ("new", "2025-06-01")]:
+            d = tmp_path / name
+            d.mkdir()
+            (d / "_referia.yml").write_text(f"title: {name.title()}\ndate: '{date}'")
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/?after=2025-01-01")
+        assert "Old" not in resp.text
+        assert "New" in resp.text
+
+    def test_listing_filter_form_is_present(self, tmp_path):
+        """Listing page includes a filter form with date and current controls."""
+        sub = tmp_path / "proj"
+        sub.mkdir()
+        (sub / "_referia.yml").write_text("title: Project")
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/")
+        assert 'type="date"' in resp.text
+        assert 'name="current"' in resp.text
+
     def test_health_not_swallowed_by_root_catchall(self, tmp_path):
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:

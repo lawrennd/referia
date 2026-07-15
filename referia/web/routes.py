@@ -255,16 +255,24 @@ def _make_oob(widget_html: str) -> str:
 
 
 @router.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def index(
+    request: Request,
+    after: str | None = None,
+    before: str | None = None,
+    current: str | None = None,
+):
     """Render the full review page for the current record.
 
     In root-server mode (``app.state.root`` is set) there is no single
     reviewer, so instead we render a directory listing of all configs found
-    under the root.
+    under the root.  The ``after``, ``before`` and ``current`` query params
+    filter the listing by date range or work-in-progress status.
     """
     if getattr(request.app.state, "root", None) is not None:
+        current_only = current is not None
         configs = _list_sub_configs(request.app.state.root, "")
-        return _render_directory_listing("", configs)
+        configs = _filter_configs(configs, after=after, before=before, current_only=current_only)
+        return _render_directory_listing("", configs, after=after, before=before, current_only=current_only)
 
     reviewer = _reviewer(request)
     ctx = _panel_response_context(reviewer)
@@ -495,9 +503,12 @@ def _root_reviewer(request: Request, config_path: str):
 def _read_config_meta(yml_path: Path) -> dict:
     """Return display metadata from a ``_referia.yml`` without loading WebReviewer.
 
-    Reads only ``title`` and ``description`` via ``yaml.safe_load``.  Any
-    parse error silently returns an empty dict so a bad yml never breaks the
-    listing page.
+    Extracts ``title``, ``description``, ``date``, and ``current`` via
+    ``yaml.safe_load``.  Any parse error silently returns an empty dict so a
+    bad yml never breaks the listing page.
+
+    ``date`` is normalised to an ISO-format string (``"YYYY-MM-DD"``).
+    ``current`` is coerced to a plain Python ``bool``.
     """
     try:
         import yaml  # type: ignore[import]
@@ -505,9 +516,24 @@ def _read_config_meta(yml_path: Path) -> dict:
             data = yaml.safe_load(fh)
         if not isinstance(data, dict):
             return {}
+        raw_date = data.get("date")
+        date_str: str | None = None
+        if raw_date is not None:
+            try:
+                import datetime
+                if isinstance(raw_date, (datetime.date, datetime.datetime)):
+                    date_str = raw_date.strftime("%Y-%m-%d")
+                else:
+                    # Validate it looks like a date string.
+                    datetime.date.fromisoformat(str(raw_date))
+                    date_str = str(raw_date)
+            except (ValueError, TypeError):
+                pass
         return {
             "title": data.get("title") or data.get("name"),
             "description": data.get("description"),
+            "date": date_str,
+            "current": bool(data.get("current", False)),
         }
     except Exception:
         return {}
@@ -516,13 +542,15 @@ def _read_config_meta(yml_path: Path) -> dict:
 def _list_sub_configs(root: str, url_path: str) -> list[dict]:
     """Return all ``_referia.yml`` configs under *url_path* grouped for display.
 
-    Each entry in the returned list represents one config and contains:
+    Each entry contains:
 
     * ``url``         — root-relative URL with trailing slash (links to the review)
     * ``label``       — display label (path relative to the immediate group dir)
     * ``title``       — human-readable title from ``_referia.yml``, or leaf name
-    * ``description`` — short description from ``_referia.yml``, or ``None``
-    * ``group``       — name of the immediate child of *search_base* (grouping key)
+    * ``description`` — short description, or ``None``
+    * ``date``        — ISO date string from ``_referia.yml``, or ``None``
+    * ``current``     — bool from ``_referia.yml`` ``current`` field
+    * ``group``       — name of the immediate child of *search_base* (section key)
     * ``group_url``   — root-relative URL with trailing slash for the group dir
     """
     root_path = Path(root)
@@ -540,13 +568,11 @@ def _list_sub_configs(root: str, url_path: str) -> list[dict]:
             continue
 
         parts = rel_from_base.parts
-        # Immediate child of search_base is the group key.
         if parts:
             group_name = parts[0]
             group_abs = search_base / parts[0]
             label = str(Path(*parts[1:])) if len(parts) > 1 else parts[0]
         else:
-            # Config is at the search_base itself — no meaningful group.
             group_name = ""
             group_abs = search_base
             label = yml.parent.name
@@ -563,18 +589,90 @@ def _list_sub_configs(root: str, url_path: str) -> list[dict]:
             "label": label,
             "title": meta.get("title") or yml.parent.name,
             "description": meta.get("description"),
+            "date": meta.get("date"),
+            "current": meta.get("current", False),
             "group": group_name,
             "group_url": group_url,
         })
     return configs
 
 
-def _render_directory_listing(url_path: str, configs: list[dict]) -> HTMLResponse:
-    """Return an HTML directory-listing page with sections grouped by subdirectory."""
+def _filter_configs(
+    configs: list[dict],
+    *,
+    after: str | None = None,
+    before: str | None = None,
+    current_only: bool = False,
+) -> list[dict]:
+    """Return only those configs matching the supplied filter criteria.
+
+    * ``after``        — include configs whose ``date`` >= this ISO string
+    * ``before``       — include configs whose ``date`` <= this ISO string
+    * ``current_only`` — if ``True``, include only configs where ``current`` is truthy
+
+    Configs with no ``date`` field pass through date filters unchanged (we
+    cannot exclude what we cannot measure).
+    """
+    import datetime
+
+    result = []
+    for c in configs:
+        if current_only and not c.get("current"):
+            continue
+        cfg_date_str = c.get("date")
+        if cfg_date_str:
+            try:
+                cfg_date = datetime.date.fromisoformat(cfg_date_str)
+                if after:
+                    if cfg_date < datetime.date.fromisoformat(after):
+                        continue
+                if before:
+                    if cfg_date > datetime.date.fromisoformat(before):
+                        continue
+            except ValueError:
+                pass  # malformed date — let it through
+        result.append(c)
+    return result
+
+
+def _render_directory_listing(
+    url_path: str,
+    configs: list[dict],
+    *,
+    after: str | None = None,
+    before: str | None = None,
+    current_only: bool = False,
+) -> HTMLResponse:
+    """Return an HTML directory-listing page with sections grouped by subdirectory.
+
+    Includes a ``..`` navigation link (except at the root), a filter form for
+    date range and current-only filtering, and renders title, date, and
+    description for each config.
+    """
     breadcrumb = url_path.strip("/")
     page_title = breadcrumb or "Referia"
 
-    # Build ordered groups preserving discovery order.
+    # ── Parent (up-one) link ────────────────────────────────────────────────
+    if breadcrumb:
+        parts = breadcrumb.split("/")
+        parent = "/" + "/".join(parts[:-1]) + "/" if len(parts) > 1 else "/"
+        up_link = f'<p class="up"><a href="{parent}">&uarr; ..</a></p>'
+    else:
+        up_link = ""
+
+    # ── Filter form ─────────────────────────────────────────────────────────
+    after_val = _esc(after or "")
+    before_val = _esc(before or "")
+    current_checked = ' checked' if current_only else ''
+    filter_form = f"""<form class="filters" method="get">
+  <label>After&nbsp;<input type="date" name="after" value="{after_val}"></label>
+  <label>Before&nbsp;<input type="date" name="before" value="{before_val}"></label>
+  <label><input type="checkbox" name="current" value="1"{current_checked}> Current only</label>
+  <button type="submit">Filter</button>
+  <a class="clear" href="?">Clear</a>
+</form>"""
+
+    # ── Group and render entries ─────────────────────────────────────────────
     groups: dict[str, dict] = {}
     for c in configs:
         g = c["group"]
@@ -584,14 +682,28 @@ def _render_directory_listing(url_path: str, configs: list[dict]) -> HTMLRespons
 
     sections: list[str] = []
     for gdata in groups.values():
-        items_html = "\n".join(
-            '<li>'
-            f'<a href="{e["url"]}">{_esc(e["title"])}</a>'
-            + (f'<span class="desc">{_esc(e["description"])}</span>'
-               if e.get("description") else "")
-            + "</li>"
-            for e in gdata["entries"]
-        )
+        items: list[str] = []
+        for e in gdata["entries"]:
+            date_span = (
+                f'<span class="date">{_esc(e["date"])}</span>'
+                if e.get("date") else ""
+            )
+            current_badge = (
+                '<span class="badge-current">current</span>'
+                if e.get("current") else ""
+            )
+            desc_span = (
+                f'<span class="desc">{_esc(e["description"])}</span>'
+                if e.get("description") else ""
+            )
+            items.append(
+                f'<li>'
+                f'<a href="{e["url"]}">{_esc(e["title"])}</a>'
+                f'{current_badge}{date_span}'
+                f'{desc_span}'
+                f'</li>'
+            )
+        items_html = "\n".join(items)
         if gdata["name"]:
             heading = (
                 f'<h2><a href="{gdata["url"]}">'
@@ -601,28 +713,45 @@ def _render_directory_listing(url_path: str, configs: list[dict]) -> HTMLRespons
             heading = ""
         sections.append(f"<section>{heading}<ul>{items_html}</ul></section>")
 
-    body = "\n".join(sections)
+    body = "\n".join(sections) if sections else "<p>No reviews found.</p>"
     label = f"/{_esc(breadcrumb)}" if breadcrumb else "root"
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><title>{_esc(page_title)}</title>
 <style>
-  body{{font-family:system-ui,sans-serif;max-width:720px;margin:3rem auto;padding:0 1.5rem;}}
-  h1{{font-size:1.4rem;margin-bottom:1.5rem;}}
+  body{{font-family:system-ui,sans-serif;max-width:760px;margin:3rem auto;padding:0 1.5rem;}}
+  h1{{font-size:1.4rem;margin-bottom:.5rem;}}
+  .up{{margin:0 0 1rem;font-size:.9rem;}}
+  .up a{{color:#555;text-decoration:none;}}
+  .up a:hover{{text-decoration:underline;}}
+  .filters{{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;
+            background:#f5f5f5;border:1px solid #ddd;border-radius:6px;
+            padding:.6rem .8rem;margin-bottom:1.5rem;font-size:.875rem;}}
+  .filters label{{display:flex;align-items:center;gap:.3rem;}}
+  .filters input[type=date]{{font-size:.85rem;padding:.15rem .3rem;}}
+  .filters button{{padding:.2rem .7rem;cursor:pointer;}}
+  .filters a.clear{{color:#666;font-size:.85rem;text-decoration:none;}}
+  .filters a.clear:hover{{text-decoration:underline;}}
   h2{{font-size:1.05rem;color:#555;margin:1.5rem 0 .4rem;
       border-bottom:1px solid #e0e0e0;padding-bottom:.3rem;}}
   h2 a{{color:#2e6da4;text-decoration:none;}}
   h2 a:hover{{text-decoration:underline;}}
   ul{{list-style:none;padding:0 0 0 1rem;margin:.2rem 0;}}
-  li{{padding:.25rem 0;line-height:1.4;}}
+  li{{padding:.3rem 0;line-height:1.4;}}
   li a{{color:#1a4f7a;font-weight:500;text-decoration:none;}}
   li a:hover{{text-decoration:underline;}}
+  .date{{margin-left:.6rem;font-size:.8rem;color:#777;font-variant-numeric:tabular-nums;}}
+  .badge-current{{margin-left:.5rem;font-size:.7rem;font-weight:600;
+                  background:#d4edda;color:#155724;border-radius:3px;
+                  padding:.1rem .35rem;vertical-align:middle;}}
   .desc{{display:block;font-size:.85rem;color:#666;margin-top:.1rem;}}
   section{{margin-bottom:.5rem;}}
 </style>
 </head>
 <body>
 <h1>Reviews under <code>{label}</code></h1>
+{up_link}
+{filter_form}
 {body}
 </body>
 </html>"""
@@ -792,13 +921,23 @@ async def root_populate(request: Request, config_path: str, field: str):
 # ── Catch-all full page — MUST be registered last ────────────────────────────
 
 @root_router.get("/{config_path:path}", response_class=HTMLResponse)
-async def root_index(request: Request, config_path: str):
+async def root_index(
+    request: Request,
+    config_path: str,
+    after: str | None = None,
+    before: str | None = None,
+    current: str | None = None,
+):
     """Render the full review page for a root-mode config path.
 
     Redirects to a trailing-slash URL when none is present so that relative
     hrefs in viewer HTML (e.g. ``../pdfpages``) resolve correctly in the
     browser.  Without the slash the browser treats the last path segment as a
     file, stripping it before resolving ``..``-relative links.
+
+    When the path maps to a directory without a ``_referia.yml``, a listing of
+    sub-configs is shown instead.  The ``after``, ``before`` and ``current``
+    query params filter that listing.
     """
     from fastapi.responses import RedirectResponse
 
@@ -815,10 +954,17 @@ async def root_index(request: Request, config_path: str):
         reviewer = _root_reviewer(request, config_path)
     except _HTTPException as exc:
         if exc.status_code == 404:
-            # No _referia.yml here — show a listing of sub-configs if any exist.
-            configs = _list_sub_configs(request.app.state.root, config_path)
-            if configs:
-                return _render_directory_listing(config_path, configs)
+            # No _referia.yml here — show a filtered listing of sub-configs.
+            all_configs = _list_sub_configs(request.app.state.root, config_path)
+            if all_configs:
+                current_only = current is not None
+                visible = _filter_configs(
+                    all_configs, after=after, before=before, current_only=current_only
+                )
+                return _render_directory_listing(
+                    config_path, visible,
+                    after=after, before=before, current_only=current_only,
+                )
         raise
 
     ctx = _panel_response_context(reviewer)
