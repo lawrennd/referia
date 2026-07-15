@@ -606,7 +606,7 @@ class Interface(lynguine.config.interface.Interface):
         
             
 
-        viewelem = {"display": 'Parent assesser available <a href="' + os.path.join(os.path.relpath(os.path.expandvars(self._parent._directory), "assessment.ipynb")) + '" target="_blank">here</a>.'}
+        viewelem = {"display": 'Parent assesser available <a href="' + os.path.relpath(os.path.expandvars(self._parent._directory), self._directory) + '" target="_blank">here</a>.'}
 
         # Add links to parent assessment by placing in viewer.
         if "viewer" in self._data:
