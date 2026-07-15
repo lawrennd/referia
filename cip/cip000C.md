@@ -1,7 +1,7 @@
 ---
 author: Neil D. Lawrence
 created: "2026-07-15"
-last_updated: "2026-07-15"
+last_updated: "2026-07-15"  # refined URL scheme and index query parameter spec
 status: Proposed
 related_requirements: []
 related_cips: ["000B"]
@@ -68,7 +68,7 @@ directory when `--root` is omitted):
 referia serve --root ~/OneDrive/referia/ --port 8765
 ```
 
-URL paths map to `_referia.yml` locations relative to the root:
+URL paths map to config file locations relative to the root:
 
 ```
 GET /theses/examined/introduction/   →  {root}/theses/examined/introduction/_referia.yml
@@ -76,9 +76,39 @@ GET /people/letters/                 →  {root}/people/letters/_referia.yml
 GET /                                →  landing page listing available configs
 ```
 
-The trailing slash is canonical; the `_referia.yml` filename is implicit (always
-the same) and need not appear in the URL.  Optionally the explicit form
-`/theses/examined/introduction/_referia.yml` could be accepted as an alias.
+The trailing slash is canonical; the config filename defaults to `_referia.yml`
+and is normally omitted from the URL.  When a non-default config filename is
+used, it can be specified explicitly:
+
+```
+GET /theses/examined/introduction/_referia_draft.yml
+```
+
+This allows projects that maintain multiple named config files in the same
+directory to address each one directly.
+
+### Index as a query parameter
+
+The current record is specified via an `index` query parameter:
+
+```
+GET /people/letters/?index=Kazlauskaite_Ieva          # label value
+GET /people/letters/?index=3                           # positional (0-based integer)
+GET /people/letters/?index=0                           # first record
+GET /people/letters/?index=-1                          # last record
+```
+
+Resolution rules:
+1. If `index` is an integer (including negative), treat as a positional offset
+   into the DataFrame's index: `0` → first, `-1` → last, `n` → `df.index[n]`.
+2. Otherwise treat as a label and look it up directly.
+3. If absent, default to the first record (`index=0`).
+
+The `subindex` query parameter follows the same convention for subseries navigation:
+
+```
+GET /people/letters/?index=Kazlauskaite_Ieva&subindex=2026-06-01
+```
 
 ### State per config
 
@@ -144,10 +174,14 @@ link label.
 4. **Landing page** — `GET /` scans the root for `_referia.yml` files and renders an
    index page.
 
-5. **State in URL** — pass `index` and optionally `subindex` as query parameters so
-   that the reviewer's state is set per-request rather than persisted server-side.
-   This is a breaking change to the internal `set_index` flow; can be deferred to a
-   later iteration.
+5. **State in URL** — pass `index` and optionally `subindex` as query parameters.
+   Accepted forms:
+   - Integer (including `-1` for last, `0` for first) → positional lookup via
+     `df.index[n]`, with Python-style wrapping for negatives.
+   - Non-integer string → label lookup.
+   - Absent → default to `index=0`.
+   The config filename in the URL path defaults to `_referia.yml`; a non-default
+   name (e.g. `_referia_draft.yml`) can be appended to the path explicitly.
 
 6. **CLI update** — add `--root` option to `referia serve`; update `app.py` factory.
 
@@ -179,7 +213,8 @@ None formalised yet.
 - [ ] Add catch-all path router
 - [ ] Reviewer cache with mtime invalidation
 - [ ] Landing page
-- [ ] State in URL (query parameters)
+- [ ] State in URL: `index` and `subindex` query parameters (label or integer, `-1`/`0` for last/first)
+- [ ] Non-default config filename support in path (e.g. `_referia_draft.yml`)
 - [ ] CLI `--root` option
 - [ ] Tests
 
