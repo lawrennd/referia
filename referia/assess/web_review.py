@@ -129,11 +129,36 @@ class WebReviewer:
     def get_value(self, column: str) -> Any:
         """Return the current value of *column* for the active record.
 
+        NaN values (pandas sentinel for missing data) are normalised to
+        ``None`` so renderers and callers can use a simple ``is None`` check
+        rather than having to handle every numpy/pandas NaN variant.  This
+        mirrors what the Jupyter interface achieves via ``remove_nan()``
+        before passing values to widgets.
+
         :param column: Name of the data column.
-        :return: The stored value (may be ``None`` / ``NaN``).
+        :return: The stored value, with NaN replaced by ``None``.
         """
+        import math
+        import numpy as np
+        import pandas as pd
+
         self._data.set_column(column)
-        return self._data.get_value()
+        val = self._data.get_value()
+        # Normalise all NaN-like sentinels to None.
+        try:
+            if val is None:
+                return None
+            if isinstance(val, float) and math.isnan(val):
+                return None
+            if isinstance(val, (np.floating,)) and np.isnan(val):
+                return None
+            if isinstance(val, np.datetime64) and np.isnat(val):
+                return None
+            if pd.api.types.is_scalar(val) and pd.isnull(val):
+                return None
+        except (TypeError, ValueError):
+            pass
+        return val
 
     def get_row_data(self) -> dict:
         """Return all column values for the current record as a plain dict.

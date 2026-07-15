@@ -168,7 +168,7 @@ def _render_int_text(spec: dict, value: Any) -> str:
     label = _label_html(args.get("description", ""))
     min_attr = f' min="{args["min"]}"' if "min" in args else ""
     max_attr = f' max="{args["max"]}"' if "max" in args else ""
-    val = int(value) if value is not None else 0
+    val = int(value) if value is not None and value == value else 0  # value==value is False for NaN
     return (
         label
         + f'<input type="number" class="widget-number" {_htmx_field_attrs(column)} '
@@ -183,7 +183,7 @@ def _render_float_text(spec: dict, value: Any) -> str:
     min_attr = f' min="{args["min"]}"' if "min" in args else ""
     max_attr = f' max="{args["max"]}"' if "max" in args else ""
     step = args.get("step", 0.1)
-    val = float(value) if value is not None else 0.0
+    val = float(value) if value is not None and value == value else 0.0
     return (
         label
         + f'<input type="number" class="widget-number" {_htmx_field_attrs(column)} '

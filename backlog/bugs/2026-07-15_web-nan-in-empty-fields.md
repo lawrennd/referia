@@ -1,7 +1,7 @@
 ---
 id: "2026-07-15_web-nan-in-empty-fields"
 title: "Empty cells render as 'nan' in web interface text areas and other widgets"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-07-15"
 last_updated: "2026-07-15"
