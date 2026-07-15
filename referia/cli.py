@@ -2,8 +2,12 @@
 
 Usage::
 
+    # Single-config mode (original):
     poetry run referia serve [--config _referia.yml] [--directory .] \\
                              [--host 127.0.0.1] [--port 8000]
+
+    # Root-server mode (multi-config):
+    poetry run referia serve --root ~/OneDrive/referia/ [--host 127.0.0.1] [--port 8000]
 """
 
 import argparse
@@ -22,20 +26,34 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Start the web review interface",
         description=(
             "Serve a referia review session as a local web application.  "
-            "Open the printed URL in any browser."
+            "Open the printed URL in any browser.\n\n"
+            "Single-config mode: serve one _referia.yml from a specific directory.\n"
+            "Root-server mode (--root): serve any _referia.yml found under a root "
+            "directory, each addressable by its path in the URL."
         ),
     )
     serve.add_argument(
         "--config",
         default="_referia.yml",
         metavar="FILE",
-        help="Path to the referia configuration file (default: _referia.yml)",
+        help="Config filename for single-config mode (default: _referia.yml). "
+             "Ignored when --root is supplied.",
     )
     serve.add_argument(
         "--directory",
-        default=".",
+        default=None,
         metavar="DIR",
-        help="Review directory containing the config and data files (default: .)",
+        help="Review directory for single-config mode (default: current directory). "
+             "Cannot be combined with --root.",
+    )
+    serve.add_argument(
+        "--root",
+        default=None,
+        metavar="DIR",
+        help="Root directory for multi-config (root-server) mode.  When given, "
+             "all _referia.yml files found under this directory are served at "
+             "their relative path (e.g. /theses/examined/introduction/).  "
+             "Cannot be combined with --directory.",
     )
     serve.add_argument(
         "--host",
@@ -74,13 +92,29 @@ def _serve(args):
         )
         sys.exit(1)
 
+    # Validate mutually exclusive options
+    if args.root is not None and args.directory is not None:
+        print(
+            "error: --root and --directory cannot be used together.\n"
+            "  Use --root for multi-config (root-server) mode.\n"
+            "  Use --directory for single-config mode.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     from referia.web.app import create_app
 
-    app = create_app(user_file=args.config, directory=args.directory)
+    if args.root is not None:
+        app = create_app(root=args.root)
+        print(f"Starting referia root-server at http://{args.host}:{args.port}")
+        print(f"  Root:   {args.root}")
+        print("  Any _referia.yml under the root is served at its relative path.")
+    else:
+        directory = args.directory if args.directory is not None else "."
+        app = create_app(user_file=args.config, directory=directory)
+        print(f"Starting referia review interface at http://{args.host}:{args.port}")
+        print(f"  Config:    {args.config}")
+        print(f"  Directory: {directory}")
 
-    print(f"Starting referia review interface at http://{args.host}:{args.port}")
-    print(f"  Config:    {args.config}")
-    print(f"  Directory: {args.directory}")
     print("Press Ctrl+C to stop.")
-
     uvicorn.run(app, host=args.host, port=args.port)
