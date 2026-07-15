@@ -446,6 +446,82 @@ class TestRootRouterRoutes:
         assert 'type="date"' in resp.text
         assert 'name="current"' in resp.text
 
+    # ── Inheritance display ──────────────────────────────────────────────────
+
+    def test_same_group_child_indented_under_parent(self, tmp_path):
+        """Child config inherits from a sibling in the same top-level cluster.
+
+        Structure (all in cluster ``people/``):
+          people/_referia.yml       ← parent
+          people/letters/_referia.yml  ← child (inherits: directory: ../)
+        """
+        parent_dir = tmp_path / "people"
+        child_dir = tmp_path / "people" / "letters"
+        parent_dir.mkdir(parents=True)
+        child_dir.mkdir(parents=True)
+        (parent_dir / "_referia.yml").write_text("title: People")
+        (child_dir / "_referia.yml").write_text(
+            "title: People Letters\ninherit:\n  directory: ../\n"
+        )
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/")
+        text = resp.text
+        # Child should be indented (margin-left style applied)
+        assert "margin-left" in text
+        # The parent-child marker should appear
+        assert "&#x21b3;" in text
+
+    def test_same_group_parent_appears_before_child(self, tmp_path):
+        """Topological sort puts parent before child when listing a cluster."""
+        parent_dir = tmp_path / "people"
+        child_dir = tmp_path / "people" / "letters"
+        parent_dir.mkdir(parents=True)
+        child_dir.mkdir(parents=True)
+        (parent_dir / "_referia.yml").write_text("title: People Base")
+        (child_dir / "_referia.yml").write_text(
+            "title: People Letters\ninherit:\n  directory: ../\n"
+        )
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/")
+        pos_parent = resp.text.index("People Base")
+        pos_child = resp.text.index("People Letters")
+        assert pos_parent < pos_child, "Parent should render before child"
+
+    def test_cross_group_child_shows_inherits_annotation(self, tmp_path):
+        """Child in one top-level group that inherits from a different group shows annotation.
+
+        Structure:
+          shared/_referia.yml         ← parent (group: shared)
+          emails/_referia.yml         ← child  (group: emails, inherits: ../shared)
+        """
+        (tmp_path / "shared").mkdir()
+        (tmp_path / "shared" / "_referia.yml").write_text("title: Shared Config")
+        (tmp_path / "emails").mkdir()
+        (tmp_path / "emails" / "_referia.yml").write_text(
+            "title: Email Reviews\ninherit:\n  directory: ../shared\n"
+        )
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/")
+        # The child entry in 'emails' group should have an "inherits" annotation.
+        assert "inherits&nbsp;" in resp.text
+
+    def test_no_inheritance_renders_cleanly(self, tmp_path):
+        """Listing with no inheritance relationships renders without indent markers."""
+        for name in ("alpha", "beta", "gamma"):
+            d = tmp_path / name
+            d.mkdir()
+            (d / "_referia.yml").write_text(f"title: {name.title()}")
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/")
+        # The ↳ indent marker should not appear in the list items.
+        assert "&#x21b3;" not in resp.text
+        # "inherits&nbsp;" is the visible annotation text — not in CSS class names.
+        assert "inherits&nbsp;" not in resp.text
+
     def test_health_not_swallowed_by_root_catchall(self, tmp_path):
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:

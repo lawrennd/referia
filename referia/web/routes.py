@@ -503,12 +503,14 @@ def _root_reviewer(request: Request, config_path: str):
 def _read_config_meta(yml_path: Path) -> dict:
     """Return display metadata from a ``_referia.yml`` without loading WebReviewer.
 
-    Extracts ``title``, ``description``, ``date``, and ``current`` via
-    ``yaml.safe_load``.  Any parse error silently returns an empty dict so a
-    bad yml never breaks the listing page.
+    Extracts ``title``, ``description``, ``date``, ``current``, and
+    ``inherit_abs`` via ``yaml.safe_load``.  Any parse error silently returns
+    an empty dict so a bad yml never breaks the listing page.
 
     ``date`` is normalised to an ISO-format string (``"YYYY-MM-DD"``).
     ``current`` is coerced to a plain Python ``bool``.
+    ``inherit_abs`` is the resolved absolute ``Path`` of the inherited config
+    directory, or ``None`` if no ``inherit`` section is present.
     """
     try:
         import yaml  # type: ignore[import]
@@ -529,11 +531,23 @@ def _read_config_meta(yml_path: Path) -> dict:
                     date_str = str(raw_date)
             except (ValueError, TypeError):
                 pass
+
+        inherit_abs: Path | None = None
+        raw_inherit = data.get("inherit")
+        if isinstance(raw_inherit, dict):
+            rel_dir = raw_inherit.get("directory")
+            if rel_dir:
+                try:
+                    inherit_abs = (yml_path.parent / str(rel_dir)).resolve()
+                except Exception:
+                    pass
+
         return {
             "title": data.get("title") or data.get("name"),
             "description": data.get("description"),
             "date": date_str,
             "current": bool(data.get("current", False)),
+            "inherit_abs": inherit_abs,
         }
     except Exception:
         return {}
@@ -593,8 +607,76 @@ def _list_sub_configs(root: str, url_path: str) -> list[dict]:
             "current": meta.get("current", False),
             "group": group_name,
             "group_url": group_url,
+            "_inherit_abs": meta.get("inherit_abs"),  # resolved Path or None
         })
+
+    # Resolve inherit_abs → root-relative URL and inherit_title.
+    url_to_config = {c["url"]: c for c in configs}
+    for c in configs:
+        inherit_abs = c.pop("_inherit_abs", None)
+        inherit_url: str | None = None
+        inherit_title: str | None = None
+        if inherit_abs is not None:
+            try:
+                inherit_rel = inherit_abs.relative_to(root_path)
+                inherit_url = "/" + str(inherit_rel) + "/"
+                parent_cfg = url_to_config.get(inherit_url)
+                if parent_cfg:
+                    inherit_title = parent_cfg.get("title")
+            except ValueError:
+                # Parent is outside the root tree — keep inherit_url as None
+                # but record that it exists (so we can show a plain label).
+                try:
+                    inherit_title = inherit_abs.name
+                except Exception:
+                    pass
+        c["inherit_url"] = inherit_url
+        c["inherit_title"] = inherit_title
+
     return configs
+
+
+def _topo_sort_group(entries: list[dict]) -> list[dict]:
+    """Return *entries* with parents before their children (topological order).
+
+    Entries that form no parent-child relationship keep their original order.
+    Cycles (unlikely but possible with hand-edited YAMLs) are broken by
+    skipping already-visited nodes.
+    """
+    url_set = {e["url"] for e in entries}
+    url_to_entry = {e["url"]: e for e in entries}
+    result: list[dict] = []
+    visited: set[str] = set()
+
+    def visit(url: str) -> None:
+        if url in visited:
+            return
+        visited.add(url)
+        e = url_to_entry.get(url)
+        if e is None:
+            return
+        parent_url = e.get("inherit_url")
+        if parent_url and parent_url in url_set:
+            visit(parent_url)
+        result.append(e)
+
+    for e in entries:
+        visit(e["url"])
+
+    return result
+
+
+def _inherit_depth(url: str, url_set: set, url_to_inherit: dict, _seen: set | None = None) -> int:
+    """Return how many ancestors within *url_set* this entry has (chain depth)."""
+    if _seen is None:
+        _seen = set()
+    if url in _seen:
+        return 0  # cycle guard
+    _seen.add(url)
+    parent = url_to_inherit.get(url)
+    if parent and parent in url_set:
+        return 1 + _inherit_depth(parent, url_set, url_to_inherit, _seen)
+    return 0
 
 
 def _filter_configs(
@@ -680,10 +762,23 @@ def _render_directory_listing(
             groups[g] = {"name": g, "url": c["group_url"], "entries": []}
         groups[g]["entries"].append(c)
 
+    # All URLs in the full config list (for cross-group parent detection).
+    all_urls = {c["url"] for c in configs}
+
     sections: list[str] = []
     for gdata in groups.values():
+        entries = gdata["entries"]
+        url_set = {e["url"] for e in entries}
+        url_to_inherit = {e["url"]: e.get("inherit_url") for e in entries}
+
+        sorted_entries = _topo_sort_group(entries)
+
         items: list[str] = []
-        for e in gdata["entries"]:
+        for e in sorted_entries:
+            depth = _inherit_depth(e["url"], url_set, url_to_inherit)
+            indent_style = f"margin-left:{depth * 1.4}rem;" if depth else ""
+            indent_marker = "&#x21b3;&nbsp;" if depth else ""  # ↳
+
             date_span = (
                 f'<span class="date">{_esc(e["date"])}</span>'
                 if e.get("date") else ""
@@ -696,10 +791,41 @@ def _render_directory_listing(
                 f'<span class="desc">{_esc(e["description"])}</span>'
                 if e.get("description") else ""
             )
+
+            # Cross-group inheritance annotation: parent is known but outside
+            # this group (either in another group or entirely outside root).
+            cross_inherit_html = ""
+            inh_url = e.get("inherit_url")
+            inh_title = e.get("inherit_title")
+            if inh_url and inh_url not in url_set:
+                # Parent is in a different group within root — link to it.
+                label_text = _esc(inh_title or inh_url)
+                if inh_url in all_urls:
+                    cross_inherit_html = (
+                        f'<span class="inherits-from">'
+                        f'inherits&nbsp;<a href="{inh_url}">{label_text}</a>'
+                        f'</span>'
+                    )
+                else:
+                    cross_inherit_html = (
+                        f'<span class="inherits-from">'
+                        f'inherits&nbsp;{label_text}'
+                        f'</span>'
+                    )
+            elif inh_url is None and e.get("inherit_title"):
+                # Parent resolved but is outside root tree.
+                cross_inherit_html = (
+                    f'<span class="inherits-from">'
+                    f'inherits&nbsp;{_esc(e["inherit_title"])}'
+                    f'</span>'
+                )
+
             items.append(
-                f'<li>'
+                f'<li style="{indent_style}">'
+                f'{indent_marker}'
                 f'<a href="{e["url"]}">{_esc(e["title"])}</a>'
                 f'{current_badge}{date_span}'
+                f'{cross_inherit_html}'
                 f'{desc_span}'
                 f'</li>'
             )
@@ -745,6 +871,9 @@ def _render_directory_listing(
                   background:#d4edda;color:#155724;border-radius:3px;
                   padding:.1rem .35rem;vertical-align:middle;}}
   .desc{{display:block;font-size:.85rem;color:#666;margin-top:.1rem;}}
+  .inherits-from{{margin-left:.6rem;font-size:.78rem;color:#888;font-style:italic;}}
+  .inherits-from a{{color:#888;text-decoration:none;}}
+  .inherits-from a:hover{{text-decoration:underline;}}
   section{{margin-bottom:.5rem;}}
 </style>
 </head>
