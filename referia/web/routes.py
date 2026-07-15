@@ -486,6 +486,16 @@ def _get_cached_reviewer(app_state, config_file: Path, user_file: str):
             reviewer = WebReviewer(user_file, str(config_file.parent))
         except Exception as exc:
             log.error("Failed to load config %s: %s", config_file, exc)
+            # Record in the in-memory error registry (if it exists on app_state).
+            load_errors = getattr(app_state, "load_errors", None)
+            if load_errors is not None:
+                import time as _time
+                load_errors.append({
+                    "path": str(config_file),
+                    "error": str(exc),
+                    "type": type(exc).__name__,
+                    "time": _time.strftime("%Y-%m-%d %H:%M:%S"),
+                })
             raise HTTPException(status_code=503, detail=f"Could not load config: {exc}")
         app_state.reviewer_cache[key] = (mtime, reviewer)
 
@@ -549,8 +559,9 @@ def _read_config_meta(yml_path: Path) -> dict:
             "current": bool(data.get("current", False)),
             "inherit_abs": inherit_abs,
         }
-    except Exception:
-        return {}
+    except Exception as exc:
+        log.warning("Failed to parse config %s: %s", yml_path, exc)
+        return {"_error": str(exc)}
 
 
 def _list_sub_configs(root: str, url_path: str) -> list[dict]:
@@ -608,6 +619,8 @@ def _list_sub_configs(root: str, url_path: str) -> list[dict]:
             "group": group_name,
             "group_url": group_url,
             "_inherit_abs": meta.get("inherit_abs"),  # resolved Path or None
+            "error": meta.get("_error"),  # None if parse succeeded
+            "yml_path": str(yml),
         })
 
     # Resolve inherit_abs → root-relative URL and inherit_title.
@@ -742,6 +755,18 @@ def _render_directory_listing(
     else:
         up_link = ""
 
+    # ── Error banner (shown only when there are parse failures) ─────────────
+    error_count = sum(1 for c in configs if c.get("error"))
+    if error_count:
+        error_banner = (
+            f'<p class="error-banner">'
+            f'&#x26A0;&#xFE0F;&nbsp;{error_count} config(s) failed to parse. '
+            f'<a href="/errors">View errors &rarr;</a>'
+            f'</p>'
+        )
+    else:
+        error_banner = ""
+
     # ── Filter form ─────────────────────────────────────────────────────────
     after_val = _esc(after or "")
     before_val = _esc(before or "")
@@ -820,11 +845,19 @@ def _render_directory_listing(
                     f'</span>'
                 )
 
+            error_indicator = ""
+            if e.get("error"):
+                error_title = _esc(e["error"][:120])
+                error_indicator = (
+                    f' <a href="/errors" class="error-icon" title="{error_title}">'
+                    f'&#x26A0;&#xFE0F;</a>'
+                )
+
             items.append(
                 f'<li style="{indent_style}">'
                 f'{indent_marker}'
                 f'<a href="{e["url"]}">{_esc(e["title"])}</a>'
-                f'{current_badge}{date_span}'
+                f'{error_indicator}{current_badge}{date_span}'
                 f'{cross_inherit_html}'
                 f'{desc_span}'
                 f'</li>'
@@ -874,12 +907,17 @@ def _render_directory_listing(
   .inherits-from{{margin-left:.6rem;font-size:.78rem;color:#888;font-style:italic;}}
   .inherits-from a{{color:#888;text-decoration:none;}}
   .inherits-from a:hover{{text-decoration:underline;}}
+  .error-banner{{background:#fff3cd;border:1px solid #ffc107;border-radius:6px;
+                 padding:.5rem .9rem;font-size:.9rem;margin-bottom:1rem;}}
+  .error-banner a{{color:#856404;font-weight:500;}}
+  .error-icon{{text-decoration:none;margin-left:.3rem;}}
   section{{margin-bottom:.5rem;}}
 </style>
 </head>
 <body>
 <h1>Reviews under <code>{label}</code></h1>
 {up_link}
+{error_banner}
 {filter_form}
 {body}
 </body>
@@ -1048,6 +1086,81 @@ async def root_populate(request: Request, config_path: str, field: str):
 
 
 # ── Catch-all full page — MUST be registered last ────────────────────────────
+
+@root_router.get("/errors", response_class=HTMLResponse)
+async def list_errors(request: Request):
+    """Show all configs that failed to parse (YAML) or load (WebReviewer)."""
+    root = request.app.state.root
+    all_configs = _list_sub_configs(root, "")
+
+    # ── YAML parse errors found while scanning the tree ──────────────────────
+    parse_errors = [c for c in all_configs if c.get("error")]
+
+    # ── WebReviewer load errors recorded during lazy loading ─────────────────
+    load_errors: list[dict] = getattr(request.app.state, "load_errors", [])
+
+    rows_parse = "".join(
+        f'<tr>'
+        f'<td><code>{_esc(e["yml_path"])}</code></td>'
+        f'<td class="err-msg">{_esc(e["error"])}</td>'
+        f'</tr>'
+        for e in parse_errors
+    ) or "<tr><td colspan='2'>None</td></tr>"
+
+    rows_load = "".join(
+        f'<tr>'
+        f'<td><code>{_esc(e["path"])}</code></td>'
+        f'<td class="err-type">{_esc(e["type"])}</td>'
+        f'<td class="err-msg">{_esc(e["error"])}</td>'
+        f'<td class="err-time">{_esc(e["time"])}</td>'
+        f'</tr>'
+        for e in reversed(load_errors)
+    ) or "<tr><td colspan='4'>None</td></tr>"
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Config Errors</title>
+<style>
+  body{{font-family:system-ui,sans-serif;max-width:1000px;margin:3rem auto;padding:0 1.5rem;}}
+  h1{{font-size:1.4rem;}}
+  h2{{font-size:1.1rem;margin-top:2rem;border-bottom:1px solid #ddd;padding-bottom:.3rem;}}
+  .back{{font-size:.9rem;margin-bottom:1.5rem;}}
+  .back a{{color:#2e6da4;}}
+  table{{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:.5rem;}}
+  th{{text-align:left;background:#f5f5f5;padding:.4rem .6rem;border-bottom:2px solid #ddd;}}
+  td{{padding:.35rem .6rem;border-bottom:1px solid #eee;vertical-align:top;word-break:break-word;}}
+  .err-msg{{color:#c0392b;font-family:monospace;}}
+  .err-type{{color:#777;white-space:nowrap;}}
+  .err-time{{color:#999;white-space:nowrap;font-size:.8rem;}}
+  .ok{{color:#27ae60;font-weight:500;}}
+</style>
+</head>
+<body>
+<h1>&#x26A0;&#xFE0F; Config Errors</h1>
+<p class="back"><a href="/">&larr; Back to listings</a></p>
+
+<h2>YAML parse failures ({len(parse_errors)})</h2>
+<p style="font-size:.85rem;color:#666;">These <code>_referia.yml</code> files could not be read at all.</p>
+<table>
+<thead><tr><th>File</th><th>Error</th></tr></thead>
+<tbody>{rows_parse}</tbody>
+</table>
+
+<h2>Reviewer load failures ({len(load_errors)})</h2>
+<p style="font-size:.85rem;color:#666;">These configs parsed OK but failed when a reviewer tried to open them.</p>
+<table>
+<thead><tr><th>Config file</th><th>Type</th><th>Error</th><th>When</th></tr></thead>
+<tbody>{rows_load}</tbody>
+</table>
+
+<p style="font-size:.8rem;color:#999;margin-top:2rem;">
+  Errors are also written to <code>{_esc(root)}/referia-server.log</code>.
+  Load failures accumulate until the server restarts.
+</p>
+</body>
+</html>"""
+    return HTMLResponse(html)
+
 
 @root_router.get("/{config_path:path}", response_class=HTMLResponse)
 async def root_index(

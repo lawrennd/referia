@@ -522,6 +522,64 @@ class TestRootRouterRoutes:
         # "inherits&nbsp;" is the visible annotation text — not in CSS class names.
         assert "inherits&nbsp;" not in resp.text
 
+    # ── Error logging and /errors page ──────────────────────────────────────
+
+    def test_parse_error_shows_warning_icon_on_listing(self, tmp_path):
+        """A _referia.yml with invalid YAML shows ⚠️ on the listing."""
+        bad = tmp_path / "broken"
+        bad.mkdir()
+        (bad / "_referia.yml").write_text("title: [unclosed bracket")
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/")
+        # The warning icon entity appears for the broken config.
+        assert "&#x26A0;" in resp.text
+
+    def test_parse_error_shows_error_banner_on_listing(self, tmp_path):
+        """Error banner with link to /errors appears when any config fails to parse."""
+        bad = tmp_path / "broken"
+        bad.mkdir()
+        (bad / "_referia.yml").write_text("title: [unclosed bracket")
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/")
+        assert "error-banner" in resp.text
+        assert "/errors" in resp.text
+
+    def test_errors_page_shows_parse_failures(self, tmp_path):
+        """GET /errors lists configs that failed YAML parsing."""
+        bad = tmp_path / "bad"
+        bad.mkdir()
+        (bad / "_referia.yml").write_text(": invalid: yaml: :")
+        good = tmp_path / "good"
+        good.mkdir()
+        (good / "_referia.yml").write_text("title: Good Config")
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/errors")
+        assert resp.status_code == 200
+        assert "YAML parse failures" in resp.text
+        # The broken file path should appear
+        assert str(bad / "_referia.yml") in resp.text
+
+    def test_errors_page_shows_none_when_all_ok(self, tmp_path):
+        """GET /errors shows 'None' in the parse-failures section when all configs parse OK."""
+        ok = tmp_path / "ok"
+        ok.mkdir()
+        (ok / "_referia.yml").write_text("title: Fine")
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/errors")
+        assert resp.status_code == 200
+        assert "YAML parse failures (0)" in resp.text
+
+    def test_root_log_file_created(self, tmp_path):
+        """A referia-server.log file is created at the root when running in root mode."""
+        app = create_app(root=str(tmp_path))
+        with TestClient(app):
+            pass
+        assert (tmp_path / "referia-server.log").exists()
+
     def test_health_not_swallowed_by_root_catchall(self, tmp_path):
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:

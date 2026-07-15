@@ -72,13 +72,28 @@ def create_app(
         app.state.reviewer = None   # no single pre-loaded reviewer
         app.state.user_file = None
         app.state.directory = resolved_root
+        # load_errors accumulates {path, error, time} dicts for the /errors page.
+        app.state.load_errors: list[dict] = []
+
+        # Write WARNING+ messages from all referia/lynguine loggers to a
+        # single file at the root so errors are easy to find.
+        _log_path = Path(resolved_root) / "referia-server.log"
+        _file_handler = logging.FileHandler(str(_log_path), encoding="utf-8")
+        _file_handler.setLevel(logging.WARNING)
+        _file_handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)-8s %(name)s: %(message)s")
+        )
+        for _logger_name in ("referia", "lynguine", ""):
+            logging.getLogger(_logger_name).addHandler(_file_handler)
 
         @app.on_event("startup")
         async def _startup_root() -> None:
             log.info(
                 "Referia root-server mode active.  "
-                "Configs loaded on demand from: %r",
+                "Configs loaded on demand from: %r  "
+                "Log: %s",
                 resolved_root,
+                _log_path,
             )
 
     else:
