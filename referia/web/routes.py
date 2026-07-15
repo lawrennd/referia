@@ -483,6 +483,58 @@ def _root_reviewer(request: Request, config_path: str):
     return _get_cached_reviewer(request.app.state, config_file, user_file)
 
 
+def _list_sub_configs(root: str, url_path: str) -> list[dict]:
+    """Return all ``_referia.yml`` configs discoverable under *url_path* within *root*.
+
+    Each entry has ``url`` (root-relative URL with trailing slash) and
+    ``name`` (the leaf directory name) for use in a directory-listing page.
+    """
+    root_path = Path(root)
+    clean = url_path.strip("/")
+    search_base = root_path / clean if clean else root_path
+    if not search_base.is_dir():
+        return []
+    configs = []
+    for yml in sorted(search_base.rglob("_referia.yml")):
+        try:
+            rel = yml.parent.relative_to(root_path)
+        except ValueError:
+            continue
+        configs.append({
+            "path": str(rel),
+            "url": "/" + str(rel) + "/",
+            "name": yml.parent.name,
+        })
+    return configs
+
+
+def _render_directory_listing(url_path: str, configs: list[dict]) -> HTMLResponse:
+    """Return a simple HTML directory-listing page for configs under *url_path*."""
+    title = url_path.strip("/") or "Referia"
+    items = "\n".join(
+        f'<li><a href="{c["url"]}">{c["path"]}</a></li>' for c in configs
+    )
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{_esc(title)}</title>
+<style>
+  body {{ font-family: system-ui, sans-serif; max-width: 640px; margin: 3rem auto; }}
+  h1 {{ font-size: 1.4rem; }}
+  ul {{ line-height: 2; }}
+  a {{ color: #3a6ea5; text-decoration: none; }}
+  a:hover {{ text-decoration: underline; }}
+</style>
+</head>
+<body>
+<h1>Available reviews under <code>/{_esc(title)}</code></h1>
+<ul>
+{items}
+</ul>
+</body>
+</html>"""
+    return HTMLResponse(html)
+
+
 def _config_path_prefix(config_path: str) -> str:
     """Normalise a URL config path to an absolute prefix string for JS injection.
 
@@ -663,7 +715,18 @@ async def root_index(request: Request, config_path: str):
             status_code=301,
         )
 
-    reviewer = _root_reviewer(request, config_path)
+    from fastapi import HTTPException as _HTTPException
+
+    try:
+        reviewer = _root_reviewer(request, config_path)
+    except _HTTPException as exc:
+        if exc.status_code == 404:
+            # No _referia.yml here — show a listing of sub-configs if any exist.
+            configs = _list_sub_configs(request.app.state.root, config_path)
+            if configs:
+                return _render_directory_listing(config_path, configs)
+        raise
+
     ctx = _panel_response_context(reviewer)
     prefix = _config_path_prefix(config_path)
 

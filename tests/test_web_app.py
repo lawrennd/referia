@@ -298,6 +298,29 @@ class TestRootRouterRoutes:
             resp = client.get("/no/such/config")
         assert resp.status_code == 404
 
+    def test_root_intermediate_dir_shows_listing(self, tmp_path):
+        """A directory with no _referia.yml but sub-configs shows a listing page."""
+        sub = tmp_path / "group" / "project"
+        sub.mkdir(parents=True)
+        (sub / "_referia.yml").write_text("title: test")
+        app = create_app(root=str(tmp_path))
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app) as client:
+                resp = client.get("/group/")
+        assert resp.status_code == 200
+        assert "group/project" in resp.text
+
+    def test_root_listing_links_are_clickable_urls(self, tmp_path):
+        """Listing entries link to the correct root-relative URL."""
+        sub = tmp_path / "a" / "b"
+        sub.mkdir(parents=True)
+        (sub / "_referia.yml").write_text("title: test")
+        app = create_app(root=str(tmp_path))
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app) as client:
+                resp = client.get("/a/")
+        assert "/a/b/" in resp.text
+
     def test_health_not_swallowed_by_root_catchall(self, tmp_path):
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:

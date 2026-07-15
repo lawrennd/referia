@@ -1,7 +1,7 @@
 ---
 id: "2026-07-15_cip000C-landing-page"
 title: "Landing page listing all configs under root"
-status: "Ready"
+status: "Completed"
 priority: "Medium"
 created: "2026-07-15"
 last_updated: "2026-07-15"
