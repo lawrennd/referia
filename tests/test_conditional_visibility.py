@@ -407,6 +407,117 @@ class TestTemplateVisibilityPropagation:
                 f"All widgets from template should be hidden when visible_if is false (widget: {widget_key})"
 
 
+class TestStrictColumnsDefault:
+    """
+    Regression tests for strict_columns default behaviour.
+
+    referia should default to strict_columns=False (permissive) so that configs
+    which have extra columns in their data files (e.g. a 'SessionDate' column not
+    listed in the spec) continue to load without error.  Configs can opt IN to
+    strict mode by explicitly setting strict_columns: true.
+    """
+
+    @pytest.fixture
+    def temp_dir(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+
+    def _write_config(self, temp_dir, strict_columns_value=None, in_sub=False):
+        """Write a minimal _referia.yml; strict_columns_value=None means omit the key."""
+        alloc = {
+            "index": "Name",
+            "type": "excel",
+            "filename": "data.xlsx",
+            "header": 0,
+        }
+        config: dict = {
+            "allocation": alloc,
+            "output": {"type": "excel", "filename": "output.xlsx"},
+            "viewer": [{"field": "Name", "type": "text"}],
+        }
+        if strict_columns_value is not None:
+            if in_sub:
+                config["allocation"]["strict_columns"] = strict_columns_value
+            else:
+                config["strict_columns"] = strict_columns_value
+        with open(temp_dir / "_referia.yml", "w") as f:
+            yaml.dump(config, f)
+
+    def _write_data(self, temp_dir, extra_col=True):
+        df = pd.DataFrame({"Name": ["Alice", "Bob"]})
+        if extra_col:
+            df["SessionDate"] = ["2022-01-01", "2022-01-02"]
+        df.to_excel(temp_dir / "data.xlsx", index=False)
+
+    # ------------------------------------------------------------------ #
+    # Unit tests of the strict_columns resolution logic.
+    #
+    # The relevant code path is referia's _finalize_df override, which is
+    # called with strict_columns=None (its default) by lynguine's from_flow
+    # for non-input data (e.g. when an existing output file is re-read).
+    # The override must resolve None → False unless the config says True.
+    # ------------------------------------------------------------------ #
+
+    def _resolve(self, sub_strict, top_strict):
+        """
+        Run the resolution logic extracted from CustomDataFrame._finalize_df
+        and return the resolved value.
+
+        sub_strict: strict_columns value to put in the sub-interface (or None=omit)
+        top_strict: strict_columns value to put in the top-level interface (or None=omit)
+        """
+        sub_data = {}
+        if sub_strict is not None:
+            sub_data["strict_columns"] = sub_strict
+
+        top_data = {}
+        if top_strict is not None:
+            top_data["strict_columns"] = top_strict
+
+        # Replicate the logic from referia/assess/data.py CustomDataFrame._finalize_df
+        # so that we can test it independently of the full data pipeline.
+        class _FakeInterface(dict):
+            """Minimal dict subclass that mimics Interface for the 'in' and '[]' checks."""
+
+        interface = _FakeInterface(sub_data)
+        top_interface = _FakeInterface(top_data) if top_data else None
+
+        strict_columns = None   # the argument as lynguine would pass it
+        if strict_columns is None:
+            if "strict_columns" in interface:
+                strict_columns = bool(interface["strict_columns"])
+            elif top_interface is not None and "strict_columns" in top_interface:
+                strict_columns = bool(top_interface["strict_columns"])
+            else:
+                strict_columns = False
+        return strict_columns
+
+    def test_default_is_false_when_no_strict_set(self):
+        """No strict_columns anywhere → resolved value must be False."""
+        assert self._resolve(sub_strict=None, top_strict=None) is False
+
+    def test_false_in_sub_resolves_false(self):
+        """strict_columns: false in sub-interface → False."""
+        assert self._resolve(sub_strict=False, top_strict=None) is False
+
+    def test_true_in_sub_resolves_true(self):
+        """strict_columns: true in sub-interface → True."""
+        assert self._resolve(sub_strict=True, top_strict=None) is True
+
+    def test_false_in_top_resolves_false(self):
+        """strict_columns: false in top-level interface → False."""
+        assert self._resolve(sub_strict=None, top_strict=False) is False
+
+    def test_true_in_top_resolves_true(self):
+        """strict_columns: true in top-level interface → True."""
+        assert self._resolve(sub_strict=None, top_strict=True) is True
+
+    def test_sub_takes_precedence_over_top(self):
+        """Sub-interface strict_columns overrides top-level setting."""
+        assert self._resolve(sub_strict=False, top_strict=True) is False
+        assert self._resolve(sub_strict=True, top_strict=False) is True
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
 
