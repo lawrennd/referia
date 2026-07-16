@@ -67,6 +67,34 @@ def _build_parser() -> argparse.ArgumentParser:
         help="TCP port to listen on (default: 8000)",
     )
 
+    check = subparsers.add_parser(
+        "check",
+        help="Lint all _referia.yml files under a root directory",
+        description=(
+            "Scan every _referia.yml under --root and report any YAML parse "
+            "errors.  Exits 0 when all configs are valid, non-zero otherwise.  "
+            "Use --format json to get machine-readable output suitable for "
+            "piping to an LLM for automated fixing."
+        ),
+    )
+    check.add_argument(
+        "--root",
+        required=True,
+        metavar="DIR",
+        help="Root directory to scan recursively for _referia.yml files.",
+    )
+    check.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format: 'text' (default, human-readable) or 'json' (LLM-friendly).",
+    )
+    check.add_argument(
+        "--errors-only",
+        action="store_true",
+        help="In text mode, suppress the summary and show only failing files.",
+    )
+
     return parser
 
 
@@ -76,6 +104,8 @@ def main(argv=None):
 
     if args.command == "serve":
         _serve(args)
+    elif args.command == "check":
+        _check(args)
     else:
         parser.print_help()
         sys.exit(1)
@@ -118,3 +148,23 @@ def _serve(args):
 
     print("Press Ctrl+C to stop.")
     uvicorn.run(app, host=args.host, port=args.port)
+
+
+def _check(args):
+    """Implement ``referia check`` subcommand."""
+    from referia.check import scan_configs, format_text, format_json
+
+    results = scan_configs(args.root)
+    errors = [r for r in results if not r["ok"]]
+
+    if args.format == "json":
+        print(format_json(results, args.root))
+    else:
+        if args.errors_only:
+            for r in errors:
+                loc = f":{r['line']}" if r["line"] is not None else ""
+                print(f"{r['path']}{loc}: [{r['category']}] {r['error'].splitlines()[0]}")
+        else:
+            print(format_text(results, args.root))
+
+    sys.exit(1 if errors else 0)
