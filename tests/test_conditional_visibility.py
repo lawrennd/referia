@@ -483,18 +483,20 @@ class TestStrictColumnsDefault:
         top_interface = _FakeInterface(top_data) if top_data else None
 
         strict_columns = None   # the argument as lynguine would pass it
+        # Mirror the logic in referia/assess/data.py CustomDataFrame._finalize_df:
+        # only resolves to False when explicitly told so; otherwise defaults to True.
         if strict_columns is None:
-            if "strict_columns" in interface:
-                strict_columns = bool(interface["strict_columns"])
-            elif top_interface is not None and "strict_columns" in top_interface:
-                strict_columns = bool(top_interface["strict_columns"])
-            else:
+            if "strict_columns" in interface and not interface["strict_columns"]:
                 strict_columns = False
+            elif top_interface is not None and "strict_columns" in top_interface and not top_interface["strict_columns"]:
+                strict_columns = False
+            else:
+                strict_columns = True
         return strict_columns
 
-    def test_default_is_false_when_no_strict_set(self):
-        """No strict_columns anywhere → resolved value must be False."""
-        assert self._resolve(sub_strict=None, top_strict=None) is False
+    def test_default_is_true_when_no_strict_set(self):
+        """No strict_columns anywhere → resolved value must be True (opt-in to permissive)."""
+        assert self._resolve(sub_strict=None, top_strict=None) is True
 
     def test_false_in_sub_resolves_false(self):
         """strict_columns: false in sub-interface → False."""
@@ -512,10 +514,10 @@ class TestStrictColumnsDefault:
         """strict_columns: true in top-level interface → True."""
         assert self._resolve(sub_strict=None, top_strict=True) is True
 
-    def test_sub_takes_precedence_over_top(self):
-        """Sub-interface strict_columns overrides top-level setting."""
+    def test_permissive_wins_at_either_level(self):
+        """If either interface says false, the result is False (permissive wins)."""
         assert self._resolve(sub_strict=False, top_strict=True) is False
-        assert self._resolve(sub_strict=True, top_strict=False) is True
+        assert self._resolve(sub_strict=True, top_strict=False) is False
 
 
 if __name__ == "__main__":

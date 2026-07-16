@@ -1157,12 +1157,12 @@ class CustomDataFrame(data.CustomDataFrame):
         #    interface["index"] = df.index.name
 
         if strict_columns is None:
-            if "strict_columns" in interface:
-                strict_columns = bool(interface["strict_columns"])
-            elif self.interface is not None and "strict_columns" in self.interface:
-                strict_columns = bool(self.interface["strict_columns"])
-            else:
+            if "strict_columns" in interface and not interface["strict_columns"]:
                 strict_columns = False
+            elif self.interface is not None and "strict_columns" in self.interface and not self.interface["strict_columns"]:
+                strict_columns = False
+            else:
+                strict_columns = True
                 
 
         if strict_columns: # check that index is provided
