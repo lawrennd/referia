@@ -12,11 +12,13 @@ import sys
 try:
     from referia.util.llm import (
         LLMManager, CostTracker, get_llm_manager, reset_llm_manager,
-        LLMError, LLMConfigError, LLMProviderError, LLMBudgetError
+        LLMError, LLMConfigError, LLMProviderError, LLMBudgetError,
+        LANGCHAIN_AVAILABLE
     )
     LLM_AVAILABLE = True
 except ImportError:
     LLM_AVAILABLE = False
+    LANGCHAIN_AVAILABLE = False
     pytestmark = pytest.mark.skip(reason="LLM dependencies not installed")
 
 
@@ -64,7 +66,7 @@ class TestCostTracker:
         assert summary["budget_remaining"] is not None
 
 
-@pytest.mark.skipif(not LLM_AVAILABLE, reason="LLM dependencies not installed")
+@pytest.mark.skipif(not LLM_AVAILABLE or not LANGCHAIN_AVAILABLE, reason="LLM dependencies not installed")
 class TestLLMManager:
     """Test the LLM manager functionality."""
     
@@ -185,7 +187,7 @@ class TestLLMManager:
         assert mock_cache.set.called
 
 
-@pytest.mark.skipif(not LLM_AVAILABLE, reason="LLM dependencies not installed")
+@pytest.mark.skipif(not LLM_AVAILABLE or not LANGCHAIN_AVAILABLE, reason="LLM dependencies not installed")
 class TestLLMComputeFunctions:
     """Test LLM compute functions."""
     
@@ -206,7 +208,7 @@ class TestLLMComputeFunctions:
         
         # Create compute instance
         interface_config = {"compute": []}
-        interface = Interface(interface_config, directory="/tmp")
+        interface = Interface(interface_config, directory="/tmp", user_file="_referia.yml")
         compute = Compute(interface)
         
         # Get the LLM functions
@@ -614,7 +616,7 @@ class TestLLMComputeFunctions:
         )
 
 
-@pytest.mark.skipif(not LLM_AVAILABLE, reason="LLM dependencies not installed")
+@pytest.mark.skipif(not LLM_AVAILABLE or not LANGCHAIN_AVAILABLE, reason="LLM dependencies not installed")
 class TestLLMFunctionRegistry:
     """Test that LLM functions are properly registered."""
     
@@ -653,7 +655,7 @@ class TestLLMFunctionRegistry:
         assert "custom user prompt" in custom_query_info["docstr"].lower()
 
 
-@pytest.mark.skipif(not LLM_AVAILABLE, reason="LLM dependencies not installed")
+@pytest.mark.skipif(not LLM_AVAILABLE or not LANGCHAIN_AVAILABLE, reason="LLM dependencies not installed")
 class TestIntegration:
     """Integration tests for LLM functionality."""
     

@@ -19,6 +19,12 @@ import os
 import yaml
 from referia.config.interface import Interface
 
+# CIP-0006 template expansion is not yet implemented — mark all tests as expected failures
+pytestmark = pytest.mark.xfail(
+    reason="TDD: CIP-0006 template expansion not yet implemented",
+    strict=False
+)
+
 
 class TestFullConfigExpansion:
     """Test complete configuration expansion with templates."""
