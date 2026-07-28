@@ -6,78 +6,142 @@
 [![codecov](https://codecov.io/gh/lawrennd/referia/branch/main/graph/badge.svg?token=YOUR_CODECOV_TOKEN)](https://codecov.io/gh/lawrennd/referia)
 
 
-The referia library provides tools for assisting with assessment, originally written as an aide for 2021 REF Assessment, code has gone through many addtions and then a major restructuring for version 0.2.0
+The referia library provides tools for assisting with assessment, originally written as an aide for 2021 REF Assessment. The library builds on functionality provided in the [`lynguine`](https://github.com/lawrennd/lynguine/) data oriented architecture library. The main difference between the two is that functionality that is general for the flow-based model the code follows sits in `lynguine`. The `referia` code provides convenience functionality for ease of creation of reviewing software.
 
-The library uses jupyter notebook as an interface. 
+## Installation
 
-The library builds on functionality provided in the [`lynguine`](https://github.com/lawrennd/lynguine/) data oriented architecture library. The main difference between the two is that functionality that is general for the flow-based model the code follows sits in `lynguine`. The `referia` code provides convenience functionality for ease of creation of reviewing software.
+```bash
+pip install referia
+```
 
-To install use
+Or, when working from source:
+
+```bash
+poetry install
+```
+
+## Quick start
+
+All review configuration lives in a YAML file, conventionally named `_referia.yml`, placed alongside your data files. Once that file exists you have two ways to run a review session.
+
+### Web interface (recommended)
+
+```bash
+referia serve --directory path/to/review --config _referia.yml
+```
+
+Open the printed URL (default `http://127.0.0.1:8000`) in any browser. The interface shows a two-column layout: a viewer panel on the left (document content, instructions, templates) and a review form on the right. Navigating between records, editing fields, and saving are all live — no page reloads.
+
+Options:
+
+| Flag | Default | Description |
+|---|---|---|
+| `--config FILE` | `_referia.yml` | Config filename inside `--directory`. |
+| `--directory DIR` | `.` (cwd) | Directory containing the config and data files. |
+| `--host HOST` | `127.0.0.1` | Network interface to bind. |
+| `--port PORT` | `8000` | TCP port to listen on. |
+
+To serve every `_referia.yml` found under a root directory at once, use root-server mode:
+
+```bash
+referia serve --root ~/OneDrive/referia/
+```
+
+Each config is then reachable at its relative path (e.g. `http://127.0.0.1:8000/theses/examined/`).
+
+### Jupyter notebook interface
+
+The original notebook interface is still supported. Add a notebook to your review directory and instantiate a `Reviewer`:
 
 ```python
-%pip install referia
+from referia import Reviewer
+r = Reviewer("_referia.yml", ".")
+r.display()
 ```
 
-Configuration is stored in a local file, `_referia.yml`.
+### Linting configs
 
-This file provides the source and format of input data (for assessment), the location and format of annotations to store on the assessment as well of details of how to view files and urls associated with the assessment.
+```bash
+referia check --root path/to/reviews
+```
 
-The configuration has the following fields
+Scans all `_referia.yml` files under the root and reports YAML parse errors. Use `--format json` for machine-readable output.
 
-`input`
+## Configuration reference
 
-This contains the input data to be assessed.
+All behaviour is controlled by `_referia.yml`. The top-level keys are:
 
-`viewer`
+### `input`
 
-Provides information at the top of the score sheet that gives background (for example reviewing instructions).
+Source data for the items being assessed (Excel, CSV, etc.). Passed directly to the lynguine data layer.
 
-`editpdf`
+### `viewer`
 
-Lists pdfs to copy and allow the user to edit (for example to make notes on a submitted thesis).
-
-Subfields are `field` which contains the filename, `sourcedirectory` and `storedirectory`. Also provides ability to specify `pages` from the source, so that we have something like
+Content rendered in the left-hand panel of the web interface (or above the form in the notebook). Supports Liquid templates evaluated against the current record.
 
 ```yaml
-field: ColumnName0
-sourcedirectory: ./
-pages:
-  first: ColumnName1
-  last: ColumnName2
-storedirectory: ./pdfs
+viewer:
+  - liquid: "## {{ Name }}: {{ Title }}"
+  - display: "**Submitted:** {{ SubmissionDate }}"
 ```
 
-Functionality is provided in `system.Sys.edit_files`.
+### `review`
 
-`urls` 
+Widget specifications for the review form. Supports sliders, text areas, dropdowns, checkboxes, and more.
 
-Lists urls that should be opened for providing additional information on the review.
+```yaml
+review:
+  - field: Score
+    type: IntSlider
+    args:
+      min: 1
+      max: 10
+      step: 1
+    description: "Overall score"
+  - field: Comments
+    type: Textarea
+    description: "Reviewer comments"
+```
 
-`output`
+### `compute`
 
-This specifies how the annotation information is to be stored.
+Fields filled in automatically. Supports LLM calls, date/timestamp generation, and arbitrary Python functions evaluated against the current record.
 
-`scored`
+### `output`
 
-Specifies how the code should "count up" how many reviews are complete.
+How annotation data is persisted (Excel, CSV, etc.).
 
-`series`
+### `editpdf`
 
-This specifies how to store annotation information which is available with a subindex (such as a time series).
+PDFs to copy and open for annotation. Supports page-range extraction driven by data columns.
 
-`review`
+```yaml
+editpdf:
+  field: ThesisFilename
+  sourcedirectory: ./submissions
+  storedirectory: ./annotated
+  pages:
+    first: StartPage
+    last: EndPage
+```
 
-This specifies a set of widgets to create for human reviewing.
+### `urls`
 
-`compute`
+URLs to open in a browser alongside the review form.
 
-Specifies fields that should be filled in by computations. 
+### `documents`
 
-`documents`
+Word documents (or emails) generated from the review data using Liquid templates — useful for feedback letters and reports.
 
-Allows for the creation of documents (such as word docx or emails) that summarise the provided information.
+### `summary_documents`
 
-`summary_documents`
+Like `documents`, but generated across all records rather than per-record. Useful for summary reports across a full review round.
 
-Similar to documents, but this section provides documents that summarise all the data. Can be useful for summarising a sequence of reviews.
+### `scored`
+
+Specification for counting completed reviews (used to display progress).
+
+### `series`
+
+Annotation data with a sub-index (e.g. time series of assessments for the same item).
 
