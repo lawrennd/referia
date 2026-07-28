@@ -10,7 +10,7 @@ import tempfile
 import random
 import string
 
-import pyminizip as pz
+import zipfile
 
 import pypdftk as tk
 
@@ -294,8 +294,27 @@ class Sys():
 
 
     def write_zip(self, filename=None, password=None, filelist=None, directorylist=[], compress=4):
-        """Write a zip file using pyminizip"""
-        pz.compress_multiple(filelist, directorylist, filename, password, compress)
+        """Write a zip file using the stdlib zipfile module.
+
+        Note: Python's zipfile cannot write password-protected (encrypted) zips.
+        If password is supplied and encryption is required, replace this with pyzipper.
+        """
+        if password is not None:
+            raise NotImplementedError(
+                "write_zip: password-protected zip creation is not supported without "
+                "an additional dependency. Install pyzipper and update this method, "
+                "or leave password as None for unencrypted zips."
+            )
+        if filelist is None:
+            filelist = []
+        if not directorylist:
+            directorylist = [""] * len(filelist)
+        with zipfile.ZipFile(filename, "w",
+                             compression=zipfile.ZIP_DEFLATED,
+                             compresslevel=compress) as zf:
+            for src, arcdir in zip(filelist, directorylist):
+                arcname = os.path.join(arcdir, os.path.basename(src)) if arcdir else os.path.basename(src)
+                zf.write(src, arcname)
 
 
     # Email scripts originally from https://stackoverflow.com/questions/61529817/automate-outlook-on-mac-with-python
