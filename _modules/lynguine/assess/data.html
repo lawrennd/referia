@@ -776,6 +776,27 @@
 
 <span class="sd">&quot;&quot;&quot;Wrapper classes for data objects&quot;&quot;&quot;</span>
 
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_set_value_with_coercion</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Set a value in a DataFrame, coercing column dtype when necessary.</span>
+
+<span class="sd">    When a column is inferred as float64 (e.g. because some rows were blank on</span>
+<span class="sd">    load) and the incoming value is a bool, pandas refuses the assignment with</span>
+<span class="sd">    ``raise_on_upcast=True``.  Excel stores booleans as 0/1 numbers, so</span>
+<span class="sd">    converting ``True`` → ``1.0`` / ``False`` → ``0.0`` preserves round-trip</span>
+<span class="sd">    fidelity and keeps ``visible_if`` truthiness evaluation correct.  For other</span>
+<span class="sd">    type mismatches the column is upcast to ``object`` as a fallback.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span> <span class="ow">and</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_float_dtype</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">col_label</span><span class="p">]):</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">col_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">col_label</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+
 <span class="n">ctxt</span> <span class="o">=</span> <span class="n">Context</span><span class="p">()</span>
 <span class="n">log</span> <span class="o">=</span> <span class="n">Logger</span><span class="p">(</span>
     <span class="n">name</span><span class="o">=</span><span class="vm">__name__</span><span class="p">,</span>
@@ -1306,6 +1327,13 @@
         
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isseries</span><span class="p">(</span><span class="n">col</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="c1"># Keep the sub-DataFrame in sync with the main DataFrame.</span>
+            <span class="c1"># `self.at` writes to pandas&#39; internal blocks but not to</span>
+            <span class="c1"># `self._d[typ]` (a separate object created by _distribute_data).</span>
+            <span class="c1"># Without this, save_flows reads stale values from self._d.</span>
+            <span class="n">typ</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_col_source</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">typ</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">],</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_selector</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;A set_value() attempted when selector not set for a series column.&quot;</span><span class="p">)</span>
@@ -3469,12 +3497,12 @@
             <span class="n">data_modified</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">for</span> <span class="n">typ</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">_d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">row_label</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span> <span class="ow">and</span> <span class="n">col_label</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                    <span class="n">data</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="n">_set_value_with_coercion</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
                     <span class="n">data_modified</span> <span class="o">=</span> <span class="kc">True</span>
                     <span class="k">break</span>
                 <span class="k">if</span> <span class="n">row_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span> <span class="ow">and</span> <span class="n">typ</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
                     <span class="c1"># Add row indexed by row_label to pd.DataFrame data</span>
-                    <span class="n">data</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="n">_set_value_with_coercion</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
                     <span class="n">data_modified</span> <span class="o">=</span> <span class="kc">True</span>
                     <span class="k">break</span>
                 <span class="k">elif</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
