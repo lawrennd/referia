@@ -44,10 +44,10 @@ Options:
 To serve every `_referia.yml` found under a root directory at once, use root-server mode:
 
 ```bash
-referia serve --root ~/OneDrive/referia/
+referia serve --root ~/referia/
 ```
 
-Each config is then reachable at its relative path (e.g. `http://127.0.0.1:8000/theses/examined/`).
+Each config is then reachable at its relative path (e.g. `http://127.0.0.1:8000/reports/review/`).
 
 ### Jupyter notebook interface
 
