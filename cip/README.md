@@ -39,6 +39,8 @@ Each CIP can have one of the following statuses:
 - [CIP-000A](./cip000A.md): Migration from Excel to YAML for referia data files
 - [CIP-000B](./cip000B.md): Web Display System — Non-Jupyter Rendering Backend
 - [CIP-000C](./cip000C.md): Multi-Config Web Server (Root-Based Path Routing)
+- [CIP-000D](./cip000D.md): LangChain 1.x Migration for LLM Integration (Proposed)
+- [CIP-000E](./cip000E.md): Web Layer Security Hardening for CodeQL Findings (Accepted)
 
 ## Creating a Good CIP
 

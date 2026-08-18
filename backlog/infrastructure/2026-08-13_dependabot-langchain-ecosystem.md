@@ -4,9 +4,9 @@ title: "Resolve Dependabot alerts in optional LangChain dependencies"
 status: "Proposed"
 priority: "Medium"
 created: "2026-08-13"
-last_updated: "2026-08-13"
+last_updated: "2026-08-18"
 category: "infrastructure"
-related_cips: ["0006"]
+related_cips: ["0006", "000D"]
 owner: "lawrennd"
 dependencies: []
 tags:
@@ -55,12 +55,14 @@ not track dependency CVE remediation.
 
 1. Review whether referia uses affected APIs (`load_prompt`, `HTMLHeaderTextSplitter.split_text_from_url`, image token counting).
 2. If unused, document non-exposure and consider pinning/minimum versions without full 1.x migration.
-3. If used, plan LangChain 1.x migration as follow-on work — may warrant a new CIP if scope is large.
+3. LangChain 1.x migration scoped in **[CIP-000D](../../cip/cip000D.md)** (Proposed). Implement this
+   backlog task after CIP-000D is **Accepted**.
 4. Install group: `poetry install --with llm`
 
 ## Related
 
-- CIP: [CIP-0006](../../cip/cip0006.md) — LLM Integration (implemented; security considerations only)
+- CIP: [CIP-0006](../../cip/cip0006.md) — LLM Integration (implemented on 0.3.x)
+- CIP: [CIP-000D](../../cip/cip000D.md) — LangChain 1.x migration (design; execute after acceptance)
 - Dependabot: https://github.com/lawrennd/referia/security/dependabot
 - Existing backlog `2025-12-21_fix-llm-integration-test.md` covers test failures, not CVEs.
 
@@ -69,3 +71,10 @@ not track dependency CVE remediation.
 ### 2026-08-13
 
 Task created from Dependabot alert triage. Related to CIP-0006 scope but no existing backlog for CVE remediation.
+
+### 2026-08-18
+
+Code audit confirms referia uses a narrow LangChain surface (`ChatOpenAI`, `ChatAnthropic`, message
+types, `invoke`) and does not call vulnerable APIs (`load_prompt`, URL text splitters). Migration
+to 1.x still required to close Dependabot alerts. **[CIP-000D](../../cip/cip000D.md)** created for
+migration design; defer implementation until CIP is Accepted.
