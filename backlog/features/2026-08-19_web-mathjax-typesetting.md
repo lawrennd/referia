@@ -1,7 +1,7 @@
 ---
 id: "2026-08-19_web-mathjax-typesetting"
 title: "Web display: typeset LaTeX in Markdown and HTMLMath widgets"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2026-08-19"
 last_updated: "2026-08-19"
@@ -36,12 +36,12 @@ This is Jupyter-parity for CIP-000B, not a new widget type. Configs should keep 
 
 ## Acceptance Criteria
 
-- [ ] Review Markdown widgets typeset inline `$...$` and display `$$...$$` (same delimiters as Jupyter HTMLMath)
-- [ ] `HTMLMath` widgets typeset as well as Markdown
-- [ ] Typesetting runs on first page load and after HTMX swaps (index change, Reload) so swapped fragments are not left as raw TeX
-- [ ] Queens 2021 undergrad admissions question text is readable as maths without editing `_referia.yml`
-- [ ] Offline/CDN choice is documented (same issue as the existing HTMX unpkg TODO)
-- [ ] A test asserts the review page shell includes a typesetter (script tag or equivalent), so the page cannot silently drop maths again
+- [x] Review Markdown widgets typeset inline `$...$` and display `$$...$$` (same delimiters as Jupyter HTMLMath)
+- [x] `HTMLMath` widgets typeset as well as Markdown
+- [x] Typesetting runs on first page load and after HTMX swaps (index change, Reload) so swapped fragments are not left as raw TeX
+- [x] Queens 2021 undergrad admissions question text is readable as maths without editing `_referia.yml`
+- [x] Offline/CDN choice is documented (same issue as the existing HTMX unpkg TODO)
+- [x] A test asserts the review page shell includes a typesetter (script tag or equivalent), so the page cannot silently drop maths again
 
 ## Implementation Notes
 
@@ -76,3 +76,7 @@ Task created after web review of Queens 2021 undergrad admissions: question 3 (a
 ### 2026-08-19 (accepted)
 
 Status moved to In Progress. Implementing MathJax on the review page shell.
+
+### 2026-08-19 (implemented)
+
+MathJax 3 (`tex-chtml.js`) loaded from jsDelivr in `base.html` with Jupyter-style `$...$` / `$$...$$` delimiters. `htmx:afterSettle` calls `MathJax.typesetPromise()` on the swapped element. Tests: `tests/test_web_mathjax.py`, `tests/test_web_routes.py::test_html_includes_mathjax_typesetter`. Restart `referia serve` to pick up the template.

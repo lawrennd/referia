@@ -132,6 +132,15 @@ class TestGetRoot:
         response = client.get("/")
         assert "htmx" in response.text
 
+    def test_html_includes_mathjax_typesetter(self, client):
+        """Jupyter Markdown widgets use HTMLMath; the web page must load MathJax."""
+        response = client.get("/")
+        html = response.text
+        assert "mathjax@3" in html
+        assert "tex-chtml.js" in html
+        assert "MathJax.typesetPromise" in html
+        assert "inlineMath" in html
+
 
 # ---------------------------------------------------------------------------
 # GET /record

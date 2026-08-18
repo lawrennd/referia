@@ -10,6 +10,23 @@
         TODO: vendor htmx.min.js into /static for offline use.
     -->
     <script src="https://unpkg.com/htmx.org@2.0.0" crossorigin="anonymous"></script>
+    <!--
+        MathJax typesets $...$ / $$...$$ in Markdown and HTMLMath widgets,
+        matching Jupyter ipywidgets.HTMLMath.  Re-run after HTMX swaps.
+        TODO: vendor for offline use (same as htmx above).
+    -->
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        },
+        options: {
+          skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async crossorigin="anonymous"></script>
     <script>
       /* Root-server mode: CONFIG_PATH is the URL prefix for this config (e.g.
          "/theses/examined/introduction").  In single-config mode it is empty.
@@ -90,6 +107,27 @@
       window.addEventListener("resize", updateStickyHeights);
       /* Re-measure after HTMX swaps — the nav may change height after a reload */
       document.addEventListener("htmx:afterSettle", updateStickyHeights);
+
+      /* Typeset LaTeX after HTMX replaces Markdown/HTMLMath fragments.
+         Wait for MathJax startup so the first swap is not a no-op if the
+         CDN script is still loading. */
+      function typesetMath(root) {
+        var target = root || document.body;
+        function run() {
+          if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise([target]).catch(function () {});
+          }
+        }
+        if (window.MathJax && MathJax.startup && MathJax.startup.promise) {
+          MathJax.startup.promise.then(run);
+        } else {
+          run();
+        }
+      }
+      document.addEventListener("htmx:afterSettle", function (evt) {
+        var el = (evt.detail && evt.detail.elt) ? evt.detail.elt : document.body;
+        typesetMath(el);
+      });
     </script>
 </head>
 <body>
