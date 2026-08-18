@@ -220,7 +220,8 @@ class TestPostField:
         mock_reviewer.set_value.side_effect = KeyError("no such column")
         response = client.post("/field/Nonexistent", data={"Nonexistent": "x"})
         assert response.status_code == 200
-        assert "Error" in response.text
+        assert "failed" in response.text.lower()
+        assert "no such column" not in response.text
 
     def test_checkbox_field_coerces_truthy_value(self, client, mock_reviewer):
         mock_reviewer.get_widget_specs.return_value = [
@@ -289,7 +290,9 @@ class TestPostSave:
         mock_reviewer.save_flows.side_effect = OSError("disk full")
         response = client.post("/save", data={})
         assert response.status_code == 200
-        assert "failed" in response.text.lower() or "Error" in response.text
+        assert "failed" in response.text.lower()
+        assert "disk full" not in response.text
+        assert "See server log" in response.text
 
 
 # ---------------------------------------------------------------------------
@@ -371,6 +374,14 @@ class TestPostReload:
     def test_response_contains_review_panel(self, client):
         response = client.post("/reload")
         assert 'id="index-select"' in response.text
+
+    def test_reload_failure_omits_exception_text(self, client, mock_reviewer):
+        mock_reviewer.load_flows.side_effect = OSError("secret path /tmp/xyz")
+        response = client.post("/reload")
+        assert response.status_code == 200
+        assert "failed" in response.text.lower()
+        assert "secret path" not in response.text
+        assert "/tmp/xyz" not in response.text
 
 
 # ---------------------------------------------------------------------------
@@ -476,6 +487,14 @@ class TestPostPopulate:
         assert "view_args" in cs
         # Plain string args must be wrapped as {"display": ...} view spec dicts
         assert cs["view_args"].get("text") == {"display": "{description}"}
+
+    def test_populate_failure_omits_exception_text(self, populate_client):
+        client, reviewer = populate_client
+        reviewer.run_populate.side_effect = RuntimeError("internal compute boom")
+        response = client.post("/populate/Summary")
+        assert response.status_code == 200
+        assert "failed" in response.text.lower()
+        assert "internal compute boom" not in response.text
 
 
 # ---------------------------------------------------------------------------

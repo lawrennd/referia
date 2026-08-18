@@ -1,7 +1,7 @@
 ---
 id: "2026-08-18_cip000E-path-safety"
 title: "Centralise URL-to-filesystem path safety (CodeQL #4–#11)"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-08-18"
 last_updated: "2026-08-18"
@@ -35,11 +35,11 @@ This is an invariant for a later authenticated deployment — auth does not make
 
 ## Acceptance Criteria
 
-- [ ] `safe_path_under_root` (or equivalent) rejects paths that escape the root
-- [ ] `_resolve_config_path` and `_list_sub_configs` use it (including before `rglob`)
-- [ ] Tests cover `../`, absolute escape, and a valid nested config path
-- [ ] Document the contract: `WebReviewer.__init__` directory is caller-validated
-- [ ] Web route tests still pass
+- [x] `safe_path_under_root` (or equivalent) rejects paths that escape the root
+- [x] `_resolve_config_path` and `_list_sub_configs` use it (including before `rglob`)
+- [x] Tests cover `../`, absolute escape, and a valid nested config path
+- [x] Document the contract: `WebReviewer.__init__` directory is caller-validated
+- [x] Web route tests still pass
 - [ ] CodeQL alerts #4–#11 close, or remaining findings have documented suppressions
 
 ## Implementation Notes
@@ -58,3 +58,7 @@ This is an invariant for a later authenticated deployment — auth does not make
 ### 2026-08-18
 
 Task created when CIP-000E was Accepted.
+
+Implemented `referia/web/path_safety.py`. URL paths strip leading slashes, so `/etc/passwd` is
+`root/etc/passwd`, not the OS file; `..` segments are rejected. Tests in
+`tests/test_path_safety.py`. `WebReviewer` documents that `directory` is caller-validated.

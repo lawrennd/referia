@@ -1,7 +1,7 @@
 ---
 id: "2026-08-18_cip000E-exception-exposure"
 title: "Stop returning exception text to the browser (CodeQL #13–#20)"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-08-18"
 last_updated: "2026-08-18"
@@ -33,12 +33,12 @@ and `_get_cached_reviewer` / `_resolve_config_path` HTTPException details.
 
 ## Acceptance Criteria
 
-- [ ] Shared helpers such as `_user_error_html` and `_log_route_error` exist and are used by both
+- [x] Shared helpers such as `_user_error_html` and `_log_route_error` exist and are used by both
       single-config and root-mode routes
-- [ ] HTMX error responses contain no exception message text
-- [ ] `HTTPException.detail` strings are generic (no `{exc}` interpolation)
-- [ ] Tests assert failing save/reload/populate returns generic HTML (mock the reviewer)
-- [ ] Existing web route tests still pass
+- [x] HTMX error responses contain no exception message text
+- [x] `HTTPException.detail` strings are generic (no `{exc}` interpolation)
+- [x] Tests assert failing save/reload/populate returns generic HTML (mock the reviewer)
+- [x] Existing web route tests still pass
 - [ ] CodeQL alerts #13–#20 close after merge (or next scan)
 
 ## Implementation Notes
@@ -57,3 +57,8 @@ Keep `_esc` for remaining user-visible strings (titles, YAML metadata). Do not s
 ### 2026-08-18
 
 Task created when CIP-000E was Accepted.
+
+Implemented: `_user_error_html` / `_log_route_error` on field, save, reload, and populate
+handlers (single-config and root). `_resolve_config_path` and `_get_cached_reviewer` return
+generic HTTP details. `/errors` still shows full exception text. Tests in `tests/test_web_routes.py`
+assert `"disk full"` and `"no such column"` never reach the browser.

@@ -53,3 +53,6 @@ and `/errors` access control remain out of scope (future CIP).
 ### 2026-08-18
 
 Task created when CIP-000E was Accepted. Blocked on the four implementation tasks.
+
+The four implementation tasks are Completed. CIP-000E is Implemented. This task starts after
+the code is on `main` and GitHub CodeQL has rescanned.

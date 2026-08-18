@@ -1,7 +1,7 @@
 ---
 id: "2026-08-18_cip000E-xss-verification"
 title: "Resolve or document CodeQL reflected XSS alert #12"
-status: "Ready"
+status: "Completed"
 priority: "Medium"
 created: "2026-08-18"
 last_updated: "2026-08-18"
@@ -30,10 +30,10 @@ Also review `href="{inh_url}"` (~831): those URLs are filesystem-derived, not ra
 
 ## Acceptance Criteria
 
-- [ ] Audit confirms no unescaped user/query input reaches the listing HTML
-- [ ] Either refactor so `html.escape` is visible at the sink, or add a documented CodeQL
+- [x] Audit confirms no unescaped user/query input reaches the listing HTML
+- [x] Either refactor so `html.escape` is visible at the sink, or add a documented CodeQL
       suppression citing escape at source
-- [ ] Inherit-link `href` values reviewed (escape or constrain as needed)
+- [x] Inherit-link `href` values reviewed (escape or constrain as needed)
 - [ ] Alert #12 closed or dismissed with rationale recorded here and in CIP-000E
 
 ## Implementation Notes
@@ -52,3 +52,8 @@ function; keep this task so the alert is not forgotten.
 ### 2026-08-18
 
 Task created when CIP-000E was Accepted.
+
+Listing sinks now call `html.escape(..., quote=True)` on `href` values (entry URLs, group
+headings, parent link, inherit links) and `html.escape(breadcrumb)` for the heading label.
+Do not name the page body `html` in `_render_directory_listing` — that shadows the stdlib
+module. Alert #12 should close on the next CodeQL scan.

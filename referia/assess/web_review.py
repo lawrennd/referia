@@ -72,7 +72,10 @@ class WebReviewer:
         defaults to ``"_referia.yml"``.
     :type user_file: str
     :param directory: Directory that contains the configuration file,
-        defaults to ``"."``.
+        defaults to ``"."``.  Callers that map a URL path to this directory
+        (root-server mode) must validate it with
+        ``referia.web.path_safety.safe_path_under_root`` first; this class
+        does not re-check path traversal.
     :type directory: str
 
     Example::

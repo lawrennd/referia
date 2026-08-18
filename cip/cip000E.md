@@ -3,7 +3,7 @@ author: "lawrennd"
 created: "2026-08-18"
 id: "000E"
 last_updated: "2026-08-18"
-status: "Accepted"
+status: "Implemented"
 compressed: false
 related_requirements: []
 related_cips: ["000B", "000C"]
@@ -24,8 +24,8 @@ title: "Web Layer Security Hardening for CodeQL Findings"
 
 - [x] Proposed — Initial documentation complete
 - [x] Accepted — Plan reviewed and approved
-- [ ] In Progress — Implementation underway
-- [ ] Implemented — Code and workflow changes complete
+- [x] In Progress — Implementation underway
+- [x] Implemented — Code and workflow changes complete
 - [ ] Closed — CodeQL alerts cleared, tests pass, policy documented
 - [ ] Rejected
 - [ ] Deferred
@@ -38,7 +38,7 @@ workflow permissions, a shared path-safety helper, generic user-facing error mes
 server-side logging, and verification of one likely false-positive XSS alert.
 
 This CIP documents **policy and mechanism** so future web routes follow the same patterns. Backlog
-tasks (created 2026-08-18) execute the work; implementation has not started.
+tasks 1–4 are implemented; task 5 (CodeQL closure on GitHub) remains after the changes reach `main`.
 
 ## Motivation
 
@@ -118,9 +118,9 @@ scope.
 | Job | Minimum permissions |
 |-----|---------------------|
 | `python-tests` / `test-coverage` | `contents: read` |
-| `build-and-deploy` (gh-pages) | `contents: read`, `pages: write`, `id-token: write` (if OIDC used by action) |
+| `build-and-deploy` (gh-pages) | `contents: write` (`peaceiris/actions-gh-pages` pushes the `gh-pages` branch) |
 
-Verify against current `peaceiris/actions-gh-pages` requirements when implementing.
+Implemented 2026-08-18. `pages: write` / `id-token: write` are not required for this action.
 
 ### 2. Path injection (alerts #4–#11)
 
@@ -232,7 +232,7 @@ does not model `_esc()` as a sanitizer.
 
 ## Implementation Plan
 
-Backlog tasks (all Ready; implement in this order, phases 2–4 can overlap after 1):
+Backlog tasks (phases 1–4 Completed 2026-08-18; phase 5 waits for GitHub CodeQL):
 
 1. [`2026-08-18_cip000E-workflow-permissions`](../backlog/infrastructure/2026-08-18_cip000E-workflow-permissions.md) — alerts **#1–#3**
 2. [`2026-08-18_cip000E-exception-exposure`](../backlog/infrastructure/2026-08-18_cip000E-exception-exposure.md) — alerts **#13–#20**
@@ -273,12 +273,12 @@ automation tenet: security tooling should be satisfied without blocking local re
 
 ## Implementation Status
 
-- [ ] Workflow permissions added (#1–#3)
-- [ ] User-facing exception policy implemented (#13–#20)
-- [ ] Path safety helper and refactors (#4–#11)
-- [ ] XSS alert resolved or documented (#12)
-- [ ] Web route tests extended
-- [ ] Full test suite passes
+- [x] Workflow permissions added (#1–#3)
+- [x] User-facing exception policy implemented (#13–#20)
+- [x] Path safety helper and refactors (#4–#11)
+- [x] XSS alert resolved or documented (#12)
+- [x] Web route tests extended
+- [x] Full test suite passes
 - [ ] All 20 CodeQL alerts closed on GitHub
 
 ## References

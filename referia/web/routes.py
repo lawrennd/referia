@@ -62,6 +62,7 @@ single-config mode, the config prefix in root mode).  An
 
 from __future__ import annotations
 
+import html
 import logging
 from pathlib import Path
 from typing import Any
@@ -69,6 +70,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from referia.web.path_safety import PathOutsideRootError, safe_path_under_root
 from referia.web.render import render_widget, render_form, render_viewer
 
 log = logging.getLogger(__name__)
@@ -236,8 +238,19 @@ def _render_index_selector(indices: list, current_index: Any) -> str:
 
 
 def _esc(value: Any) -> str:
-    import html
     return html.escape(str(value) if value is not None else "")
+
+
+def _user_error_html(action: str) -> str:
+    """Generic browser-facing error; details belong in the server log (CIP-000E)."""
+    return (
+        f'<span class="status-error">&#10007; {_esc(action)} failed. See server log.</span>'
+    )
+
+
+def _log_route_error(action: str, exc: Exception, **context: Any) -> None:
+    extra = " ".join(f"{k}={v!r}" for k, v in context.items())
+    log.exception("%s failed %s", action, extra)
 
 
 def _make_oob(widget_html: str) -> str:
@@ -331,9 +344,8 @@ async def update_field(request: Request, column: str):
         reviewer.set_value(column, value)
         status_html = '<span class="status-ok">&#10003; Updated</span>'
     except Exception as exc:
-        log.warning("Failed to update field %r: %s", column, exc)
-        status_html = f'<span class="status-error">&#10007; Error: {_esc(str(exc))}</span>'
-        return HTMLResponse(status_html)
+        _log_route_error("Update", exc, column=column)
+        return HTMLResponse(_user_error_html("Update"))
 
     # Build OOB refreshes for all affected widgets
     data = _current_data(reviewer)
@@ -365,8 +377,8 @@ async def save(request: Request):
         reviewer.save_flows()
         return HTMLResponse('<span class="status-ok">&#10003; Saved</span>')
     except Exception as exc:
-        log.warning("Save failed: %s", exc)
-        return HTMLResponse(f'<span class="status-error">&#10007; Save failed: {_esc(str(exc))}</span>')
+        _log_route_error("Save", exc)
+        return HTMLResponse(_user_error_html("Save"))
 
 
 @router.post("/reload", response_class=HTMLResponse)
@@ -378,8 +390,8 @@ async def reload_data(request: Request):
     try:
         reviewer.load_flows(reload=True)
     except Exception as exc:
-        log.warning("Reload failed: %s", exc)
-        return HTMLResponse(f'<span class="status-error">&#10007; Reload failed: {_esc(str(exc))}</span>')
+        _log_route_error("Reload", exc)
+        return HTMLResponse(_user_error_html("Reload"))
 
     ctx = _panel_response_context(reviewer)
     return templates.TemplateResponse(request, "review_panel.html", ctx)
@@ -443,23 +455,24 @@ def _resolve_config_path(root: str, url_path: str) -> tuple[Path, str]:
     root_p = Path(root).resolve()
     clean = url_path.strip("/")
 
-    if clean.endswith(".yml"):
-        candidate = (root_p / clean).resolve()
-        user_file = candidate.name
-        config_dir = candidate.parent
-    else:
-        config_dir = (root_p / clean).resolve() if clean else root_p
-        user_file = "_referia.yml"
-        candidate = config_dir / user_file
-
-    # Security: reject paths that escape the root
     try:
-        config_dir.relative_to(root_p)
-    except ValueError:
+        if clean.endswith(".yml"):
+            candidate = safe_path_under_root(root_p, clean)
+            user_file = candidate.name
+            config_dir = candidate.parent
+        elif clean:
+            config_dir = safe_path_under_root(root_p, clean)
+            user_file = "_referia.yml"
+            candidate = config_dir / user_file
+        else:
+            config_dir = root_p
+            user_file = "_referia.yml"
+            candidate = config_dir / user_file
+    except PathOutsideRootError:
         raise HTTPException(status_code=400, detail="Path outside root rejected")
 
     if not candidate.exists():
-        raise HTTPException(status_code=404, detail=f"Config not found: /{clean}")
+        raise HTTPException(status_code=404, detail="Config not found")
 
     return candidate, user_file
 
@@ -477,7 +490,8 @@ def _get_cached_reviewer(app_state, config_file: Path, user_file: str):
     try:
         mtime = config_file.stat().st_mtime
     except OSError as exc:
-        raise HTTPException(status_code=404, detail=f"Config not accessible: {exc}")
+        log.exception("Config not accessible: %s", config_file)
+        raise HTTPException(status_code=404, detail="Config not accessible") from exc
 
     cached = app_state.reviewer_cache.get(key)
     if cached is None or cached[0] != mtime:
@@ -496,7 +510,7 @@ def _get_cached_reviewer(app_state, config_file: Path, user_file: str):
                     "type": type(exc).__name__,
                     "time": _time.strftime("%Y-%m-%d %H:%M:%S"),
                 })
-            raise HTTPException(status_code=503, detail=f"Could not load config: {exc}")
+            raise HTTPException(status_code=503, detail="Could not load config")
         app_state.reviewer_cache[key] = (mtime, reviewer)
 
     return app_state.reviewer_cache[key][1]
@@ -578,9 +592,12 @@ def _list_sub_configs(root: str, url_path: str) -> list[dict]:
     * ``group``       — name of the immediate child of *search_base* (section key)
     * ``group_url``   — root-relative URL with trailing slash for the group dir
     """
-    root_path = Path(root)
+    root_path = Path(root).resolve()
     clean = url_path.strip("/")
-    search_base = root_path / clean if clean else root_path
+    try:
+        search_base = safe_path_under_root(root_path, clean) if clean else root_path
+    except PathOutsideRootError:
+        return []
     if not search_base.is_dir():
         return []
 
@@ -751,7 +768,7 @@ def _render_directory_listing(
     if breadcrumb:
         parts = breadcrumb.split("/")
         parent = "/" + "/".join(parts[:-1]) + "/" if len(parts) > 1 else "/"
-        up_link = f'<p class="up"><a href="{parent}">&uarr; ..</a></p>'
+        up_link = f'<p class="up"><a href="{html.escape(parent, quote=True)}">&uarr; ..</a></p>'
     else:
         up_link = ""
 
@@ -828,7 +845,7 @@ def _render_directory_listing(
                 if inh_url in all_urls:
                     cross_inherit_html = (
                         f'<span class="inherits-from">'
-                        f'inherits&nbsp;<a href="{inh_url}">{label_text}</a>'
+                        f'inherits&nbsp;<a href="{html.escape(inh_url, quote=True)}">{label_text}</a>'
                         f'</span>'
                     )
                 else:
@@ -856,7 +873,7 @@ def _render_directory_listing(
             items.append(
                 f'<li style="{indent_style}">'
                 f'{indent_marker}'
-                f'<a href="{e["url"]}">{_esc(e["title"])}</a>'
+                f'<a href="{html.escape(e["url"], quote=True)}">{_esc(e["title"])}</a>'
                 f'{error_indicator}{current_badge}{date_span}'
                 f'{cross_inherit_html}'
                 f'{desc_span}'
@@ -865,7 +882,7 @@ def _render_directory_listing(
         items_html = "\n".join(items)
         if gdata["name"]:
             heading = (
-                f'<h2><a href="{gdata["url"]}">'
+                f'<h2><a href="{html.escape(gdata["url"], quote=True)}">'
                 f'{_esc(gdata["name"])}/</a></h2>'
             )
         else:
@@ -873,8 +890,9 @@ def _render_directory_listing(
         sections.append(f"<section>{heading}<ul>{items_html}</ul></section>")
 
     body = "\n".join(sections) if sections else "<p>No reviews found.</p>"
-    label = f"/{_esc(breadcrumb)}" if breadcrumb else "root"
-    html = f"""<!DOCTYPE html>
+    # Escape at the HTML sink so CodeQL sees html.escape (CIP-000E alert #12).
+    label = f"/{html.escape(breadcrumb)}" if breadcrumb else "root"
+    page_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><title>{_esc(page_title)}</title>
 <style>
@@ -922,7 +940,7 @@ def _render_directory_listing(
 {body}
 </body>
 </html>"""
-    return HTMLResponse(html)
+    return HTMLResponse(page_html)
 
 
 def _config_path_prefix(config_path: str) -> str:
@@ -975,10 +993,8 @@ def _run_populate_and_respond(reviewer, field: str, btn_spec: dict) -> HTMLRespo
     try:
         reviewer.run_populate({"compute": compute_spec})
     except Exception as exc:
-        log.warning("Populate failed for %r: %s", field, exc)
-        return HTMLResponse(
-            f'<span class="status-error">&#10007; Populate failed: {_esc(str(exc))}</span>'
-        )
+        _log_route_error("Populate", exc, field=field)
+        return HTMLResponse(_user_error_html("Populate"))
 
     target_spec = _find_spec(reviewer, target)
     if target_spec is None:
@@ -1029,10 +1045,8 @@ async def root_update_field(request: Request, config_path: str, column: str):
         reviewer.set_value(column, value)
         status_html = '<span class="status-ok">&#10003; Updated</span>'
     except Exception as exc:
-        log.warning("root_update_field %r: %s", column, exc)
-        return HTMLResponse(
-            f'<span class="status-error">&#10007; Error: {_esc(str(exc))}</span>'
-        )
+        _log_route_error("Update", exc, column=column)
+        return HTMLResponse(_user_error_html("Update"))
 
     data = _current_data(reviewer)
     parts = [status_html]
@@ -1053,10 +1067,8 @@ async def root_save(request: Request, config_path: str):
         reviewer.save_flows()
         return HTMLResponse('<span class="status-ok">&#10003; Saved</span>')
     except Exception as exc:
-        log.warning("root_save: %s", exc)
-        return HTMLResponse(
-            f'<span class="status-error">&#10007; Save failed: {_esc(str(exc))}</span>'
-        )
+        _log_route_error("Save", exc)
+        return HTMLResponse(_user_error_html("Save"))
 
 
 @root_router.post("/{config_path:path}/reload", response_class=HTMLResponse)
@@ -1066,10 +1078,8 @@ async def root_reload(request: Request, config_path: str):
     try:
         reviewer.load_flows(reload=True)
     except Exception as exc:
-        log.warning("root_reload: %s", exc)
-        return HTMLResponse(
-            f'<span class="status-error">&#10007; Reload failed: {_esc(str(exc))}</span>'
-        )
+        _log_route_error("Reload", exc)
+        return HTMLResponse(_user_error_html("Reload"))
     ctx = _panel_response_context(reviewer)
     return templates.TemplateResponse(request, "review_panel.html", ctx)
 
@@ -1117,7 +1127,7 @@ async def list_errors(request: Request):
         for e in reversed(load_errors)
     ) or "<tr><td colspan='4'>None</td></tr>"
 
-    html = f"""<!DOCTYPE html>
+    page_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Config Errors</title>
 <style>
@@ -1159,7 +1169,7 @@ async def list_errors(request: Request):
 </p>
 </body>
 </html>"""
-    return HTMLResponse(html)
+    return HTMLResponse(page_html)
 
 
 @root_router.get("/{config_path:path}", response_class=HTMLResponse)
