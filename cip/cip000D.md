@@ -3,7 +3,7 @@ author: "lawrennd"
 created: "2026-08-18"
 id: "000D"
 last_updated: "2026-08-18"
-status: "Proposed"
+status: "Accepted"
 compressed: false
 related_requirements: []
 related_cips: ["0006"]
@@ -22,7 +22,7 @@ title: "LangChain 1.x Migration for LLM Integration"
 ## Status
 
 - [x] Proposed — Initial documentation complete
-- [ ] Accepted — Plan reviewed and approved
+- [x] Accepted — Plan reviewed and approved
 - [ ] In Progress — Migration underway
 - [ ] Implemented — Code and lockfile updated
 - [ ] Closed — Tests pass, Dependabot alerts closed, docs updated
@@ -37,7 +37,7 @@ line; advisories cite patched versions only on 1.x, with no indication of backpo
 0.3.x.
 
 This CIP covers dependency constraints, code compatibility, test updates, and documentation — not
-runtime behaviour changes for reviewers.
+runtime behaviour changes for reviewers. Backlog tasks are Ready; implementation has not started.
 
 ## Motivation
 
@@ -141,28 +141,14 @@ No change to compute YAML API or `LLMManager` public interface is intended.
 
 ## Implementation Plan
 
-1. **Spike (half day)**
-   - Create branch `cip000D-langchain-1x-migration`
-   - Bump constraints in `pyproject.toml`
-   - Run `poetry update langchain langchain-core langchain-openai langchain-anthropic langchain-text-splitters --with llm`
-   - Note any Poetry conflicts
+Backlog tasks (all Ready; implement in this order):
 
-2. **Code compatibility**
-   - Run LLM unit tests: `poetry run pytest referia/tests/test_llm_integration.py -v`
-   - Fix `referia/util/llm.py` if 1.x API differs
-   - Grep for any remaining 0.x import paths
+1. [`2026-08-18_cip000D-bump-constraints`](../backlog/infrastructure/2026-08-18_cip000D-bump-constraints.md) — `pyproject.toml` + `poetry.lock` to LangChain 1.x
+2. [`2026-08-18_cip000D-api-compat`](../backlog/infrastructure/2026-08-18_cip000D-api-compat.md) — `llm.py`, unit tests, optional smoke test
+3. [`2026-08-18_cip000D-docs`](../backlog/infrastructure/2026-08-18_cip000D-docs.md) — `docs/llm_integration.md` and CIP-0006 cross-link
+4. [`2026-08-13_dependabot-langchain-ecosystem`](../backlog/infrastructure/2026-08-13_dependabot-langchain-ecosystem.md) — confirm Dependabot #72, #74–#78 closed
 
-3. **Integration validation**
-   - Optional: run integration-marked tests with API keys
-   - Smoke-test one compute workflow (`llm_summarise` or `llm_pdf_review`) from a notebook or script
-
-4. **Documentation**
-   - Update `docs/llm_integration.md` version references
-   - Add migration note to CIP-0006 "Future Enhancements" or cross-link
-
-5. **Security verification**
-   - Push to `main`; confirm Dependabot alerts #72, #74–#78 close
-   - Mark backlog `2026-08-13_dependabot-langchain-ecosystem.md` completed
+Phase 4 depends on 1–3. diskcache alert #73 remains a separate backlog.
 
 ## Backward Compatibility
 
@@ -201,7 +187,7 @@ convenience tenets (optional LLM group stays optional; alerts cleared without ch
 ## References
 
 - [CIP-0006](./cip0006.md) — original LLM integration (implemented on 0.3.x)
-- Backlog: `backlog/infrastructure/2026-08-13_dependabot-langchain-ecosystem.md`
+- Backlog: CIP-000D tasks under `backlog/infrastructure/2026-08-18_cip000D-*.md`; alert closure in `2026-08-13_dependabot-langchain-ecosystem.md`
 - Code: `referia/util/llm.py`, `referia/assess/compute.py` (`_llm_functions_list`)
 - [LangChain v1 migration guide](https://python.langchain.com/docs/versions/v0_2/)
 - Dependabot: https://github.com/lawrennd/referia/security/dependabot
