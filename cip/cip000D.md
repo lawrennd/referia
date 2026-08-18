@@ -3,7 +3,7 @@ author: "lawrennd"
 created: "2026-08-18"
 id: "000D"
 last_updated: "2026-08-18"
-status: "Accepted"
+status: "In Progress"
 compressed: false
 related_requirements: []
 related_cips: ["0006"]
@@ -23,7 +23,7 @@ title: "LangChain 1.x Migration for LLM Integration"
 
 - [x] Proposed — Initial documentation complete
 - [x] Accepted — Plan reviewed and approved
-- [ ] In Progress — Migration underway
+- [x] In Progress — Migration underway
 - [ ] Implemented — Code and lockfile updated
 - [ ] Closed — Tests pass, Dependabot alerts closed, docs updated
 - [ ] Rejected
@@ -105,10 +105,13 @@ langchain-openai = "^1.1.14"
 langchain-anthropic = "^1.4.6"
 # langchain-text-splitters resolves transitively; pin explicitly if needed for alert #75
 langchain-text-splitters = "^1.1.2"
+openai = "^2.26.0"
+anthropic = ">=0.96.0,<1.0.0"
 ```
 
-Retain existing non-LangChain llm group deps (`openai`, `anthropic`, `tenacity`, `diskcache`,
-`python-dotenv`) unless Poetry resolution requires minor bumps.
+Retain existing non-LangChain llm group deps (`tenacity`, `diskcache`, `python-dotenv`) unless
+Poetry resolution requires bumps. **Required for 1.x:** `openai` `^2.26.0` (`langchain-openai`
+needs `>=2.26`) and `anthropic` `>=0.96.0,<1.0.0` (`langchain-anthropic` needs `>=0.96`).
 
 ### Expected code changes
 
@@ -176,8 +179,8 @@ convenience tenets (optional LLM group stays optional; alerts cleared without ch
 
 ## Implementation Status
 
-- [ ] Dependency constraints bumped to LangChain 1.x minimums
-- [ ] `poetry.lock` updated for llm group
+- [x] Dependency constraints bumped to LangChain 1.x minimums
+- [x] `poetry.lock` updated for llm group
 - [ ] `referia/util/llm.py` verified/updated for 1.x API
 - [ ] LLM tests pass
 - [ ] Full test suite passes
