@@ -23,6 +23,17 @@ from referia.web.app import create_app
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _yaml_exception_text(text: str) -> str:
+    """Return PyYAML's exception string for *text*, which must fail to parse."""
+    import yaml
+
+    try:
+        yaml.safe_load(text)
+    except Exception as exc:
+        return str(exc)
+    raise AssertionError(f"expected YAML parse failure for {text!r}")
+
+
 def _mock_reviewer():
     r = MagicMock()
     r.index_list.return_value = ["alice", "bob"]
@@ -572,6 +583,49 @@ class TestRootRouterRoutes:
             resp = client.get("/errors")
         assert resp.status_code == 200
         assert "YAML parse failures (0)" in resp.text
+
+    def test_errors_and_listing_omit_parse_exception_text(self, tmp_path):
+        """CIP-000E: parse exception strings stay in the log, not HTML."""
+        yaml_text = "title: [unclosed bracket"
+        marker = _yaml_exception_text(yaml_text)
+        bad = tmp_path / "broken"
+        bad.mkdir()
+        (bad / "_referia.yml").write_text(yaml_text)
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            listing = client.get("/")
+            errors = client.get("/errors")
+        assert listing.status_code == 200
+        assert errors.status_code == 200
+        assert marker not in listing.text
+        assert marker not in errors.text
+        assert "See server log" in listing.text
+        assert "See server log" in errors.text
+        assert str(bad / "_referia.yml") in errors.text
+
+    def test_errors_page_omits_load_exception_text(self, tmp_path):
+        """CIP-000E: WebReviewer load failures do not put str(exc) in /errors."""
+        marker = "UNIQUE_LOAD_FAILURE_xyzzy"
+        good = tmp_path / "good"
+        good.mkdir()
+        (good / "_referia.yml").write_text("title: Good Config\n")
+        with patch(
+            "referia.assess.web_review.WebReviewer",
+            side_effect=RuntimeError(marker),
+        ):
+            app = create_app(root=str(tmp_path))
+            with TestClient(app) as client:
+                load_resp = client.get("/good/")
+                errors = client.get("/errors")
+            registry = list(app.state.load_errors)
+        assert load_resp.status_code == 503
+        assert "Could not load config" in load_resp.text
+        assert marker not in load_resp.text
+        assert errors.status_code == 200
+        assert marker not in errors.text
+        assert marker not in str(registry)
+        assert "See server log" in errors.text
+        assert str(good / "_referia.yml") in errors.text
 
     def test_root_log_file_created(self, tmp_path):
         """A referia-server.log file is created at the root when running in root mode."""

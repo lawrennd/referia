@@ -1,7 +1,7 @@
 ---
 id: "2026-08-19_cip000E-generic-errors-page"
 title: "Generic messages on /errors and listing tooltips (CodeQL #21)"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2026-08-19"
 last_updated: "2026-08-19"
@@ -43,13 +43,13 @@ Remaining HTML sinks (targeted, not a full-repo review):
 
 ## Acceptance Criteria
 
-- [ ] `/errors` HTML contains no exception message text (generic cell copy, e.g. "See server log")
-- [ ] Directory-listing warning icon has no exception text in `title` (generic tooltip is fine)
-- [ ] Parse and load failures still appear as rows (path/config identity can remain)
-- [ ] Full exception text is logged with `log.exception` / `log.warning` (existing log path is enough)
-- [ ] Tests assert a distinctive exception string never appears in `GET /errors` or listing HTML
-- [ ] Existing `/errors` tests still pass (counts, banner, path listing) after copy changes
-- [ ] CIP-000E policy table updated: `/errors` is generic in the browser, detail in the log
+- [x] `/errors` HTML contains no exception message text (generic cell copy, e.g. "See server log")
+- [x] Directory-listing warning icon has no exception text in `title` (generic tooltip is fine)
+- [x] Parse and load failures still appear as rows (path/config identity can remain)
+- [x] Full exception text is logged with `log.exception` / `log.warning` (existing log path is enough)
+- [x] Tests assert a distinctive exception string never appears in `GET /errors` or listing HTML
+- [x] Existing `/errors` tests still pass (counts, banner, path listing) after copy changes
+- [x] CIP-000E policy table updated: `/errors` is generic in the browser, detail in the log
 - [ ] CodeQL alert #21 closes after merge (or next scan)
 
 ## Implementation Notes
@@ -77,3 +77,7 @@ Do not add authentication in this task.
 Task created as a CIP-000E follow-on after CodeQL #21. Status Proposed pending review.
 
 Accepted and moved to In Progress for implementation.
+
+Implemented: `/errors` and listing tooltips use "See server log."; parse meta stores
+`_error: True`; load registry no longer stores `str(exc)`. Tests in `tests/test_web_app.py`.
+CodeQL #21 remains until GitHub rescans `main`.

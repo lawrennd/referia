@@ -72,7 +72,8 @@ def create_app(
         app.state.reviewer = None   # no single pre-loaded reviewer
         app.state.user_file = None
         app.state.directory = resolved_root
-        # load_errors accumulates {path, error, time} dicts for the /errors page.
+        # load_errors accumulates {path, type, time} dicts for the /errors page.
+        # Exception text stays in the server log (CIP-000E).
         app.state.load_errors: list[dict] = []
 
         # Write WARNING+ messages from all referia/lynguine loggers to a

@@ -248,6 +248,10 @@ def _user_error_html(action: str) -> str:
     )
 
 
+_BROWSER_ERROR_HINT = "See server log."
+_PARSE_FAIL_TOOLTIP = "Failed to parse. See server log."
+
+
 def _log_route_error(action: str, exc: Exception, **context: Any) -> None:
     extra = " ".join(f"{k}={v!r}" for k, v in context.items())
     log.exception("%s failed %s", action, extra)
@@ -499,14 +503,14 @@ def _get_cached_reviewer(app_state, config_file: Path, user_file: str):
         try:
             reviewer = WebReviewer(user_file, str(config_file.parent))
         except Exception as exc:
-            log.error("Failed to load config %s: %s", config_file, exc)
+            log.exception("Failed to load config %s", config_file)
             # Record in the in-memory error registry (if it exists on app_state).
+            # Do not store str(exc): the registry feeds /errors HTML (CIP-000E / CodeQL #21).
             load_errors = getattr(app_state, "load_errors", None)
             if load_errors is not None:
                 import time as _time
                 load_errors.append({
                     "path": str(config_file),
-                    "error": str(exc),
                     "type": type(exc).__name__,
                     "time": _time.strftime("%Y-%m-%d %H:%M:%S"),
                 })
@@ -528,8 +532,9 @@ def _read_config_meta(yml_path: Path) -> dict:
     """Return display metadata from a ``_referia.yml`` without loading WebReviewer.
 
     Extracts ``title``, ``description``, ``date``, ``current``, and
-    ``inherit_abs`` via ``yaml.safe_load``.  Any parse error silently returns
-    an empty dict so a bad yml never breaks the listing page.
+    ``inherit_abs`` via ``yaml.safe_load``.  Any parse error logs the exception
+    and returns ``{"_error": True}`` so a bad yml never breaks the listing page
+    and exception text never reaches the browser (CIP-000E).
 
     ``date`` is normalised to an ISO-format string (``"YYYY-MM-DD"``).
     ``current`` is coerced to a plain Python ``bool``.
@@ -575,7 +580,7 @@ def _read_config_meta(yml_path: Path) -> dict:
         }
     except Exception as exc:
         log.warning("Failed to parse config %s: %s", yml_path, exc)
-        return {"_error": str(exc)}
+        return {"_error": True}
 
 
 def _list_sub_configs(root: str, url_path: str) -> list[dict]:
@@ -636,7 +641,7 @@ def _list_sub_configs(root: str, url_path: str) -> list[dict]:
             "group": group_name,
             "group_url": group_url,
             "_inherit_abs": meta.get("inherit_abs"),  # resolved Path or None
-            "error": meta.get("_error"),  # None if parse succeeded
+            "error": bool(meta.get("_error")),
             "yml_path": str(yml),
         })
 
@@ -864,7 +869,7 @@ def _render_directory_listing(
 
             error_indicator = ""
             if e.get("error"):
-                error_title = _esc(e["error"][:120])
+                error_title = html.escape(_PARSE_FAIL_TOOLTIP, quote=True)
                 error_indicator = (
                     f' <a href="/errors" class="error-icon" title="{error_title}">'
                     f'&#x26A0;&#xFE0F;</a>'
@@ -1109,10 +1114,12 @@ async def list_errors(request: Request):
     # ── WebReviewer load errors recorded during lazy loading ─────────────────
     load_errors: list[dict] = getattr(request.app.state, "load_errors", [])
 
+    generic_msg = _esc(_BROWSER_ERROR_HINT)
+
     rows_parse = "".join(
         f'<tr>'
         f'<td><code>{_esc(e["yml_path"])}</code></td>'
-        f'<td class="err-msg">{_esc(e["error"])}</td>'
+        f'<td class="err-msg">{generic_msg}</td>'
         f'</tr>'
         for e in parse_errors
     ) or "<tr><td colspan='2'>None</td></tr>"
@@ -1121,7 +1128,7 @@ async def list_errors(request: Request):
         f'<tr>'
         f'<td><code>{_esc(e["path"])}</code></td>'
         f'<td class="err-type">{_esc(e["type"])}</td>'
-        f'<td class="err-msg">{_esc(e["error"])}</td>'
+        f'<td class="err-msg">{generic_msg}</td>'
         f'<td class="err-time">{_esc(e["time"])}</td>'
         f'</tr>'
         for e in reversed(load_errors)

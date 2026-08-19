@@ -2,7 +2,7 @@
 author: "lawrennd"
 created: "2026-08-18"
 id: "000E"
-last_updated: "2026-08-18"
+last_updated: "2026-08-19"
 status: "Implemented"
 compressed: false
 related_requirements: []
@@ -87,8 +87,9 @@ the request-handling layer regardless of who is logged in.
 Assume for this CIP:
 
 - Anyone who can reach the server may probe URL paths and form endpoints
-- Exception messages and paths must not leak filesystem layout or library internals to the browser
-- Operator-facing detail remains in server logs and the `/errors` page
+- Exception messages must not leak library internals to the browser
+- Failed-config identity (path) may appear on `/errors` and listings so operators can find the file
+- Exception detail remains in server logs only
 
 **Out of scope here (future CIP if we expose the interface):**
 
@@ -100,8 +101,8 @@ Assume for this CIP:
 | Session isolation | Multi-user cache and `/errors` currently assume one operator |
 
 When that CIP exists, it should **rely on** the helpers and error policy from this CIP, not
-reimplement them. `/errors` in particular would need an access-control decision: it is operator
-detail today and must not stay anonymously reachable on a public host.
+reimplement them. `/errors` lists which configs failed (paths, exception type, time) with generic
+copy; full exceptions stay in the log. It must not stay anonymously reachable on a public host.
 
 ### 1. GitHub Actions workflow permissions (alerts #1–#3)
 
@@ -191,7 +192,7 @@ stack-trace-exposure — exception strings are still information disclosure.
 |----------|----------------|
 | Browser (reviewer) | Short generic message: e.g. `"Save failed. See server log."` |
 | Server log | Full exception with `log.exception(...)` |
-| `/errors` page | Detailed load/parse failures (operator tool; unchanged) |
+| `/errors` page and listing tooltips | Failed config path (and load type/time); generic `"See server log."` — no `{exc}` |
 | `HTTPException` JSON/HTML detail | Generic text; no `{exc}` interpolation |
 
 **Proposed helpers** in `referia/web/routes.py`:
@@ -205,7 +206,8 @@ def _log_route_error(action: str, exc: Exception, **context) -> None:
 ```
 
 Replace all user-facing `str(exc)` returns in HTMX handlers. Keep `_esc` for any dynamic text that
-remains user-visible (titles, config metadata from YAML).
+remains user-visible (titles, config metadata from YAML). `/errors` and listing warning tooltips
+use the same generic hint; do not interpolate registry `error` strings into HTML (CodeQL #21).
 
 ### 4. Reflected XSS (alert #12)
 
@@ -232,19 +234,21 @@ does not model `_esc()` as a sanitizer.
 
 ## Implementation Plan
 
-Backlog tasks (phases 1–4 Completed 2026-08-18; phase 5 waits for GitHub CodeQL):
+Backlog tasks (phases 1–4 Completed 2026-08-18; generic `/errors` 2026-08-19; closure waits for GitHub CodeQL):
 
 1. [`2026-08-18_cip000E-workflow-permissions`](../backlog/infrastructure/2026-08-18_cip000E-workflow-permissions.md) — alerts **#1–#3**
 2. [`2026-08-18_cip000E-exception-exposure`](../backlog/infrastructure/2026-08-18_cip000E-exception-exposure.md) — alerts **#13–#20**
 3. [`2026-08-18_cip000E-path-safety`](../backlog/infrastructure/2026-08-18_cip000E-path-safety.md) — alerts **#4–#11**
 4. [`2026-08-18_cip000E-xss-verification`](../backlog/infrastructure/2026-08-18_cip000E-xss-verification.md) — alert **#12**
-5. [`2026-08-18_cip000E-codeql-closure`](../backlog/infrastructure/2026-08-18_cip000E-codeql-closure.md) — confirm 20 → 0 on GitHub
+5. [`2026-08-19_cip000E-generic-errors-page`](../backlog/infrastructure/2026-08-19_cip000E-generic-errors-page.md) — alert **#21**
+6. [`2026-08-18_cip000E-codeql-closure`](../backlog/infrastructure/2026-08-18_cip000E-codeql-closure.md) — confirm #1–#21 closed on GitHub
 
-See each task for acceptance criteria. Phase 5 depends on 1–4.
+See each task for acceptance criteria. Phase 6 depends on 1–5.
 
 ## Backward Compatibility
 
-- **Reviewer UX**: Error messages become less specific in the browser; operators use logs and `/errors`
+- **Reviewer UX**: Error messages become less specific in the browser; operators use the server log
+  (and `/errors` for which config failed, not the exception text)
 - **API shape**: No change to routes, HTMX contracts, or YAML configuration
 - **Single-config vs root mode**: Both modes receive the same error and path policies
 - **No breaking changes** to Python library APIs outside the web layer
@@ -262,6 +266,7 @@ poetry run pytest tests/ -q
 
 - Path traversal rejected (`../`, absolute escape, encoded segments)
 - Error handlers return generic HTML without exception text (mock failing `save_flows`, etc.)
+- `/errors` and listing tooltips omit parse/load exception strings
 - Workflow YAML valid (CI is the integration test for permissions)
 
 **CodeQL:** Confirm alert closure on GitHub after merge to `main` (may lag one scan cycle).
@@ -275,11 +280,12 @@ automation tenet: security tooling should be satisfied without blocking local re
 
 - [x] Workflow permissions added (#1–#3)
 - [x] User-facing exception policy implemented (#13–#20)
+- [x] Generic `/errors` page and listing tooltips (#21)
 - [x] Path safety helper and refactors (#4–#11)
 - [x] XSS alert resolved or documented (#12)
 - [x] Web route tests extended
 - [x] Full test suite passes
-- [ ] All 20 CodeQL alerts closed on GitHub
+- [ ] All CodeQL alerts closed on GitHub (#1–#21)
 
 ## References
 
