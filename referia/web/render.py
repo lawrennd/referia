@@ -323,17 +323,20 @@ def _evaluate_liquid(template: str, data: dict) -> str:
 def _render_markdown_widget(spec: dict, value: Any, data: dict | None = None) -> str:
     args = spec.get("args", {})
     # Content priority:
-    #   1. top-level liquid: — set by %param% template expansion (e.g. "### Introduction")
-    #      This is already resolved; no further Liquid evaluation needed.
-    #   2. args.liquid — set by CriterionComment expansion (contains {{columnName}} Liquid refs)
-    #      Requires Liquid evaluation against the current row data.
+    #   1. top-level liquid: — used by interview/admissions Markdown widgets
+    #      (``{{q1Question}}``) and by %param% expansion ("### Introduction").
+    #      Remaining ``{{column}}`` refs are resolved against the current row.
+    #   2. args.liquid — set by CriterionComment expansion (contains {{columnName}})
     #   3. args.value / args.description — static configured content
     #   4. the field's data value
+    top_liquid = spec.get("liquid")
+    if top_liquid and data is not None:
+        top_liquid = _evaluate_liquid(top_liquid, data)
     args_liquid = args.get("liquid")
     if args_liquid and data is not None:
         args_liquid = _evaluate_liquid(args_liquid, data)
     content = (
-        spec.get("liquid")
+        top_liquid
         or args_liquid
         or args.get("value")
         or args.get("description")

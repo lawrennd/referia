@@ -562,3 +562,25 @@ class TestMarkdownTopLevelLiquid:
         }
         html = render_widget(spec, None, data={})
         assert "{{missingColumn}}" not in html
+
+    def test_top_level_liquid_with_column_reference(self):
+        """Interview Markdown widgets put {{column}} on the top-level liquid key."""
+        spec = {
+            "type": "Markdown",
+            "liquid": "### Question 1\n\n{{q1Question}}\n\n1. {{q1pt1Question}}\n",
+        }
+        data = {
+            "q1Question": "Consider a program that runs over the integers.",
+            "q1pt1Question": "How many integers might we expect to include?",
+        }
+        html = render_widget(spec, None, data=data)
+        assert "Consider a program that runs over the integers." in html
+        assert "How many integers might we expect to include?" in html
+        assert "{{q1Question}}" not in html
+        assert "{{q1pt1Question}}" not in html
+
+    def test_top_level_liquid_missing_column_is_empty(self):
+        """Missing column in top-level liquid resolves to empty — no raw {{key}}."""
+        spec = {"type": "Markdown", "liquid": "Question 1\n{{q1Question}}\n"}
+        html = render_widget(spec, None, data={})
+        assert "{{q1Question}}" not in html

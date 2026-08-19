@@ -493,9 +493,24 @@ class TestGetRowData:
         result = reviewer.get_row_data()
         assert result["score"] is None
 
-    def test_empty_row_on_bad_index(self):
-        """If the current index can't be located, return an empty dict."""
+    def test_includes_constants_when_to_pandas_fails(self):
+        """to_pandas() overlap errors must not blank global_consts used in Liquid."""
+        reviewer, data, _ = _build_reviewer(
+            col_vals={"score": 1, "q1Question": "How many integers?"},
+        )
+        data.to_pandas.side_effect = ValueError("columns overlap but no suffix specified")
+        result = reviewer.get_row_data()
+        assert result["q1Question"] == "How many integers?"
+        assert result["score"] == 1
+
+    def test_empty_row_when_columns_unavailable(self):
+        """If the column list cannot be read, return an empty dict."""
         reviewer, data, _ = _build_reviewer(col_vals={"score": 1})
-        data.to_pandas.side_effect = KeyError("missing")
+
+        class _BoomColumns:
+            def __iter__(self):
+                raise RuntimeError("no columns")
+
+        data.columns = _BoomColumns()
         result = reviewer.get_row_data()
         assert result == {}

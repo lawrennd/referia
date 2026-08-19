@@ -193,17 +193,27 @@ class Interface(lynguine.config.interface.Interface):
             log.debug(f"Adding \"global_consts\" from referia as \"constants\" in the linguine form.")
             constants = data["global_consts"]
             if isinstance(constants, list):
-                for i, constant in enumerate(constants):
+                # Each list item is a selected row of constants (often with a
+                # different row key: roleInterview vs programme-manager).
+                # Old referia joined those rows field-wise into one series.
+                # lynguine ``stack`` does the same: merge single-row sources
+                # into one row. ``hstack`` joins on index values and would
+                # leave fields on unmatched rows.
+                const_index = None
+                for constant in constants:
                     if "index" in constant:
-                        if i == 0:
-                            index = constant["index"]
-                        elif index != constant["index"]:
+                        if const_index is None:
+                            const_index = constant["index"]
+                        elif const_index != constant["index"]:
                             errmsg = "All \"global_consts\" items must have the same \"index\"."
                             log.error(errmsg)
                             raise ValueError(errmsg)
                         del constant["index"]
-                log.debug(f"Adding list of constants as an \"hstack\" in the linguine \"constants\" entry.")
-                data["constants"] = {"type": "hstack", "index": index,  "specifications": constants}
+                log.debug(f"Adding list of constants as a \"stack\" in the lynguine \"constants\" entry.")
+                stacked = {"type": "stack", "specifications": constants}
+                if const_index is not None:
+                    stacked["index"] = const_index
+                data["constants"] = stacked
             else:
                 data["constants"] = constants
             del data["global_consts"]

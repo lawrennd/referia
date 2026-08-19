@@ -513,6 +513,54 @@ input:
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 
+class TestGlobalConstsListOfLocal:
+    """A YAML list of local global_consts should merge fields, even when row keys differ."""
+
+    def test_list_merges_fields_from_different_row_keys(self):
+        """Programme-manager pattern: two local blocks, different data-row indexes."""
+        tmpdir = tempfile.mkdtemp()
+        try:
+            data_file = f"{tmpdir}/data.yml"
+            with open(data_file, "w") as f:
+                yaml.dump([{"name": "Alice", "index": "row1"}], f)
+
+            config_file = f"{tmpdir}/_referia.yml"
+            with open(config_file, "w") as f:
+                f.write(f"""global_consts:
+  - type: local
+    index: index
+    select: roleInterview
+    data:
+    - index: roleInterview
+      openingComment: Check that the applicant can hear you.
+  - type: local
+    index: index
+    data:
+    - index: programme-manager
+      runningOrder: Welcome and introductions
+
+input:
+  type: yaml
+  filename: data.yml
+  directory: {tmpdir}
+  index: index
+""")
+
+            interface = Interface.from_file(
+                user_file="_referia.yml",
+                directory=tmpdir,
+            )
+            cdf = CustomDataFrame.from_flow(interface)
+
+            assert "openingComment" in cdf.columns
+            assert "runningOrder" in cdf.columns
+            assert cdf.loc["row1", "openingComment"] == "Check that the applicant can hear you."
+            assert cdf.loc["row1", "runningOrder"] == "Welcome and introductions"
+        finally:
+            import shutil
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 class TestGlobalConstsRegression:
     """Test backward compatibility with existing global_consts usage."""
     

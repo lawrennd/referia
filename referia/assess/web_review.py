@@ -171,41 +171,24 @@ class WebReviewer:
         renderer) can look up any column—including those used in
         ``visible_if`` conditions that have no corresponding widget.
 
-        Values that are ``NaN`` (pandas sentinel for missing floats) are
-        normalised to ``None`` so downstream code can use plain truthiness
-        checks.
+        Values are read with :meth:`get_value` rather than ``to_pandas()``.
+        ``to_pandas()`` joins every flow into one frame and raises when
+        allocation and scores share column names, which would blank Liquid
+        substitutions (``{{q1Question}}`` and similar constants).
+        ``get_value`` is the same path Jupyter Liquid uses, including
+        parameter columns from ``global_consts``.
         """
-        import math
-        import pandas as pd
-
-        idx = self._data.get_index()
         try:
-            df = self._data.to_pandas()
-            row = df.loc[idx]
-            if isinstance(row, pd.DataFrame):
-                # Subseries: multiple rows share the same primary index.
-                # Pick the row that matches the active subindex so we return
-                # the data for the currently-selected sub-entry rather than
-                # the first one arbitrarily.
-                try:
-                    subindex = self._data.get_subindex()
-                    selector = self._data.get_selector()
-                    if selector and subindex is not None and selector in row.columns:
-                        matching = row[row[selector] == subindex]
-                        row = matching.iloc[0] if not matching.empty else row.iloc[0]
-                    else:
-                        row = row.iloc[0]
-                except Exception:
-                    row = row.iloc[0]
+            columns = list(self._data.columns)
         except Exception:
             return {}
 
         result: dict = {}
-        for col in row.index:
-            val = row[col]
-            if isinstance(val, float) and math.isnan(val):
-                val = None
-            result[col] = val
+        for col in columns:
+            try:
+                result[col] = self.get_value(col)
+            except Exception:
+                result[col] = None
         return result
 
     def set_value(self, column: str, value: Any) -> None:
