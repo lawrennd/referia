@@ -24,7 +24,9 @@ poetry install
 
 All review configuration lives in a YAML file, conventionally named `_referia.yml`, placed alongside your data files. Once that file exists you have two ways to run a review session.
 
-### Web interface (recommended)
+### Web interface
+
+The reviewing was originally done in a Jupyter notebook interface (see below). But a client/server set up is now available that allows reviewing through a browser interface directly.
 
 ```bash
 referia serve --directory path/to/review --config _referia.yml
