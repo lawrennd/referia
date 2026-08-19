@@ -2,8 +2,9 @@
 author: "Neil D. Lawrence"
 created: "2026-07-05"
 id: "000A"
-last_updated: "2026-07-05"
+last_updated: "2026-08-18"
 status: "Implemented"
+github_issue: 13
 compressed: false
 related_requirements: []
 related_cips: []
@@ -172,3 +173,4 @@ Manual validation in the Jupyter assessment notebook:
 - `lynguine.access.io.read_yaml` / `write_yaml` — existing YAML I/O support
 - `theses/examined/info/introduction.yml` — prior example of YAML data in this workflow
 - `scripts/yaml_output.py` — existing script for YAML output generation
+- GitHub issue [#13](https://github.com/lawrennd/referia/issues/13) (closed 2026-08-18): YAML serialisation of `pd.Timestamp` is part of making timestamps survive in outputs
