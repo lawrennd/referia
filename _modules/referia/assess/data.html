@@ -809,6 +809,34 @@
     <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="ow">or</span> <span class="n">val</span><span class="o">==</span><span class="s2">&quot;&quot;</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">concat_preserving_dtypes</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">new_row</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Append ``new_row`` to ``df`` without the empty/all-NA concat warning.</span>
+
+<span class="sd">    Pandas currently excludes empty or all-NA columns when determining</span>
+<span class="sd">    ``pd.concat`` result dtypes. That is deprecated. Drop those columns</span>
+<span class="sd">    from ``new_row`` before concatenating so ``df``&#39;s dtypes are used —</span>
+<span class="sd">    the documented way to keep the old behaviour.</span>
+
+<span class="sd">    :param df: Existing data frame to append to.</span>
+<span class="sd">    :type df: pd.DataFrame</span>
+<span class="sd">    :param new_row: One or more rows to append.</span>
+<span class="sd">    :type new_row: pd.DataFrame</span>
+<span class="sd">    :return: Concatenated data frame with ``df``&#39;s columns.</span>
+<span class="sd">    :rtype: pd.DataFrame</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">new_row</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_row</span><span class="o">.</span><span class="n">index</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">df</span>
+    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">new_row</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+    <span class="n">populated</span> <span class="o">=</span> <span class="n">new_row</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">populated</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="n">populated</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">new_row</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">populated</span><span class="p">])</span>
+    <span class="k">if</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">automapping</span><span class="p">(</span><span class="n">columns</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Generate dictionary of mapping between variable names and column names.</span>
@@ -1858,7 +1886,7 @@
             <span class="c1"># Only precompute if something to write to</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">compute_append</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">,</span> <span class="n">row</span><span class="o">=</span><span class="n">row</span><span class="p">)</span>
         <span class="c1"># was return df.append(row) before append deprecation</span>
-        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">row</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">concat_preserving_dtypes</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="CustomDataFrame.add_series_row">
@@ -1885,7 +1913,7 @@
                     <span class="n">new_row</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="k">if</span> <span class="n">values</span> <span class="k">else</span> <span class="kc">None</span>
                 <span class="c1"># Add new row at end so it is updated when subindex is None</span>
                 <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Adding row to series </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">typ</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> in data frame.&quot;</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">series_df</span><span class="p">,</span> <span class="n">new_row</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span> <span class="o">=</span> <span class="n">concat_preserving_dtypes</span><span class="p">(</span><span class="n">series_df</span><span class="p">,</span> <span class="n">new_row</span><span class="p">)</span>
         <span class="c1"># Set the subindex to None so that last row is now selected.</span>
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Set subindex to None to select added row.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_subindex</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
