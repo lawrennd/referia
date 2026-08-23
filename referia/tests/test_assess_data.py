@@ -1,5 +1,7 @@
 # tests/test_assess_data.py
 
+import warnings
+
 import pytest
 import referia.assess.data
 import pandas as pd
@@ -194,6 +196,62 @@ def test_get_selectors():
 
     custom_df = create_series_dataframe()
     assert custom_df.get_selectors() == ["E", "F"]
+
+
+def test_concat_preserving_dtypes_blank_row():
+    """Blank rows must append without the empty/all-NA concat FutureWarning."""
+    df = pd.DataFrame({"text": ["hello"], "score": [1.0]}, index=["r1"])
+    new_row = pd.DataFrame({"text": [None], "score": [None]}, index=["r1"])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        result = referia.assess.data.concat_preserving_dtypes(df, new_row)
+    assert len(result) == 2
+    assert list(result.index) == ["r1", "r1"]
+    assert result["score"].dtype == np.float64
+    assert pd.isna(result.iloc[-1]["score"])
+
+
+def test_concat_preserving_dtypes_partial_values():
+    """Populated columns are kept; all-NA columns take the existing dtype."""
+    df = pd.DataFrame({"text": ["hello"], "score": [1.0]}, index=["r1"])
+    new_row = pd.DataFrame({"text": ["world"], "score": [None]}, index=["r1"])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        result = referia.assess.data.concat_preserving_dtypes(df, new_row)
+    assert result.iloc[-1]["text"] == "world"
+    assert result["score"].dtype == np.float64
+    assert pd.isna(result.iloc[-1]["score"])
+
+
+def test_add_series_row_no_concat_future_warning():
+    """Adding a blank writeseries row onto numeric series data must not warn."""
+    data = {"A": [1], "score": [3.5], "comment": ["ok"]}
+    colspecs = {"input": ["A"], "writeseries": ["score", "comment"]}
+    df = referia.assess.data.CustomDataFrame(data, colspecs=colspecs)
+    index = df.index[0]
+    df.set_index(index)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        df.add_series_row(index=index)
+    series = df._d["writeseries"]
+    assert len(series) == 2
+    assert list(series.index) == [index, index]
+    assert pd.isna(series.iloc[-1]["score"])
+
+
+def test_add_series_row_with_values():
+    """Values passed to add_series_row land on the new last row."""
+    data = {"A": [1], "score": [3.5], "comment": ["ok"]}
+    colspecs = {"input": ["A"], "writeseries": ["score", "comment"]}
+    df = referia.assess.data.CustomDataFrame(data, colspecs=colspecs)
+    index = df.index[0]
+    df.set_index(index)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        df.add_series_row(index=index, values={"comment": "second", "score": 4.0})
+    series = df._d["writeseries"]
+    assert series.iloc[-1]["comment"] == "second"
+    assert series.iloc[-1]["score"] == 4.0
 
 
 # Test loc accessor

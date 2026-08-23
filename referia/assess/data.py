@@ -46,6 +46,34 @@ def empty(val):
     return pd.isna(val) or val==""
 
 
+def concat_preserving_dtypes(df, new_row):
+    """Append ``new_row`` to ``df`` without the empty/all-NA concat warning.
+
+    Pandas currently excludes empty or all-NA columns when determining
+    ``pd.concat`` result dtypes. That is deprecated. Drop those columns
+    from ``new_row`` before concatenating so ``df``'s dtypes are used —
+    the documented way to keep the old behaviour.
+
+    :param df: Existing data frame to append to.
+    :type df: pd.DataFrame
+    :param new_row: One or more rows to append.
+    :type new_row: pd.DataFrame
+    :return: Concatenated data frame with ``df``'s columns.
+    :rtype: pd.DataFrame
+    """
+    if new_row is None or len(new_row.index) == 0:
+        return df
+    if df.empty:
+        return new_row.reindex(columns=df.columns)
+    populated = new_row.dropna(axis=1, how="all")
+    if populated.empty:
+        populated = pd.DataFrame(index=new_row.index)
+    result = pd.concat([df, populated])
+    if list(result.columns) != list(df.columns):
+        result = result.reindex(columns=df.columns)
+    return result
+
+
 def automapping(columns):
     """
     Generate dictionary of mapping between variable names and column names.
@@ -1027,7 +1055,7 @@ class CustomDataFrame(data.CustomDataFrame):
             # Only precompute if something to write to
             self.compute_append(index=index, row=row)
         # was return df.append(row) before append deprecation
-        return pd.concat([df, row])
+        return concat_preserving_dtypes(df, row)
 
 
     def add_series_row(self, index=None, values=None):
@@ -1052,7 +1080,7 @@ class CustomDataFrame(data.CustomDataFrame):
                     new_row[col] = values.get(col) if values else None
                 # Add new row at end so it is updated when subindex is None
                 log.debug(f"Adding row to series \"{typ}\" in data frame.")
-                self._d[typ] = pd.concat([series_df, new_row])
+                self._d[typ] = concat_preserving_dtypes(series_df, new_row)
         # Set the subindex to None so that last row is now selected.
         log.debug(f"Set subindex to None to select added row.")
         self.set_subindex(None)
