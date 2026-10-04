@@ -1,10 +1,10 @@
 ---
 id: "2026-08-13_dependabot-gitpython"
 title: "Resolve Dependabot alerts for GitPython (via lynguine)"
-status: "Completed"
+status: "In Progress"
 priority: "High"
 created: "2026-08-13"
-last_updated: "2026-08-13"
+last_updated: "2026-10-04"
 category: "infrastructure"
 related_cips: []
 owner: "lawrennd"
@@ -21,18 +21,28 @@ tags:
 
 ## Description
 
-GitHub Dependabot reports **15 open high/medium alerts** for `GitPython` / `gitpython` in `poetry.lock`
-(current locked version: **3.1.51**). Patched version required: **≥ 3.1.58** (covers alerts #85–#99).
+GitPython is a **transitive** dependency of referia (`referia → lynguine → gitpython`). Referia does
+not declare GitPython directly, so patched versions come from lynguine’s constraint plus a referia
+lock refresh.
 
-GitPython is a **transitive dependency** of `lynguine` (`lynguine → gitpython *`). Referia does not
-declare GitPython directly, so resolution likely requires coordinating a minimum version constraint
-in lynguine and refreshing referia's lock file.
+### August 2026 (done)
+
+- Referia lock was stale at **3.1.51** against August advisories (alerts #79, #85–#99; patched **≥ 3.1.58**).
+- After lynguine 0.1.2 (`gitpython >= 3.1.58`), referia ran `poetry update lynguine gitpython` →
+  GitPython **3.1.59**, lynguine **0.1.2**. Tests passed (337).
+
+### October 2026 (open)
+
+- Lynguine raised the floor again to `gitpython >= 3.1.62` and locked **3.1.62**
+  ([lynguine PR #28](https://github.com/lawrennd/lynguine/pull/28)).
+- Referia `poetry.lock` still has GitPython **3.1.59** as of 2026-10-04.
+- Referia pulls lynguine from `main` (`pyproject.toml`), so a lock refresh should pick up the new floor.
 
 Most alerts concern unguarded git option forwarding, config injection, and arbitrary file
 read/overwrite — relevant if untrusted input reaches GitPython APIs (lower risk for typical referia
 review workflows, but still worth patching).
 
-## Dependabot alerts
+## Dependabot alerts (August 2026 set)
 
 | # | Severity | GHSA | Summary (abbrev.) |
 |---|----------|------|-------------------|
@@ -52,26 +62,32 @@ review workflows, but still worth patching).
 | 98 | high | GHSA-jm78-9fvv-mhgr | git-config OPTION-name injection |
 | 99 | high | GHSA-hmq2-w58f-27jc | `.gitmodules` submodule path traversal |
 
+October lynguine advisories (need **≥ 3.1.62**): tracked on lynguine Dependabot / companion backlog
+(e.g. GHSA-239g-whfq-7xj9, GHSA-g5vv-9gxw-82hx, GHSA-whh4-5q6c-9v3x, GHSA-59cr-6r3x-644w).
+
 ## Acceptance Criteria
 
-- [x] `poetry.lock` resolves `gitpython` to **≥ 3.1.58** (now **3.1.59**)
-- [ ] All 15 Dependabot alerts (#79, #85–#99) show as fixed or dismissed with documented rationale
-- [x] Referia test suite passes after lock update (337 passed)
-- [x] If lynguine change is required, corresponding lynguine backlog task or PR is linked (lynguine 0.1.2)
+- [x] August refresh: `poetry.lock` resolves `gitpython` to **≥ 3.1.58** (reached **3.1.59**)
+- [x] Referia test suite passed after August lock update (337 passed)
+- [x] Lynguine change linked (lynguine 0.1.2 / companion backlog; later [PR #28](https://github.com/lawrennd/lynguine/pull/28) for 3.1.62)
+- [ ] October refresh: `poetry.lock` resolves `gitpython` to **≥ 3.1.62** (still **3.1.59** as of 2026-10-04)
+- [ ] August Dependabot alerts (#79, #85–#99) fixed or dismissed with documented rationale (pending GitHub rescan after August; re-check after October refresh)
+- [ ] Any new GitPython alerts after the October refresh fixed or dismissed with rationale
 
 ## Implementation Notes
 
-1. Add `gitpython = ">=3.1.58"` (or equivalent) to lynguine `pyproject.toml` if not already constrained.
-2. In referia: `poetry update gitpython` (or full lock refresh after lynguine release).
-3. Confirm no referia code calls vulnerable GitPython APIs with untrusted input.
+1. Lynguine declares the floor (`gitpython >= 3.1.62` as of 2026-10-04).
+2. In referia: `poetry update lynguine gitpython` (lynguine is git dependency on `main`).
+3. Confirm no referia code calls vulnerable GitPython APIs with untrusted input (GitPython use is via lynguine).
+4. Clone URL trust review remains on the **lynguine** companion task (`download.py` / `clone_or_pull.py`).
 
 ## Related
 
 - Dependabot: https://github.com/lawrennd/referia/security/dependabot
 - Dependency path: `referia → lynguine → gitpython`
 - Lynguine backlog: `lynguine/backlog/infrastructure/2026-08-13_dependabot-gitpython.md`
-- Lynguine lock already has gitpython 3.1.58; referia lock is stale at 3.1.51
-- No existing CIP or backlog item covers this alert set.
+- Lynguine PR (October floor): https://github.com/lawrennd/lynguine/pull/28
+- Lynguine lock: GitPython **3.1.62**; referia lock: **3.1.59** (needs refresh)
 
 ## Progress Updates
 
@@ -83,4 +99,13 @@ Task created from Dependabot alert triage. No matching CIP/backlog found.
 
 Lynguine 0.1.2 released with `gitpython >= 3.1.58`. Referia lock updated:
 `poetry update lynguine gitpython` → gitpython 3.1.51 → **3.1.59**, lynguine 0.1.1 → **0.1.2**.
-Tests pass. Dependabot alert closure pending GitHub rescan.
+Tests pass. Dependabot alert closure pending GitHub rescan. Status briefly treated as complete for
+the August floor.
+
+### 2026-10-04
+
+Reopened for documentation sync with lynguine:
+
+- Lynguine landed [PR #28](https://github.com/lawrennd/lynguine/pull/28): floor `>=3.1.62`, lock **3.1.62**
+- Referia lock still **3.1.59** — needs a second `poetry update lynguine gitpython`
+- Status set back to **In Progress** until the October refresh and alert check are done
