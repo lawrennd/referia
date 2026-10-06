@@ -41,6 +41,7 @@ Each CIP can have one of the following statuses:
 - [CIP-000C](./cip000C.md): Multi-Config Web Server (Root-Based Path Routing)
 - [CIP-000D](./cip000D.md): LangChain 1.x Migration for LLM Integration (In Progress)
 - [CIP-000E](./cip000E.md): Web Layer Security Hardening for CodeQL Findings (Implemented)
+- [CIP-000F](./cip000F.md): Detect, version, and migrate referia config dialects (Accepted)
 
 ## Creating a Good CIP
 
