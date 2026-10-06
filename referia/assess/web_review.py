@@ -177,6 +177,14 @@ class WebReviewer:
         substitutions (``{{q1Question}}`` and similar constants).
         ``get_value`` is the same path Jupyter Liquid uses, including
         parameter columns from ``global_consts``.
+
+        Mapping aliases from ``_name_column_map`` and from the interface
+        ``input`` / ``output`` mapping (for example ``Title`` → ``Project title``,
+        or ``number`` → the index column) are copied into the dict as well.
+        Jupyter Liquid uses :meth:`lynguine.assess.data.CustomDataFrame.mapping`;
+        the web renderer looks up ``{{Title}}`` by key, so aliases must be
+        present or those substitutions go empty.  Index fields are often
+        absent from ``_name_column_map`` even when they appear in YAML.
         """
         try:
             columns = list(self._data.columns)
@@ -189,7 +197,45 @@ class WebReviewer:
                 result[col] = self.get_value(col)
             except Exception:
                 result[col] = None
+
+        try:
+            idx_name = getattr(self._data.index, "name", None)
+            if idx_name and idx_name not in result:
+                result[idx_name] = self.get_index()
+        except Exception:
+            idx_name = None
+
+        for name, column in self._row_mapping_aliases().items():
+            if name in result:
+                continue
+            if column in result:
+                result[name] = result[column]
+                continue
+            try:
+                result[name] = self.get_value(column)
+            except Exception:
+                if column == idx_name:
+                    result[name] = self.get_index()
+                else:
+                    result[name] = None
         return result
+
+    def _row_mapping_aliases(self) -> dict:
+        """Name → column aliases for Liquid keys on the current row."""
+        aliases: dict = {}
+        name_map = getattr(self._data, "_name_column_map", None)
+        if isinstance(name_map, dict):
+            aliases.update(name_map)
+        for key in ("input", "output", "allocation", "scores"):
+            try:
+                block = self._interface[key] if key in self._interface else None
+            except Exception:
+                block = None
+            if isinstance(block, dict):
+                mapping = block.get("mapping")
+                if isinstance(mapping, dict):
+                    aliases.update(mapping)
+        return aliases
 
     def set_value(self, column: str, value: Any) -> None:
         """Update *column* for the active record and run on-change logic.

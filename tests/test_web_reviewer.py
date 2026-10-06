@@ -514,3 +514,48 @@ class TestGetRowData:
         data.columns = _BoomColumns()
         result = reviewer.get_row_data()
         assert result == {}
+
+    def test_includes_mapping_aliases(self):
+        """Liquid keys such as {{Title}} must resolve via input mapping aliases."""
+        reviewer, data, _ = _build_reviewer(
+            col_vals={"Project title": "Toolkit for misuse", "score": 1},
+        )
+        data._name_column_map = {"Title": "Project title"}
+        result = reviewer.get_row_data()
+        assert result["Project title"] == "Toolkit for misuse"
+        assert result["Title"] == "Toolkit for misuse"
+
+    def test_mapping_alias_from_get_value_when_column_not_listed(self):
+        """Aliases whose source column is missing from .columns still use get_value."""
+        reviewer, data, _ = _build_reviewer(col_vals={"score": 1})
+        data._name_column_map = {"Title": "Project title"}
+
+        orig_get = reviewer.get_value
+
+        def _get(column):
+            if column == "Project title":
+                return "Toolkit for misuse"
+            return orig_get(column)
+
+        reviewer.get_value = _get
+        result = reviewer.get_row_data()
+        assert result["Title"] == "Toolkit for misuse"
+
+    def test_interface_mapping_covers_index_alias(self):
+        """YAML mapping onto the index (number → Project number) must still fill."""
+        reviewer, data, _ = _build_reviewer(col_vals={"score": 1})
+        data._name_column_map = {}
+        orig_get = reviewer.get_value
+
+        def _get(column):
+            if column == "Project number":
+                return 1
+            return orig_get(column)
+
+        reviewer.get_value = _get
+        reviewer._interface.__contains__ = lambda self, k: k == "input"
+        reviewer._interface.__getitem__ = lambda self, k: {
+            "input": {"mapping": {"number": "Project number"}}
+        }[k]
+        result = reviewer.get_row_data()
+        assert result["number"] == 1
