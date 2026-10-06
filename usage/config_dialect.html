@@ -3,9 +3,10 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Overview: module code &mdash; referia 0.2 Documentation</title>
+  <title>Config dialects and versioning &mdash; referia 0.2 Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
@@ -18,7 +19,9 @@
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" /> 
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Assess Module" href="../modules/assess.html" />
+    <link rel="prev" title="Quick Start Guide" href="../quickstart.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,7 +44,7 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction to Referia</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../introduction.html#what-is-referia">What is Referia?</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../introduction.html#relationship-with-lynguine">Relationship with Lynguine</a></li>
@@ -66,14 +69,14 @@
 <li class="toctree-l2"><a class="reference internal" href="../quickstart.html#next-steps">Next Steps</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../usage/config_dialect.html">Config dialects and versioning</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#version-field">Version field</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#dialect-generations">Dialect generations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#in-memory-key-mapping-v1-v2">In-memory key mapping (v1 → v2)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#strict-columns-defaults"><code class="docutils literal notranslate"><span class="pre">strict_columns</span></code> defaults</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#cli-check-and-migrate">CLI: check and migrate</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#runtime-vs-disk">Runtime vs disk</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#library-api">Library API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Config dialects and versioning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#version-field">Version field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dialect-generations">Dialect generations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#in-memory-key-mapping-v1-v2">In-memory key mapping (v1 → v2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#strict-columns-defaults"><code class="docutils literal notranslate"><span class="pre">strict_columns</span></code> defaults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cli-check-and-migrate">CLI: check and migrate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#runtime-vs-disk">Runtime vs disk</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#library-api">Library API</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../modules/assess.html">Assess Module</a><ul>
@@ -787,8 +790,9 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Overview: module code</li>
+      <li class="breadcrumb-item active">Config dialects and versioning</li>
       <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/usage/config_dialect.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -796,26 +800,143 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <h1>All modules for which code is available</h1>
-<ul><li><a href="lynguine/assess/compute.html">lynguine.assess.compute</a></li>
-<li><a href="lynguine/assess/data.html">lynguine.assess.data</a></li>
-<li><a href="lynguine/config/interface.html">lynguine.config.interface</a></li>
-<li><a href="referia/assess/compute.html">referia.assess.compute</a></li>
-<li><a href="referia/assess/data.html">referia.assess.data</a></li>
-<li><a href="referia/assess/review.html">referia.assess.review</a></li>
-<li><a href="referia/config/dialect.html">referia.config.dialect</a></li>
-<li><a href="referia/config/interface.html">referia.config.interface</a></li>
-<li><a href="referia/util/files.html">referia.util.files</a></li>
-<li><a href="referia/util/misc.html">referia.util.misc</a></li>
-<li><a href="referia/util/plot.html">referia.util.plot</a></li>
-<li><a href="referia/util/system.html">referia.util.system</a></li>
-<li><a href="referia/util/text.html">referia.util.text</a></li>
-<li><a href="referia/util/widgets.html">referia.util.widgets</a></li>
+  <section id="config-dialects-and-versioning">
+<h1>Config dialects and versioning<a class="headerlink" href="#config-dialects-and-versioning" title="Link to this heading"></a></h1>
+<p>Every <code class="docutils literal notranslate"><span class="pre">_referia.yml</span></code> belongs to a <strong>config dialect</strong> generation. Referia
+detects the dialect, converts convenience keys in memory on load, and can
+stamp or rewrite files on disk when you ask.</p>
+<p>This is independent of the referia <em>package</em> version. Dialect <code class="docutils literal notranslate"><span class="pre">2</span></code> can run
+under package <code class="docutils literal notranslate"><span class="pre">0.x</span></code>.</p>
+<section id="version-field">
+<h2>Version field<a class="headerlink" href="#version-field" title="Link to this heading"></a></h2>
+<p>Declare the dialect at the top of the file:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">referia_config_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+
+<span class="nt">input</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">excel</span>
+<span class="w">  </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">candidates.xlsx</span>
+<span class="w">  </span><span class="nt">index</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Name</span>
+
+<span class="nt">review</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Score</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IntSlider</span>
+</pre></div>
+</div>
+<p>Rules:</p>
+<ul class="simple">
+<li><p>Integer generations only (not semver).</p></li>
+<li><p>Current supported generation: <strong>2</strong>.</p></li>
+<li><p>Loading never writes the field back; use <code class="docutils literal notranslate"><span class="pre">referia</span> <span class="pre">migrate</span></code> to stamp or
+rewrite on disk.</p></li>
+<li><p>After the living corpus is stamped, missing versions warn on load / check,
+and later raise unless <code class="docutils literal notranslate"><span class="pre">--allow-unversioned</span></code> is used.</p></li>
 </ul>
+</section>
+<section id="dialect-generations">
+<h2>Dialect generations<a class="headerlink" href="#dialect-generations" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Version</p></th>
+<th class="head"><p>On-disk markers</p></th>
+<th class="head"><p>Load behaviour</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>v0</strong></p></td>
+<td><p>Proto <code class="docutils literal notranslate"><span class="pre">_config.yml</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">allocation:</span></code> as a filename)</p></td>
+<td><p>Reported only; not normalised</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>v1</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">allocation</span></code>, <code class="docutils literal notranslate"><span class="pre">scores</span></code>, <code class="docutils literal notranslate"><span class="pre">scorer</span></code>, <code class="docutils literal notranslate"><span class="pre">globals</span></code>, …</p></td>
+<td><p>Normalised in memory to v2 keys</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>v2</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">input</span></code>, <code class="docutils literal notranslate"><span class="pre">output</span></code>, <code class="docutils literal notranslate"><span class="pre">review</span></code>, <code class="docutils literal notranslate"><span class="pre">constants</span></code>, …</p></td>
+<td><p>Canonical; no key rewrite</p></td>
+</tr>
+</tbody>
+</table>
+<p>Mixing the same slot in both dialects (<code class="docutils literal notranslate"><span class="pre">allocation</span></code> with <code class="docutils literal notranslate"><span class="pre">input</span></code>,
+<code class="docutils literal notranslate"><span class="pre">scores</span></code> with <code class="docutils literal notranslate"><span class="pre">output</span></code>, <code class="docutils literal notranslate"><span class="pre">scorer</span></code> with <code class="docutils literal notranslate"><span class="pre">review</span></code>) is an error.</p>
+</section>
+<section id="in-memory-key-mapping-v1-v2">
+<h2>In-memory key mapping (v1 → v2)<a class="headerlink" href="#in-memory-key-mapping-v1-v2" title="Link to this heading"></a></h2>
+<p>On every load of a v1 file, <code class="docutils literal notranslate"><span class="pre">Interface</span></code> applies:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">allocation</span></code> (+ <code class="docutils literal notranslate"><span class="pre">additional</span></code>) → <code class="docutils literal notranslate"><span class="pre">input</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scores</span></code> → <code class="docutils literal notranslate"><span class="pre">output</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scorer</span></code> → <code class="docutils literal notranslate"><span class="pre">review</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">global_consts</span></code> → <code class="docutils literal notranslate"><span class="pre">constants</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">globals</span></code> → <code class="docutils literal notranslate"><span class="pre">parameters</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">converters</span></code> → <code class="docutils literal notranslate"><span class="pre">dtypes</span></code> on data specs</p></li>
+</ul>
+<p>Widget composites stay unexpanded on disk; expansion remains a runtime
+convenience.</p>
+</section>
+<section id="strict-columns-defaults">
+<h2><code class="docutils literal notranslate"><span class="pre">strict_columns</span></code> defaults<a class="headerlink" href="#strict-columns-defaults" title="Link to this heading"></a></h2>
+<p>When <code class="docutils literal notranslate"><span class="pre">strict_columns</span></code> is omitted:</p>
+<ul class="simple">
+<li><p><strong>v1</strong> → permissive (<code class="docutils literal notranslate"><span class="pre">false</span></code>) — legacy Excel sheets often have extra or
+duplicate headers</p></li>
+<li><p><strong>v2</strong> → strict (<code class="docutils literal notranslate"><span class="pre">true</span></code>) — opt out with <code class="docutils literal notranslate"><span class="pre">strict_columns:</span> <span class="pre">false</span></code></p></li>
+</ul>
+<p>An explicit <code class="docutils literal notranslate"><span class="pre">strict_columns</span></code> value in YAML always wins.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>End-to-end enforcement on the main <code class="docutils literal notranslate"><span class="pre">from_flow</span></code> input path also depends
+on lynguine not forcing <code class="docutils literal notranslate"><span class="pre">strict_columns=False</span></code>. Referia’s dialect
+helpers and <code class="docutils literal notranslate"><span class="pre">_finalize_df</span></code> already honour the table above.</p>
+</div>
+</section>
+<section id="cli-check-and-migrate">
+<h2>CLI: check and migrate<a class="headerlink" href="#cli-check-and-migrate" title="Link to this heading"></a></h2>
+<p>Lint YAML and report dialect (no Excel / path access required):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">referia</span> <span class="n">check</span> <span class="o">--</span><span class="n">root</span> <span class="n">PATH</span>
+<span class="n">referia</span> <span class="n">check</span> <span class="o">--</span><span class="n">root</span> <span class="n">PATH</span> <span class="o">--</span><span class="nb">format</span> <span class="n">json</span>
+</pre></div>
+</div>
+<p>Migrate is <strong>dry-run by default</strong>. Add <code class="docutils literal notranslate"><span class="pre">--write</span></code> to change files:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Insert referia_config_version only (keeps comments and key order)</span>
+<span class="n">referia</span> <span class="n">migrate</span> <span class="o">--</span><span class="n">root</span> <span class="n">PATH</span> <span class="o">--</span><span class="n">stamp</span><span class="o">-</span><span class="n">only</span>
+<span class="n">referia</span> <span class="n">migrate</span> <span class="o">--</span><span class="n">root</span> <span class="n">PATH</span> <span class="o">--</span><span class="n">stamp</span><span class="o">-</span><span class="n">only</span> <span class="o">--</span><span class="n">write</span>
+
+<span class="c1"># Rewrite v1 keys to v2 (may lose comments; prefer sibling .migrated.yml)</span>
+<span class="n">referia</span> <span class="n">migrate</span> <span class="o">--</span><span class="n">root</span> <span class="n">PATH</span>
+<span class="n">referia</span> <span class="n">migrate</span> <span class="o">--</span><span class="n">root</span> <span class="n">PATH</span> <span class="o">--</span><span class="n">write</span>
+<span class="n">referia</span> <span class="n">migrate</span> <span class="o">--</span><span class="n">root</span> <span class="n">PATH</span> <span class="o">--</span><span class="n">write</span> <span class="o">--</span><span class="ow">in</span><span class="o">-</span><span class="n">place</span>   <span class="c1"># .bak backup</span>
+</pre></div>
+</div>
+<p>Stamp-only skips files that already declare a version and reports v0 proto
+files without rewriting them.</p>
+</section>
+<section id="runtime-vs-disk">
+<h2>Runtime vs disk<a class="headerlink" href="#runtime-vs-disk" title="Link to this heading"></a></h2>
+</section>
+<section id="library-api">
+<h2>Library API<a class="headerlink" href="#library-api" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">referia.config.dialect</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">detect_config_dialect</span><span class="p">,</span>
+    <span class="n">normalise_referia_config</span><span class="p">,</span>
+    <span class="n">SUPPORTED_CONFIG_VERSION</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">report</span> <span class="o">=</span> <span class="n">detect_config_dialect</span><span class="p">(</span><span class="n">raw_dict</span><span class="p">)</span>
+<span class="c1"># report.version_declared, report.version_inferred, report.markers, …</span>
+</pre></div>
+</div>
+<p>See also <a class="reference internal" href="../modules/config.html"><span class="doc">Configuration Module</span></a> for <code class="docutils literal notranslate"><span class="pre">Interface</span></code> and the dialect module
+API reference.</p>
+</section>
+</section>
+
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../quickstart.html" class="btn btn-neutral float-left" title="Quick Start Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../modules/assess.html" class="btn btn-neutral float-right" title="Assess Module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 

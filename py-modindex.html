@@ -69,6 +69,16 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#next-steps">Next Steps</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="usage/config_dialect.html">Config dialects and versioning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#version-field">Version field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#dialect-generations">Dialect generations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#in-memory-key-mapping-v1-v2">In-memory key mapping (v1 → v2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#strict-columns-defaults"><code class="docutils literal notranslate"><span class="pre">strict_columns</span></code> defaults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#cli-check-and-migrate">CLI: check and migrate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#runtime-vs-disk">Runtime vs disk</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#library-api">Library API</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="modules/assess.html">Assess Module</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="modules/assess.html#compute-class">Compute Class</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute"><code class="docutils literal notranslate"><span class="pre">Compute</span></code></a><ul>
@@ -320,6 +330,33 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="modules/config.html#inheritance-relationship">Inheritance Relationship</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/config.html#configuration-file-format">Configuration File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/config.html#module-referia.config.dialect">Dialect API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport"><code class="docutils literal notranslate"><span class="pre">DialectReport</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.version_declared"><code class="docutils literal notranslate"><span class="pre">DialectReport.version_declared</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.version_inferred"><code class="docutils literal notranslate"><span class="pre">DialectReport.version_inferred</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.markers"><code class="docutils literal notranslate"><span class="pre">DialectReport.markers</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.conflicts"><code class="docutils literal notranslate"><span class="pre">DialectReport.conflicts</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.needs_normalise"><code class="docutils literal notranslate"><span class="pre">DialectReport.needs_normalise</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.notes"><code class="docutils literal notranslate"><span class="pre">DialectReport.notes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.as_dict"><code class="docutils literal notranslate"><span class="pre">DialectReport.as_dict()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.detect_config_dialect"><code class="docutils literal notranslate"><span class="pre">detect_config_dialect()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.normalise_referia_config"><code class="docutils literal notranslate"><span class="pre">normalise_referia_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.effective_config_version"><code class="docutils literal notranslate"><span class="pre">effective_config_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.inferred_stamp_version"><code class="docutils literal notranslate"><span class="pre">inferred_stamp_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.stamp_version_text"><code class="docutils literal notranslate"><span class="pre">stamp_version_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.deep_copy_config"><code class="docutils literal notranslate"><span class="pre">deep_copy_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.ConfigVersionError"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.ConfigVersionError.add_note"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError.add_note()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.ConfigVersionError.args"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError.args</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.ConfigVersionError.with_traceback"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError.with_traceback()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.get_version_enforcement"><code class="docutils literal notranslate"><span class="pre">get_version_enforcement()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.enforce_config_version"><code class="docutils literal notranslate"><span class="pre">enforce_config_version()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="modules/config.html#usage-example">Usage Example</a></li>
 </ul>
 </li>
@@ -783,6 +820,11 @@
        <td></td>
        <td>&#160;&#160;&#160;
        <a href="modules/assess.html#module-referia.assess"><code class="xref">referia.assess</code></a></td><td>
+       <em></em></td></tr>
+     <tr class="cg-1">
+       <td></td>
+       <td>&#160;&#160;&#160;
+       <a href="modules/config.html#module-referia.config.dialect"><code class="xref">referia.config.dialect</code></a></td><td>
        <em></em></td></tr>
      <tr class="cg-1">
        <td></td>

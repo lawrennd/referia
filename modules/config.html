@@ -69,6 +69,16 @@
 <li class="toctree-l2"><a class="reference internal" href="../quickstart.html#next-steps">Next Steps</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../usage/config_dialect.html">Config dialects and versioning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#version-field">Version field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#dialect-generations">Dialect generations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#in-memory-key-mapping-v1-v2">In-memory key mapping (v1 → v2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#strict-columns-defaults"><code class="docutils literal notranslate"><span class="pre">strict_columns</span></code> defaults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#cli-check-and-migrate">CLI: check and migrate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#runtime-vs-disk">Runtime vs disk</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#library-api">Library API</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="assess.html">Assess Module</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="assess.html#compute-class">Compute Class</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="assess.html#referia.assess.compute.Compute"><code class="docutils literal notranslate"><span class="pre">Compute</span></code></a><ul>
@@ -320,6 +330,33 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#inheritance-relationship">Inheritance Relationship</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuration-file-format">Configuration File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-referia.config.dialect">Dialect API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.DialectReport"><code class="docutils literal notranslate"><span class="pre">DialectReport</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.DialectReport.version_declared"><code class="docutils literal notranslate"><span class="pre">DialectReport.version_declared</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.DialectReport.version_inferred"><code class="docutils literal notranslate"><span class="pre">DialectReport.version_inferred</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.DialectReport.markers"><code class="docutils literal notranslate"><span class="pre">DialectReport.markers</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.DialectReport.conflicts"><code class="docutils literal notranslate"><span class="pre">DialectReport.conflicts</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.DialectReport.needs_normalise"><code class="docutils literal notranslate"><span class="pre">DialectReport.needs_normalise</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.DialectReport.notes"><code class="docutils literal notranslate"><span class="pre">DialectReport.notes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.DialectReport.as_dict"><code class="docutils literal notranslate"><span class="pre">DialectReport.as_dict()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.detect_config_dialect"><code class="docutils literal notranslate"><span class="pre">detect_config_dialect()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.normalise_referia_config"><code class="docutils literal notranslate"><span class="pre">normalise_referia_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.effective_config_version"><code class="docutils literal notranslate"><span class="pre">effective_config_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.inferred_stamp_version"><code class="docutils literal notranslate"><span class="pre">inferred_stamp_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.stamp_version_text"><code class="docutils literal notranslate"><span class="pre">stamp_version_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.deep_copy_config"><code class="docutils literal notranslate"><span class="pre">deep_copy_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.ConfigVersionError"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.ConfigVersionError.add_note"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError.add_note()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.ConfigVersionError.args"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError.args</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.dialect.ConfigVersionError.with_traceback"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError.with_traceback()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.get_version_enforcement"><code class="docutils literal notranslate"><span class="pre">get_version_enforcement()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.config.dialect.enforce_config_version"><code class="docutils literal notranslate"><span class="pre">enforce_config_version()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#usage-example">Usage Example</a></li>
 </ul>
 </li>
@@ -773,7 +810,8 @@ It extends the configuration system from lynguine with referia-specific function
 <li><p><a class="reference internal" href="#interface" id="id1">Interface</a></p></li>
 <li><p><a class="reference internal" href="#inheritance-relationship" id="id2">Inheritance Relationship</a></p></li>
 <li><p><a class="reference internal" href="#configuration-file-format" id="id3">Configuration File Format</a></p></li>
-<li><p><a class="reference internal" href="#usage-example" id="id4">Usage Example</a></p></li>
+<li><p><a class="reference internal" href="#module-referia.config.dialect" id="id4">Dialect API</a></p></li>
+<li><p><a class="reference internal" href="#usage-example" id="id5">Usage Example</a></p></li>
 </ul>
 </nav>
 <section id="interface">
@@ -1034,8 +1072,11 @@ Interface class to add referia-specific functionality.</p>
 <section id="configuration-file-format">
 <h2><a class="toc-backref" href="#id3" role="doc-backlink">Configuration File Format</a><a class="headerlink" href="#configuration-file-format" title="Link to this heading"></a></h2>
 <p>Referia configuration files follow the same format as lynguine configurations, with additional
-fields specific to review processes:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># Base configuration (inherited from lynguine)</span>
+fields specific to review processes. Prefer the canonical <strong>v2</strong> dialect and declare
+<code class="docutils literal notranslate"><span class="pre">referia_config_version</span></code> (see <a class="reference internal" href="../usage/config_dialect.html"><span class="doc">Config dialects and versioning</span></a>):</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">referia_config_version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+
+<span class="c1"># Base configuration (inherited from lynguine)</span>
 <span class="nt">input</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">file</span>
 <span class="w">  </span><span class="nt">file</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data.csv</span>
@@ -1051,9 +1092,255 @@ fields specific to review processes:</p>
 <span class="w">      </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
 </pre></div>
 </div>
+<p>Legacy <strong>v1</strong> convenience keys (<code class="docutils literal notranslate"><span class="pre">allocation</span></code>, <code class="docutils literal notranslate"><span class="pre">scores</span></code>, <code class="docutils literal notranslate"><span class="pre">scorer</span></code>, …) still
+load: <code class="docutils literal notranslate"><span class="pre">Interface</span></code> normalises them in memory. Use <code class="docutils literal notranslate"><span class="pre">referia</span> <span class="pre">migrate</span></code> to stamp
+or rewrite files on disk.</p>
+</section>
+<section id="module-referia.config.dialect">
+<span id="dialect-api"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">Dialect API</a><a class="headerlink" href="#module-referia.config.dialect" title="Link to this heading"></a></h2>
+<p>Referia config dialect detection and in-memory normalisation (CIP-000F).</p>
+<p>Dialect generations:</p>
+<ul class="simple">
+<li><p><strong>v0</strong> — proto <code class="docutils literal notranslate"><span class="pre">_config.yml</span></code> shapes (report only; not normalised)</p></li>
+<li><p><strong>v1</strong> — convenience keys: <code class="docutils literal notranslate"><span class="pre">allocation</span></code>, <code class="docutils literal notranslate"><span class="pre">scores</span></code>, <code class="docutils literal notranslate"><span class="pre">scorer</span></code>, …</p></li>
+<li><p><strong>v2</strong> — canonical lynguine keys: <code class="docutils literal notranslate"><span class="pre">input</span></code>, <code class="docutils literal notranslate"><span class="pre">output</span></code>, <code class="docutils literal notranslate"><span class="pre">review</span></code>, …</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">detect_config_dialect</span></code> is pure (no I/O). <code class="docutils literal notranslate"><span class="pre">normalise_referia_config</span></code>
+mutates <em>data</em> in place and returns it, matching the historical behaviour
+of <code class="docutils literal notranslate"><span class="pre">Interface.__init__</span></code>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="referia.config.dialect.DialectReport">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">DialectReport</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">version_declared</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version_inferred</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markers=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conflicts=&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">needs_normalise=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notes=&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#DialectReport"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.DialectReport" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Result of inspecting a loaded <code class="docutils literal notranslate"><span class="pre">_referia.yml</span></code> dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>version_declared</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>version_inferred</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>markers</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>)</p></li>
+<li><p><strong>conflicts</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>)</p></li>
+<li><p><strong>needs_normalise</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+<li><p><strong>notes</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="referia.config.dialect.DialectReport.version_declared">
+<span class="sig-name descname"><span class="pre">version_declared</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><a class="headerlink" href="#referia.config.dialect.DialectReport.version_declared" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="referia.config.dialect.DialectReport.version_inferred">
+<span class="sig-name descname"><span class="pre">version_inferred</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#referia.config.dialect.DialectReport.version_inferred" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="referia.config.dialect.DialectReport.markers">
+<span class="sig-name descname"><span class="pre">markers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#referia.config.dialect.DialectReport.markers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="referia.config.dialect.DialectReport.conflicts">
+<span class="sig-name descname"><span class="pre">conflicts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#referia.config.dialect.DialectReport.conflicts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="referia.config.dialect.DialectReport.needs_normalise">
+<span class="sig-name descname"><span class="pre">needs_normalise</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#referia.config.dialect.DialectReport.needs_normalise" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="referia.config.dialect.DialectReport.notes">
+<span class="sig-name descname"><span class="pre">notes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#referia.config.dialect.DialectReport.notes" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="referia.config.dialect.DialectReport.as_dict">
+<span class="sig-name descname"><span class="pre">as_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#DialectReport.as_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.DialectReport.as_dict" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a>[<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><em>Any</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.config.dialect.detect_config_dialect">
+<span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">detect_config_dialect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#detect_config_dialect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.detect_config_dialect" title="Link to this definition"></a></dt>
+<dd><p>Classify a loaded referia config dict without mutating it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> | </em><em>None</em>) – Parsed YAML mapping (or <code class="docutils literal notranslate"><span class="pre">None</span></code> / empty).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#referia.config.dialect.DialectReport" title="referia.config.dialect.DialectReport"><code class="xref py py-class docutils literal notranslate"><span class="pre">DialectReport</span></code></a></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#referia.config.dialect.DialectReport" title="referia.config.dialect.DialectReport"><em>DialectReport</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.config.dialect.normalise_referia_config">
+<span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">normalise_referia_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#normalise_referia_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.normalise_referia_config" title="Link to this definition"></a></dt>
+<dd><p>Rewrite v1 convenience keys to lynguine form <strong>in place</strong>.</p>
+<p>Does <strong>not</strong> expand <code class="docutils literal notranslate"><span class="pre">CriterionComment*</span></code> composites or templates; those
+remain runtime-only steps in <code class="docutils literal notranslate"><span class="pre">Interface</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Config mapping (mutated).</p></li>
+<li><p><strong>directory</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Optional config directory (for deprecation messages).</p></li>
+<li><p><strong>user_file</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Optional config filename (for deprecation messages).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The same <em>data</em> dict after normalisation.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.config.dialect.effective_config_version">
+<span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">effective_config_version</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#effective_config_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.effective_config_version" title="Link to this definition"></a></dt>
+<dd><p>Declared <code class="docutils literal notranslate"><span class="pre">referia_config_version</span></code> if present, else inferred dialect.</p>
+<p>Used for policy defaults (e.g. <code class="docutils literal notranslate"><span class="pre">strict_columns</span></code>) that should follow the
+living dialect generation rather than only an explicit stamp.
+Proto v0 is treated as generation 0.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> | </em><em>None</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.config.dialect.inferred_stamp_version">
+<span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">inferred_stamp_version</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#inferred_stamp_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.inferred_stamp_version" title="Link to this definition"></a></dt>
+<dd><p>Version integer to write for stamp-only migrate, or <code class="docutils literal notranslate"><span class="pre">None</span></code> to skip.</p>
+<p>Proto v0 files return <code class="docutils literal notranslate"><span class="pre">None</span></code> (do not stamp).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> | </em><em>None</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a> | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.config.dialect.stamp_version_text">
+<span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">stamp_version_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#stamp_version_text"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.stamp_version_text" title="Link to this definition"></a></dt>
+<dd><p>Surgically insert <code class="docutils literal notranslate"><span class="pre">referia_config_version</span></code> into YAML text.</p>
+<p>Preserves comments and key order by inserting a single line after any
+leading comment/blank block (or at the top of the document). Does not
+rewrite the rest of the file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>version</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.config.dialect.deep_copy_config">
+<span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">deep_copy_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#deep_copy_config"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.deep_copy_config" title="Link to this definition"></a></dt>
+<dd><p>Deep-copy helper for tests that need an unmutated original.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="referia.config.dialect.ConfigVersionError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">ConfigVersionError</span></span><a class="reference internal" href="../_modules/referia/config/dialect.html#ConfigVersionError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.ConfigVersionError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
+<p>Raised when a config’s <code class="docutils literal notranslate"><span class="pre">referia_config_version</span></code> is missing or unsupported.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="referia.config.dialect.ConfigVersionError.add_note">
+<span class="sig-name descname"><span class="pre">add_note</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#referia.config.dialect.ConfigVersionError.add_note" title="Link to this definition"></a></dt>
+<dd><p>Exception.add_note(note) –
+add a note to the exception</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="referia.config.dialect.ConfigVersionError.args">
+<span class="sig-name descname"><span class="pre">args</span></span><a class="headerlink" href="#referia.config.dialect.ConfigVersionError.args" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="referia.config.dialect.ConfigVersionError.with_traceback">
+<span class="sig-name descname"><span class="pre">with_traceback</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#referia.config.dialect.ConfigVersionError.with_traceback" title="Link to this definition"></a></dt>
+<dd><p>Exception.with_traceback(tb) –
+set self.__traceback__ to tb and return self.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.config.dialect.get_version_enforcement">
+<span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">get_version_enforcement</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#get_version_enforcement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.get_version_enforcement" title="Link to this definition"></a></dt>
+<dd><p>Return the active enforcement mode: <code class="docutils literal notranslate"><span class="pre">off</span></code>, <code class="docutils literal notranslate"><span class="pre">warn</span></code>, or <code class="docutils literal notranslate"><span class="pre">error</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.config.dialect.enforce_config_version">
+<span class="sig-prename descclassname"><span class="pre">referia.config.dialect.</span></span><span class="sig-name descname"><span class="pre">enforce_config_version</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allow_unversioned</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/dialect.html#enforce_config_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.dialect.enforce_config_version" title="Link to this definition"></a></dt>
+<dd><p>Enforce <code class="docutils literal notranslate"><span class="pre">referia_config_version</span></code> according to <em>mode</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> | </em><em>None</em>) – Config mapping (not mutated).</p></li>
+<li><p><strong>mode</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – <code class="docutils literal notranslate"><span class="pre">off</span></code> / <code class="docutils literal notranslate"><span class="pre">warn</span></code> / <code class="docutils literal notranslate"><span class="pre">error</span></code>. <code class="docutils literal notranslate"><span class="pre">None</span></code> uses
+<a class="reference internal" href="#referia.config.dialect.get_version_enforcement" title="referia.config.dialect.get_version_enforcement"><code class="xref py py-func docutils literal notranslate"><span class="pre">get_version_enforcement()</span></code></a>.</p></li>
+<li><p><strong>allow_unversioned</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Escape hatch; skip missing-version checks.</p></li>
+<li><p><strong>directory</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>user_file</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Declared version integer, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if absent/allowed.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#referia.config.dialect.ConfigVersionError" title="referia.config.dialect.ConfigVersionError"><strong>ConfigVersionError</strong></a> – Missing version in error mode, or declared
+version newer than <code class="xref py py-data docutils literal notranslate"><span class="pre">SUPPORTED_CONFIG_VERSION</span></code>.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/functions.html#int" title="(in Python v3.14)">int</a> | None</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="usage-example">
-<h2><a class="toc-backref" href="#id4" role="doc-backlink">Usage Example</a><a class="headerlink" href="#usage-example" title="Link to this heading"></a></h2>
+<h2><a class="toc-backref" href="#id5" role="doc-backlink">Usage Example</a><a class="headerlink" href="#usage-example" title="Link to this heading"></a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">referia.config.interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interface</span>
 
 <span class="c1"># Load a configuration file</span>

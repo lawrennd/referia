@@ -66,6 +66,16 @@
 <li class="toctree-l2"><a class="reference internal" href="quickstart.html#next-steps">Next Steps</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="usage/config_dialect.html">Config dialects and versioning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#version-field">Version field</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#dialect-generations">Dialect generations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#in-memory-key-mapping-v1-v2">In-memory key mapping (v1 → v2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#strict-columns-defaults"><code class="docutils literal notranslate"><span class="pre">strict_columns</span></code> defaults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#cli-check-and-migrate">CLI: check and migrate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#runtime-vs-disk">Runtime vs disk</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/config_dialect.html#library-api">Library API</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="modules/assess.html">Assess Module</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="modules/assess.html#compute-class">Compute Class</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="modules/assess.html#referia.assess.compute.Compute"><code class="docutils literal notranslate"><span class="pre">Compute</span></code></a><ul>
@@ -317,6 +327,33 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="modules/config.html#inheritance-relationship">Inheritance Relationship</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/config.html#configuration-file-format">Configuration File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/config.html#module-referia.config.dialect">Dialect API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport"><code class="docutils literal notranslate"><span class="pre">DialectReport</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.version_declared"><code class="docutils literal notranslate"><span class="pre">DialectReport.version_declared</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.version_inferred"><code class="docutils literal notranslate"><span class="pre">DialectReport.version_inferred</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.markers"><code class="docutils literal notranslate"><span class="pre">DialectReport.markers</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.conflicts"><code class="docutils literal notranslate"><span class="pre">DialectReport.conflicts</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.needs_normalise"><code class="docutils literal notranslate"><span class="pre">DialectReport.needs_normalise</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.notes"><code class="docutils literal notranslate"><span class="pre">DialectReport.notes</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.DialectReport.as_dict"><code class="docutils literal notranslate"><span class="pre">DialectReport.as_dict()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.detect_config_dialect"><code class="docutils literal notranslate"><span class="pre">detect_config_dialect()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.normalise_referia_config"><code class="docutils literal notranslate"><span class="pre">normalise_referia_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.effective_config_version"><code class="docutils literal notranslate"><span class="pre">effective_config_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.inferred_stamp_version"><code class="docutils literal notranslate"><span class="pre">inferred_stamp_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.stamp_version_text"><code class="docutils literal notranslate"><span class="pre">stamp_version_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.deep_copy_config"><code class="docutils literal notranslate"><span class="pre">deep_copy_config()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.ConfigVersionError"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.ConfigVersionError.add_note"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError.add_note()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.ConfigVersionError.args"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError.args</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/config.html#referia.config.dialect.ConfigVersionError.with_traceback"><code class="docutils literal notranslate"><span class="pre">ConfigVersionError.with_traceback()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.get_version_enforcement"><code class="docutils literal notranslate"><span class="pre">get_version_enforcement()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/config.html#referia.config.dialect.enforce_config_version"><code class="docutils literal notranslate"><span class="pre">enforce_config_version()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="modules/config.html#usage-example">Usage Example</a></li>
 </ul>
 </li>
@@ -801,6 +838,8 @@
 </li>
       <li><a href="modules/assess.html#referia.assess.compute.Compute.add_liquid_filters">add_liquid_filters() (referia.assess.compute.Compute method)</a>
 </li>
+      <li><a href="modules/config.html#referia.config.dialect.ConfigVersionError.add_note">add_note() (referia.config.dialect.ConfigVersionError method)</a>
+</li>
       <li><a href="modules/util.html#referia.util.misc.add_one_to_max">add_one_to_max() (in module referia.util.misc)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.add_row">add_row() (referia.assess.data.CustomDataFrame method)</a>
@@ -842,6 +881,10 @@
       <li><a href="modules/assess.html#referia.assess.review.Reviewer.add_views">add_views() (referia.assess.review.Reviewer method)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.apply">apply() (referia.assess.data.CustomDataFrame method)</a>
+</li>
+      <li><a href="modules/config.html#referia.config.dialect.ConfigVersionError.args">args (referia.config.dialect.ConfigVersionError attribute)</a>
+</li>
+      <li><a href="modules/config.html#referia.config.dialect.DialectReport.as_dict">as_dict() (referia.config.dialect.DialectReport method)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.augment">augment (referia.assess.data.CustomDataFrame property)</a>
 </li>
@@ -911,10 +954,10 @@
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.columns">columns (referia.assess.data.CustomDataFrame property)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/util.html#referia.util.widgets.Combobox">Combobox() (in module referia.util.widgets)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/util.html#referia.util.text.comment_list">comment_list() (in module referia.util.text)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.compute.Compute">Compute (class in referia.assess.compute)</a>
@@ -938,6 +981,10 @@
       <li><a href="modules/assess.html#referia.assess.compute.Compute.computes">computes (referia.assess.compute.Compute property)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.conditions">conditions() (referia.assess.data.CustomDataFrame method)</a>
+</li>
+      <li><a href="modules/config.html#referia.config.dialect.ConfigVersionError">ConfigVersionError</a>
+</li>
+      <li><a href="modules/config.html#referia.config.dialect.DialectReport.conflicts">conflicts (referia.config.dialect.DialectReport attribute)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.convert">convert() (referia.assess.data.CustomDataFrame method)</a>
 </li>
@@ -964,6 +1011,8 @@
       <li><a href="modules/util.html#referia.util.widgets.DatePicker">DatePicker() (in module referia.util.widgets)</a>
 </li>
       <li><a href="modules/util.html#referia.util.misc.datetimeToYyyymmdd">datetimeToYyyymmdd() (in module referia.util.misc)</a>
+</li>
+      <li><a href="modules/config.html#referia.config.dialect.deep_copy_config">deep_copy_config() (in module referia.config.dialect)</a>
 </li>
       <li><a href="modules/config.html#referia.config.interface.Interface.default_config_file">default_config_file() (referia.config.interface.Interface class method)</a>
 </li>
@@ -1003,6 +1052,10 @@
         <li><a href="modules/util.html#referia.util.widgets.ScreenCapture.description">(referia.util.widgets.ScreenCapture property)</a>
 </li>
       </ul></li>
+      <li><a href="modules/config.html#referia.config.dialect.detect_config_dialect">detect_config_dialect() (in module referia.config.dialect)</a>
+</li>
+      <li><a href="modules/config.html#referia.config.dialect.DialectReport">DialectReport (class in referia.config.dialect)</a>
+</li>
       <li><a href="modules/config.html#referia.config.interface.Interface.directory">directory (referia.config.interface.Interface property)</a>
 </li>
       <li><a href="modules/util.html#referia.util.widgets.CreateDocButton.display">display() (referia.util.widgets.CreateDocButton method)</a>
@@ -1067,6 +1120,8 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/config.html#referia.config.dialect.effective_config_version">effective_config_version() (in module referia.config.dialect)</a>
+</li>
       <li><a href="modules/util.html#referia.util.widgets.ElementBoundedFloatText">ElementBoundedFloatText() (in module referia.util.widgets)</a>
 </li>
       <li><a href="modules/util.html#referia.util.widgets.ElementCheckbox">ElementCheckbox() (in module referia.util.widgets)</a>
@@ -1112,6 +1167,8 @@
       <li><a href="modules/util.html#referia.util.widgets.ElementWidget">ElementWidget (class in referia.util.widgets)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.empty">empty (referia.assess.data.CustomDataFrame property)</a>
+</li>
+      <li><a href="modules/config.html#referia.config.dialect.enforce_config_version">enforce_config_version() (in module referia.config.dialect)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.equals">equals() (referia.assess.data.CustomDataFrame method)</a>
 </li>
@@ -1337,6 +1394,8 @@
       </ul></li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.get_value_column">get_value_column() (referia.assess.data.CustomDataFrame method)</a>
 </li>
+      <li><a href="modules/config.html#referia.config.dialect.get_version_enforcement">get_version_enforcement() (in module referia.config.dialect)</a>
+</li>
       <li><a href="modules/util.html#referia.util.widgets.gocf_">gocf_() (in module referia.util.widgets)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.groupby">groupby() (referia.assess.data.CustomDataFrame method)</a>
@@ -1391,16 +1450,18 @@
 </li>
       <li><a href="modules/util.html#referia.util.widgets.IndexSubIndexSelectorSelect">IndexSubIndexSelectorSelect (class in referia.util.widgets)</a>
 </li>
+      <li><a href="modules/config.html#referia.config.dialect.inferred_stamp_version">inferred_stamp_version() (in module referia.config.dialect)</a>
+</li>
       <li><a href="modules/util.html#referia.util.widgets.interact">interact() (in module referia.util.widgets)</a>
 </li>
       <li><a href="modules/util.html#referia.util.widgets.interact_manual">interact_manual() (in module referia.util.widgets)</a>
 </li>
       <li><a href="modules/util.html#referia.util.widgets.interactive">interactive() (in module referia.util.widgets)</a>
 </li>
-      <li><a href="modules/config.html#referia.config.interface.Interface">Interface (class in referia.config.interface)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/config.html#referia.config.interface.Interface">Interface (class in referia.config.interface)</a>
+</li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.interface">interface (referia.assess.data.CustomDataFrame property)</a>
 </li>
       <li><a href="modules/util.html#referia.util.widgets.IntSlider">IntSlider() (in module referia.util.widgets)</a>
@@ -1477,6 +1538,8 @@
       </ul></li>
       <li><a href="modules/util.html#referia.util.widgets.Markdown">Markdown() (in module referia.util.widgets)</a>
 </li>
+      <li><a href="modules/config.html#referia.config.dialect.DialectReport.markers">markers (referia.config.dialect.DialectReport attribute)</a>
+</li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.mean">mean() (referia.assess.data.CustomDataFrame method)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.merge">merge() (referia.assess.data.CustomDataFrame method)</a>
@@ -1486,6 +1549,8 @@
 
       <ul>
         <li><a href="modules/assess.html#module-referia.assess">referia.assess</a>
+</li>
+        <li><a href="modules/config.html#module-referia.config.dialect">referia.config.dialect</a>
 </li>
         <li><a href="modules/util.html#module-referia.util.files">referia.util.files</a>
 </li>
@@ -1552,9 +1617,15 @@
       </ul></li>
       <li><a href="modules/util.html#referia.util.text.named_entities">named_entities() (in module referia.util.text)</a>
 </li>
+      <li><a href="modules/config.html#referia.config.dialect.DialectReport.needs_normalise">needs_normalise (referia.config.dialect.DialectReport attribute)</a>
+</li>
+      <li><a href="modules/config.html#referia.config.dialect.normalise_referia_config">normalise_referia_config() (in module referia.config.dialect)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="modules/util.html#referia.util.misc.notempty">notempty() (in module referia.util.misc)</a>
+</li>
+      <li><a href="modules/config.html#referia.config.dialect.DialectReport.notes">notes (referia.config.dialect.DialectReport attribute)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.notna">notna() (referia.assess.data.CustomDataFrame method)</a>
 </li>
@@ -1739,6 +1810,13 @@
 
       <ul>
         <li><a href="modules/assess.html#module-referia.assess">module</a>
+</li>
+      </ul></li>
+      <li>
+    referia.config.dialect
+
+      <ul>
+        <li><a href="modules/config.html#module-referia.config.dialect">module</a>
 </li>
       </ul></li>
       <li>
@@ -2003,6 +2081,8 @@
 </li>
       <li><a href="modules/util.html#referia.util.text.split_into_sentences">split_into_sentences() (in module referia.util.text)</a>
 </li>
+      <li><a href="modules/config.html#referia.config.dialect.stamp_version_text">stamp_version_text() (in module referia.config.dialect)</a>
+</li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.subtract">subtract() (referia.assess.data.CustomDataFrame method)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.sum">sum() (referia.assess.data.CustomDataFrame method)</a>
@@ -2173,8 +2253,12 @@
 </li>
       <li><a href="modules/config.html#referia.config.interface.Interface.values">values() (referia.config.interface.Interface method)</a>
 </li>
+      <li><a href="modules/config.html#referia.config.dialect.DialectReport.version_declared">version_declared (referia.config.dialect.DialectReport attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/config.html#referia.config.dialect.DialectReport.version_inferred">version_inferred (referia.config.dialect.DialectReport attribute)</a>
+</li>
       <li><a href="modules/assess.html#referia.assess.review.Reviewer.view_series">view_series() (referia.assess.review.Reviewer method)</a>
 </li>
       <li><a href="modules/assess.html#referia.assess.data.CustomDataFrame.view_to_tmpname">view_to_tmpname() (referia.assess.data.CustomDataFrame method)</a>
@@ -2225,6 +2309,8 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="modules/config.html#referia.config.dialect.ConfigVersionError.with_traceback">with_traceback() (referia.config.dialect.ConfigVersionError method)</a>
+</li>
       <li><a href="modules/util.html#referia.util.text.word_cloud">word_cloud() (in module referia.util.text)</a>
 </li>
       <li><a href="modules/util.html#referia.util.text.word_count">word_count() (in module referia.util.text)</a>
