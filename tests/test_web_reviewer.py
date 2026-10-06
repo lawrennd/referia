@@ -24,6 +24,7 @@ def _make_interface(
     modified_suffix="modified",
     created_suffix="created",
     combinator=None,
+    extra=None,
 ):
     """Return a dict-like mock for Interface."""
     data = {
@@ -34,6 +35,8 @@ def _make_interface(
     }
     if combinator is not None:
         data["combinator"] = combinator
+    if extra:
+        data.update(extra)
 
     iface = MagicMock()
     iface.__getitem__ = lambda self, k: data[k]
@@ -96,7 +99,7 @@ def _make_data(index_vals=None, col_vals=None):
 # ---------------------------------------------------------------------------
 
 
-def _build_reviewer(review=None, viewer=None, index_vals=None, col_vals=None, combinator=None):
+def _build_reviewer(review=None, viewer=None, index_vals=None, col_vals=None, combinator=None, extra=None):
     """Construct a WebReviewer with patched Interface and CustomDataFrame."""
     from referia.assess.web_review import WebReviewer
 
@@ -104,12 +107,14 @@ def _build_reviewer(review=None, viewer=None, index_vals=None, col_vals=None, co
         review=review,
         viewer=viewer,
         combinator=combinator,
+        extra=extra,
     )
     data, storage = _make_data(index_vals=index_vals, col_vals=col_vals)
 
     reviewer = WebReviewer.__new__(WebReviewer)
     reviewer._interface = iface
     reviewer._data = data
+    reviewer._directory = "/tmp"
     return reviewer, data, storage
 
 
@@ -559,3 +564,32 @@ class TestGetRowData:
         }[k]
         result = reviewer.get_row_data()
         assert result["number"] == 1
+
+
+class TestDocumentEntries:
+    def test_list_url_entries(self):
+        reviewer, _, _ = _build_reviewer(
+            extra={"urls": [{"url": "https://example.com/p?q="}]},
+        )
+        entries = reviewer.list_url_entries()
+        assert entries == [{"href": "https://example.com/p?q=", "label": "https://example.com/p?q="}]
+
+    def test_list_pdf_entries_localpdf(self, tmp_path):
+        pdf = tmp_path / "thesis.pdf"
+        pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"ThesisPDF": "thesis.pdf"},
+            extra={"localpdf": [{"directory": str(tmp_path), "field": "ThesisPDF", "name": "thesis"}]},
+        )
+        reviewer._directory = str(tmp_path)
+        entries = reviewer.list_pdf_entries()
+        assert len(entries) == 1
+        assert entries[0]["kind"] == "localpdf"
+        assert entries[0]["exists"] is True
+        assert entries[0]["label"] == "thesis"
+
+    def test_get_record_document_missing_field(self, tmp_path):
+        reviewer, _, _ = _build_reviewer(
+            extra={"localpdf": [{"directory": str(tmp_path), "field": "ThesisPDF"}]},
+        )
+        assert reviewer.get_record_document("localpdf", 0) is None

@@ -3,7 +3,7 @@ author: "Neil D. Lawrence"
 created: "2026-07-13"
 id: "000B"
 last_updated: "2026-10-06"
-status: "Accepted"
+status: "In Progress"
 compressed: false
 related_requirements: []
 related_cips: ["0005", "0006"]
@@ -23,7 +23,7 @@ title: "Web Display System — Non-Jupyter Rendering Backend"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [ ] In Progress - Actively being implemented
+- [x] In Progress - Actively being implemented
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected
@@ -317,7 +317,7 @@ drives both rendering targets.
 - [x] HTMX routes for field update and index navigation
 - [x] Jinja2 templates (base page + review panel)
 - [x] CSS layout
-- [ ] Document serving route
+- [x] Document serving route
 - [x] Composite widget expansion in web renderer
 - [x] Unit tests for `WebReviewer`
 - [x] Unit tests for `render_widget`

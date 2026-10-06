@@ -58,6 +58,9 @@ def _build_mock_reviewer() -> MagicMock:
     reviewer.get_value.return_value = ""
     reviewer.get_row_data.return_value = {}
     reviewer.affected_widgets.return_value = {"Comment", "Score"}
+    reviewer.list_pdf_entries.return_value = []
+    reviewer.list_url_entries.return_value = []
+    reviewer._directory = "/tmp"
     return reviewer
 
 
@@ -602,3 +605,60 @@ class TestHealth:
         data = response = client.get("/health").json()
         assert data["status"] == "ok"
         assert data["reviewer"] == "loaded"
+
+
+class TestDocumentRoutes:
+    def test_document_serves_file_under_review_dir(self, tmp_path):
+        pdf = tmp_path / "paper.pdf"
+        pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+        reviewer = _build_mock_reviewer()
+        reviewer._directory = str(tmp_path)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory=str(tmp_path))
+            with TestClient(app) as c:
+                response = c.get("/document/paper.pdf")
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("application/pdf")
+        assert response.content.startswith(b"%PDF")
+
+    def test_document_rejects_traversal(self, tmp_path):
+        reviewer = _build_mock_reviewer()
+        reviewer._directory = str(tmp_path)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory=str(tmp_path))
+            with TestClient(app) as c:
+                response = c.get("/document/%2e%2e/secret.pdf")
+        assert response.status_code in {403, 404}
+        assert not response.content.startswith(b"%PDF")
+
+    def test_record_document_serves_resolved_pdf(self, tmp_path):
+        pdf = tmp_path / "thesis.pdf"
+        pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+        reviewer = _build_mock_reviewer()
+        reviewer._directory = str(tmp_path)
+        reviewer.get_record_document.return_value = pdf
+        reviewer.allowed_roots_for_document.return_value = [tmp_path]
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory=str(tmp_path))
+            with TestClient(app) as c:
+                response = c.get("/record-document/localpdf/0")
+        assert response.status_code == 200
+        assert response.content.startswith(b"%PDF")
+
+    def test_record_document_unknown_kind_404(self, client):
+        response = client.get("/record-document/nope/0")
+        assert response.status_code == 404
+
+    def test_page_includes_pdf_iframe_when_present(self, tmp_path):
+        reviewer = _build_mock_reviewer()
+        reviewer._directory = str(tmp_path)
+        reviewer.list_pdf_entries.return_value = [
+            {"kind": "localpdf", "n": 0, "label": "thesis", "exists": True},
+        ]
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory=str(tmp_path))
+            with TestClient(app) as c:
+                response = c.get("/")
+        assert "document-panel" in response.text
+        assert 'src="/record-document/localpdf/0"' in response.text
+        assert "thesis" in response.text
