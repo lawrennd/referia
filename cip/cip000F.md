@@ -3,7 +3,7 @@ author: "Neil D. Lawrence"
 created: "2026-10-06"
 id: "000F"
 last_updated: "2026-10-06"
-status: "Implemented"
+status: "Closed"
 compressed: false
 related_requirements: []
 related_cips: ["000A", "000B", "000C"]
@@ -25,7 +25,7 @@ title: "Detect, version, and migrate referia config dialects"
 - [x] Accepted - Approved, ready to start work
 - [x] In Progress - Actively being implemented
 - [x] Implemented - Work complete, awaiting verification
-- [ ] Closed - Verified and complete
+- [x] Closed - Verified and complete
 - [ ] Rejected
 - [ ] Deferred
 
@@ -316,6 +316,17 @@ Backlog tasks created on acceptance (2026-10-06):
 - [x] Full key-rewrite migrate mode — `backlog/features/2026-10-06_cip000F-migrate-rewrite.md`
 - [x] Related bug: `Interface.from_file` kwargs — `backlog/bugs/2026-10-06_interface-from-file-kwargs.md`
 - [x] Tests and fixtures (synthetic v1/v2 YAML) — `referia/tests/test_config_dialect.py`
+- [x] Related: dialect-aware `strict_columns` defaults — `backlog/bugs/2026-10-06_strict-columns-duplicate-excel-headers.md`
+
+### 2026-10-06 validation (close)
+
+- Dialect unit tests and `TestStrictColumnsDefault`: **26 passed**.
+- Stamped v1 REF configs load without an explicit `strict_columns: false`.
+- Referia `_resolve_strict_columns` / `_finalize_df(None)` honour v1→permissive,
+  v2→strict. End-to-end `from_flow` input loads still force permissive mode in
+  lynguine (`strict_columns=False`); tracked separately as
+  `lynguine/backlog/bugs/2026-10-06_from-flow-hardcodes-strict-columns-false.md`
+  and is **out of scope** for this CIP’s dialect detect / stamp / migrate work.
 
 ## References
 
