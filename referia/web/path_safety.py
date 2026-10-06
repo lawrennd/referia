@@ -49,3 +49,17 @@ def safe_path_under_root(root: Path | str, url_path: str = "") -> Path:
     except ValueError as exc:
         raise PathOutsideRootError("Path outside root rejected") from exc
     return candidate
+
+
+def is_path_under_root(path: Path | str, root: Path | str) -> bool:
+    """Return True if *path* resolves inside *root* (symlink-aware)."""
+    try:
+        Path(path).resolve().relative_to(Path(root).resolve())
+    except (ValueError, OSError):
+        return False
+    return True
+
+
+def is_path_under_any_root(path: Path | str, roots: list[Path | str]) -> bool:
+    """Return True if *path* resolves inside any of *roots*."""
+    return any(is_path_under_root(path, root) for root in roots)

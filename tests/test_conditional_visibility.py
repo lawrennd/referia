@@ -409,12 +409,10 @@ class TestTemplateVisibilityPropagation:
 
 class TestStrictColumnsDefault:
     """
-    Regression tests for strict_columns default behaviour.
+    Regression tests for dialect-aware strict_columns defaults.
 
-    referia should default to strict_columns=False (permissive) so that configs
-    which have extra columns in their data files (e.g. a 'SessionDate' column not
-    listed in the spec) continue to load without error.  Configs can opt IN to
-    strict mode by explicitly setting strict_columns: true.
+    Omitted key: v1 → False (permissive), v2 → True (strict).
+    Explicit ``strict_columns`` in YAML always overrides the dialect default.
     """
 
     @pytest.fixture
@@ -450,74 +448,72 @@ class TestStrictColumnsDefault:
         df.to_excel(temp_dir / "data.xlsx", index=False)
 
     # ------------------------------------------------------------------ #
-    # Unit tests of the strict_columns resolution logic.
-    #
-    # The relevant code path is referia's _finalize_df override, which is
-    # called with strict_columns=None (its default) by lynguine's from_flow
-    # for non-input data (e.g. when an existing output file is re-read).
-    # The override must resolve None → False unless the config says True.
+    # Unit tests of CustomDataFrame._resolve_strict_columns
     # ------------------------------------------------------------------ #
 
-    def _resolve(self, sub_strict, top_strict):
-        """
-        Run the resolution logic extracted from CustomDataFrame._finalize_df
-        and return the resolved value.
+    def _fake_cdf(self, dialect_version, top_strict=None):
+        """Minimal stand-in that uses the real resolution helpers."""
+        from referia.assess.data import CustomDataFrame
 
-        sub_strict: strict_columns value to put in the sub-interface (or None=omit)
-        top_strict: strict_columns value to put in the top-level interface (or None=omit)
-        """
-        sub_data = {}
-        if sub_strict is not None:
-            sub_data["strict_columns"] = sub_strict
-
-        top_data = {}
-        if top_strict is not None:
-            top_data["strict_columns"] = top_strict
-
-        # Replicate the logic from referia/assess/data.py CustomDataFrame._finalize_df
-        # so that we can test it independently of the full data pipeline.
         class _FakeInterface(dict):
-            """Minimal dict subclass that mimics Interface for the 'in' and '[]' checks."""
+            pass
 
-        interface = _FakeInterface(sub_data)
-        top_interface = _FakeInterface(top_data) if top_data else None
+        top = _FakeInterface()
+        if top_strict is not None:
+            top["strict_columns"] = top_strict
+        top._referia_dialect_version = dialect_version
+        top._referia_config_version = dialect_version
 
-        strict_columns = None   # the argument as lynguine would pass it
-        # Mirror the logic in referia/assess/data.py CustomDataFrame._finalize_df:
-        # only resolves to False when explicitly told so; otherwise defaults to True.
-        if strict_columns is None:
-            if "strict_columns" in interface and not interface["strict_columns"]:
-                strict_columns = False
-            elif top_interface is not None and "strict_columns" in top_interface and not top_interface["strict_columns"]:
-                strict_columns = False
-            else:
-                strict_columns = True
-        return strict_columns
+        cdf = CustomDataFrame.__new__(CustomDataFrame)
+        cdf.interface = top
+        return cdf, _FakeInterface
 
-    def test_default_is_true_when_no_strict_set(self):
-        """No strict_columns anywhere → resolved value must be True (opt-in to permissive)."""
-        assert self._resolve(sub_strict=None, top_strict=None) is True
+    def _resolve(self, sub_strict, top_strict, dialect_version=2):
+        """
+        Resolve via CustomDataFrame helpers.
+
+        sub_strict / top_strict: explicit value or None to omit.
+        dialect_version: effective config generation for the default.
+        """
+        cdf, Fake = self._fake_cdf(dialect_version, top_strict=top_strict)
+        sub = Fake()
+        if sub_strict is not None:
+            sub["strict_columns"] = sub_strict
+        return cdf._resolve_strict_columns(sub, None)
+
+    def test_omit_on_v1_defaults_false(self):
+        """No strict_columns on v1 → False (permissive)."""
+        assert self._resolve(None, None, dialect_version=1) is False
+
+    def test_omit_on_v2_defaults_true(self):
+        """No strict_columns on v2 → True (strict)."""
+        assert self._resolve(None, None, dialect_version=2) is True
 
     def test_false_in_sub_resolves_false(self):
         """strict_columns: false in sub-interface → False."""
         assert self._resolve(sub_strict=False, top_strict=None) is False
 
     def test_true_in_sub_resolves_true(self):
-        """strict_columns: true in sub-interface → True."""
-        assert self._resolve(sub_strict=True, top_strict=None) is True
+        """strict_columns: true in sub-interface → True (even on v1)."""
+        assert self._resolve(sub_strict=True, top_strict=None, dialect_version=1) is True
 
     def test_false_in_top_resolves_false(self):
-        """strict_columns: false in top-level interface → False."""
-        assert self._resolve(sub_strict=None, top_strict=False) is False
+        """strict_columns: false in top-level interface → False (even on v2)."""
+        assert self._resolve(sub_strict=None, top_strict=False, dialect_version=2) is False
 
     def test_true_in_top_resolves_true(self):
         """strict_columns: true in top-level interface → True."""
-        assert self._resolve(sub_strict=None, top_strict=True) is True
+        assert self._resolve(sub_strict=None, top_strict=True, dialect_version=1) is True
 
-    def test_permissive_wins_at_either_level(self):
-        """If either interface says false, the result is False (permissive wins)."""
+    def test_sub_overrides_top(self):
+        """Data-spec key takes precedence over top-level key."""
         assert self._resolve(sub_strict=False, top_strict=True) is False
-        assert self._resolve(sub_strict=True, top_strict=False) is False
+        assert self._resolve(sub_strict=True, top_strict=False) is True
+
+    def test_explicit_argument_wins(self):
+        cdf, Fake = self._fake_cdf(2)
+        assert cdf._resolve_strict_columns(Fake(), False) is False
+        assert cdf._resolve_strict_columns(Fake(), True) is True
 
 
 if __name__ == "__main__":

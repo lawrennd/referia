@@ -1,10 +1,10 @@
 ---
 id: "2026-07-13_web-document-serving"
 title: "Web display system: document serving and system integration"
-status: "Proposed"
+status: "In Progress"
 priority: "Medium"
 created: "2026-07-13"
-last_updated: "2026-07-13"
+last_updated: "2026-10-06"
 category: "features"
 related_cips: ["000B"]
 owner: "Neil D. Lawrence"
@@ -30,13 +30,13 @@ The goal is feature parity with the Jupyter `Sys.view_series()` workflow.
 
 ## Acceptance Criteria
 
-- [ ] `GET /document/{path:path}` serves a file from the review directory with the correct MIME type
-- [ ] PDFs are embedded in the review page via `<iframe src="/document/...">` or an `<object>` tag alongside the review form
-- [ ] `urls:` entries from `_referia.yml` are rendered as `<a href="..." target="_blank">` links in the viewer panel
+- [x] `GET /document/{path:path}` serves a file from the review directory with the correct MIME type
+- [x] PDFs are embedded in the review page via `<iframe src="/document/...">` or an `<object>` tag alongside the review form
+- [x] `urls:` entries from `_referia.yml` are rendered as `<a href="..." target="_blank">` links in the viewer panel
 - [ ] `POST /generate-document` triggers Word document generation and returns a download link
 - [ ] `POST /edit-pdf` triggers PDF page extraction and returns a download link for the extracted file
-- [ ] File paths are validated to prevent directory traversal (serve only files within the configured review directory)
-- [ ] The document panel updates when the index changes (HTMX swap)
+- [x] File paths are validated to prevent directory traversal (serve only files within the configured review directory)
+- [x] The document panel updates when the index changes (HTMX swap)
 
 ## Implementation Notes
 
@@ -69,3 +69,10 @@ inserts into the page.
 ### 2026-07-13
 
 Task created following acceptance of CIP-000B.
+
+### 2026-10-06
+
+Started implementation: `GET /document/{path}` and `GET /record-document/{kind}/{n}`
+serve files; the review panel embeds declared `localpdf`/`editpdf` PDFs in lazy
+iframes and renders `urls:` as links. Generate-document and edit-pdf download
+routes remain open.

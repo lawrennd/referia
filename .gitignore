@@ -57,3 +57,59 @@ docs/yaml_frontmatter_examples.md
 CLAUDE.md
 AGENTS.md
 scripts/validate_vibesafe_structure.py
+
+# ---------------------------------------------------------------------------
+# Project local: build artefacts, editor backups, runtime junk
+# (Keep below the VibeSafe block so installs do not need to recreate these.)
+# ---------------------------------------------------------------------------
+
+# Python / test
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.venv/
+venv/
+
+# Editor / env backups (emacs, shell redirects, etc.)
+*~
+\#*\#
+.#*
+.env~
+.env.backup
+.env.bak
+
+# Runtime logs
+*.log
+
+# Sphinx
+docs/_build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local review / notebook data artefacts (any directory)
+scores.xlsx
+
+# Scratch / one-off local files (not package source)
+old_liquid
+test_liquid
+vibesafe-tenets.md
+vibesafe-tenets.yaml
+referia/replace_linguine.sh
+notebooks/llm_test/
+
+# VibeSafe requirements scaffolding (commit reqXXXX_*.md when you create them)
+requirements/README.md
+requirements/requirement_template.md

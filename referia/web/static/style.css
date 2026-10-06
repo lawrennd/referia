@@ -200,6 +200,56 @@ main {
     font-size: 0.9rem;
 }
 
+.document-panel {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--colour-border);
+}
+
+.document-panel h2 {
+    font-size: 1rem;
+    margin: 0 0 0.6rem;
+}
+
+.document-url-list {
+    padding-left: 1.25rem;
+    margin: 0 0 0.75rem;
+}
+
+.document-url-list a {
+    word-break: break-all;
+}
+
+.pdf-entry {
+    margin-bottom: 0.6rem;
+}
+
+.pdf-entry summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.pdf-frame {
+    width: 100%;
+    min-height: 70vh;
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius);
+    margin-top: 0.5rem;
+    background: #fff;
+}
+
+.pdf-open {
+    font-size: 0.85rem;
+    margin: 0.35rem 0 0;
+}
+
+.pdf-missing {
+    color: var(--colour-muted);
+    font-style: italic;
+    font-size: 0.9rem;
+    margin: 0.35rem 0 0;
+}
+
 /* ── Review form column ──────────────────────────────────── */
 
 .review-col {

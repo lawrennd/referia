@@ -36,6 +36,9 @@
         {% else %}
             <p class="no-viewer">No viewer configured.</p>
         {% endif %}
+        {% if document_html %}
+            {{ document_html | safe }}
+        {% endif %}
     </div>
 
     <div class="review-col">

@@ -23,6 +23,9 @@ All routes share a ``WebReviewer`` instance stored in ``app.state.reviewer``.
 ``POST /reload``
     Reload data from source files; return a refreshed review panel.
 
+``GET /document/{path:path}`` / ``GET /record-document/{kind}/{n}``
+    Serve a file or a current-record PDF (``localpdf`` / ``editpdf``).
+
 ``POST /populate/{field}``
     Trigger an on-demand compute function for *field*; return a status
     fragment plus the refreshed widget.
@@ -70,8 +73,8 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from referia.web.path_safety import PathOutsideRootError, safe_path_under_root
-from referia.web.render import render_widget, render_form, render_viewer
+from referia.web.path_safety import PathOutsideRootError, safe_path_under_root, is_path_under_any_root
+from referia.web.render import render_widget, render_form, render_viewer, render_document_panel
 
 log = logging.getLogger(__name__)
 
@@ -184,11 +187,12 @@ def _find_populate_spec(reviewer, field: str) -> dict | None:
     return None
 
 
-def _panel_response_context(reviewer) -> dict:
+def _panel_response_context(reviewer, prefix: str = "") -> dict:
     """Build the shared template context dict for ``review_panel.html``.
 
     Used by single-config and root-mode routes so the panel-rendering logic
-    lives in exactly one place.
+    lives in exactly one place.  *prefix* is prepended to PDF iframe URLs in
+    root-server mode.
     """
     indices = reviewer.index_list()
     current_index = reviewer.get_index()
@@ -200,10 +204,16 @@ def _panel_response_context(reviewer) -> dict:
     ]
     form_html = render_form(reviewer.get_review_specs(), data)
     index_selector = _render_index_selector(indices, current_index)
+    document_html = render_document_panel(
+        reviewer.list_pdf_entries(),
+        reviewer.list_url_entries(),
+        prefix,
+    )
 
     return {
         "index_selector": index_selector,
         "viewer_blocks": viewer_blocks,
+        "document_html": document_html,
         "form_html": form_html,
         "current_index": current_index,
         "total": len(indices),
@@ -211,9 +221,9 @@ def _panel_response_context(reviewer) -> dict:
     }
 
 
-def _render_panel(reviewer, request: Request) -> str:
+def _render_panel(reviewer, request: Request, prefix: str = "") -> str:
     """Render the full review panel as an HTML string."""
-    ctx = _panel_response_context(reviewer)
+    ctx = _panel_response_context(reviewer, prefix)
     response = _templates(request).TemplateResponse(request, "review_panel.html", ctx)
     return response.body.decode()
 
@@ -437,6 +447,65 @@ async def populate_field(request: Request, field: str):
             f'<span class="status-warning">&#9888; No PopulateButton found for field {_esc(field)}</span>'
         )
     return _run_populate_and_respond(reviewer, field, btn_spec)
+
+
+def _file_response(path: Path):
+    """Return a FileResponse with a PDF-aware media type."""
+    import mimetypes
+
+    from fastapi.responses import FileResponse
+
+    media, _ = mimetypes.guess_type(path.name)
+    if path.suffix.lower() == ".pdf":
+        media = "application/pdf"
+    return FileResponse(str(path), media_type=media or "application/octet-stream")
+
+
+def _serve_document_file(request: Request, reviewer, rel_path: str):
+    """Serve a file under the review directory or server root."""
+    from fastapi import HTTPException
+
+    root = getattr(request.app.state, "root", None) or reviewer._directory
+    try:
+        resolved = safe_path_under_root(root, rel_path)
+    except PathOutsideRootError:
+        raise HTTPException(status_code=403, detail="Path outside root rejected")
+    if not resolved.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    return _file_response(resolved)
+
+
+def _serve_record_document(request: Request, reviewer, kind: str, n: int):
+    """Serve the current record's localpdf/editpdf entry *n*."""
+    from fastapi import HTTPException
+
+    if kind not in {"localpdf", "editpdf"}:
+        raise HTTPException(status_code=404, detail="Unknown document kind")
+    path = reviewer.get_record_document(kind, n)
+    if path is None or not path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    allowed = list(reviewer.allowed_roots_for_document(kind, n))
+    extra_root = getattr(request.app.state, "root", None)
+    if extra_root:
+        allowed.append(extra_root)
+    allowed.append(reviewer._directory)
+    if not is_path_under_any_root(path, allowed):
+        raise HTTPException(status_code=403, detail="Path outside root rejected")
+    return _file_response(path)
+
+
+@router.get("/record-document/{kind}/{n}")
+async def get_record_document(request: Request, kind: str, n: int):
+    """Serve one PDF declared in ``localpdf`` / ``editpdf`` for the current record."""
+    reviewer = _reviewer(request)
+    return _serve_record_document(request, reviewer, kind, n)
+
+
+@router.get("/document/{path:path}")
+async def get_document(request: Request, path: str):
+    """Serve a file from the review directory (single-config) or server root."""
+    reviewer = _reviewer(request)
+    return _serve_document_file(request, reviewer, path)
 
 
 # ===========================================================================
@@ -1027,7 +1096,7 @@ async def root_get_record(request: Request, config_path: str, index: str | None 
     reviewer = _root_reviewer(request, config_path)
     if index is not None:
         reviewer.set_index(index)
-    ctx = _panel_response_context(reviewer)
+    ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
     return _templates(request).TemplateResponse(request, "review_panel.html", ctx)
 
 
@@ -1085,7 +1154,7 @@ async def root_reload(request: Request, config_path: str):
     except Exception as exc:
         _log_route_error("Reload", exc)
         return HTMLResponse(_user_error_html("Reload"))
-    ctx = _panel_response_context(reviewer)
+    ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
     return templates.TemplateResponse(request, "review_panel.html", ctx)
 
 
@@ -1098,6 +1167,18 @@ async def root_populate(request: Request, config_path: str, field: str):
             f'<span class="status-warning">&#9888; No PopulateButton for {_esc(field)}</span>'
         )
     return _run_populate_and_respond(reviewer, field, btn_spec)
+
+
+@root_router.get("/{config_path:path}/record-document/{kind}/{n}")
+async def root_get_record_document(request: Request, config_path: str, kind: str, n: int):
+    reviewer = _root_reviewer(request, config_path)
+    return _serve_record_document(request, reviewer, kind, n)
+
+
+@root_router.get("/{config_path:path}/document/{path:path}")
+async def root_get_document(request: Request, config_path: str, path: str):
+    reviewer = _root_reviewer(request, config_path)
+    return _serve_document_file(request, reviewer, path)
 
 
 # ── Catch-all full page — MUST be registered last ────────────────────────────
@@ -1226,8 +1307,8 @@ async def root_index(
                 )
         raise
 
-    ctx = _panel_response_context(reviewer)
     prefix = _config_path_prefix(config_path)
+    ctx = _panel_response_context(reviewer, prefix)
 
     # Derive a display title: use the last path component as a readable label
     display_title = config_path.strip("/").split("/")[-1] if config_path.strip("/") else "Referia"

@@ -584,3 +584,38 @@ class TestMarkdownTopLevelLiquid:
         spec = {"type": "Markdown", "liquid": "Question 1\n{{q1Question}}\n"}
         html = render_widget(spec, None, data={})
         assert "{{q1Question}}" not in html
+
+
+class TestRenderDocumentPanel:
+    def test_empty_when_no_docs(self):
+        from referia.web.render import render_document_panel
+
+        assert render_document_panel([], []) == ""
+
+    def test_urls_are_links(self):
+        from referia.web.render import render_document_panel
+
+        html = render_document_panel([], [{"href": "https://example.com/a", "label": "A"}])
+        assert 'href="https://example.com/a"' in html
+        assert 'target="_blank"' in html
+
+    def test_pdf_iframe_uses_prefix(self):
+        from referia.web.render import render_document_panel
+
+        html = render_document_panel(
+            [{"kind": "localpdf", "n": 0, "label": "thesis", "exists": True}],
+            [],
+            prefix="/theses/examined",
+        )
+        assert 'src="/theses/examined/record-document/localpdf/0"' in html
+        assert "thesis" in html
+
+    def test_missing_pdf_has_no_iframe(self):
+        from referia.web.render import render_document_panel
+
+        html = render_document_panel(
+            [{"kind": "editpdf", "n": 1, "label": "ch1", "exists": False}],
+            [],
+        )
+        assert "<iframe" not in html
+        assert "PDF not found" in html

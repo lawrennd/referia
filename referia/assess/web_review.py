@@ -334,6 +334,102 @@ class WebReviewer:
         self._flatten_entries(self._review_raw(), specs)
         return specs
 
+    def list_url_entries(self) -> list[dict]:
+        """Resolve ``urls:`` entries for the current record.
+
+        Jupyter opens these with ``webbrowser.open``.  The web panel renders
+        them as ``<a target="_blank">`` links.
+
+        :return: List of ``{"href": str, "label": str}`` dicts.
+        """
+        from unidecode import unidecode
+
+        from referia.util.misc import renderable, tallyable
+
+        entries: list[dict] = []
+        for view in self._interface_section("urls"):
+            if not isinstance(view, dict) or "url" not in view:
+                continue
+            try:
+                urlterm = self._extract_url_term(view, renderable, tallyable)
+                href = unidecode(str(view["url"]) + urlterm.replace(" ", "%20"))
+            except Exception as exc:
+                log.debug("Could not resolve url entry %r: %s", view, exc)
+                continue
+            if not href:
+                continue
+            entries.append({"href": href, "label": href})
+        return entries
+
+    def list_pdf_entries(self) -> list[dict]:
+        """Describe ``localpdf`` / ``editpdf`` files for the current record.
+
+        Paths are resolved on the server; the returned dicts are metadata for
+        the document panel.  Serving goes through ``/record-document/{kind}/{n}``.
+
+        :return: List of ``kind``, ``n``, ``label``, ``exists`` dicts.
+        """
+        entries: list[dict] = []
+        for kind in ("localpdf", "editpdf"):
+            for n, view in enumerate(self._interface_section(kind)):
+                if not isinstance(view, dict):
+                    continue
+                path = self.get_record_document(kind, n)
+                label = view.get("name") or (path.name if path is not None else kind)
+                entries.append(
+                    {
+                        "kind": kind,
+                        "n": n,
+                        "label": str(label),
+                        "exists": bool(path is not None and path.is_file()),
+                    }
+                )
+        return entries
+
+    def get_record_document(self, kind: str, n: int):
+        """Return the resolved PDF path for ``localpdf``/``editpdf`` entry *n*.
+
+        :return: A :class:`~pathlib.Path` or ``None`` if missing or unresolvable.
+        """
+        from pathlib import Path
+
+        views = self._interface_section(kind)
+        if n < 0 or n >= len(views):
+            return None
+        view = views[n]
+        if not isinstance(view, dict):
+            return None
+        try:
+            if kind == "localpdf":
+                path = self._resolve_local_file(view)
+            elif kind == "editpdf":
+                path = self._resolve_editpdf_file(view)
+            else:
+                return None
+        except Exception as exc:
+            log.debug("Could not resolve %s[%s]: %s", kind, n, exc)
+            return None
+        return Path(path).expanduser() if path else None
+
+    def allowed_roots_for_document(self, kind: str, n: int) -> list:
+        """Directories that entry *n* of *kind* may legally serve from."""
+        from pathlib import Path
+
+        roots = [Path(self._directory).resolve()]
+        views = self._interface_section(kind)
+        if n < 0 or n >= len(views) or not isinstance(views[n], dict):
+            return roots
+        view = views[n]
+        for key in ("directory", "sourcedirectory", "storedirectory"):
+            raw = view.get(key)
+            if not raw:
+                continue
+            try:
+                roots.append(self._resolve_config_relative_dir(raw))
+            except OSError:
+                continue
+        return roots
+
     def render_viewer_html(self, viewer_spec: dict) -> str:
         """Evaluate *viewer_spec* against the current record and return HTML.
 
@@ -359,6 +455,95 @@ class WebReviewer:
     def _review_raw(self) -> list:
         review = self._interface.get("review", []) or []
         return review if isinstance(review, list) else [review]
+
+    def _interface_section(self, key: str) -> list:
+        try:
+            section = self._interface[key] if key in self._interface else []
+        except Exception:
+            section = []
+        if not section:
+            return []
+        return section if isinstance(section, list) else [section]
+
+    def _extract_file_value(self, view: dict):
+        from referia.util.misc import renderable, tallyable
+
+        if renderable(view):
+            return self._data.view_to_value(view)
+        if tallyable(view):
+            return self._data.tally_to_value(view)
+        if "field" in view:
+            return self.get_value(view["field"])
+        if "file" in view:
+            return view["file"]
+        return None
+
+    def _extract_url_term(self, view: dict, renderable, tallyable) -> str:
+        if "field" in view:
+            val = self.get_value(view["field"])
+            if isinstance(val, str):
+                return val
+        if renderable(view):
+            return str(self._data.view_to_value(view) or "")
+        if tallyable(view):
+            return str(self._data.tally_to_value(view) or "")
+        return ""
+
+    def _resolve_config_relative_dir(self, raw: str | None):
+        """Resolve a YAML directory against the config directory, not process cwd.
+
+        Relative values such as ``../files`` are joined to ``self._directory``.
+        Absolute paths and ``$HOME`` / env-expanded paths are left as absolute.
+        An empty value means the config directory itself.
+        """
+        import os
+        from pathlib import Path
+
+        base = Path(self._directory)
+        text = os.path.expandvars(str(raw or "")).strip()
+        if not text:
+            return base.resolve()
+        directory = Path(text).expanduser()
+        if not directory.is_absolute():
+            directory = base / directory
+        return directory.resolve()
+
+    def _resolve_local_file(self, view: dict):
+        from pathlib import Path
+
+        val = self._extract_file_value(view)
+        if not isinstance(val, str) or not val:
+            return None
+        return self._resolve_config_relative_dir(view.get("directory")) / Path(val)
+
+    def _resolve_editpdf_file(self, view: dict):
+        """Prefer the annotated copy when it exists, otherwise the source PDF."""
+        from pathlib import Path
+
+        from referia.util.files import to_valid_file
+        from referia.util.misc import renderable
+
+        val = self._extract_file_value(view)
+        if not isinstance(val, str) or not val:
+            return None
+        source_dir = self._resolve_config_relative_dir(view.get("sourcedirectory"))
+        store_raw = view.get("storedirectory")
+        store_dir = (
+            self._resolve_config_relative_dir(store_raw) if store_raw else None
+        )
+        orig = source_dir / Path(val)
+        if "name" in view:
+            stub = str(view["name"]) + ".pdf"
+        elif renderable(view):
+            stub = self._data.view_to_tmpname(view) + ".pdf"
+        else:
+            stub = orig.name
+        index = self.get_index()
+        dest_name = to_valid_file(str(index)) + "_" + to_valid_file(stub)
+        dest = (store_dir / dest_name) if store_dir is not None else None
+        if dest is not None and dest.is_file():
+            return dest
+        return orig
 
     def _flatten_entries(self, entries: list, out: list) -> None:
         """Recursively flatten nested review/viewer cluster entries.

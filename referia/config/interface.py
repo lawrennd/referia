@@ -13,6 +13,12 @@ import lynguine
 from lynguine.config.context import Context
 from lynguine.log import Logger
 
+from referia.config.dialect import (
+    effective_config_version,
+    enforce_config_version,
+    normalise_referia_config,
+)
+
 
 ctxt = Context()
 log = Logger(
@@ -56,32 +62,73 @@ class Interface(lynguine.config.interface.Interface):
         """
         return "_referia.yml"
     
-    def __init__(self, data=None, directory=None, user_file=None):
+    def __init__(
+        self,
+        data=None,
+        directory=None,
+        user_file=None,
+        allowed_roots=None,
+        unbounded_paths=False,
+        cwd_sandbox=False,
+        allow_unversioned=False,
+        version_enforcement=None,
+        **kwargs,
+    ):
         """
         Initialise the interface object. The referia interface is converted to a linguine interface.
 
         :param data: The data to be loaded in.
         :type data: dict
+        :param allowed_roots: Forwarded to lynguine ``Interface`` (path jail).
+        :param unbounded_paths: Forwarded to lynguine ``Interface``.
+        :param cwd_sandbox: Forwarded to lynguine ``Interface`` when supported.
+        :param allow_unversioned: Skip missing ``referia_config_version`` checks.
+        :param version_enforcement: ``off`` / ``warn`` / ``error``; default from
+            ``REFERIA_CONFIG_VERSION_ENFORCEMENT`` (currently warn).
         :return: None
         """
+        import inspect
 
         self.directory = directory
         self.user_file = user_file
-        
+
+        if data is None:
+            data = {}
+
+        # Capture dialect generation before normalise rewrites v1 keys.
+        self._referia_dialect_version = effective_config_version(data)
+
+        # CIP-000F: version field policy, then dialect normalise
+        enforce_config_version(
+            data,
+            directory=directory,
+            user_file=user_file,
+            mode=version_enforcement,
+            allow_unversioned=allow_unversioned,
+        )
+
+        log.debug("Normalising referia config dialect to lynguine form.")
+        normalise_referia_config(
+            data, directory=directory, user_file=user_file
+        )
+
+        # Referia-only label; do not pass through as a lynguine data key.
+        self._referia_config_version = data.pop("referia_config_version", None)
+
         # Load templates if present (CIP-0006: Template Expansion)
         self._templates = {}
         if "templates" in data:
             log.debug("Loading templates from configuration")
             self._load_templates(data["templates"], directory)
-        
+
         # Expand templates in review section if present
         if "review" in data and self._templates:
             log.debug("Expanding templates in review section")
             data["review"] = self._expand_templates_in_review(data["review"])
-        
+
         # Store expanded config for inspection (useful for testing)
         self._config = data
-        
+
         # create suffices for timestamp columns
         if "modified_suffix" not in data:
             data["modified_suffix"] = "modified"
@@ -89,186 +136,14 @@ class Interface(lynguine.config.interface.Interface):
         if "created_suffix" not in data:
             data["created_suffix"] = "created"
 
-        if "allocation" in data:
-            log.debug(f"Converting \"allocation\" in interface to linguine form.")
-            allocation = data["allocation"]
-            if not isinstance(allocation, list):
-                allocation = [allocation]
-            index = None
-            columns = []
-            mapping = {}
-            for i, item in enumerate(allocation):
-                if "index" in item:
-                    if index is None:
-                        index = item["index"]
-                    elif index != item["index"]:
-                        errmsg = "All \"allocation\" items must have the same \"index\"."
-                        log.error(errmsg)
-                        raise ValueError(errmsg)
-                    del item["index"]
-
-                    # Extract mapping and columns from item
-                    item_mapping, item_columns = self._extract_mapping_columns(item)
-
-                    # Add any columns and mappings that are not already present
-                    for column in item_columns:
-                        if column not in columns:
-                            columns.append(column)
-                    for column in item_mapping:
-                        if column not in mapping:
-                            mapping[column] = item_mapping[column]
-                        else:
-                            # Check if an existing mapping is the same
-                            if mapping[column] != item_mapping[column]:
-                                errmsg = f"\"mapping\" for column \"{column}\" must be the same for all \"allocation\" items."
-                                log.error(errmsg)
-                                raise ValueError(errmsg)
-
-
-                else:
-                    if "index" in item:
-                        index = item["index"]
-                        del item["index"]
-                allocation[i] = item
-
-                
-            # If "input" is not present, create it with the list of allocation.
-            if "input" not in data:
-                log.debug(f"Creating input structure from allocation via an \"vstack\" representation with index \"{index}\" that is embedded in an \"hstack\".")
-                data["input"] = {
-                    "type" : "hstack", # allocation will be concatenated horizontally with additionals
-                    "index" : index, # extracted index from allocation elements
-                    "mapping" : mapping,
-                    "specifications" : [{ 
-                        "type": "vstack", # each allocation element will be concatenated vertically
-                        "specifications" : allocation
-                    }],
-                }
-            else:
-                errmsg = "\"allocation\" is not allowed when \"input\" is present."
-                log.error(errmsg)
-                raise ValueError(errmsg)
-            
-            if "mapping" in data["input"]:
-                data["input"]["mapping"].update(mapping)
-            else:
-                data["input"]["mapping"] = mapping
-            if "columns" in data["input"]:
-                data["input"]["columns"] += columns
-            else:
-                data["input"]["columns"] = columns
-            del data["allocation"]
-            
-        if "additional" in data:
-            log.debug(f"Processing \"additional\" into linguine input.")
-            additional = data["additional"]
-            mapping, columns = self._extract_mapping_columns(additional)
-            if "mapping" in additional:
-                del additional["mapping"]
-            if "columns" in additional:
-                del additional["columns"]
-            if not isinstance(additional, list):
-                additional = [additional]
-            log.debug(f"Concatenating referia \"additional\" onto end of the \"hstack\" of \"input\".")
-            if "input" not in data:
-                log.debug(f"Creating input structure from additional via an \"hstack\" representation.")
-                data["input"] = {
-                    "type" : "hstack", # additional will be concatenated horizontally with allocation
-                    "specifications" : additional
-                }
-            else:
-                data["input"]["specifications"] += additional
-            
-            if "mapping" in data["input"]:
-                data["input"]["mapping"].update(mapping)
-            else:
-                data["input"]["mapping"] = mapping
-            if "columns" in data["input"]:
-                data["input"]["columns"] += columns
-            else:
-                data["input"]["columns"] = columns
-            del data["additional"]
-
-        if "global_consts" in data:
-            log.debug(f"Adding \"global_consts\" from referia as \"constants\" in the linguine form.")
-            constants = data["global_consts"]
-            if isinstance(constants, list):
-                # Each list item is a selected row of constants (often with a
-                # different row key: roleInterview vs programme-manager).
-                # Old referia joined those rows field-wise into one series.
-                # lynguine ``stack`` does the same: merge single-row sources
-                # into one row. ``hstack`` joins on index values and would
-                # leave fields on unmatched rows.
-                const_index = None
-                for constant in constants:
-                    if "index" in constant:
-                        if const_index is None:
-                            const_index = constant["index"]
-                        elif const_index != constant["index"]:
-                            errmsg = "All \"global_consts\" items must have the same \"index\"."
-                            log.error(errmsg)
-                            raise ValueError(errmsg)
-                        del constant["index"]
-                log.debug(f"Adding list of constants as a \"stack\" in the lynguine \"constants\" entry.")
-                stacked = {"type": "stack", "specifications": constants}
-                if const_index is not None:
-                    stacked["index"] = const_index
-                data["constants"] = stacked
-            else:
-                data["constants"] = constants
-            del data["global_consts"]
-
-        if "globals" in data:
-            log.debug(f"Adding \"globals\" from referia as \"parameters\" in the linguine form.")
-            parameters = data["globals"]
-            if isinstance(parameters, list):
-                for i, parameter in enumerate(parameters):
-                    if "index" in parameter:
-                        if i == 0:
-                            index = parameter["index"]
-                        elif index != parameter["index"]:
-                            errmsg = "All \"globals\" items must have the same \"index\"."
-                            log.error(errmsg)
-                            raise ValueError(errmsg)
-                        del parameter["index"]
-                log.debug(f"Adding list of parameters as an \"hstack\" in the linguine \"parameters\" entry.")
-                data["parameters"] = {"type": "hstack", "index": index, "specifications": parameters}
-            else:
-                data["parameters"] = parameters
-            del data["globals"]
-
-        if "scores" in data:
-            log.debug(f"Converting \"scores\" in referia to \"output\" in linguine.")
-            if "output" not in data:
-                data["output"] = data["scores"]
-                del data["scores"]
-            else:
-                errmsg = "Cannot have both \"scores\" and \"output\" entries in referia."
-                log.error(errmsg)
-                raise ValueError(errmsg)
-        
-        if "scorer" in data:
-            # Give a deprecation warning
-            if "review" not in data:
-                data["review"] = data["scorer"]
-                del data["scorer"]
-                warnmsg = f"The \"scorer\" entry in referia is deprecated, please update the file \"{os.path.join(self.directory, self.user_file)}\"."
-                log.warning(warnmsg)
-                warnings.warn(warnmsg, DeprecationWarning)
-            else:
-                errmsg = "Cannot have both \"scorer\" and \"review\" entries in referia."
-                log.error(errmsg)
-                raise ValueError(errmsg)            
-            
         if "review" in data:
             data["review"] = self._expand_review_cluster(data["review"])
-            #self._expand_scores()   
 
         # Extract all fields from the review interface
         review_columns = self._extract_review_write_fields(data)
         modified_columns = {}
         created_columns = {}
-        
+
         for column in review_columns.copy():
             modified_columns[column] = column + "_" + data["modified_suffix"]
             created_columns[column] = column + "_" + data["created_suffix"]
@@ -276,26 +151,64 @@ class Interface(lynguine.config.interface.Interface):
         output_types = ["output", "series"]
         for output_type in output_types:
             if output_type in data:
-                # If columns not specified, create from review fields
                 if "columns" not in data[output_type] and review_columns:
-                    log.debug(f"No columns specified in {output_type}, auto-generating from review fields")
+                    log.debug(
+                        f"No columns specified in {output_type}, "
+                        "auto-generating from review fields"
+                    )
                     data[output_type]["columns"] = review_columns.copy()
-                
+
                 if "columns" in data[output_type]:
                     for column in data[output_type]["columns"]:
                         if column in modified_columns:
-                            if modified_columns[column] not in data[output_type]["columns"]:
-                                data[output_type]["columns"].append(modified_columns[column])
-                                log.debug(f"Adding column as \"{modified_columns[column]}\" to \"{output_type}\" outputs.")
+                            if (
+                                modified_columns[column]
+                                not in data[output_type]["columns"]
+                            ):
+                                data[output_type]["columns"].append(
+                                    modified_columns[column]
+                                )
+                                log.debug(
+                                    f'Adding column as "{modified_columns[column]}" '
+                                    f'to "{output_type}" outputs.'
+                                )
                         if column in created_columns:
-                            if created_columns[column] not in data[output_type]["columns"]:
-                                data[output_type]["columns"].append(created_columns[column])
-                                log.debug(f"Adding column as \"{created_columns[column]}\" to \"{output_type}\" outputs.")
-        
-        log.debug(f"End conversion of \"referia\" form into \"linguine\" standard form.")
-        
-        super().__init__(data=data, directory=directory, user_file=user_file)
-    
+                            if (
+                                created_columns[column]
+                                not in data[output_type]["columns"]
+                            ):
+                                data[output_type]["columns"].append(
+                                    created_columns[column]
+                                )
+                                log.debug(
+                                    f'Adding column as "{created_columns[column]}" '
+                                    f'to "{output_type}" outputs.'
+                                )
+
+        log.debug(
+            'End conversion of "referia" form into "linguine" standard form.'
+        )
+
+        # Forward path-jail kwargs expected by lynguine Interface.from_file.
+        # Older lynguine builds only accept data/directory/user_file.
+        parent_params = inspect.signature(super().__init__).parameters
+        parent_kwargs = {
+            "data": data,
+            "directory": directory,
+            "user_file": user_file,
+        }
+        if "allowed_roots" in parent_params and allowed_roots is not None:
+            parent_kwargs["allowed_roots"] = allowed_roots
+        if "unbounded_paths" in parent_params:
+            parent_kwargs["unbounded_paths"] = unbounded_paths
+        if "cwd_sandbox" in parent_params:
+            parent_kwargs["cwd_sandbox"] = cwd_sandbox
+        for key, value in kwargs.items():
+            if key in parent_params:
+                parent_kwargs[key] = value
+
+        super().__init__(**parent_kwargs)
+
     def _load_templates(self, templates_config, directory):
         """
         Load template definitions from inline or external sources.

@@ -24,6 +24,7 @@ def _make_interface(
     modified_suffix="modified",
     created_suffix="created",
     combinator=None,
+    extra=None,
 ):
     """Return a dict-like mock for Interface."""
     data = {
@@ -34,6 +35,8 @@ def _make_interface(
     }
     if combinator is not None:
         data["combinator"] = combinator
+    if extra:
+        data.update(extra)
 
     iface = MagicMock()
     iface.__getitem__ = lambda self, k: data[k]
@@ -96,7 +99,7 @@ def _make_data(index_vals=None, col_vals=None):
 # ---------------------------------------------------------------------------
 
 
-def _build_reviewer(review=None, viewer=None, index_vals=None, col_vals=None, combinator=None):
+def _build_reviewer(review=None, viewer=None, index_vals=None, col_vals=None, combinator=None, extra=None):
     """Construct a WebReviewer with patched Interface and CustomDataFrame."""
     from referia.assess.web_review import WebReviewer
 
@@ -104,12 +107,14 @@ def _build_reviewer(review=None, viewer=None, index_vals=None, col_vals=None, co
         review=review,
         viewer=viewer,
         combinator=combinator,
+        extra=extra,
     )
     data, storage = _make_data(index_vals=index_vals, col_vals=col_vals)
 
     reviewer = WebReviewer.__new__(WebReviewer)
     reviewer._interface = iface
     reviewer._data = data
+    reviewer._directory = "/tmp"
     return reviewer, data, storage
 
 
@@ -559,3 +564,114 @@ class TestGetRowData:
         }[k]
         result = reviewer.get_row_data()
         assert result["number"] == 1
+
+
+class TestDocumentEntries:
+    def test_list_url_entries(self):
+        reviewer, _, _ = _build_reviewer(
+            extra={"urls": [{"url": "https://example.com/p?q="}]},
+        )
+        entries = reviewer.list_url_entries()
+        assert entries == [{"href": "https://example.com/p?q=", "label": "https://example.com/p?q="}]
+
+    def test_list_pdf_entries_localpdf(self, tmp_path):
+        pdf = tmp_path / "thesis.pdf"
+        pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"ThesisPDF": "thesis.pdf"},
+            extra={"localpdf": [{"directory": str(tmp_path), "field": "ThesisPDF", "name": "thesis"}]},
+        )
+        reviewer._directory = str(tmp_path)
+        entries = reviewer.list_pdf_entries()
+        assert len(entries) == 1
+        assert entries[0]["kind"] == "localpdf"
+        assert entries[0]["exists"] is True
+        assert entries[0]["label"] == "thesis"
+
+    def test_get_record_document_missing_field(self, tmp_path):
+        reviewer, _, _ = _build_reviewer(
+            extra={"localpdf": [{"directory": str(tmp_path), "field": "ThesisPDF"}]},
+        )
+        assert reviewer.get_record_document("localpdf", 0) is None
+
+    def test_relative_directory_uses_config_dir_not_cwd(self, tmp_path, monkeypatch):
+        """Relative localpdf directories must join to the config dir, not process cwd."""
+        config_dir = tmp_path / "preliminary"
+        files_dir = tmp_path / "files"
+        other_cwd = tmp_path / "elsewhere"
+        config_dir.mkdir()
+        files_dir.mkdir()
+        other_cwd.mkdir()
+        pdf = files_dir / "app.pdf"
+        pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"ApplicationPDF": "app.pdf"},
+            extra={"localpdf": [{"directory": "../files", "field": "ApplicationPDF", "name": "app"}]},
+        )
+        reviewer._directory = str(config_dir)
+        monkeypatch.chdir(other_cwd)
+
+        path = reviewer.get_record_document("localpdf", 0)
+        assert path == pdf.resolve()
+        entries = reviewer.list_pdf_entries()
+        assert entries[0]["exists"] is True
+
+        roots = reviewer.allowed_roots_for_document("localpdf", 0)
+        assert files_dir.resolve() in roots
+
+    def test_absolute_directory_still_works(self, tmp_path):
+        pdf = tmp_path / "abs.pdf"
+        pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"ThesisPDF": "abs.pdf"},
+            extra={"localpdf": [{"directory": str(tmp_path), "field": "ThesisPDF"}]},
+        )
+        reviewer._directory = str(tmp_path / "config")
+        path = reviewer.get_record_document("localpdf", 0)
+        assert path == pdf.resolve()
+
+    def test_home_env_directory_still_works(self, tmp_path, monkeypatch):
+        home = tmp_path / "home"
+        home.mkdir()
+        pdf = home / "home.pdf"
+        pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+        monkeypatch.setenv("HOME", str(home))
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"ThesisPDF": "home.pdf"},
+            extra={"localpdf": [{"directory": "$HOME", "field": "ThesisPDF"}]},
+        )
+        reviewer._directory = str(tmp_path / "config")
+        path = reviewer.get_record_document("localpdf", 0)
+        assert path == pdf.resolve()
+
+    def test_editpdf_relative_source_and_store(self, tmp_path, monkeypatch):
+        config_dir = tmp_path / "review"
+        source_dir = tmp_path / "source"
+        store_dir = tmp_path / "annotated"
+        other_cwd = tmp_path / "cwd"
+        for d in (config_dir, source_dir, store_dir, other_cwd):
+            d.mkdir()
+        src_pdf = source_dir / "thesis.pdf"
+        src_pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+
+        reviewer, _, _ = _build_reviewer(
+            index_vals=["Alice"],
+            col_vals={"ThesisPDF": "thesis.pdf"},
+            extra={
+                "editpdf": [{
+                    "sourcedirectory": "../source",
+                    "storedirectory": "../annotated",
+                    "field": "ThesisPDF",
+                    "name": "abstract",
+                }],
+            },
+        )
+        reviewer._directory = str(config_dir)
+        monkeypatch.chdir(other_cwd)
+
+        path = reviewer.get_record_document("editpdf", 0)
+        assert path == src_pdf.resolve()
+        roots = reviewer.allowed_roots_for_document("editpdf", 0)
+        assert source_dir.resolve() in roots
+        assert store_dir.resolve() in roots

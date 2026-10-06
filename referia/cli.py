@@ -95,6 +95,48 @@ def _build_parser() -> argparse.ArgumentParser:
         help="In text mode, suppress the summary and show only failing files.",
     )
 
+    migrate = subparsers.add_parser(
+        "migrate",
+        help="Stamp or rewrite _referia.yml dialect versions",
+        description=(
+            "Migrate referia config dialects under --root.  "
+            "Default is dry-run full rewrite.  Use --stamp-only to insert "
+            "referia_config_version without rewriting keys; "
+            "add --write to apply changes.  Full rewrite may lose comments."
+        ),
+    )
+    migrate.add_argument(
+        "--root",
+        required=True,
+        metavar="DIR",
+        help="Root directory to scan recursively for _referia.yml files.",
+    )
+    migrate.add_argument(
+        "--stamp-only",
+        action="store_true",
+        help="Insert referia_config_version only (no key rewrites).",
+    )
+    migrate.add_argument(
+        "--write",
+        action="store_true",
+        help="Apply changes. Without this flag, only report what would happen.",
+    )
+    migrate.add_argument(
+        "--in-place",
+        action="store_true",
+        help=(
+            "With full rewrite --write: overwrite originals (keeps .bak). "
+            "Default write target is sibling _referia.migrated.yml. "
+            "Ignored with --stamp-only."
+        ),
+    )
+    migrate.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format: 'text' (default) or 'json'.",
+    )
+
     return parser
 
 
@@ -106,6 +148,8 @@ def main(argv=None):
         _serve(args)
     elif args.command == "check":
         _check(args)
+    elif args.command == "migrate":
+        _migrate(args)
     else:
         parser.print_help()
         sys.exit(1)
@@ -163,8 +207,67 @@ def _check(args):
         if args.errors_only:
             for r in errors:
                 loc = f":{r['line']}" if r["line"] is not None else ""
-                print(f"{r['path']}{loc}: [{r['category']}] {r['error'].splitlines()[0]}")
+                err = (r["error"] or "").splitlines()[0]
+                print(f"{r['path']}{loc}: [{r['category']}] {err}")
         else:
             print(format_text(results, args.root))
 
+    sys.exit(1 if errors else 0)
+
+
+def _migrate(args):
+    """Implement ``referia migrate`` subcommand."""
+    if args.stamp_only:
+        from referia.migrate import (
+            apply_stamp,
+            format_stamp_json,
+            format_stamp_text,
+            scan_for_stamp,
+        )
+
+        if args.in_place:
+            print(
+                "note: --in-place is ignored with --stamp-only "
+                "(stamp always edits the original file).",
+                file=sys.stderr,
+            )
+
+        planned = scan_for_stamp(args.root)
+        results = apply_stamp(planned, write=args.write)
+        if args.format == "json":
+            print(format_stamp_json(results, args.root, write=args.write))
+        else:
+            print(format_stamp_text(results, args.root, write=args.write))
+    else:
+        from referia.migrate import (
+            apply_rewrite,
+            format_rewrite_json,
+            format_rewrite_text,
+            scan_for_rewrite,
+        )
+
+        planned = scan_for_rewrite(args.root)
+        results = apply_rewrite(
+            planned, write=args.write, in_place=args.in_place
+        )
+        if args.format == "json":
+            print(
+                format_rewrite_json(
+                    results,
+                    args.root,
+                    write=args.write,
+                    in_place=args.in_place,
+                )
+            )
+        else:
+            print(
+                format_rewrite_text(
+                    results,
+                    args.root,
+                    write=args.write,
+                    in_place=args.in_place,
+                )
+            )
+
+    errors = [r for r in results if r.get("action") == "error"]
     sys.exit(1 if errors else 0)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from referia.web.path_safety import PathOutsideRootError, safe_path_under_root
+from referia.web.path_safety import PathOutsideRootError, safe_path_under_root, is_path_under_root, is_path_under_any_root
 from referia.web.routes import _list_sub_configs, _resolve_config_path
 
 
@@ -54,3 +54,20 @@ class TestResolveConfigPathGenericErrors:
             _resolve_config_path(str(tmp_path), "secret-name/path")
         assert exc_info.value.status_code == 404
         assert "secret-name" not in str(exc_info.value.detail)
+
+
+class TestIsPathUnderRoot:
+    def test_file_inside_root(self, tmp_path):
+        nested = tmp_path / "files" / "a.pdf"
+        nested.parent.mkdir()
+        nested.write_bytes(b"%PDF")
+        assert is_path_under_root(nested, tmp_path)
+
+    def test_file_outside_root(self, tmp_path):
+        other = tmp_path.parent / "outside.pdf"
+        assert not is_path_under_root(other, tmp_path)
+
+    def test_any_root_matches_second(self, tmp_path):
+        nested = tmp_path / "a.pdf"
+        nested.write_bytes(b"%PDF")
+        assert is_path_under_any_root(nested, ["/nope", tmp_path])
