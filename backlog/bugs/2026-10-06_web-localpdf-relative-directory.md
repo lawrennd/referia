@@ -1,7 +1,7 @@
 ---
 id: "2026-10-06_web-localpdf-relative-directory"
 title: "Web localpdf/editpdf relative directories resolve against process cwd, not config directory"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-06"
 last_updated: "2026-10-06"
@@ -61,13 +61,13 @@ config directory, so cwd and config dir coincide.
 
 ## Acceptance Criteria
 
-- [ ] Relative `directory` / `sourcedirectory` / `storedirectory` values in
+- [x] Relative `directory` / `sourcedirectory` / `storedirectory` values in
       `localpdf` and `editpdf` resolve against the config directory
       (`WebReviewer._directory`).
-- [ ] Absolute paths and `$HOME` / env-expanded paths continue to work.
-- [ ] `allowed_roots_for_document` uses the same base so serving and
+- [x] Absolute paths and `$HOME` / env-expanded paths continue to work.
+- [x] `allowed_roots_for_document` uses the same base so serving and
       existence checks agree.
-- [ ] Unit tests cover: relative `../files`, absolute path, `$HOME/...`,
+- [x] Unit tests cover: relative `../files`, absolute path, `$HOME/...`,
       and a cwd that is *not* the config directory (regression for this bug).
 - [ ] Root-server listing for
       `applications/2024-04-29_mphil-admissions/preliminary/` embeds
@@ -112,3 +112,11 @@ configs already encode the intended relative layout.
 Bug identified while loading MPhil interview-confirm in root-server mode.
 PDFs present under `../files` relative to the cohort directory; web UI
 reports missing because resolution used process cwd.
+
+### 2026-10-06 (fix)
+
+Added `WebReviewer._resolve_config_relative_dir()` and wired it through
+`_resolve_local_file`, `_resolve_editpdf_file`, and
+`allowed_roots_for_document`. Unit tests cover relative, absolute, `$HOME`,
+and cwd ≠ config dir. Manual smoke of the MPhil preliminary config left as
+an optional check after `referia serve` restart.

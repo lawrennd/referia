@@ -413,7 +413,6 @@ class WebReviewer:
 
     def allowed_roots_for_document(self, kind: str, n: int) -> list:
         """Directories that entry *n* of *kind* may legally serve from."""
-        import os
         from pathlib import Path
 
         roots = [Path(self._directory).resolve()]
@@ -426,7 +425,7 @@ class WebReviewer:
             if not raw:
                 continue
             try:
-                roots.append(Path(os.path.expandvars(str(raw))).expanduser().resolve())
+                roots.append(self._resolve_config_relative_dir(raw))
             except OSError:
                 continue
         return roots
@@ -490,19 +489,35 @@ class WebReviewer:
             return str(self._data.tally_to_value(view) or "")
         return ""
 
-    def _resolve_local_file(self, view: dict):
+    def _resolve_config_relative_dir(self, raw: str | None):
+        """Resolve a YAML directory against the config directory, not process cwd.
+
+        Relative values such as ``../files`` are joined to ``self._directory``.
+        Absolute paths and ``$HOME`` / env-expanded paths are left as absolute.
+        An empty value means the config directory itself.
+        """
         import os
+        from pathlib import Path
+
+        base = Path(self._directory)
+        text = os.path.expandvars(str(raw or "")).strip()
+        if not text:
+            return base.resolve()
+        directory = Path(text).expanduser()
+        if not directory.is_absolute():
+            directory = base / directory
+        return directory.resolve()
+
+    def _resolve_local_file(self, view: dict):
         from pathlib import Path
 
         val = self._extract_file_value(view)
         if not isinstance(val, str) or not val:
             return None
-        directory = os.path.expandvars(view.get("directory") or "")
-        return Path(directory, val).expanduser()
+        return self._resolve_config_relative_dir(view.get("directory")) / Path(val)
 
     def _resolve_editpdf_file(self, view: dict):
         """Prefer the annotated copy when it exists, otherwise the source PDF."""
-        import os
         from pathlib import Path
 
         from referia.util.files import to_valid_file
@@ -511,9 +526,12 @@ class WebReviewer:
         val = self._extract_file_value(view)
         if not isinstance(val, str) or not val:
             return None
-        source_dir = os.path.expandvars(view.get("sourcedirectory") or "")
-        store_dir = os.path.expandvars(view.get("storedirectory") or "")
-        orig = Path(source_dir, val).expanduser()
+        source_dir = self._resolve_config_relative_dir(view.get("sourcedirectory"))
+        store_raw = view.get("storedirectory")
+        store_dir = (
+            self._resolve_config_relative_dir(store_raw) if store_raw else None
+        )
+        orig = source_dir / Path(val)
         if "name" in view:
             stub = str(view["name"]) + ".pdf"
         elif renderable(view):
@@ -522,7 +540,7 @@ class WebReviewer:
             stub = orig.name
         index = self.get_index()
         dest_name = to_valid_file(str(index)) + "_" + to_valid_file(stub)
-        dest = Path(store_dir, dest_name).expanduser() if store_dir else None
+        dest = (store_dir / dest_name) if store_dir is not None else None
         if dest is not None and dest.is_file():
             return dest
         return orig
