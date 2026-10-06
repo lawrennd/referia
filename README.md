@@ -61,17 +61,28 @@ r = Reviewer("_referia.yml", ".")
 r.display()
 ```
 
-### Linting configs
+### Linting and migrating configs
 
 ```bash
 referia check --root path/to/reviews
+referia migrate --root path/to/reviews --stamp-only          # dry-run
+referia migrate --root path/to/reviews --stamp-only --write  # insert version only
+referia migrate --root path/to/reviews --write               # rewrite v1 keys → v2
 ```
 
-Scans all `_referia.yml` files under the root and reports YAML parse errors. Use `--format json` for machine-readable output.
+`check` reports YAML parse errors and config **dialect** (v1 convenience keys vs v2 canonical). `migrate` is dry-run unless you pass `--write`. Stamp-only inserts `referia_config_version` without rewriting keys; full migrate rewrites `allocation`/`scores`/`scorer` into `input`/`output`/`review`. Use `--format json` on `check` for machine-readable output.
 
 ## Configuration reference
 
-All behaviour is controlled by `_referia.yml`. The top-level keys are:
+All behaviour is controlled by `_referia.yml`. Prefer the canonical dialect and declare a version:
+
+```yaml
+referia_config_version: 2
+```
+
+Supported generations: **1** (convenience keys such as `allocation` / `scores` / `scorer`, normalised in memory on load) and **2** (canonical `input` / `output` / `review`). When `strict_columns` is omitted, v1 defaults to permissive and v2 to strict; an explicit value always wins. See the Sphinx guide *Config dialects and versioning* for the full mapping and CLI details.
+
+The top-level keys are:
 
 ### `input`
 

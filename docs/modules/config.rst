@@ -47,9 +47,12 @@ Configuration File Format
 ----------------------
 
 Referia configuration files follow the same format as lynguine configurations, with additional
-fields specific to review processes:
+fields specific to review processes. Prefer the canonical **v2** dialect and declare
+``referia_config_version`` (see :doc:`../usage/config_dialect`):
 
 .. code-block:: yaml
+
+    referia_config_version: 2
 
     # Base configuration (inherited from lynguine)
     input:
@@ -66,6 +69,18 @@ fields specific to review processes:
         - name: impact
           weight: 0.3
 
+Legacy **v1** convenience keys (``allocation``, ``scores``, ``scorer``, …) still
+load: ``Interface`` normalises them in memory. Use ``referia migrate`` to stamp
+or rewrite files on disk.
+
+Dialect API
+-----------
+
+.. automodule:: referia.config.dialect
+   :members: DialectReport, detect_config_dialect, normalise_referia_config, SUPPORTED_CONFIG_VERSION
+   :undoc-members:
+   :show-inheritance:
+
 Usage Example
 -----------
 
@@ -78,4 +93,4 @@ Usage Example
     
     # Access configuration values
     input_config = interface["input"]
-    review_config = interface["review"] 
+    review_config = interface["review"]

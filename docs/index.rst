@@ -18,6 +18,7 @@ Contents
    introduction
    installation
    quickstart
+   usage/config_dialect
    modules/assess
    modules/config
    modules/util

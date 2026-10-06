@@ -4,7 +4,7 @@ created: "2026-10-06"
 id: "000F"
 last_updated: "2026-10-06"
 status: "Closed"
-compressed: false
+compressed: true
 related_requirements: []
 related_cips: ["000A", "000B", "000C"]
 tags:
@@ -327,6 +327,15 @@ Backlog tasks created on acceptance (2026-10-06):
   lynguine (`strict_columns=False`); tracked separately as
   `lynguine/backlog/bugs/2026-10-06_from-flow-hardcodes-strict-columns-false.md`
   and is **out of scope** for this CIP’s dialect detect / stamp / migrate work.
+
+### 2026-10-06 compression
+
+Distilled into formal docs (`compressed: true`):
+
+- `docs/usage/config_dialect.rst` — user guide (versions, mapping, CLI, `strict_columns`)
+- `docs/modules/config.rst` — dialect automodule + link
+- `docs/index.rst` — toctree entry
+- `README.md` — check / migrate / version summary
 
 ## References
 
