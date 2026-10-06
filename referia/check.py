@@ -26,7 +26,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from referia.config.dialect import detect_config_dialect
+from referia.config.dialect import (
+    SUPPORTED_CONFIG_VERSION,
+    detect_config_dialect,
+    get_version_enforcement,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +100,12 @@ def _categorize_error(error_msg: str) -> tuple[str, str | None]:
 # Single-file checker
 # ---------------------------------------------------------------------------
 
-def _check_one(yml_path: Path, root_path: Path) -> dict[str, Any]:
+def _check_one(
+    yml_path: Path,
+    root_path: Path,
+    *,
+    version_enforcement: str | None = None,
+) -> dict[str, Any]:
     """Check a single ``_referia.yml``.  Always returns a result dict."""
     rel = str(yml_path.relative_to(root_path))
     base: dict[str, Any] = {
@@ -110,7 +119,9 @@ def _check_one(yml_path: Path, root_path: Path) -> dict[str, Any]:
         "context": [],
         "suggested_fix": None,
         "dialect": None,
+        "warnings": [],
     }
+    mode = version_enforcement or get_version_enforcement()
     try:
         import yaml  # type: ignore[import]
         with open(yml_path, encoding="utf-8") as fh:
@@ -131,6 +142,35 @@ def _check_one(yml_path: Path, root_path: Path) -> dict[str, Any]:
                     "Remove mixed v1/v2 keys that name the same slot "
                     "(e.g. allocation with input, scores with output)."
                 )
+            declared = report.version_declared
+            if (
+                declared is not None
+                and declared > SUPPORTED_CONFIG_VERSION
+            ):
+                base["ok"] = False
+                base["error"] = (
+                    f"referia_config_version={declared} is newer than "
+                    f"supported {SUPPORTED_CONFIG_VERSION}"
+                )
+                base["category"] = "unsupported_config_version"
+                base["suggested_fix"] = (
+                    "Upgrade referia or lower referia_config_version."
+                )
+            elif declared is None and report.version_inferred != 0:
+                msg = (
+                    "missing referia_config_version; "
+                    "run `referia migrate --root DIR --stamp-only --write`"
+                )
+                if mode == "error":
+                    base["ok"] = False
+                    base["error"] = msg
+                    base["category"] = "missing_config_version"
+                    base["suggested_fix"] = (
+                        "Add referia_config_version: 1 or 2, or stamp "
+                        "with referia migrate --stamp-only --write."
+                    )
+                elif mode == "warn":
+                    base["warnings"].append(msg)
         else:
             base["dialect"] = {
                 "version_declared": None,
@@ -184,7 +224,11 @@ def _check_one(yml_path: Path, root_path: Path) -> dict[str, Any]:
 # Root scanner
 # ---------------------------------------------------------------------------
 
-def scan_configs(root: str) -> list[dict[str, Any]]:
+def scan_configs(
+    root: str,
+    *,
+    version_enforcement: str | None = None,
+) -> list[dict[str, Any]]:
     """Scan all ``_referia.yml`` files under *root* and return results.
 
     Results are sorted by ``relative_path``.  Each entry is a dict as
@@ -193,7 +237,11 @@ def scan_configs(root: str) -> list[dict[str, Any]]:
     root_path = Path(root).expanduser().resolve()
     results = []
     for yml in sorted(root_path.rglob("_referia.yml")):
-        results.append(_check_one(yml, root_path))
+        results.append(
+            _check_one(
+                yml, root_path, version_enforcement=version_enforcement
+            )
+        )
     return results
 
 
@@ -246,6 +294,8 @@ def format_text(results: list[dict[str, Any]], root: str) -> str:
     lines.append("")
     lines.append(f"  \u2713 {ok_count:>4}  OK")
     lines.append(f"  \u2717 {len(errors):>4}  error(s)")
+    warn_count = sum(len(r.get("warnings") or []) for r in results)
+    lines.append(f"  ! {warn_count:>4}  warning(s)")
     lines.append("")
     lines.append("  Dialect:")
     lines.append(f"    v0              {buckets['v0']:>4}")
@@ -255,6 +305,14 @@ def format_text(results: list[dict[str, Any]], root: str) -> str:
     lines.append(f"    v2 stamped      {buckets['v2_stamped']:>4}")
     lines.append(f"    mixed           {buckets['mixed']:>4}")
     lines.append(f"    parse error     {buckets['parse_error']:>4}")
+
+    warned = [r for r in results if r.get("warnings")]
+    if warned:
+        lines.append("")
+        lines.append("Warnings:")
+        for r in warned:
+            for w in r["warnings"]:
+                lines.append(f"  ! {r['relative_path']}: {w}")
 
     if not errors:
         lines.append("")
@@ -292,11 +350,18 @@ def format_json(results: list[dict[str, Any]], root: str) -> str:
     """Return a JSON report string suitable for LLM consumption."""
     root_abs = str(Path(root).expanduser().resolve())
     errors = [r for r in results if not r["ok"]]
+    warnings = [
+        {"path": r["path"], "relative_path": r["relative_path"], "warning": w}
+        for r in results
+        for w in (r.get("warnings") or [])
+    ]
     payload = {
         "root": root_abs,
         "total_scanned": len(results),
         "error_count": len(errors),
+        "warning_count": len(warnings),
         "errors": errors,
+        "warnings": warnings,
         "results": results,
     }
     return json.dumps(payload, indent=2)

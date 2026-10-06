@@ -14,7 +14,8 @@ from lynguine.config.context import Context
 from lynguine.log import Logger
 
 from referia.config.dialect import (
-    detect_config_dialect,
+    effective_config_version,
+    enforce_config_version,
     normalise_referia_config,
 )
 
@@ -69,6 +70,8 @@ class Interface(lynguine.config.interface.Interface):
         allowed_roots=None,
         unbounded_paths=False,
         cwd_sandbox=False,
+        allow_unversioned=False,
+        version_enforcement=None,
         **kwargs,
     ):
         """
@@ -79,6 +82,9 @@ class Interface(lynguine.config.interface.Interface):
         :param allowed_roots: Forwarded to lynguine ``Interface`` (path jail).
         :param unbounded_paths: Forwarded to lynguine ``Interface``.
         :param cwd_sandbox: Forwarded to lynguine ``Interface`` when supported.
+        :param allow_unversioned: Skip missing ``referia_config_version`` checks.
+        :param version_enforcement: ``off`` / ``warn`` / ``error``; default from
+            ``REFERIA_CONFIG_VERSION_ENFORCEMENT`` (currently warn).
         :return: None
         """
         import inspect
@@ -90,14 +96,17 @@ class Interface(lynguine.config.interface.Interface):
             data = {}
 
         # Capture dialect generation before normalise rewrites v1 keys.
-        report = detect_config_dialect(data)
-        self._referia_dialect_version = (
-            int(report.version_declared)
-            if report.version_declared is not None
-            else int(report.version_inferred)
+        self._referia_dialect_version = effective_config_version(data)
+
+        # CIP-000F: version field policy, then dialect normalise
+        enforce_config_version(
+            data,
+            directory=directory,
+            user_file=user_file,
+            mode=version_enforcement,
+            allow_unversioned=allow_unversioned,
         )
 
-        # CIP-000F: explicit detect+normalise of v1 convenience keys
         log.debug("Normalising referia config dialect to lynguine form.")
         normalise_referia_config(
             data, directory=directory, user_file=user_file

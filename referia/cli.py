@@ -100,9 +100,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Stamp or rewrite _referia.yml dialect versions",
         description=(
             "Migrate referia config dialects under --root.  "
-            "Default is dry-run.  Use --stamp-only to insert "
+            "Default is dry-run full rewrite.  Use --stamp-only to insert "
             "referia_config_version without rewriting keys; "
-            "add --write to apply changes."
+            "add --write to apply changes.  Full rewrite may lose comments."
         ),
     )
     migrate.add_argument(
@@ -120,6 +120,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "--write",
         action="store_true",
         help="Apply changes. Without this flag, only report what would happen.",
+    )
+    migrate.add_argument(
+        "--in-place",
+        action="store_true",
+        help=(
+            "With full rewrite --write: overwrite originals (keeps .bak). "
+            "Default write target is sibling _referia.migrated.yml. "
+            "Ignored with --stamp-only."
+        ),
     )
     migrate.add_argument(
         "--format",
@@ -208,27 +217,57 @@ def _check(args):
 
 def _migrate(args):
     """Implement ``referia migrate`` subcommand."""
-    if not args.stamp_only:
-        print(
-            "error: full dialect rewrite is not implemented yet; "
-            "use --stamp-only (see CIP-000F).",
-            file=sys.stderr,
+    if args.stamp_only:
+        from referia.migrate import (
+            apply_stamp,
+            format_stamp_json,
+            format_stamp_text,
+            scan_for_stamp,
         )
-        sys.exit(2)
 
-    from referia.migrate import (
-        apply_stamp,
-        format_stamp_json,
-        format_stamp_text,
-        scan_for_stamp,
-    )
+        if args.in_place:
+            print(
+                "note: --in-place is ignored with --stamp-only "
+                "(stamp always edits the original file).",
+                file=sys.stderr,
+            )
 
-    planned = scan_for_stamp(args.root)
-    results = apply_stamp(planned, write=args.write)
-    if args.format == "json":
-        print(format_stamp_json(results, args.root, write=args.write))
+        planned = scan_for_stamp(args.root)
+        results = apply_stamp(planned, write=args.write)
+        if args.format == "json":
+            print(format_stamp_json(results, args.root, write=args.write))
+        else:
+            print(format_stamp_text(results, args.root, write=args.write))
     else:
-        print(format_stamp_text(results, args.root, write=args.write))
+        from referia.migrate import (
+            apply_rewrite,
+            format_rewrite_json,
+            format_rewrite_text,
+            scan_for_rewrite,
+        )
+
+        planned = scan_for_rewrite(args.root)
+        results = apply_rewrite(
+            planned, write=args.write, in_place=args.in_place
+        )
+        if args.format == "json":
+            print(
+                format_rewrite_json(
+                    results,
+                    args.root,
+                    write=args.write,
+                    in_place=args.in_place,
+                )
+            )
+        else:
+            print(
+                format_rewrite_text(
+                    results,
+                    args.root,
+                    write=args.write,
+                    in_place=args.in_place,
+                )
+            )
 
     errors = [r for r in results if r.get("action") == "error"]
     sys.exit(1 if errors else 0)

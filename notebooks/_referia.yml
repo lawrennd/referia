@@ -1,3 +1,4 @@
+referia_config_version: 2
 browser: "Google Chrome.app"
 sortby:
   field: index

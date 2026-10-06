@@ -413,7 +413,6 @@ def normalise_referia_config(
     return data
 
 
-
 def effective_config_version(data: dict | None) -> int:
     """Declared ``referia_config_version`` if present, else inferred dialect.
 
@@ -509,3 +508,100 @@ def _text_has_version_key(text: str) -> bool:
 def deep_copy_config(data: dict) -> dict:
     """Deep-copy helper for tests that need an unmutated original."""
     return copy.deepcopy(data)
+
+
+# ---------------------------------------------------------------------------
+# Version enforcement (CIP-000F phases 3–4)
+# ---------------------------------------------------------------------------
+
+# Default after the machine-wide stamp corpus: warn on missing version.
+# Set REFERIA_CONFIG_VERSION_ENFORCEMENT=error to refuse unversioned loads,
+# or =off to silence. Package cutover to error is a later bump.
+DEFAULT_VERSION_ENFORCEMENT = "warn"
+_VALID_ENFORCEMENT = frozenset({"off", "warn", "error"})
+
+
+class ConfigVersionError(ValueError):
+    """Raised when a config's ``referia_config_version`` is missing or unsupported."""
+
+
+def get_version_enforcement() -> str:
+    """Return the active enforcement mode: ``off``, ``warn``, or ``error``."""
+    import os
+
+    raw = os.environ.get("REFERIA_CONFIG_VERSION_ENFORCEMENT")
+    if raw is None or raw.strip() == "":
+        return DEFAULT_VERSION_ENFORCEMENT
+    mode = raw.strip().lower()
+    if mode not in _VALID_ENFORCEMENT:
+        raise ConfigVersionError(
+            f"Invalid REFERIA_CONFIG_VERSION_ENFORCEMENT={raw!r}; "
+            f"expected one of {sorted(_VALID_ENFORCEMENT)}"
+        )
+    return mode
+
+
+def _config_path_hint(directory: str | None, user_file: str | None) -> str:
+    import os
+
+    if directory is not None and user_file is not None:
+        return os.path.join(directory, user_file)
+    if user_file is not None:
+        return user_file
+    if directory is not None:
+        return directory
+    return "<in-memory config>"
+
+
+def enforce_config_version(
+    data: dict | None,
+    *,
+    directory: str | None = None,
+    user_file: str | None = None,
+    mode: str | None = None,
+    allow_unversioned: bool = False,
+) -> int | None:
+    """Enforce ``referia_config_version`` according to *mode*.
+
+    :param data: Config mapping (not mutated).
+    :param mode: ``off`` / ``warn`` / ``error``. ``None`` uses
+        :func:`get_version_enforcement`.
+    :param allow_unversioned: Escape hatch; skip missing-version checks.
+    :return: Declared version integer, or ``None`` if absent/allowed.
+    :raises ConfigVersionError: Missing version in error mode, or declared
+        version newer than :data:`SUPPORTED_CONFIG_VERSION`.
+    """
+    if mode is None:
+        mode = get_version_enforcement()
+    else:
+        mode = mode.lower()
+        if mode not in _VALID_ENFORCEMENT:
+            raise ConfigVersionError(
+                f"Invalid version enforcement mode {mode!r}; "
+                f"expected one of {sorted(_VALID_ENFORCEMENT)}"
+            )
+
+    report = detect_config_dialect(data if isinstance(data, dict) else {})
+    path = _config_path_hint(directory, user_file)
+    declared = report.version_declared
+
+    if declared is not None and declared > SUPPORTED_CONFIG_VERSION:
+        raise ConfigVersionError(
+            f"Config {path!r} declares referia_config_version={declared}, "
+            f"but this referia only supports up to {SUPPORTED_CONFIG_VERSION}. "
+            "Upgrade referia or lower the version field."
+        )
+
+    if declared is not None or allow_unversioned or mode == "off":
+        return declared
+
+    # Missing version
+    msg = (
+        f"Config {path!r} has no referia_config_version. "
+        "Run `referia migrate --root DIR --stamp-only --write` "
+        "or add the field manually."
+    )
+    if mode == "warn":
+        warnings.warn(msg, UserWarning, stacklevel=2)
+        return None
+    raise ConfigVersionError(msg)

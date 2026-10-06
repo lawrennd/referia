@@ -1,7 +1,7 @@
 ---
 id: "2026-10-06_cip000F-stamp-machine-configs"
 title: "CIP-000F: Stamp referia_config_version on living machine configs"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-06"
 last_updated: "2026-10-06"
@@ -32,12 +32,12 @@ Record counts stamped / skipped / failed. Do not rewrite dialect keys.
 
 ## Acceptance Criteria
 
-- [ ] Dry-run reviewed before `--write`
-- [ ] All successful parses under chosen roots either already stamped or
+- [x] Dry-run reviewed before `--write`
+- [x] All successful parses under chosen roots either already stamped or
   receive `referia_config_version: 1` or `2`
-- [ ] No comment-loss / mass reformat of YAML
-- [ ] Summary counts committed or noted in this task’s progress updates
-- [ ] v0 / unreadable files listed and left alone
+- [x] No comment-loss / mass reformat of YAML
+- [x] Summary counts committed or noted in this task’s progress updates
+- [x] v0 / unreadable files listed and left alone
 
 ## Implementation Notes
 
@@ -58,3 +58,15 @@ is Ready/Completed.
 ### 2026-10-06
 
 Stamp-only CLI landed; this operational pass is Ready.
+
+### 2026-10-06 (machine stamp)
+
+Stamped all 314 `_referia.yml` under `/Users/neil` (Caches/Containers/venvs pruned):
+
+- stamped_v1: 226
+- stamped_v2: 88
+- errors: 0
+
+Roots included OneDrive referia (279), Documents/ref (11), refdemo, Downloads,
+lawrennd notebooks/projects, old_lawrennd copies, private, teaching.
+Proto `_config.yml` files were not stamped (separate name; migrator skips v0).

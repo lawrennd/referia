@@ -3,7 +3,7 @@ author: "Neil D. Lawrence"
 created: "2026-10-06"
 id: "000F"
 last_updated: "2026-10-06"
-status: "In Progress"
+status: "Implemented"
 compressed: false
 related_requirements: []
 related_cips: ["000A", "000B", "000C"]
@@ -24,7 +24,7 @@ title: "Detect, version, and migrate referia config dialects"
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
 - [x] In Progress - Actively being implemented
-- [ ] Implemented - Work complete, awaiting verification
+- [x] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected
 - [ ] Deferred
@@ -311,9 +311,9 @@ Backlog tasks created on acceptance (2026-10-06):
 - [x] Extract in-memory normaliser from `Interface` — `backlog/features/2026-10-06_cip000F-extract-normaliser.md`
 - [x] `referia check` dialect reporting — `backlog/features/2026-10-06_cip000F-check-dialect-report.md`
 - [x] `referia migrate --stamp-only` (surgical) — `backlog/features/2026-10-06_cip000F-migrate-stamp-only.md`
-- [ ] Machine-wide stamp of living `_referia.yml` trees — `backlog/infrastructure/2026-10-06_cip000F-stamp-machine-configs.md`
-- [ ] Warn then error on missing version — `backlog/features/2026-10-06_cip000F-enforce-version.md`
-- [ ] Full key-rewrite migrate mode — `backlog/features/2026-10-06_cip000F-migrate-rewrite.md`
+- [x] Machine-wide stamp of living `_referia.yml` trees — `backlog/infrastructure/2026-10-06_cip000F-stamp-machine-configs.md`
+- [x] Warn then error on missing version — `backlog/features/2026-10-06_cip000F-enforce-version.md`
+- [x] Full key-rewrite migrate mode — `backlog/features/2026-10-06_cip000F-migrate-rewrite.md`
 - [x] Related bug: `Interface.from_file` kwargs — `backlog/bugs/2026-10-06_interface-from-file-kwargs.md`
 - [x] Tests and fixtures (synthetic v1/v2 YAML) — `referia/tests/test_config_dialect.py`
 

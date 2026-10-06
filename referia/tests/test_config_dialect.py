@@ -157,7 +157,10 @@ def test_inferred_stamp_version_skips_declared_and_v0():
 
 def test_interface_accepts_allowed_roots_kwargs(tmp_path):
     """from_file-style kwargs must not raise TypeError."""
-    data = {"review": [{"type": "Checkbox", "field": "ok"}]}
+    data = {
+        "referia_config_version": 2,
+        "review": [{"type": "Checkbox", "field": "ok"}],
+    }
     iface = Interface(
         deep_copy_config(data),
         directory=str(tmp_path),
@@ -169,18 +172,26 @@ def test_interface_accepts_allowed_roots_kwargs(tmp_path):
 
 
 def test_interface_from_file_with_kwargs(tmp_path):
+    """from_file must construct referia Interface (path kwargs via __init__).
+
+    Installed lynguine ``from_file`` may not accept ``allowed_roots`` as a
+    parameter; newer lynguine passes them into ``cls(...)``. Cover constructor
+    kwargs in ``test_interface_accepts_lynguine_path_kwargs``; here only that
+    ``from_file`` succeeds for a minimal stamped config.
+    """
     cfg = tmp_path / "_referia.yml"
     cfg.write_text(
+        "referia_config_version: 2\n"
         "review:\n  - type: Checkbox\n    field: ok\n",
         encoding="utf-8",
     )
     iface = Interface.from_file(
         user_file="_referia.yml",
         directory=str(tmp_path),
-        allowed_roots=[str(tmp_path)],
     )
-    assert "review" in iface._config or True  # constructed successfully
     assert iface.directory == str(tmp_path)
+    assert iface._referia_config_version == 2
+    assert getattr(iface, "_referia_dialect_version", None) == 2
 
 
 def test_migrate_stamp_only_dry_run_and_write(tmp_path):
@@ -224,3 +235,176 @@ def test_check_reports_dialect(tmp_path):
     assert results[0]["dialect"]["version_inferred"] == 1
     payload = format_json(results, str(tmp_path))
     assert "version_inferred" in payload
+
+
+def test_enforce_warn_error_and_escape(monkeypatch):
+    from referia.config.dialect import (
+        ConfigVersionError,
+        enforce_config_version,
+    )
+
+    data = {"review": []}
+    monkeypatch.delenv("REFERIA_CONFIG_VERSION_ENFORCEMENT", raising=False)
+
+    with pytest.warns(UserWarning, match="no referia_config_version"):
+        assert enforce_config_version(data, mode="warn") is None
+
+    with pytest.raises(ConfigVersionError, match="no referia_config_version"):
+        enforce_config_version(data, mode="error")
+
+    assert (
+        enforce_config_version(
+            data, mode="error", allow_unversioned=True
+        )
+        is None
+    )
+    assert enforce_config_version(data, mode="off") is None
+
+    stamped = {"referia_config_version": 2, "review": []}
+    assert enforce_config_version(stamped, mode="error") == 2
+
+    with pytest.raises(ConfigVersionError, match="only supports"):
+        enforce_config_version(
+            {"referia_config_version": 99, "review": []}, mode="warn"
+        )
+
+
+def test_interface_warns_on_missing_version(tmp_path, monkeypatch):
+    monkeypatch.delenv("REFERIA_CONFIG_VERSION_ENFORCEMENT", raising=False)
+    data = {
+        "title": "T",
+        "review": [],
+        "input": {
+            "type": "local",
+            "index": "Name",
+            "data": [{"Name": "a"}],
+        },
+        "output": {
+            "type": "local",
+            "index": "Name",
+            "data": [],
+        },
+    }
+    with pytest.warns(UserWarning, match="no referia_config_version"):
+        Interface(
+            data=dict(data),
+            directory=str(tmp_path),
+            user_file="_referia.yml",
+            allowed_roots=[str(tmp_path)],
+        )
+
+    with pytest.raises(Exception, match="no referia_config_version"):
+        Interface(
+            data=dict(data),
+            directory=str(tmp_path),
+            user_file="_referia.yml",
+            allowed_roots=[str(tmp_path)],
+            version_enforcement="error",
+        )
+
+    iface = Interface(
+        data=dict(data),
+        directory=str(tmp_path),
+        user_file="_referia.yml",
+        allowed_roots=[str(tmp_path)],
+        version_enforcement="error",
+        allow_unversioned=True,
+    )
+    assert iface._referia_config_version is None
+
+
+def test_check_warns_missing_version(tmp_path, monkeypatch):
+    from referia.check import format_text, scan_configs
+
+    monkeypatch.delenv("REFERIA_CONFIG_VERSION_ENFORCEMENT", raising=False)
+    (tmp_path / "_referia.yml").write_text(
+        "referia_config_version: 2\nreview: []\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "_referia.yml").write_text(
+        "review: []\n",
+        encoding="utf-8",
+    )
+
+    warn_results = scan_configs(str(tmp_path), version_enforcement="warn")
+    by_rel = {r["relative_path"]: r for r in warn_results}
+    assert by_rel["_referia.yml"]["ok"] is True
+    assert by_rel["_referia.yml"]["warnings"] == []
+    assert by_rel["sub/_referia.yml"]["ok"] is True
+    assert any(
+        "missing referia_config_version" in w
+        for w in by_rel["sub/_referia.yml"]["warnings"]
+    )
+    text = format_text(warn_results, str(tmp_path))
+    assert "warning(s)" in text
+    assert "sub/_referia.yml" in text
+
+    err_results = scan_configs(str(tmp_path), version_enforcement="error")
+    by_rel = {r["relative_path"]: r for r in err_results}
+    assert by_rel["sub/_referia.yml"]["ok"] is False
+    assert by_rel["sub/_referia.yml"]["category"] == "missing_config_version"
+
+
+def test_migrate_rewrite_dry_run_and_write(tmp_path):
+    from referia.migrate import apply_rewrite, scan_for_rewrite
+
+    sub = tmp_path / "review"
+    sub.mkdir()
+    yml = sub / "_referia.yml"
+    yml.write_text(
+        textwrap.dedent(
+            """\
+            # may be lost on rewrite
+            title: T
+            allocation:
+              - type: excel
+                filename: a.xlsx
+                index: Name
+            scores:
+              type: excel
+              filename: s.xlsx
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    planned = scan_for_rewrite(str(tmp_path))
+    assert len(planned) == 1
+    assert planned[0]["action"] == "rewrite"
+    assert "-allocation" in planned[0]["changes"]
+    assert "+input" in planned[0]["changes"]
+
+    dry = apply_rewrite(planned, write=False)
+    assert dry[0]["written"] is False
+    assert not (sub / "_referia.migrated.yml").exists()
+
+    planned2 = scan_for_rewrite(str(tmp_path))
+    written = apply_rewrite(planned2, write=True, in_place=False)
+    assert written[0]["written"] is True
+    dest = sub / "_referia.migrated.yml"
+    assert dest.exists()
+    text = dest.read_text(encoding="utf-8")
+    assert "referia_config_version: 2" in text
+    assert "input:" in text
+    assert "output:" in text
+    assert "allocation:" not in text
+    assert "scores:" not in text
+
+    planned3 = scan_for_rewrite(str(tmp_path))
+    # Original still v1-ish; rewrite plan targets original _referia.yml
+    assert planned3[0]["action"] == "rewrite"
+
+    in_place = apply_rewrite(
+        scan_for_rewrite(str(tmp_path)), write=True, in_place=True
+    )
+    assert in_place[0]["written"] is True
+    assert (yml.with_suffix(".yml.bak")).exists() or (
+        sub / "_referia.yml.bak"
+    ).exists()
+    orig = yml.read_text(encoding="utf-8")
+    assert "input:" in orig
+    assert "referia_config_version: 2" in orig
+
+    planned4 = scan_for_rewrite(str(tmp_path))
+    assert planned4[0]["action"] == "skip_already_v2"
