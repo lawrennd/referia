@@ -14,6 +14,7 @@ Each result dict has the keys::
     category       – short error category string (None if ok)
     context        – list of annotated source lines around the error
     suggested_fix  – human-readable hint (None if ok or unknown)
+    dialect        – DialectReport fields (None if parse failed)
 
 Use ``format_text`` / ``format_json`` to render the result set for display or
 LLM consumption.
@@ -24,6 +25,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+
+from referia.config.dialect import detect_config_dialect
 
 
 # ---------------------------------------------------------------------------
@@ -106,12 +109,37 @@ def _check_one(yml_path: Path, root_path: Path) -> dict[str, Any]:
         "category": None,
         "context": [],
         "suggested_fix": None,
+        "dialect": None,
     }
     try:
         import yaml  # type: ignore[import]
         with open(yml_path, encoding="utf-8") as fh:
             content = fh.read()
-        yaml.safe_load(content)
+        data = yaml.safe_load(content)
+        if data is None:
+            data = {}
+        if isinstance(data, dict):
+            report = detect_config_dialect(data)
+            base["dialect"] = report.as_dict()
+            if report.conflicts:
+                base["ok"] = False
+                base["error"] = (
+                    "dialect conflict: " + ", ".join(report.conflicts)
+                )
+                base["category"] = "dialect_conflict"
+                base["suggested_fix"] = (
+                    "Remove mixed v1/v2 keys that name the same slot "
+                    "(e.g. allocation with input, scores with output)."
+                )
+        else:
+            base["dialect"] = {
+                "version_declared": None,
+                "version_inferred": None,
+                "markers": [],
+                "conflicts": [],
+                "needs_normalise": False,
+                "notes": ["YAML root is not a mapping"],
+            }
         return base
     except Exception as exc:
         try:
@@ -173,6 +201,22 @@ def scan_configs(root: str) -> list[dict[str, Any]]:
 # Formatters
 # ---------------------------------------------------------------------------
 
+def _dialect_bucket(result: dict[str, Any]) -> str:
+    """Classify a successful parse into a dialect summary bucket."""
+    d = result.get("dialect") or {}
+    inferred = d.get("version_inferred")
+    declared = d.get("version_declared")
+    if inferred == 0:
+        return "v0"
+    if d.get("conflicts"):
+        return "mixed"
+    if inferred == 1:
+        return "v1_stamped" if declared is not None else "v1_unlabelled"
+    if inferred == 2:
+        return "v2_stamped" if declared is not None else "v2_unlabelled"
+    return "unknown"
+
+
 def format_text(results: list[dict[str, Any]], root: str) -> str:
     """Return a human-readable report string."""
     lines: list[str] = []
@@ -181,11 +225,36 @@ def format_text(results: list[dict[str, Any]], root: str) -> str:
     errors = [r for r in results if not r["ok"]]
     ok_count = total - len(errors)
 
+    buckets = {
+        "v0": 0,
+        "v1_unlabelled": 0,
+        "v1_stamped": 0,
+        "v2_unlabelled": 0,
+        "v2_stamped": 0,
+        "mixed": 0,
+        "parse_error": 0,
+        "unknown": 0,
+    }
+    for r in results:
+        if not r["ok"] and r.get("category") != "dialect_conflict":
+            buckets["parse_error"] += 1
+        else:
+            buckets[_dialect_bucket(r)] += 1
+
     lines.append(f"Scanning {root_abs} ...")
     lines.append(f"  {total} config(s) found")
     lines.append("")
     lines.append(f"  \u2713 {ok_count:>4}  OK")
     lines.append(f"  \u2717 {len(errors):>4}  error(s)")
+    lines.append("")
+    lines.append("  Dialect:")
+    lines.append(f"    v0              {buckets['v0']:>4}")
+    lines.append(f"    v1 unlabelled   {buckets['v1_unlabelled']:>4}")
+    lines.append(f"    v1 stamped      {buckets['v1_stamped']:>4}")
+    lines.append(f"    v2 unlabelled   {buckets['v2_unlabelled']:>4}")
+    lines.append(f"    v2 stamped      {buckets['v2_stamped']:>4}")
+    lines.append(f"    mixed           {buckets['mixed']:>4}")
+    lines.append(f"    parse error     {buckets['parse_error']:>4}")
 
     if not errors:
         lines.append("")
@@ -228,5 +297,6 @@ def format_json(results: list[dict[str, Any]], root: str) -> str:
         "total_scanned": len(results),
         "error_count": len(errors),
         "errors": errors,
+        "results": results,
     }
     return json.dumps(payload, indent=2)

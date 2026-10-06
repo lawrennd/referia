@@ -1,7 +1,7 @@
 ---
 id: "2026-10-06_cip000F-detect-dialect"
 title: "CIP-000F: detect_config_dialect and DialectReport"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-06"
 last_updated: "2026-10-06"
@@ -49,3 +49,7 @@ dialect table.
 ### 2026-10-06
 
 Task created on CIP-000F acceptance.
+
+### 2026-10-06 (implementation)
+
+Implemented and covered by referia/tests/test_config_dialect.py.

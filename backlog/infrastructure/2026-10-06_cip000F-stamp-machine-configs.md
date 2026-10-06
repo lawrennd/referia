@@ -1,7 +1,7 @@
 ---
 id: "2026-10-06_cip000F-stamp-machine-configs"
 title: "CIP-000F: Stamp referia_config_version on living machine configs"
-status: "Proposed"
+status: "Ready"
 priority: "High"
 created: "2026-10-06"
 last_updated: "2026-10-06"
@@ -54,3 +54,7 @@ include personal Excel/PDF content in the referia git repo.
 
 Task created on CIP-000F acceptance. Status Proposed until stamp-only CLI
 is Ready/Completed.
+
+### 2026-10-06
+
+Stamp-only CLI landed; this operational pass is Ready.

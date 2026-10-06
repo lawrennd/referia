@@ -1,7 +1,7 @@
 ---
 id: "2026-10-06_cip000F-check-dialect-report"
 title: "CIP-000F: Extend referia check with dialect reporting"
-status: "Ready"
+status: "Completed"
 priority: "Medium"
 created: "2026-10-06"
 last_updated: "2026-10-06"
@@ -49,3 +49,7 @@ Reuse `detect_config_dialect`. Builds on existing `referia/check.py`.
 ### 2026-10-06
 
 Task created on CIP-000F acceptance.
+
+### 2026-10-06 (implementation)
+
+Implemented and covered by referia/tests/test_config_dialect.py.

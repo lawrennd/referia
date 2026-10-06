@@ -1,7 +1,7 @@
 ---
 id: "2026-10-06_cip000F-extract-normaliser"
 title: "CIP-000F: Extract normalise_referia_config from Interface"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-06"
 last_updated: "2026-10-06"
@@ -51,3 +51,7 @@ files still work.
 ### 2026-10-06
 
 Task created on CIP-000F acceptance.
+
+### 2026-10-06 (implementation)
+
+Implemented and covered by referia/tests/test_config_dialect.py.

@@ -1,7 +1,7 @@
 ---
 id: "2026-10-06_cip000F-migrate-stamp-only"
 title: "CIP-000F: referia migrate --stamp-only (surgical version insert)"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-06"
 last_updated: "2026-10-06"
@@ -50,3 +50,7 @@ configs. Full dialect rewrite is a separate task.
 ### 2026-10-06
 
 Task created on CIP-000F acceptance.
+
+### 2026-10-06 (implementation)
+
+Implemented and covered by referia/tests/test_config_dialect.py.

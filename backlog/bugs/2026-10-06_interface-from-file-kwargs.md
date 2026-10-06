@@ -1,7 +1,7 @@
 ---
 id: "2026-10-06_interface-from-file-kwargs"
 title: "Forward allowed_roots / unbounded_paths in referia Interface"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-06"
 last_updated: "2026-10-06"
@@ -54,3 +54,7 @@ Can land independently and should land early.
 ### 2026-10-06
 
 Bug recorded while accepting CIP-000F.
+
+### 2026-10-06 (implementation)
+
+Implemented and covered by referia/tests/test_config_dialect.py.

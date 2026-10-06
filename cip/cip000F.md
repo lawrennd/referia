@@ -3,7 +3,7 @@ author: "Neil D. Lawrence"
 created: "2026-10-06"
 id: "000F"
 last_updated: "2026-10-06"
-status: "Accepted"
+status: "In Progress"
 compressed: false
 related_requirements: []
 related_cips: ["000A", "000B", "000C"]
@@ -23,7 +23,7 @@ title: "Detect, version, and migrate referia config dialects"
 
 - [x] Proposed - Initial idea documented
 - [x] Accepted - Approved, ready to start work
-- [ ] In Progress - Actively being implemented
+- [x] In Progress - Actively being implemented
 - [ ] Implemented - Work complete, awaiting verification
 - [ ] Closed - Verified and complete
 - [ ] Rejected
@@ -307,15 +307,15 @@ Tenets: `explicit-implicit-separation`, `user-oriented-convenience`.
 
 Backlog tasks created on acceptance (2026-10-06):
 
-- [ ] Detector and report dataclass — `backlog/features/2026-10-06_cip000F-detect-dialect.md`
-- [ ] Extract in-memory normaliser from `Interface` — `backlog/features/2026-10-06_cip000F-extract-normaliser.md`
-- [ ] `referia check` dialect reporting — `backlog/features/2026-10-06_cip000F-check-dialect-report.md`
-- [ ] `referia migrate --stamp-only` (surgical) — `backlog/features/2026-10-06_cip000F-migrate-stamp-only.md`
+- [x] Detector and report dataclass — `backlog/features/2026-10-06_cip000F-detect-dialect.md`
+- [x] Extract in-memory normaliser from `Interface` — `backlog/features/2026-10-06_cip000F-extract-normaliser.md`
+- [x] `referia check` dialect reporting — `backlog/features/2026-10-06_cip000F-check-dialect-report.md`
+- [x] `referia migrate --stamp-only` (surgical) — `backlog/features/2026-10-06_cip000F-migrate-stamp-only.md`
 - [ ] Machine-wide stamp of living `_referia.yml` trees — `backlog/infrastructure/2026-10-06_cip000F-stamp-machine-configs.md`
 - [ ] Warn then error on missing version — `backlog/features/2026-10-06_cip000F-enforce-version.md`
 - [ ] Full key-rewrite migrate mode — `backlog/features/2026-10-06_cip000F-migrate-rewrite.md`
-- [ ] Related bug: `Interface.from_file` kwargs — `backlog/bugs/2026-10-06_interface-from-file-kwargs.md`
-- [ ] Tests and fixtures (synthetic v1/v2 YAML) — covered in the feature tasks above
+- [x] Related bug: `Interface.from_file` kwargs — `backlog/bugs/2026-10-06_interface-from-file-kwargs.md`
+- [x] Tests and fixtures (synthetic v1/v2 YAML) — `referia/tests/test_config_dialect.py`
 
 ## References
 
