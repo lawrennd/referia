@@ -1,7 +1,7 @@
 ---
 id: "2026-10-06_strict-columns-duplicate-excel-headers"
 title: "Dialect-aware strict_columns defaults (v1 false, v2 true)"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-10-06"
 last_updated: "2026-10-06"
@@ -45,16 +45,16 @@ debug belongs behind an opt-in flag if needed later—not the default.
 
 ## Acceptance Criteria
 
-- [ ] When `strict_columns` is omitted: **v1 → False**, **v2 → True**
+- [x] When `strict_columns` is omitted: **v1 → False**, **v2 → True**
   (use declared version if present, else inferred dialect)
-- [ ] Explicit `strict_columns: true|false` in YAML overrides the default
-- [ ] REF output config (`referia_config_version: 1`) loads without editing
+- [x] Explicit `strict_columns: true|false` in YAML overrides the default
+- [x] REF output config (`referia_config_version: 1`) loads without editing
   the spreadsheet or adding `strict_columns: false`
-- [ ] A stamped/canonical v2 config without the key stays strict by default
-- [ ] Server log on load failure stays sparse (type / safe category); no
+- [x] A stamped/canonical v2 config without the key stays strict by default
+- [x] Server log on load failure stays sparse (type / safe category); no
   column inventories or file payloads in default logging
-- [ ] Unit tests cover: omit key on v1, omit key on v2, explicit override
-- [ ] Update `TestStrictColumnsDefault` docstring/expectations to match
+- [x] Unit tests cover: omit key on v1, omit key on v2, explicit override
+- [x] Update `TestStrictColumnsDefault` docstring/expectations to match
   this dialect-aware policy (today they document “default True”)
 
 ## Implementation Notes
@@ -71,6 +71,12 @@ Trigger case (for regression, not for logging detail):
 
 Do not treat “richer server logs” as the solution.
 
+Implemented via:
+
+- `Interface._referia_dialect_version` captured before normalisation
+- `CustomDataFrame._resolve_strict_columns` / `_dialect_strict_columns_default`
+- `effective_config_version()` helper in `referia.config.dialect`
+
 ## Related
 
 - CIP: 000F
@@ -83,3 +89,8 @@ Do not treat “richer server logs” as the solution.
 
 Bug found on `/ref/output/`. Initially drafted as “informative error”;
 retargeted to dialect-aware defaults + sparse logs after discussion.
+
+### 2026-10-06 (later)
+
+Implemented dialect-aware defaults and updated `TestStrictColumnsDefault`.
+Status → Completed.

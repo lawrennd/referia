@@ -413,6 +413,20 @@ def normalise_referia_config(
     return data
 
 
+
+def effective_config_version(data: dict | None) -> int:
+    """Declared ``referia_config_version`` if present, else inferred dialect.
+
+    Used for policy defaults (e.g. ``strict_columns``) that should follow the
+    living dialect generation rather than only an explicit stamp.
+    Proto v0 is treated as generation 0.
+    """
+    report = detect_config_dialect(data)
+    if report.version_declared is not None:
+        return int(report.version_declared)
+    return int(report.version_inferred)
+
+
 def inferred_stamp_version(data: dict | None) -> int | None:
     """Version integer to write for stamp-only migrate, or ``None`` to skip.
 

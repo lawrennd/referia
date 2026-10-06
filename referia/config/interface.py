@@ -13,7 +13,10 @@ import lynguine
 from lynguine.config.context import Context
 from lynguine.log import Logger
 
-from referia.config.dialect import normalise_referia_config
+from referia.config.dialect import (
+    detect_config_dialect,
+    normalise_referia_config,
+)
 
 
 ctxt = Context()
@@ -85,6 +88,14 @@ class Interface(lynguine.config.interface.Interface):
 
         if data is None:
             data = {}
+
+        # Capture dialect generation before normalise rewrites v1 keys.
+        report = detect_config_dialect(data)
+        self._referia_dialect_version = (
+            int(report.version_declared)
+            if report.version_declared is not None
+            else int(report.version_inferred)
+        )
 
         # CIP-000F: explicit detect+normalise of v1 convenience keys
         log.debug("Normalising referia config dialect to lynguine form.")

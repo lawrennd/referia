@@ -771,6 +771,41 @@ class CustomDataFrame(data.CustomDataFrame):
             self.set_index(_index)
         return _index
 
+    def _dialect_strict_columns_default(self) -> bool:
+        """Default ``strict_columns`` from config dialect generation.
+
+        v1 (and older) configs default to permissive ``False`` so legacy Excel
+        sheets with extra or duplicated headers still load. v2 defaults to
+        ``True``. Explicit YAML always overrides this via
+        :meth:`_resolve_strict_columns`.
+        """
+        iface = self.interface
+        if iface is None:
+            return False
+        version = getattr(iface, "_referia_dialect_version", None)
+        if version is None:
+            version = getattr(iface, "_referia_config_version", None)
+        if version is None:
+            # Unversioned / unknown: treat as living legacy (permissive).
+            return False
+        try:
+            return int(version) >= 2
+        except (TypeError, ValueError):
+            return False
+
+    def _resolve_strict_columns(self, interface, strict_columns=None) -> bool:
+        """Resolve ``strict_columns``: explicit YAML wins, else dialect default.
+
+        Precedence: call argument → data-spec key → top-level key → dialect.
+        """
+        if strict_columns is not None:
+            return bool(strict_columns)
+        if interface is not None and "strict_columns" in interface:
+            return bool(interface["strict_columns"])
+        if self.interface is not None and "strict_columns" in self.interface:
+            return bool(self.interface["strict_columns"])
+        return self._dialect_strict_columns_default()
+
     def _strict_columns(self, group):
         if "strict_columns" in self.interface:
             return self.interface["strict_columns"]
@@ -779,7 +814,7 @@ class CustomDataFrame(data.CustomDataFrame):
         elif group=="cache" or group=="globals":
             return True
         else:
-            return False # historic default, should shift this to True.
+            return self._dialect_strict_columns_default()
 
     def preprocess(self):
         """Run any preprocessing computations."""
@@ -1184,14 +1219,7 @@ class CustomDataFrame(data.CustomDataFrame):
         #if "index" not in interface:
         #    interface["index"] = df.index.name
 
-        if strict_columns is None:
-            if "strict_columns" in interface and not interface["strict_columns"]:
-                strict_columns = False
-            elif self.interface is not None and "strict_columns" in self.interface and not self.interface["strict_columns"]:
-                strict_columns = False
-            else:
-                strict_columns = True
-                
+        strict_columns = self._resolve_strict_columns(interface, strict_columns)
 
         if strict_columns: # check that index is provided
             # TK: This should happen when interface is loaded and converted
