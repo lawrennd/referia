@@ -1,10 +1,10 @@
 ---
 id: "2026-07-13_web-widget-renderer"
 title: "Web display system: widget-to-HTML renderer"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-07-13"
-last_updated: "2026-07-13"
+last_updated: "2026-10-06"
 category: "features"
 related_cips: ["000B"]
 owner: "Neil D. Lawrence"
@@ -31,19 +31,19 @@ web backend.
 
 ## Acceptance Criteria
 
-- [ ] `render_widget(spec, value)` returns correct HTML for each widget type:
-  - [ ] `Textarea` → `<textarea>`
-  - [ ] `Text` → `<input type="text">`
-  - [ ] `IntSlider` / `BoundedIntText` → `<input type="range">` / `<input type="number">`
-  - [ ] `Dropdown` → `<select>` with `<option>` elements
-  - [ ] `Checkbox` → `<input type="checkbox">`
-  - [ ] `Markdown` (viewer) → rendered HTML via Python `markdown` library
-  - [ ] `SaveButton` / `ReloadButton` → `<button>` with appropriate HTMX attributes
-  - [ ] `PopulateButton` → `<button hx-post="/populate/{field}">`
-- [ ] `render_viewer(view_spec, data)` renders liquid/display viewer entries to HTML
-- [ ] Composite widget types (`CriterionCommentRaisesMeetsLowers` etc.) expand correctly via existing `Interface` expansion logic
-- [ ] Each rendered widget includes the correct HTMX attributes for live field updates (`hx-post`, `hx-target`, `hx-trigger`)
-- [ ] `visible_if` conditions are respected (hidden widgets rendered with `display:none` or excluded)
+- [x] `render_widget(spec, value)` returns correct HTML for each widget type:
+  - [x] `Textarea` → `<textarea>`
+  - [x] `Text` → `<input type="text">`
+  - [x] `IntSlider` / `BoundedIntText` → `<input type="range">` / `<input type="number">`
+  - [x] `Dropdown` → `<select>` with `<option>` elements
+  - [x] `Checkbox` → `<input type="checkbox">`
+  - [x] `Markdown` (viewer) → rendered HTML via Python `markdown` library
+  - [x] `SaveButton` / `ReloadButton` → `<button>` with appropriate HTMX attributes
+  - [x] `PopulateButton` → `<button hx-post="/populate/{field}">`
+- [x] `render_viewer(view_spec, data)` renders liquid/display viewer entries to HTML
+- [x] Composite widget types (`CriterionCommentRaisesMeetsLowers` etc.) expand correctly via existing `Interface` expansion logic
+- [x] Each rendered widget includes the correct HTMX attributes for live field updates (`hx-post`, `hx-target`, `hx-trigger`)
+- [x] `visible_if` conditions are respected (hidden widgets rendered with `display:none` or excluded)
 
 ## Implementation Notes
 
@@ -74,3 +74,9 @@ this is already Jupyter-independent.
 ### 2026-07-13
 
 Task created following acceptance of CIP-000B.
+
+### 2026-10-06
+
+Marked Completed. `referia/web/render.py` and `tests/test_web_render.py` cover
+the widget types above; cluster flattening lives in `WebReviewer._flatten_entries`.
+CIP-0006 template expansion still happens in `Interface` before render.

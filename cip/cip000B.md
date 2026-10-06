@@ -2,7 +2,7 @@
 author: "Neil D. Lawrence"
 created: "2026-07-13"
 id: "000B"
-last_updated: "2026-07-13"
+last_updated: "2026-10-06"
 status: "Accepted"
 compressed: false
 related_requirements: []
@@ -311,19 +311,19 @@ drives both rendering targets.
 
 ## Implementation Status
 
-- [ ] Skeleton FastAPI app and CLI entry point
-- [ ] `WebReviewer` class with core state management
-- [ ] Widget-to-HTML renderer for basic widget types
-- [ ] HTMX routes for field update and index navigation
-- [ ] Jinja2 templates (base page + review panel)
-- [ ] CSS layout
+- [x] Skeleton FastAPI app and CLI entry point
+- [x] `WebReviewer` class with core state management
+- [x] Widget-to-HTML renderer for basic widget types
+- [x] HTMX routes for field update and index navigation
+- [x] Jinja2 templates (base page + review panel)
+- [x] CSS layout
 - [ ] Document serving route
-- [ ] Composite widget expansion in web renderer
-- [ ] Unit tests for `WebReviewer`
-- [ ] Unit tests for `render_widget`
-- [ ] Integration tests via `TestClient`
-- [ ] `pyproject.toml` dependency additions
-- [ ] README documentation for `referia serve`
+- [x] Composite widget expansion in web renderer
+- [x] Unit tests for `WebReviewer`
+- [x] Unit tests for `render_widget`
+- [x] Integration tests via `TestClient`
+- [x] `pyproject.toml` dependency additions
+- [x] README documentation for `referia serve`
 
 ## References
 

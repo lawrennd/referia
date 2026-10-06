@@ -1,7 +1,7 @@
 ---
 author: Neil D. Lawrence
 created: "2026-07-15"
-last_updated: "2026-07-15"  # refined URL scheme and index query parameter spec
+last_updated: "2026-10-06"
 status: Accepted
 related_requirements: []
 related_cips: ["000B"]
@@ -209,14 +209,14 @@ None formalised yet.
 
 ## Implementation Status
 
-- [ ] Refactor `create_app()` to support optional root
-- [ ] Add catch-all path router
-- [ ] Reviewer cache with mtime invalidation
-- [ ] Landing page
+- [x] Refactor `create_app()` to support optional root
+- [x] Add catch-all path router
+- [x] Reviewer cache with mtime invalidation
+- [x] Landing page
 - [ ] State in URL: `index` and `subindex` query parameters (label or integer, `-1`/`0` for last/first)
-- [ ] Non-default config filename support in path (e.g. `_referia_draft.yml`)
-- [ ] CLI `--root` option
-- [ ] Tests
+- [x] Non-default config filename support in path (e.g. `_referia_draft.yml`)
+- [x] CLI `--root` option
+- [x] Tests (root-server routing and listing; index/subindex query semantics still open)
 
 ## References
 
