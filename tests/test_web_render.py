@@ -45,6 +45,25 @@ class TestWidgetContainer:
         assert 'id="btn-widget-summary"' in html
         assert 'id="widget-summary"' not in html
 
+    def test_container_id_sanitises_spaces(self):
+        """Spaced field names must become CSS-safe ids (HTMX OOB uses querySelector)."""
+        html = render_widget(_w("Textarea", "Importance Fairness"), "")
+        assert 'id="widget-Importance_Fairness"' in html
+        assert 'id="widget-Importance Fairness"' not in html
+
+    def test_unsafe_field_name_logs_once(self, caplog):
+        """Sanitising a field name should warn once, not on every render."""
+        import logging
+        from referia.web import render as render_mod
+
+        render_mod._warned_dom_ids.discard("Overall Fairness")
+        with caplog.at_level(logging.WARNING, logger="referia.web.render"):
+            render_widget(_w("Textarea", "Overall Fairness"), "")
+            render_widget(_w("Textarea", "Overall Fairness"), "")
+        matches = [r for r in caplog.records if "Overall Fairness" in r.getMessage()]
+        assert len(matches) == 1
+        assert "rewritten" in matches[0].getMessage()
+
 
 # ---------------------------------------------------------------------------
 # Textarea
@@ -378,6 +397,18 @@ class TestButtons:
         })
         assert 'hx-post="/populate/chapterSummary"' in html
         assert 'hx-indicator="#widget-chapterSummary"' in html
+
+    def test_populate_button_spaced_field_uses_safe_id_and_encoded_url(self):
+        """Spaces in field names must not appear in ids or raw URL paths."""
+        html = render_widget({
+            "type": "PopulateButton",
+            "field": "Importance Fairness",
+            "args": {"description": "Check fair"},
+        })
+        assert 'hx-post="/populate/Importance%20Fairness"' in html
+        assert 'hx-indicator="#widget-Importance_Fairness"' in html
+        assert 'hx-indicator="#widget-Importance Fairness"' not in html
+        assert 'id="btn-widget-Importance_Fairness"' in html
 
     def test_button_description(self):
         html = render_widget({"type": "SaveButton", "field": "", "args": {"description": "Save & Continue"}})

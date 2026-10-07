@@ -17,10 +17,17 @@ render_form(specs, data) -> str
 """
 
 import html as _html
+import logging
 import re
 from typing import Any
+from urllib.parse import quote
 
 from lynguine.util.misc import markdown2html
+
+log = logging.getLogger(__name__)
+
+# Field names already warned about (avoid flooding logs on every re-render).
+_warned_dom_ids: set[str] = set()
 
 
 # ---------------------------------------------------------------------------
@@ -30,6 +37,40 @@ from lynguine.util.misc import markdown2html
 def _escape(value: Any) -> str:
     """HTML-escape a value for safe use in attributes or text."""
     return _html.escape(str(value) if value is not None else "")
+
+
+def _widget_dom_id(field: str) -> str:
+    """Return a CSS/HTML-safe id fragment for a field name.
+
+    Field names may contain spaces (e.g. ``Importance Fairness``).  Spaces are
+    invalid in HTML ids and break ``querySelector('#…')`` / HTMX OOB swaps,
+    which treat the space as a descendant combinator.  Replace runs of
+    characters outside ``[A-Za-z0-9_-]`` with a single underscore.
+
+    Logs a one-shot warning per distinct field name when sanitisation changes
+    the identifier, so authors notice that ``widget-{field}`` is rewritten.
+    """
+    raw = str(field)
+    s = re.sub(r"[^A-Za-z0-9_-]+", "_", raw).strip("_")
+    if not s:
+        s = "field"
+    elif s[0].isdigit():
+        s = f"f_{s}"
+    if s != raw and raw not in _warned_dom_ids:
+        _warned_dom_ids.add(raw)
+        log.warning(
+            "Field name %r is not a valid HTML/CSS id; widget DOM id rewritten "
+            "to %r. Prefer field names using only letters, digits, underscore, "
+            "and hyphen so ids match the column name.",
+            raw,
+            s,
+        )
+    return s
+
+
+def _url_path_segment(field: str) -> str:
+    """Percent-encode a field name for use in a URL path segment."""
+    return quote(str(field), safe="")
 
 
 def _htmx_field_attrs(column: str, trigger: str = "change") -> str:
@@ -42,9 +83,10 @@ def _htmx_field_attrs(column: str, trigger: str = "change") -> str:
     ``change`` until focus leaves the element.
     """
     col = _escape(column)
+    col_url = _url_path_segment(column)
     return (
         f'name="{col}" '
-        f'hx-post="/field/{col}" '
+        f'hx-post="/field/{col_url}" '
         f'hx-trigger="{trigger}" '
         f'hx-target="#status-bar" '
         f'hx-swap="innerHTML"'
@@ -85,10 +127,10 @@ def _wrap_widget(inner: str, spec: dict, data: dict) -> str:
     widget_type = spec.get("type", "")
     if widget_type == "PopulateButton":
         col = _populate_button_target(spec)
-        css_id = f' id="btn-widget-{_escape(col)}"' if col else ""
+        css_id = f' id="btn-widget-{_widget_dom_id(col)}"' if col else ""
     else:
         col = spec.get("field", "")
-        css_id = f' id="widget-{_escape(col)}"' if col else ""
+        css_id = f' id="widget-{_widget_dom_id(col)}"' if col else ""
     vis = _visibility_style(spec, data)
     return f'<div class="widget-container"{css_id}{vis}>\n{inner}\n</div>'
 
@@ -406,11 +448,11 @@ def _render_populate_button(spec: dict, value: Any) -> str:
     args = spec.get("args", {})
     label = args.get("description", "Populate")
     target = _populate_button_target(spec)
-    col = _escape(target)
-    indicator = f"widget-{col}"
+    col_url = _url_path_segment(target)
+    indicator = f"widget-{_widget_dom_id(target)}"
     return (
         f'<button class="widget-button populate-button" '
-        f'hx-post="/populate/{col}" hx-target="#status-bar" hx-swap="innerHTML" '
+        f'hx-post="/populate/{col_url}" hx-target="#status-bar" hx-swap="innerHTML" '
         f'hx-indicator="#{indicator}" hx-disabled-elt="this">'
         f"{_escape(label)}</button>"
     )
