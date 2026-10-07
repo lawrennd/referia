@@ -1,7 +1,7 @@
 ---
 id: "2026-10-07_examined-config-missing-name-compute"
 title: "theses/examined/_referia.yml missing compute block for Name index"
-status: "Proposed"
+status: "Completed"
 priority: "Low"
 created: "2026-10-07"
 last_updated: "2026-10-07"
@@ -31,11 +31,11 @@ Excel→YAML conversion — the same failure occurs with `candidates.xlsx`.
 
 ## Acceptance Criteria
 
-- [ ] `examined/_referia.yml` has a `compute:` block in `allocation:` that
+- [x] `examined/_referia.yml` has a `compute:` block in `allocation:` that
       derives `Name` using the same `render_liquid` template as `pdfpages/_referia.yml`
-- [ ] `WebReviewer("_referia.yml", examined_dir).set_index(name)` succeeds for
+- [x] `WebReviewer("_referia.yml", examined_dir).set_index(name)` succeeds for
       at least one valid candidate name
-- [ ] The examined master-list view loads correctly in the web server
+- [x] The examined master-list view loads correctly in the web server
 
 ## Implementation Notes
 
@@ -68,3 +68,10 @@ referia package itself.
 
 Identified during cip000A validation. Pre-existing issue; not a regression
 from the YAML migration.
+
+Fixed: added `compute:` block to `allocation:` in `examined/_referia.yml`,
+copying the `render_liquid` template from `pdfpages/_referia.yml`. Dropped
+`suffix` from `row_args` since `candidates.yml` has no suffix column
+(`pdfpages` handles this via an explicit `columns:` list; here we simply omit
+it and the Liquid `{% if suffix %}` guard evaluates as empty). Validated:
+16 candidates load with correct `Name` indices; `set_index` succeeds.
