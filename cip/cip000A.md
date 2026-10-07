@@ -1,12 +1,13 @@
 ---
-author: "Neil D. Lawrence"
-created: "2026-07-05"
-id: "000A"
-last_updated: "2026-08-18"
-status: "Implemented"
+author: Neil D. Lawrence
+created: '2026-07-05'
+id: 000A
+last_updated: '2026-10-07'
+status: Closed
 github_issue: 13
 compressed: false
-related_requirements: []
+related_requirements:
+- '0007'
 related_cips: []
 tags:
 - cip
@@ -14,7 +15,7 @@ tags:
 - yaml
 - excel
 - migration
-title: "Migration from Excel to YAML for referia data files"
+title: Migration from Excel to YAML for referia data files
 ---
 
 # CIP-000A: Migration from Excel to YAML for referia data files
@@ -25,7 +26,7 @@ title: "Migration from Excel to YAML for referia data files"
 - [ ] Accepted - Approved, ready to start work
 - [ ] In Progress - Actively being implemented
 - [x] Implemented - Work complete, awaiting verification
-- [ ] Closed - Verified and complete
+- [x] Closed - Verified and complete
 - [ ] Rejected
 - [ ] Deferred
 
@@ -165,8 +166,8 @@ Manual validation in the Jupyter assessment notebook:
 - [x] Convert `pdfpages.xlsx` → `pdfpages.yml`
 - [x] Update `theses/examined/pdfpages/_referia.yml`
 - [x] Update `theses/examined/_referia.yml`
-- [ ] Validate in live notebook session
-- [ ] Archive or remove `.xlsx` files once validated
+- [x] Validate in live notebook session
+- [x] Archive or remove `.xlsx` files once validated
 
 ## References
 
