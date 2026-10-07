@@ -1,12 +1,16 @@
 ---
-author: "Neil D. Lawrence"
-created: "2026-10-06"
-id: "000F"
-last_updated: "2026-10-06"
-status: "Closed"
+author: Neil D. Lawrence
+created: '2026-10-06'
+id: 000F
+last_updated: '2026-10-06'
+status: Closed
 compressed: true
-related_requirements: []
-related_cips: ["000A", "000B", "000C"]
+related_requirements:
+- 000C
+related_cips:
+- 000A
+- 000B
+- 000C
 tags:
 - cip
 - yaml
@@ -14,7 +18,7 @@ tags:
 - config
 - versioning
 - compatibility
-title: "Detect, version, and migrate referia config dialects"
+title: Detect, version, and migrate referia config dialects
 ---
 
 # CIP-000F: Detect, version, and migrate referia config dialects

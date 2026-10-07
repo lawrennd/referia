@@ -1,12 +1,15 @@
 ---
-author: "Neil D. Lawrence"
-created: "2026-07-13"
-id: "000B"
-last_updated: "2026-10-06"
-status: "In Progress"
+author: Neil D. Lawrence
+created: '2026-07-13'
+id: 000B
+last_updated: '2026-10-06'
+status: In Progress
 compressed: false
-related_requirements: []
-related_cips: ["0005", "0006"]
+related_requirements:
+- 0008
+related_cips:
+- '0005'
+- '0006'
 tags:
 - cip
 - web
@@ -14,7 +17,7 @@ tags:
 - rendering
 - fastapi
 - htmx
-title: "Web Display System — Non-Jupyter Rendering Backend"
+title: Web Display System — Non-Jupyter Rendering Backend
 ---
 
 # CIP-000B: Web Display System — Non-Jupyter Rendering Backend

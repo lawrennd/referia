@@ -1,12 +1,14 @@
 ---
-author: "lawrennd"
-created: "2026-08-18"
-id: "000D"
-last_updated: "2026-08-18"
-status: "In Progress"
+author: lawrennd
+created: '2026-08-18'
+id: 000D
+last_updated: '2026-08-18'
+status: In Progress
 compressed: false
-related_requirements: []
-related_cips: ["0006"]
+related_requirements:
+- 000A
+related_cips:
+- '0006'
 tags:
 - cip
 - langchain
@@ -14,7 +16,7 @@ tags:
 - security
 - dependabot
 - migration
-title: "LangChain 1.x Migration for LLM Integration"
+title: LangChain 1.x Migration for LLM Integration
 ---
 
 # CIP-000D: LangChain 1.x Migration for LLM Integration

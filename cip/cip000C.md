@@ -3,7 +3,8 @@ author: Neil D. Lawrence
 created: '2026-07-15'
 last_updated: '2026-10-06'
 status: Accepted
-related_requirements: []
+related_requirements:
+- 0009
 related_cips:
 - 000B
 tags:
