@@ -37,12 +37,13 @@ LLM capabilities are optional. To install the required dependencies:
 poetry install --with llm
 ```
 
-This installs:
-- `langchain` - LLM framework
-- `langchain-openai` - OpenAI integration
-- `langchain-anthropic` - Anthropic integration
-- `openai` - OpenAI Python SDK
-- `anthropic` - Anthropic Python SDK
+This installs (all **LangChain 1.x** — migrated from 0.3.x via [CIP-000D](../cip/cip000D.md)):
+- `langchain` ≥ 1.3.9 - LLM framework
+- `langchain-core` ≥ 1.2.22 - Core message types and interfaces
+- `langchain-openai` ≥ 1.1.14 - OpenAI integration
+- `langchain-anthropic` ≥ 1.4.6 - Anthropic integration
+- `openai` ≥ 2.26.0 - OpenAI Python SDK
+- `anthropic` ≥ 0.96.0 - Anthropic Python SDK
 - `tenacity` - Retry logic
 - `diskcache` - Response caching
 
