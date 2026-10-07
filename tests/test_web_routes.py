@@ -646,9 +646,40 @@ class TestDocumentRoutes:
         with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
             app = create_app(user_file="_referia.yml", directory=str(tmp_path))
             with TestClient(app) as c:
-                response = c.get("/record-document/localpdf/0")
+                response = c.get(
+                    "/record-document/localpdf/0", params={"index": "alice"}
+                )
         assert response.status_code == 200
         assert response.content.startswith(b"%PDF")
+        reviewer.set_index.assert_called_with("alice")
+
+    def test_record_document_applies_index_before_resolve(self, tmp_path):
+        pdf = tmp_path / "thesis.pdf"
+        pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+        reviewer = _build_mock_reviewer()
+        reviewer._directory = str(tmp_path)
+        reviewer.get_record_document.return_value = pdf
+        reviewer.allowed_roots_for_document.return_value = [tmp_path]
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory=str(tmp_path))
+            with TestClient(app) as c:
+                response = c.get(
+                    "/record-document/editpdf/0", params={"index": "bob"}
+                )
+        assert response.status_code == 200
+        reviewer.set_index.assert_called_once_with("bob")
+
+    def test_record_document_missing_index_404(self, tmp_path):
+        reviewer = _build_mock_reviewer()
+        reviewer._directory = str(tmp_path)
+        reviewer.set_index.side_effect = KeyError('Index "99" not found in data')
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory=str(tmp_path))
+            with TestClient(app) as c:
+                response = c.get(
+                    "/record-document/localpdf/0", params={"index": "99"}
+                )
+        assert response.status_code == 404
 
     def test_record_document_unknown_kind_404(self, client):
         response = client.get("/record-document/nope/0")
@@ -665,5 +696,5 @@ class TestDocumentRoutes:
             with TestClient(app) as c:
                 response = c.get("/")
         assert "document-panel" in response.text
-        assert 'src="/record-document/localpdf/0"' in response.text
+        assert 'src="/record-document/localpdf/0?index=alice"' in response.text
         assert "thesis" in response.text

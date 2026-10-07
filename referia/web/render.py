@@ -521,15 +521,24 @@ def render_document_panel(
     pdfs: list[dict],
     urls: list[dict],
     prefix: str = "",
+    current_index: Any = None,
 ) -> str:
     """HTML for PDFs and URL links shown beside the review form.
 
     *prefix* is the root-server config path (e.g. ``/theses/examined/introduction``)
     or empty in single-config mode.  Iframe ``src`` values must include it;
     HTMX prefix rewriting does not apply to ``<iframe>`` requests.
+
+    *current_index* is appended as ``?index=`` so each record has a distinct
+    document URL (see backlog ``2026-10-07_web-record-document-index-in-url``).
     """
+    from urllib.parse import quote
+
     if not pdfs and not urls:
         return ""
+    index_q = ""
+    if current_index is not None:
+        index_q = f"?index={quote(str(current_index), safe='')}"
     parts = ['<div class="document-panel">', "<h2>Documents</h2>"]
     if urls:
         parts.append('<ul class="document-url-list">')
@@ -546,7 +555,7 @@ def render_document_panel(
         kind = _escape(str(entry.get("kind") or "localpdf"))
         n = int(entry.get("n") or 0)
         label = _escape(str(entry.get("label") or kind))
-        src = _escape(f"{prefix}/record-document/{kind}/{n}")
+        src = _escape(f"{prefix}/record-document/{kind}/{n}{index_q}")
         parts.append('<details class="pdf-entry">')
         parts.append(f"<summary>{label}</summary>")
         if entry.get("exists"):

@@ -1,7 +1,7 @@
 ---
 id: "2026-10-07_web-record-document-index-in-url"
 title: "Web PDF iframe URL must include the active record index"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-07"
 last_updated: "2026-10-07"
@@ -57,16 +57,16 @@ string→typed label coercion as `GET /record?index=` so
 
 ## Acceptance Criteria
 
-- [ ] Document panel iframe (and “Open in a new tab”) URLs include the active
+- [x] Document panel iframe (and “Open in a new tab”) URLs include the active
       record index (query param or path segment — pick one and document it).
-- [ ] `GET …/record-document/{kind}/{n}?index=<label>` (or equivalent) sets
+- [x] `GET …/record-document/{kind}/{n}?index=<label>` (or equivalent) sets
       that index before resolving the file, using the same coercion as
       `WebReviewer.set_index` / `_apply_index`.
-- [ ] Changing the index selector yields a **different** document URL when
+- [x] Changing the index selector yields a **different** document URL when
       the underlying file differs; the correct PDF for that row is served.
-- [ ] Missing / unknown index returns 404 (same policy as `/record`).
-- [ ] Root-server and single-config routes both behave correctly.
-- [ ] Unit tests cover string labels, numeric labels (`"2"` → int `2`), and
+- [x] Missing / unknown index returns 404 (same policy as `/record`).
+- [x] Root-server and single-config routes both behave correctly.
+- [x] Unit tests cover string labels, numeric labels (`"2"` → int `2`), and
       missing index.
 
 ## Implementation Notes
@@ -102,3 +102,7 @@ Do not change lynguine; keep HTTP string coercion in referia’s web layer.
 
 Bug diagnosed while reviewing ai@cam teaching proposals in the web UI.
 Backlog created; not yet implemented.
+
+Implemented: `render_document_panel` adds `?index=`; `/record-document`
+handlers call `_apply_index` before resolve. Tests in `test_web_render.py`
+and `test_web_routes.py`.

@@ -606,9 +606,21 @@ class TestRenderDocumentPanel:
             [{"kind": "localpdf", "n": 0, "label": "thesis", "exists": True}],
             [],
             prefix="/theses/examined",
+            current_index="alice",
         )
-        assert 'src="/theses/examined/record-document/localpdf/0"' in html
+        assert 'src="/theses/examined/record-document/localpdf/0?index=alice"' in html
         assert "thesis" in html
+
+    def test_pdf_iframe_includes_index_query(self):
+        from referia.web.render import render_document_panel
+
+        html = render_document_panel(
+            [{"kind": "editpdf", "n": 0, "label": "proposal", "exists": True}],
+            [],
+            current_index=2,
+        )
+        assert 'src="/record-document/editpdf/0?index=2"' in html
+        assert 'href="/record-document/editpdf/0?index=2"' in html
 
     def test_missing_pdf_has_no_iframe(self):
         from referia.web.render import render_document_panel
@@ -616,6 +628,7 @@ class TestRenderDocumentPanel:
         html = render_document_panel(
             [{"kind": "editpdf", "n": 1, "label": "ch1", "exists": False}],
             [],
+            current_index="bob",
         )
         assert "<iframe" not in html
         assert "PDF not found" in html

@@ -208,6 +208,7 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         reviewer.list_pdf_entries(),
         reviewer.list_url_entries(),
         prefix,
+        current_index=current_index,
     )
 
     return {
@@ -486,12 +487,24 @@ def _serve_document_file(request: Request, reviewer, rel_path: str):
     return _file_response(resolved)
 
 
-def _serve_record_document(request: Request, reviewer, kind: str, n: int):
-    """Serve the current record's localpdf/editpdf entry *n*."""
+def _serve_record_document(
+    request: Request,
+    reviewer,
+    kind: str,
+    n: int,
+    index: str | None = None,
+):
+    """Serve the current record's localpdf/editpdf entry *n*.
+
+    When *index* is supplied (from ``?index=`` on the iframe URL), switch to
+    that record before resolving the file so each row has a distinct document
+    resource identity.
+    """
     from fastapi import HTTPException
 
     if kind not in {"localpdf", "editpdf"}:
         raise HTTPException(status_code=404, detail="Unknown document kind")
+    _apply_index(reviewer, index)
     path = reviewer.get_record_document(kind, n)
     if path is None or not path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
@@ -506,10 +519,12 @@ def _serve_record_document(request: Request, reviewer, kind: str, n: int):
 
 
 @router.get("/record-document/{kind}/{n}")
-async def get_record_document(request: Request, kind: str, n: int):
-    """Serve one PDF declared in ``localpdf`` / ``editpdf`` for the current record."""
+async def get_record_document(
+    request: Request, kind: str, n: int, index: str | None = None
+):
+    """Serve one PDF declared in ``localpdf`` / ``editpdf`` for the given record."""
     reviewer = _reviewer(request)
-    return _serve_record_document(request, reviewer, kind, n)
+    return _serve_record_document(request, reviewer, kind, n, index)
 
 
 @router.get("/document/{path:path}")
@@ -1180,9 +1195,15 @@ async def root_populate(request: Request, config_path: str, field: str):
 
 
 @root_router.get("/{config_path:path}/record-document/{kind}/{n}")
-async def root_get_record_document(request: Request, config_path: str, kind: str, n: int):
+async def root_get_record_document(
+    request: Request,
+    config_path: str,
+    kind: str,
+    n: int,
+    index: str | None = None,
+):
     reviewer = _root_reviewer(request, config_path)
-    return _serve_record_document(request, reviewer, kind, n)
+    return _serve_record_document(request, reviewer, kind, n, index)
 
 
 @root_router.get("/{config_path:path}/document/{path:path}")
