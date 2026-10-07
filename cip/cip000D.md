@@ -3,7 +3,7 @@ author: lawrennd
 created: '2026-08-18'
 id: 000D
 last_updated: '2026-10-07'
-status: Implemented
+status: Closed
 compressed: false
 related_requirements:
 - 000A
@@ -27,7 +27,7 @@ title: LangChain 1.x Migration for LLM Integration
 - [x] Accepted — Plan reviewed and approved
 - [x] In Progress — Migration underway
 - [x] Implemented — Code and lockfile updated; all tests pass; Dependabot alerts closed
-- [ ] Closed — Implementation reviewed and merged
+- [x] Closed — Implementation reviewed and merged
 - [ ] Rejected
 - [ ] Deferred
 

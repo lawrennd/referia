@@ -43,8 +43,8 @@ the three implementation tasks.
 - [x] `poetry.lock` on `main` has llm-group packages at patched 1.x versions
 - [x] LLM tests passed as part of the api-compat task
 - [x] Dependabot alerts #72, #74–#78 confirmed closed (verified 2026-10-07 — no LangChain alerts in open list)
-- [x] CIP-000D status: Implemented
-- [ ] Decision recorded: compress into formal docs now or defer
+- [x] CIP-000D status: Closed
+- [x] Decision recorded: defer compression (CIP-000D marked `compressed: false`)
 
 ## Implementation Notes
 
