@@ -1,7 +1,7 @@
 ---
 id: "2026-10-07_web-resizable-document-review-split"
 title: "Web UI: resizable split between document viewer and review form"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-10-07"
 last_updated: "2026-10-07"
@@ -35,26 +35,27 @@ HTMX panel swap.
 
 ## Acceptance Criteria
 
-- [ ] A vertical drag handle sits between the document panel and the review
+- [x] A vertical drag handle sits between the document panel and the review
       form on desktop layouts.
-- [ ] Dragging the handle redistributes horizontal space between the two panes
+- [x] Dragging the handle redistributes horizontal space between the two panes
       (with sensible min widths so neither pane collapses to unusable).
-- [ ] The chosen split survives HTMX record/`/record` swaps in the same page
+- [x] The chosen split survives HTMX record/`/record` swaps in the same page
       load (handle is outside the swapped fragment, or ratio is reapplied).
-- [ ] Optional but preferred: remember the ratio in `localStorage` per browser.
-- [ ] Keyboard-accessible resize is acceptable as a follow-on; mouse/trackpad
+- [x] Optional but preferred: remember the ratio in `localStorage` per browser.
+- [x] Keyboard-accessible resize is acceptable as a follow-on; mouse/trackpad
       drag is enough for the first cut.
-- [ ] Narrow / single-column layouts remain usable (splitter disabled or hidden
+- [x] Narrow / single-column layouts remain usable (splitter disabled or hidden
       when panes stack).
 
 ## Implementation Notes
 
-Likely touch points: `referia/web/templates/base.html` (or the panel chrome
-outside `#review-panel`), CSS for the two-column layout, and a small amount of
-JS for pointer drag + optional `localStorage`.
+Implemented with:
 
-Keep the splitter chrome outside HTMX-swapped fragments where possible so
-dragging state is not destroyed on every index change.
+- `.col-splitter` between `.viewer-col` and `.review-col` in
+  `review_panel.html` (`role="separator"`).
+- Flex layout + `--viewer-pct` in `style.css` (hidden below 900px).
+- Pointer drag + `localStorage` key `referia.split.viewerPct` in `base.html`,
+  reapplied on `htmx:afterSettle` when `#review-panel` is swapped.
 
 ## Related
 
@@ -66,3 +67,7 @@ dragging state is not destroyed on every index change.
 ### 2026-10-07
 
 Task created as Proposed after web PDF index-in-URL fix landed.
+
+### 2026-10-07
+
+Implemented splitter markup, CSS, and JS; marked Completed.

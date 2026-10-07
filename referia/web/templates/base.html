@@ -128,6 +128,76 @@
         var el = (evt.detail && evt.detail.elt) ? evt.detail.elt : document.body;
         typesetMath(el);
       });
+
+      /* Resizable document / review split.  Ratio stored in localStorage and
+         reapplied after HTMX swaps recreate .two-col inside #review-panel. */
+      (function () {
+        var KEY = "referia.split.viewerPct";
+        var MIN = 20;
+        var MAX = 80;
+
+        function clampPct(pct) {
+          if (isNaN(pct)) return 50;
+          return Math.min(MAX, Math.max(MIN, pct));
+        }
+
+        function applySplit(twoCol) {
+          if (!twoCol) return;
+          var stored = parseFloat(localStorage.getItem(KEY) || "50");
+          twoCol.style.setProperty("--viewer-pct", clampPct(stored) + "%");
+        }
+
+        function bindSplitter(twoCol) {
+          var handle = twoCol.querySelector(".col-splitter");
+          if (!handle || handle.dataset.splitBound === "1") return;
+          handle.dataset.splitBound = "1";
+          handle.addEventListener("pointerdown", function (e) {
+            if (window.matchMedia("(max-width: 900px)").matches) return;
+            if (e.button !== undefined && e.button !== 0) return;
+            e.preventDefault();
+            handle.setPointerCapture(e.pointerId);
+            twoCol.classList.add("is-resizing");
+
+            function onMove(ev) {
+              var rect = twoCol.getBoundingClientRect();
+              if (rect.width <= 0) return;
+              var pct = clampPct(((ev.clientX - rect.left) / rect.width) * 100);
+              twoCol.style.setProperty("--viewer-pct", pct + "%");
+              try { localStorage.setItem(KEY, String(pct)); } catch (err) {}
+            }
+
+            function onUp(ev) {
+              twoCol.classList.remove("is-resizing");
+              try { handle.releasePointerCapture(ev.pointerId); } catch (err) {}
+              handle.removeEventListener("pointermove", onMove);
+              handle.removeEventListener("pointerup", onUp);
+              handle.removeEventListener("pointercancel", onUp);
+            }
+
+            handle.addEventListener("pointermove", onMove);
+            handle.addEventListener("pointerup", onUp);
+            handle.addEventListener("pointercancel", onUp);
+          });
+        }
+
+        function initSplit(root) {
+          var scope = root && root.querySelector ? root : document;
+          var twoCol = scope.classList && scope.classList.contains("two-col")
+            ? scope
+            : scope.querySelector(".two-col");
+          if (!twoCol) return;
+          applySplit(twoCol);
+          bindSplitter(twoCol);
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+          initSplit(document);
+        });
+        document.addEventListener("htmx:afterSettle", function (evt) {
+          var el = (evt.detail && evt.detail.elt) ? evt.detail.elt : document;
+          initSplit(el);
+        });
+      })();
     </script>
 </head>
 <body>

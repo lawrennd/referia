@@ -698,3 +698,10 @@ class TestDocumentRoutes:
         assert "document-panel" in response.text
         assert 'src="/record-document/localpdf/0?index=alice"' in response.text
         assert "thesis" in response.text
+
+    def test_page_includes_resizable_column_splitter(self, client):
+        response = client.get("/")
+        assert 'class="two-col"' in response.text
+        assert 'class="col-splitter"' in response.text
+        assert 'role="separator"' in response.text
+        assert "referia.split.viewerPct" in response.text
