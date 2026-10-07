@@ -1,7 +1,7 @@
 ---
 id: "2026-08-13_dependabot-gitpython"
 title: "Resolve Dependabot alerts for GitPython (via lynguine)"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2026-08-13"
 last_updated: "2026-10-07"
@@ -70,8 +70,8 @@ October lynguine advisories (need **≥ 3.1.62**): tracked on lynguine Dependabo
 - [x] August refresh: `poetry.lock` resolves `gitpython` to **≥ 3.1.58** (reached **3.1.59**)
 - [x] Referia test suite passed after August lock update (337 passed)
 - [x] Lynguine change linked (lynguine 0.1.2 / companion backlog; later [PR #28](https://github.com/lawrennd/lynguine/pull/28) for 3.1.62)
-- [ ] October refresh: `poetry.lock` resolves `gitpython` to **≥ 3.1.62** (still **3.1.59** as of 2026-10-07) — tracked by [`2026-10-07_dependabot-referia-transitive-refresh`](./2026-10-07_dependabot-referia-transitive-refresh.md) (also bumps oauthlib / urllib3)
-- [ ] August Dependabot alerts (#79, #85–#99) fixed or dismissed with documented rationale (pending GitHub rescan after August; re-check after October refresh)
+- [x] October refresh: `poetry.lock` resolves `gitpython` to **≥ 3.1.62** (now **3.2.0**) — done via [`2026-10-07_dependabot-referia-transitive-refresh`](./2026-10-07_dependabot-referia-transitive-refresh.md) (also oauthlib **4.0.0**, urllib3 **2.8.0**)
+- [ ] August Dependabot alerts (#79, #85–#99) fixed or dismissed with documented rationale (pending GitHub rescan after push of October lock)
 - [ ] Any new GitPython alerts after the October refresh fixed or dismissed with rationale
 
 ## Implementation Notes
@@ -112,6 +112,7 @@ Reopened for documentation sync with lynguine:
 
 ### 2026-10-07
 
-October consumer refresh (GitPython + oauthlib + urllib3) split into Ready backlog
+October consumer refresh (GitPython + oauthlib + urllib3) split into backlog
 [`2026-10-07_dependabot-referia-transitive-refresh`](./2026-10-07_dependabot-referia-transitive-refresh.md)
-so the work package is explicit and not buried only in this August-dated task.
+and **Completed** the same day: lock at gitpython **3.2.0** / oauthlib **4.0.0** / urllib3 **2.8.0**.
+This task marked **Completed**; Dependabot rescan still pending after push.

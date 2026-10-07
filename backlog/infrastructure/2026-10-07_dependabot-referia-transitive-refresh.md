@@ -1,7 +1,7 @@
 ---
 id: "2026-10-07_dependabot-referia-transitive-refresh"
 title: "Refresh referia lock for Oct Dependabot (GitPython, oauthlib, urllib3)"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-07"
 last_updated: "2026-10-07"
@@ -31,11 +31,11 @@ Lynguine closed its October Dependabot alerts by raising floors and refreshing i
 (GitPython **3.1.62**, oauthlib **4.0.0**, urllib3 **2.8.0**). Referia still resolves the
 pre-fix transitive set, so Dependabot can keep reporting the same CVEs on this repo.
 
-| Package | referia `poetry.lock` (2026-10-07) | Required | Path |
-|---------|--------------------------------------|----------|------|
-| gitpython | **3.1.59** | ≥ **3.1.62** | `referia → lynguine → gitpython` |
-| oauthlib | **3.3.1** | ≥ **4.0.0** | transitive (requests-oauthlib / Google stack) |
-| urllib3 | **2.7.0** | ≥ **2.8.0** | transitive via `requests` |
+| Package | Before | After (2026-10-07) | Required | Path |
+|---------|--------|---------------------|----------|------|
+| gitpython | 3.1.59 | **3.2.0** | ≥ 3.1.62 | `referia → lynguine → gitpython` |
+| oauthlib | 3.3.1 | **4.0.0** | ≥ 4.0.0 | transitive (requests-oauthlib / Google stack) |
+| urllib3 | 2.7.0 | **2.8.0** | ≥ 2.8.0 | transitive via `requests` |
 
 ### Why this is open
 
@@ -51,10 +51,10 @@ pre-fix transitive set, so Dependabot can keep reporting the same CVEs on this r
 
 ## Acceptance Criteria
 
-- [ ] `poetry.lock` resolves `gitpython` to **≥ 3.1.62**
-- [ ] `poetry.lock` resolves `oauthlib` to **≥ 4.0.0** and `urllib3` to **≥ 2.8.0**
-- [ ] `poetry run pytest` passes (or failures documented as pre-existing)
-- [ ] Companion task `2026-08-13_dependabot-gitpython` October refresh checkbox marked done
+- [x] `poetry.lock` resolves `gitpython` to **≥ 3.1.62** (now **3.2.0**)
+- [x] `poetry.lock` resolves `oauthlib` to **≥ 4.0.0** and `urllib3` to **≥ 2.8.0**
+- [x] Test suite passes (634 passed, 21 skipped, 19 xfailed, 3 xpassed)
+- [x] Companion task `2026-08-13_dependabot-gitpython` October refresh checkbox marked done
 - [ ] Open Dependabot alerts for these three packages fixed or documented as pending GitHub rescan
 
 ## Implementation Notes
@@ -84,4 +84,10 @@ After merge, check https://github.com/lawrennd/referia/security/dependabot — a
 ### 2026-10-07
 
 Task created from Dependabot triage after lynguine PR #28. Scale assessed as backlog (lock refresh only).
-Status **Ready** — implementation can start immediately.
+
+### 2026-10-07 (completed)
+
+Refreshed `poetry.lock` against lynguine `main` (`resolved_reference` **4f68587**):
+gitpython **3.2.0**, oauthlib **4.0.0**, urllib3 **2.8.0**. Lynguine package constraint in
+lock shows `gitpython = ">=3.1.62"`. `poetry check` clean. Tests: 634 passed.
+Dependabot alert closure pending GitHub rescan after push.
