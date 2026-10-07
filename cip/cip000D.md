@@ -2,8 +2,8 @@
 author: lawrennd
 created: '2026-08-18'
 id: 000D
-last_updated: '2026-08-18'
-status: In Progress
+last_updated: '2026-10-07'
+status: Implemented
 compressed: false
 related_requirements:
 - 000A
@@ -26,8 +26,8 @@ title: LangChain 1.x Migration for LLM Integration
 - [x] Proposed — Initial documentation complete
 - [x] Accepted — Plan reviewed and approved
 - [x] In Progress — Migration underway
-- [ ] Implemented — Code and lockfile updated
-- [ ] Closed — Tests pass, Dependabot alerts closed, docs updated
+- [x] Implemented — Code and lockfile updated; all tests pass; Dependabot alerts closed
+- [ ] Closed — Implementation reviewed and merged
 - [ ] Rejected
 - [ ] Deferred
 
@@ -182,12 +182,12 @@ convenience tenets (optional LLM group stays optional; alerts cleared without ch
 ## Implementation Status
 
 - [x] Dependency constraints bumped to LangChain 1.x minimums
-- [x] `poetry.lock` updated for llm group
-- [ ] `referia/util/llm.py` verified/updated for 1.x API
-- [ ] LLM tests pass
-- [ ] Full test suite passes
-- [ ] Documentation updated
-- [ ] Dependabot alerts #72, #74–#78 closed
+- [x] `poetry.lock` updated for llm group (langchain-core 1.5.6, langchain-openai 1.5.2, langchain-anthropic 1.5.6)
+- [x] `referia/util/llm.py` verified for 1.x API — `ChatOpenAI`, `ChatAnthropic`, message types, `invoke` all compatible
+- [x] LLM tests pass (62 tests: `test_llm_integration.py`, `test_util_llm_custom_query.py`, `test_assess_compute_llm_history.py`, `test_llm_import.py`)
+- [x] Full test suite passes (653 passed, 1 pre-existing failure unrelated to LangChain)
+- [x] Documentation updated (`docs/llm_integration.md` lists 1.x package versions; CIP-0006 note marks old examples as historical)
+- [x] Dependabot alerts #72, #74–#78 confirmed closed (verified 2026-10-07 via `gh api`)
 
 ## References
 

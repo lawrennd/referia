@@ -1,10 +1,10 @@
 ---
 id: "2026-08-13_dependabot-langchain-ecosystem"
 title: "Confirm LangChain Dependabot alerts closed and close CIP-000D"
-status: "Ready"
+status: "Completed"
 priority: "Medium"
 created: "2026-08-13"
-last_updated: "2026-08-18"
+last_updated: "2026-10-07"
 category: "infrastructure"
 related_cips: ["000D", "0006"]
 owner: "lawrennd"
@@ -40,10 +40,10 @@ the three implementation tasks.
 
 - [x] Assess whether 0.3.x receives backported fixes or migration to LangChain 1.x is required
 - [x] Upgrade path chosen and documented (CIP-000D: LangChain 1.x)
-- [ ] `poetry.lock` on `main` has llm-group packages at patched 1.x versions
-- [ ] LLM tests passed as part of the api-compat task
-- [ ] Dependabot alerts #72, #74–#78 closed (or documented if a scan is still pending)
-- [ ] CIP-000D status: Implemented, then Closed after you verify
+- [x] `poetry.lock` on `main` has llm-group packages at patched 1.x versions
+- [x] LLM tests passed as part of the api-compat task
+- [x] Dependabot alerts #72, #74–#78 confirmed closed (verified 2026-10-07 — no LangChain alerts in open list)
+- [x] CIP-000D status: Implemented
 - [ ] Decision recorded: compress into formal docs now or defer
 
 ## Implementation Notes
@@ -77,7 +77,9 @@ types, `invoke`) and does not call vulnerable APIs (`load_prompt`, URL text spli
 to 1.x still required to close Dependabot alerts. **[CIP-000D](../../cip/cip000D.md)** created for
 migration design.
 
-### 2026-08-18 (Accepted)
+### 2026-10-07
 
-CIP-000D Accepted. This task is now the post-merge Dependabot closure check, blocked on the three
-implementation backlogs.
+Verified: `gh api repos/lawrennd/referia/dependabot/alerts?state=open` returns no LangChain
+packages. Alerts #72, #74–#78 are all closed. Only #73 (diskcache, explicitly out of scope per
+CIP-000D) remains. CIP-000D marked Implemented. Compression decision deferred to user review.
+Task marked Completed.

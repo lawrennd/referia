@@ -1,10 +1,10 @@
 ---
 id: "2026-08-18_cip000D-api-compat"
 title: "Verify and fix LangChain 1.x API in llm.py and tests"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-08-18"
-last_updated: "2026-08-18"
+last_updated: "2026-10-07"
 category: "infrastructure"
 related_cips: ["000D"]
 owner: "lawrennd"
@@ -59,3 +59,10 @@ update `@patch('referia.util.llm.ChatOpenAI')` only if the import moves.
 ### 2026-08-18
 
 Task created when CIP-000D was Accepted.
+
+### 2026-10-07
+
+Verified: `referia/util/llm.py` is fully compatible with LangChain 1.x with no changes required.
+`ChatOpenAI`, `ChatAnthropic`, `HumanMessage`/`SystemMessage`/`AIMessage`, and `invoke()` all work
+as expected. No legacy import paths in production code. 62 LLM unit tests pass; full suite 653
+passed. Marked Completed.
