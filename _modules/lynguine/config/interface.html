@@ -311,6 +311,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.default_config_file"><code class="docutils literal notranslate"><span class="pre">Interface.default_config_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.directory"><code class="docutils literal notranslate"><span class="pre">Interface.directory</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.user_file"><code class="docutils literal notranslate"><span class="pre">Interface.user_file</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_cwd_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_cwd_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.from_yaml()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get"><code class="docutils literal notranslate"><span class="pre">Interface.get()</span></code></a></li>
@@ -804,6 +805,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">context</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..access.paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEFAULT_ROOTS</span><span class="p">,</span> <span class="n">PathEscapeError</span><span class="p">,</span> <span class="n">effective_roots</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..log</span><span class="w"> </span><span class="kn">import</span> <span class="n">Logger</span>
 
 
@@ -1030,6 +1032,7 @@
 <span class="sd">    computations, parameters, and other components of a data processing pipeline.</span>
 <span class="sd">    </span>
 <span class="sd">    Key features:</span>
+
 <span class="sd">    - Hierarchical inheritance: An interface can inherit from a parent interface,</span>
 <span class="sd">      allowing for composition and reuse of configurations.</span>
 <span class="sd">    - Input/output management: Defines how data is read from and written to various sources.</span>
@@ -1071,7 +1074,7 @@
         <span class="k">return</span> <span class="n">mapping</span><span class="p">,</span> <span class="n">columns</span>
                 
     
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span> <span class="p">:</span> <span class="nb">dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span> <span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">user_file</span> <span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span> <span class="p">:</span> <span class="nb">dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span> <span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">user_file</span> <span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">allowed_roots</span><span class="o">=</span><span class="n">DEFAULT_ROOTS</span><span class="p">,</span> <span class="n">unbounded_paths</span> <span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cwd_sandbox</span> <span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize a new Interface instance with the provided configuration data.</span>
 <span class="sd">        </span>
@@ -1097,6 +1100,14 @@
 <span class="sd">        :type directory: str</span>
 <span class="sd">        :param user_file: Filename of the configuration file</span>
 <span class="sd">        :type user_file: str</span>
+<span class="sd">        :param allowed_roots: Directories that later configured paths must sit under.</span>
+<span class="sd">            Omit to use ``directory``. Pass ``None`` to opt out of confinement.</span>
+<span class="sd">        :param unbounded_paths: If True, do not confine configured paths (explicit opt-out).</span>
+<span class="sd">        :type unbounded_paths: bool</span>
+<span class="sd">        :param cwd_sandbox: If True, this interface was loaded under process cwd</span>
+<span class="sd">            (``from_cwd_file``). Parent inherit must use ``from_cwd_file`` so</span>
+<span class="sd">            HTTP taint never enters ``from_file`` (CIP-000D).</span>
+<span class="sd">        :type cwd_sandbox: bool</span>
 <span class="sd">        :return: None</span>
 <span class="sd">        :raises ValueError: If required arguments are missing or if inheritance configuration is invalid</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1126,6 +1137,10 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">=</span> <span class="n">directory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">user_file</span> <span class="o">=</span> <span class="n">user_file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allowed_roots</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">unbounded_paths</span> <span class="o">=</span> <span class="n">effective_roots</span><span class="p">(</span>
+            <span class="n">directory</span><span class="p">,</span> <span class="n">allowed_roots</span><span class="p">,</span> <span class="n">unbounded_paths</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cwd_sandbox</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">cwd_sandbox</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_input</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1157,8 +1172,40 @@
 
             <span class="c1"># TK Establish if path is relative from current directory and set it to relative location.</span>
             
-            <span class="c1"># Load parent interface</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="n">user_file</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="n">inherit_directory</span><span class="p">)</span>
+            <span class="c1"># Load parent under an extended jail that includes the inherit</span>
+            <span class="c1"># directory (sibling/ancestor configs are the normal case).</span>
+            <span class="c1"># HTTP/cwd-sandbox interfaces must not call from_file: that</span>
+            <span class="c1"># taints every exists/open there for CodeQL py/path-injection</span>
+            <span class="c1"># (CIP-000D). cwd_sandbox still refuses paths outside CWD.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">unbounded_paths</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span>
+                    <span class="n">user_file</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                    <span class="n">directory</span><span class="o">=</span><span class="n">inherit_directory</span><span class="p">,</span>
+                    <span class="n">unbounded_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">cwd_sandbox</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">from_cwd_file</span><span class="p">(</span>
+                    <span class="n">user_file</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                    <span class="n">directory</span><span class="o">=</span><span class="n">inherit_directory</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">inherit_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">inherit_directory</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">parent_roots</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">allowed_roots</span> <span class="ow">or</span> <span class="p">[])</span>
+                <span class="k">if</span> <span class="n">inherit_root</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">parent_roots</span><span class="p">:</span>
+                    <span class="n">parent_roots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inherit_root</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span>
+                    <span class="n">user_file</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                    <span class="n">directory</span><span class="o">=</span><span class="n">inherit_directory</span><span class="p">,</span>
+                    <span class="n">allowed_roots</span><span class="o">=</span><span class="n">parent_roots</span><span class="p">,</span>
+                    <span class="n">unbounded_paths</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="c1"># Keep parent roots so inherited data paths remain readable.</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="o">.</span><span class="n">allowed_roots</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="o">.</span><span class="n">allowed_roots</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">root</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">allowed_roots</span> <span class="ow">or</span> <span class="p">[]):</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">allowed_roots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
             
             <span class="c1"># Set it not to be writable (convert output to input,</span>
             <span class="c1"># series to input, parameters to constants))</span>
@@ -1601,7 +1648,7 @@
 <div class="viewcode-block" id="Interface.from_file">
 <a class="viewcode-back" href="../../../modules/config.html#referia.config.interface.Interface.from_file">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">user_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">raise_error_if_not_found</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">user_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">raise_error_if_not_found</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">allowed_roots</span><span class="o">=</span><span class="n">DEFAULT_ROOTS</span><span class="p">,</span> <span class="n">unbounded_paths</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Construct an Interface instance by loading configuration from a YAML file.</span>
 <span class="sd">        </span>
@@ -1624,10 +1671,15 @@
 <span class="sd">        :param raise_error_if_not_found: Whether to raise an error if the file is not found or empty,</span>
 <span class="sd">                                        defaults to True. If False, an empty interface will be created.</span>
 <span class="sd">        :type raise_error_if_not_found: bool</span>
+<span class="sd">        :param allowed_roots: Directories the config file must sit under. Omit to use</span>
+<span class="sd">            ``directory``. Pass ``None`` to opt out of confinement.</span>
+<span class="sd">        :param unbounded_paths: If True, do not confine the config path (explicit opt-out).</span>
+<span class="sd">        :type unbounded_paths: bool</span>
 <span class="sd">        :return: A new Interface instance loaded from the specified file.</span>
 <span class="sd">        :rtype: Interface</span>
 <span class="sd">        :raises ValueError: If the file is not found or empty (and raise_error_if_not_found is True),</span>
 <span class="sd">                           or if the YAML cannot be parsed, or if a specified field is not found.</span>
+<span class="sd">        :raises lynguine.access.paths.PathEscapeError: If the config path is outside allowed roots.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         
         <span class="k">if</span> <span class="n">user_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1636,12 +1688,67 @@
             <span class="n">ufile</span> <span class="o">=</span> <span class="n">user_file</span>
             
         <span class="n">expanded_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
-        <span class="c1"># If the user_file is a list, check existence of each file in order.</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">user_file</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">ufile</span> <span class="ow">in</span> <span class="n">user_file</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expanded_directory</span><span class="p">,</span> <span class="n">ufile</span><span class="p">)):</span>
+        <span class="n">roots</span><span class="p">,</span> <span class="n">unbounded</span> <span class="o">=</span> <span class="n">effective_roots</span><span class="p">(</span>
+            <span class="n">expanded_directory</span><span class="p">,</span> <span class="n">allowed_roots</span><span class="p">,</span> <span class="n">unbounded_paths</span>
+        <span class="p">)</span>
+
+        <span class="n">names</span> <span class="o">=</span> <span class="n">user_file</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">user_file</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span> <span class="k">else</span> <span class="p">[</span><span class="n">ufile</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">unbounded</span><span class="p">:</span>
+            <span class="n">fname</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">ufile</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                <span class="n">candidate</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expanded_directory</span><span class="p">,</span> <span class="n">ufile</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">candidate</span><span class="p">):</span>
+                    <span class="n">fname</span> <span class="o">=</span> <span class="n">candidate</span>
                     <span class="k">break</span>
-        <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expanded_directory</span><span class="p">,</span> <span class="n">ufile</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fname</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">ufile</span> <span class="o">=</span> <span class="n">names</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">names</span> <span class="k">else</span> <span class="bp">cls</span><span class="o">.</span><span class="n">default_config_file</span><span class="p">()</span>
+                <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expanded_directory</span><span class="p">,</span> <span class="n">ufile</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_read_yaml_or_empty</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">raise_error_if_not_found</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span>
+                <span class="n">directory</span><span class="o">=</span><span class="n">expanded_directory</span><span class="p">,</span>
+                <span class="n">user_file</span><span class="o">=</span><span class="n">ufile</span><span class="p">,</span>
+                <span class="n">allowed_roots</span><span class="o">=</span><span class="n">roots</span><span class="p">,</span>
+                <span class="n">unbounded_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Confine before every exists/open. This branch is separate from the</span>
+        <span class="c1"># unbounded early-return so request-controlled paths cannot skip the</span>
+        <span class="c1"># prefix check and still reach a shared open().</span>
+        <span class="n">fname</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">ufile</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="n">candidate</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expanded_directory</span><span class="p">,</span> <span class="n">ufile</span><span class="p">))</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">confined</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span><span class="p">:</span>
+                <span class="n">base_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">root</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">candidate</span> <span class="o">==</span> <span class="n">base_path</span> <span class="ow">or</span> <span class="n">candidate</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base_path</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">):</span>
+                    <span class="n">confined</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">confined</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">PathEscapeError</span><span class="p">(</span><span class="n">ufile</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">roots</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">candidate</span><span class="p">):</span>
+                <span class="n">fname</span> <span class="o">=</span> <span class="n">candidate</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="n">fname</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ufile</span> <span class="o">=</span> <span class="n">names</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">names</span> <span class="k">else</span> <span class="bp">cls</span><span class="o">.</span><span class="n">default_config_file</span><span class="p">()</span>
+            <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expanded_directory</span><span class="p">,</span> <span class="n">ufile</span><span class="p">))</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">confined</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">roots</span><span class="p">:</span>
+                <span class="n">base_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">root</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">fname</span> <span class="o">==</span> <span class="n">base_path</span> <span class="ow">or</span> <span class="n">fname</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base_path</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">):</span>
+                    <span class="n">confined</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">confined</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">PathEscapeError</span><span class="p">(</span><span class="n">ufile</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">roots</span><span class="p">))</span>
+
         <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Attempting to open file </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
@@ -1674,12 +1781,151 @@
             <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;No data found in &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
-        
-        
-        <span class="n">interface</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="n">expanded_directory</span><span class="p">,</span> <span class="n">user_file</span><span class="o">=</span><span class="n">ufile</span><span class="p">)</span>
-        
-        <span class="k">return</span> <span class="n">interface</span></div>
 
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">directory</span><span class="o">=</span><span class="n">expanded_directory</span><span class="p">,</span>
+            <span class="n">user_file</span><span class="o">=</span><span class="n">ufile</span><span class="p">,</span>
+            <span class="n">allowed_roots</span><span class="o">=</span><span class="n">roots</span><span class="p">,</span>
+            <span class="n">unbounded_paths</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Interface.from_cwd_file">
+<a class="viewcode-back" href="../../../modules/config.html#referia.config.interface.Interface.from_cwd_file">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_cwd_file</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">user_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+        <span class="n">field</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">raise_error_if_not_found</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load YAML from a path confined to the process working directory.</span>
+
+<span class="sd">        Server and session entry points use this instead of ``from_file`` so</span>
+<span class="sd">        request-controlled names are joined to ``os.getcwd()`` (an untainted</span>
+<span class="sd">        prefix) rather than to the request ``directory``. GitHub CodeQL&#39;s</span>
+<span class="sd">        ``py/path-injection`` sanitizer recognizes ``normpath``/``realpath``</span>
+<span class="sd">        plus ``startswith`` only when that prefix is local to this function.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">user_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="bp">cls</span><span class="o">.</span><span class="n">default_config_file</span><span class="p">()]</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">user_file</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="n">user_file</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">user_file</span><span class="p">]</span>
+
+        <span class="c1"># Untainted jail: process cwd, not a caller-supplied directory.</span>
+        <span class="n">base_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">())</span>
+        <span class="n">rel_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">directory</span><span class="p">))</span>
+        <span class="n">joined_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="n">rel_dir</span><span class="p">))</span>
+        <span class="n">joined_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">joined_dir</span><span class="p">)</span>
+        <span class="c1"># startswith(base_path) is the CodeQL sanitizer; the os.sep check</span>
+        <span class="c1"># blocks the &quot;/cwd&quot; vs &quot;/cwd-evil&quot; prefix bypass.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">joined_dir</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base_path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">PathEscapeError</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="p">[</span><span class="n">base_path</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">joined_dir</span> <span class="o">!=</span> <span class="n">base_path</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">joined_dir</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base_path</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">PathEscapeError</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="p">[</span><span class="n">base_path</span><span class="p">])</span>
+
+        <span class="n">fname</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">ufile</span> <span class="o">=</span> <span class="n">names</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">ufile</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="c1"># Join to the untainted prefix, not to a request-derived directory.</span>
+            <span class="n">fullpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="n">rel_dir</span><span class="p">,</span> <span class="n">ufile</span><span class="p">))</span>
+            <span class="n">fullpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">fullpath</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">fullpath</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base_path</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">PathEscapeError</span><span class="p">(</span><span class="n">ufile</span><span class="p">,</span> <span class="p">[</span><span class="n">base_path</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">fullpath</span> <span class="o">!=</span> <span class="n">base_path</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fullpath</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base_path</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">PathEscapeError</span><span class="p">(</span><span class="n">ufile</span><span class="p">,</span> <span class="p">[</span><span class="n">base_path</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fullpath</span><span class="p">):</span>
+                <span class="n">fname</span> <span class="o">=</span> <span class="n">fullpath</span>
+                <span class="k">break</span>
+        <span class="k">if</span> <span class="n">fname</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="n">rel_dir</span><span class="p">,</span> <span class="n">ufile</span><span class="p">))</span>
+            <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">fname</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base_path</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">PathEscapeError</span><span class="p">(</span><span class="n">ufile</span><span class="p">,</span> <span class="p">[</span><span class="n">base_path</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">fname</span> <span class="o">!=</span> <span class="n">base_path</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">fname</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">base_path</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">PathEscapeError</span><span class="p">(</span><span class="n">ufile</span><span class="p">,</span> <span class="p">[</span><span class="n">base_path</span><span class="p">])</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Attempting to open file </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
+                <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Error reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;, error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">field</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">&#39;Field &quot;</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">&quot; specified but not found in file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+                    <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;No configuration file found at &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+            <span class="k">if</span> <span class="n">raise_error_if_not_found</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">errmsg</span><span class="si">}</span><span class="s1"> creating empty interface.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">data</span> <span class="o">==</span> <span class="p">{}</span> <span class="ow">and</span> <span class="n">raise_error_if_not_found</span><span class="p">:</span>
+            <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;No data found in &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span>
+            <span class="n">directory</span><span class="o">=</span><span class="n">joined_dir</span><span class="p">,</span>
+            <span class="n">user_file</span><span class="o">=</span><span class="n">ufile</span><span class="p">,</span>
+            <span class="n">allowed_roots</span><span class="o">=</span><span class="p">[</span><span class="n">base_path</span><span class="p">],</span>
+            <span class="n">unbounded_paths</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">cwd_sandbox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_read_yaml_or_empty</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">raise_error_if_not_found</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read YAML from an already-resolved path, or return empty data.&quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Attempting to open file </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
+                <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                    <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Error reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;, error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                    
+                    <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">field</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">&#39;Field &quot;</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">&quot; specified but not found in file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+                    <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;No configuration file found at &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+            <span class="k">if</span> <span class="n">raise_error_if_not_found</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">errmsg</span><span class="si">}</span><span class="s1"> creating empty interface.&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">data</span> <span class="o">==</span> <span class="p">{}</span> <span class="ow">and</span> <span class="n">raise_error_if_not_found</span><span class="p">:</span>
+            <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;No data found in &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span>
 
         
 <div class="viewcode-block" id="Interface.from_yaml">

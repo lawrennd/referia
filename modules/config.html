@@ -314,6 +314,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.default_config_file"><code class="docutils literal notranslate"><span class="pre">Interface.default_config_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.directory"><code class="docutils literal notranslate"><span class="pre">Interface.directory</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.user_file"><code class="docutils literal notranslate"><span class="pre">Interface.user_file</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.from_cwd_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_cwd_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.from_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.from_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.from_yaml()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.get"><code class="docutils literal notranslate"><span class="pre">Interface.get()</span></code></a></li>
@@ -872,8 +873,19 @@ It extends the configuration system from lynguine with referia-specific function
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="referia.config.interface.Interface.from_cwd_file">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_cwd_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_error_if_not_found</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lynguine/config/interface.html#Interface.from_cwd_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.interface.Interface.from_cwd_file" title="Link to this definition"></a></dt>
+<dd><p>Load YAML from a path confined to the process working directory.</p>
+<p>Server and session entry points use this instead of <code class="docutils literal notranslate"><span class="pre">from_file</span></code> so
+request-controlled names are joined to <code class="docutils literal notranslate"><span class="pre">os.getcwd()</span></code> (an untainted
+prefix) rather than to the request <code class="docutils literal notranslate"><span class="pre">directory</span></code>. GitHub CodeQL’s
+<code class="docutils literal notranslate"><span class="pre">py/path-injection</span></code> sanitizer recognizes <code class="docutils literal notranslate"><span class="pre">normpath</span></code>/<code class="docutils literal notranslate"><span class="pre">realpath</span></code>
+plus <code class="docutils literal notranslate"><span class="pre">startswith</span></code> only when that prefix is local to this function.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="referia.config.interface.Interface.from_file">
-<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_error_if_not_found</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lynguine/config/interface.html#Interface.from_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.interface.Interface.from_file" title="Link to this definition"></a></dt>
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raise_error_if_not_found</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allowed_roots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_ROOTS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unbounded_paths</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lynguine/config/interface.html#Interface.from_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.interface.Interface.from_file" title="Link to this definition"></a></dt>
 <dd><p>Construct an Interface instance by loading configuration from a YAML file.</p>
 <p>This factory method creates an Interface object by reading a YAML configuration file.
 It handles file path resolution, YAML parsing, and hierarchical interface loading if
@@ -891,6 +903,9 @@ default config filename will be used.</p></li>
 is nested within a larger configuration file).</p></li>
 <li><p><strong>raise_error_if_not_found</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to raise an error if the file is not found or empty,
 defaults to True. If False, an empty interface will be created.</p></li>
+<li><p><strong>allowed_roots</strong> – Directories the config file must sit under. Omit to use
+<code class="docutils literal notranslate"><span class="pre">directory</span></code>. Pass <code class="docutils literal notranslate"><span class="pre">None</span></code> to opt out of confinement.</p></li>
+<li><p><strong>unbounded_paths</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, do not confine the config path (explicit opt-out).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -900,8 +915,11 @@ defaults to True. If False, an empty interface will be created.</p></li>
 <dd class="field-odd"><p><a class="reference internal" href="#referia.config.interface.Interface" title="referia.config.interface.Interface">Interface</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the file is not found or empty (and raise_error_if_not_found is True),
-or if the YAML cannot be parsed, or if a specified field is not found.</p>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If the file is not found or empty (and raise_error_if_not_found is True),
+or if the YAML cannot be parsed, or if a specified field is not found.</p></li>
+<li><p><strong>lynguine.access.paths.PathEscapeError</strong> – If the config path is outside allowed roots.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>

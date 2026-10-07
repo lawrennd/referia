@@ -314,6 +314,7 @@
 <li class="toctree-l4"><a class="reference internal" href="config.html#referia.config.interface.Interface.default_config_file"><code class="docutils literal notranslate"><span class="pre">Interface.default_config_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="config.html#referia.config.interface.Interface.directory"><code class="docutils literal notranslate"><span class="pre">Interface.directory</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="config.html#referia.config.interface.Interface.user_file"><code class="docutils literal notranslate"><span class="pre">Interface.user_file</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="config.html#referia.config.interface.Interface.from_cwd_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_cwd_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="config.html#referia.config.interface.Interface.from_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="config.html#referia.config.interface.Interface.from_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.from_yaml()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="config.html#referia.config.interface.Interface.get"><code class="docutils literal notranslate"><span class="pre">Interface.get()</span></code></a></li>
@@ -1542,6 +1543,10 @@ mapping management, and compute operations.</p>
 <dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">to_pandas</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
 <dd><p>Convert the CustomDataFrame to a pandas DataFrame.</p>
+<p>Non-parameter flows are joined on the index. When two flows share
+column names, the first flow keeps those columns and duplicates in
+later flows are dropped (explicit: earlier flow wins). Parameter
+columns are still broadcast onto every row via <code class="docutils literal notranslate"><span class="pre">assign</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>A pandas DataFrame representation of the CustomDataFrame.</p>
@@ -4623,6 +4628,10 @@ is returned. The last row is assumed to be the most recent.</p>
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.to_pandas">
 <span class="sig-name descname"><span class="pre">to_pandas</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lynguine/assess/data.html#CustomDataFrame.to_pandas"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.data.CustomDataFrame.to_pandas" title="Link to this definition"></a></dt>
 <dd><p>Convert the CustomDataFrame to a pandas DataFrame.</p>
+<p>Non-parameter flows are joined on the index. When two flows share
+column names, the first flow keeps those columns and duplicates in
+later flows are dropped (explicit: earlier flow wins). Parameter
+columns are still broadcast onto every row via <code class="docutils literal notranslate"><span class="pre">assign</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>A pandas DataFrame representation of the CustomDataFrame.</p>
