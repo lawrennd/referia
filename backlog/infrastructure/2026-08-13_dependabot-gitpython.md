@@ -4,7 +4,7 @@ title: "Resolve Dependabot alerts for GitPython (via lynguine)"
 status: "In Progress"
 priority: "High"
 created: "2026-08-13"
-last_updated: "2026-10-04"
+last_updated: "2026-10-07"
 category: "infrastructure"
 related_cips: []
 owner: "lawrennd"
@@ -70,7 +70,7 @@ October lynguine advisories (need **≥ 3.1.62**): tracked on lynguine Dependabo
 - [x] August refresh: `poetry.lock` resolves `gitpython` to **≥ 3.1.58** (reached **3.1.59**)
 - [x] Referia test suite passed after August lock update (337 passed)
 - [x] Lynguine change linked (lynguine 0.1.2 / companion backlog; later [PR #28](https://github.com/lawrennd/lynguine/pull/28) for 3.1.62)
-- [ ] October refresh: `poetry.lock` resolves `gitpython` to **≥ 3.1.62** (still **3.1.59** as of 2026-10-04)
+- [ ] October refresh: `poetry.lock` resolves `gitpython` to **≥ 3.1.62** (still **3.1.59** as of 2026-10-07) — tracked by [`2026-10-07_dependabot-referia-transitive-refresh`](./2026-10-07_dependabot-referia-transitive-refresh.md) (also bumps oauthlib / urllib3)
 - [ ] August Dependabot alerts (#79, #85–#99) fixed or dismissed with documented rationale (pending GitHub rescan after August; re-check after October refresh)
 - [ ] Any new GitPython alerts after the October refresh fixed or dismissed with rationale
 
@@ -109,3 +109,9 @@ Reopened for documentation sync with lynguine:
 - Lynguine landed [PR #28](https://github.com/lawrennd/lynguine/pull/28): floor `>=3.1.62`, lock **3.1.62**
 - Referia lock still **3.1.59** — needs a second `poetry update lynguine gitpython`
 - Status set back to **In Progress** until the October refresh and alert check are done
+
+### 2026-10-07
+
+October consumer refresh (GitPython + oauthlib + urllib3) split into Ready backlog
+[`2026-10-07_dependabot-referia-transitive-refresh`](./2026-10-07_dependabot-referia-transitive-refresh.md)
+so the work package is explicit and not buried only in this August-dated task.
