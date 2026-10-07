@@ -1,12 +1,19 @@
 ---
-id: "2026-07-14_web-template-expansion-missing"
-title: "Web interface hides all conditional sections (visible_if flag columns missing from data)"
-status: "Completed"
-priority: "High"
-created: "2026-07-14"
-last_updated: "2026-07-14"
+id: 2026-07-14_web-template-expansion-missing
+title: Web interface hides all conditional sections (visible_if flag columns missing
+  from data)
+status: Completed
+priority: High
+created: '2026-07-14'
+last_updated: '2026-07-14'
 related_cips: []
-tags: ["web", "templates", "rendering", "visible_if"]
+tags:
+- web
+- templates
+- rendering
+- visible_if
+owner: lawrennd
+category: bugs
 ---
 
 # Task: Web interface hides conditional sections due to missing flag columns in data dict

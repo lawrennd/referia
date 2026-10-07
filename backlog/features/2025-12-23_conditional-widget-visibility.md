@@ -1,13 +1,13 @@
 ---
-id: "2025-12-23_conditional-widget-visibility"
-title: "Conditional Widget/Template Visibility Based on Field Values"
-status: "Implemented"
-priority: "Medium"
-created: "2025-12-23"
-last_updated: "2025-12-23"
-owner: ""
-github_issue: ""
-dependencies: ""
+id: 2025-12-23_conditional-widget-visibility
+title: Conditional Widget/Template Visibility Based on Field Values
+status: Completed
+priority: Medium
+created: '2025-12-23'
+last_updated: '2025-12-23'
+owner: lawrennd
+github_issue: ''
+dependencies: ''
 tags:
 - backlog
 - feature
@@ -16,6 +16,8 @@ tags:
 - conditional-display
 - referia
 - tested
+category: features
+related_cips: []
 ---
 
 # Task: Conditional Widget/Template Visibility Based on Field Values

@@ -1,12 +1,18 @@
 ---
-id: "2026-07-16_referia-check-cli"
-title: "Add `referia check` CLI subcommand for LLM-ready config linting"
-status: "Proposed"
-priority: "Medium"
-created: "2026-07-16"
-last_updated: "2026-07-16"
+id: 2026-07-16_referia-check-cli
+title: Add `referia check` CLI subcommand for LLM-ready config linting
+status: Proposed
+priority: Medium
+created: '2026-07-16'
+last_updated: '2026-07-16'
 related_cips: []
-tags: ["cli", "yaml", "linting", "developer-experience"]
+tags:
+- cli
+- yaml
+- linting
+- developer-experience
+owner: lawrennd
+category: features
 ---
 
 # Task: Add `referia check` CLI subcommand

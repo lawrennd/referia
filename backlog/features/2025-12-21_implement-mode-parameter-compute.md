@@ -1,18 +1,20 @@
 ---
-id: "2025-12-21_implement-mode-parameter-compute"
-title: "Implement Mode Parameter in Compute System"
-status: "Completed"
-priority: "High"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: ""
-github_issue: ""
-dependencies: ""
+id: 2025-12-21_implement-mode-parameter-compute
+title: Implement Mode Parameter in Compute System
+status: Completed
+priority: High
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
+github_issue: ''
+dependencies: ''
 tags:
 - backlog
 - feature
 - compute
 - architecture
+category: features
+related_cips: []
 ---
 
 # Task: Implement Mode Parameter in Compute System

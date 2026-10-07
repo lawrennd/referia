@@ -1,14 +1,17 @@
 ---
-id: "explicit-implicit-separation"
-title: "Explicit Implicit Separation"
-created: "2025-10-10"
-last_updated: "2025-10-10"
-version: "1.0"
+id: explicit-implicit-separation
+title: Explicit Implicit Separation
+created: '2025-10-10'
+last_updated: '2025-10-10'
+version: '1.0'
 tags:
 - tenet
 - separation
 - layering
 - architecture
+status: Active
+last_reviewed: '2025-10-10'
+review_frequency: Annual
 ---
 
 # Explicit Implicit Separation

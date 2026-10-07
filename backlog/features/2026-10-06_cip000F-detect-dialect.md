@@ -1,13 +1,14 @@
 ---
-id: "2026-10-06_cip000F-detect-dialect"
-title: "CIP-000F: detect_config_dialect and DialectReport"
-status: "Completed"
-priority: "High"
-created: "2026-10-06"
-last_updated: "2026-10-06"
-category: "features"
-related_cips: ["000F"]
-owner: ""
+id: 2026-10-06_cip000F-detect-dialect
+title: 'CIP-000F: detect_config_dialect and DialectReport'
+status: Completed
+priority: High
+created: '2026-10-06'
+last_updated: '2026-10-06'
+category: features
+related_cips:
+- 000F
+owner: lawrennd
 dependencies: []
 tags:
 - backlog

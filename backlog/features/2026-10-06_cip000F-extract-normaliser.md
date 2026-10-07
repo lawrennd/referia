@@ -1,15 +1,16 @@
 ---
-id: "2026-10-06_cip000F-extract-normaliser"
-title: "CIP-000F: Extract normalise_referia_config from Interface"
-status: "Completed"
-priority: "High"
-created: "2026-10-06"
-last_updated: "2026-10-06"
-category: "features"
-related_cips: ["000F"]
-owner: ""
+id: 2026-10-06_cip000F-extract-normaliser
+title: 'CIP-000F: Extract normalise_referia_config from Interface'
+status: Completed
+priority: High
+created: '2026-10-06'
+last_updated: '2026-10-06'
+category: features
+related_cips:
+- 000F
+owner: lawrennd
 dependencies:
-- "2026-10-06_cip000F-detect-dialect"
+- 2026-10-06_cip000F-detect-dialect
 tags:
 - backlog
 - cip000F

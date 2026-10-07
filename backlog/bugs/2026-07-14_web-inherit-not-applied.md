@@ -1,12 +1,17 @@
 ---
-id: "2026-07-14_web-inherit-not-applied"
-title: "Web interface does not apply inherit: sections"
-status: "Proposed"
-priority: "Medium"
-created: "2026-07-14"
-last_updated: "2026-07-14"
+id: 2026-07-14_web-inherit-not-applied
+title: 'Web interface does not apply inherit: sections'
+status: Proposed
+priority: Medium
+created: '2026-07-14'
+last_updated: '2026-07-14'
 related_cips: []
-tags: ["web", "inherit", "rendering"]
+tags:
+- web
+- inherit
+- rendering
+owner: lawrennd
+category: bugs
 ---
 
 # Task: Web interface does not apply `inherit:` sections

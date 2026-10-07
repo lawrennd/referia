@@ -1,12 +1,19 @@
 ---
-id: "2026-07-14_web-save-not-persisting"
-title: "Web interface Save button did not persist updated field values"
-status: "Completed"
-priority: "High"
-created: "2026-07-14"
-last_updated: "2026-07-14"
+id: 2026-07-14_web-save-not-persisting
+title: Web interface Save button did not persist updated field values
+status: Completed
+priority: High
+created: '2026-07-14'
+last_updated: '2026-07-14'
 related_cips: []
-tags: ["web", "htmx", "fastapi", "persistence", "forms"]
+tags:
+- web
+- htmx
+- fastapi
+- persistence
+- forms
+owner: lawrennd
+category: bugs
 ---
 
 # Bug: Web interface Save button did not persist updated field values

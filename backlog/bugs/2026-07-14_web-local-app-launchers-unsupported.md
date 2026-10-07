@@ -1,12 +1,20 @@
 ---
-id: "2026-07-14_web-local-app-launchers-unsupported"
-title: "Web interface cannot support local app launchers (editpdf, urls, editdocx)"
-status: "Proposed"
-priority: "Low"
-created: "2026-07-14"
-last_updated: "2026-07-14"
+id: 2026-07-14_web-local-app-launchers-unsupported
+title: Web interface cannot support local app launchers (editpdf, urls, editdocx)
+status: Proposed
+priority: Low
+created: '2026-07-14'
+last_updated: '2026-07-14'
 related_cips: []
-tags: ["web", "editpdf", "urls", "local-apps", "architecture", "limitation"]
+tags:
+- web
+- editpdf
+- urls
+- local-apps
+- architecture
+- limitation
+owner: lawrennd
+category: bugs
 ---
 
 # Feature/Limitation: Local App Launchers Not Supported in Web Interface

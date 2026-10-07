@@ -1,18 +1,20 @@
 ---
-id: "2025-12-23_template-expansion-column-generation"
-title: "Fix Template Expansion Column Auto-Generation and Namespace Clash"
-status: "Completed"
-priority: "High"
-created: "2025-12-23"
-last_updated: "2025-12-23"
-owner: "neil"
-github_issue: ""
-dependencies: ""
+id: 2025-12-23_template-expansion-column-generation
+title: Fix Template Expansion Column Auto-Generation and Namespace Clash
+status: Completed
+priority: High
+created: '2025-12-23'
+last_updated: '2025-12-23'
+owner: neil
+github_issue: ''
+dependencies: ''
 tags:
 - backlog
 - bug
 - template-expansion
 - cip-0006
+category: bugs
+related_cips: []
 ---
 
 # Task: Fix Template Expansion Column Auto-Generation and Namespace Clash

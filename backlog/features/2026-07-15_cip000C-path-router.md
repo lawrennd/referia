@@ -1,11 +1,14 @@
 ---
-id: "2026-07-15_cip000C-path-router"
-title: "Add catch-all path router for config-based routing"
-status: "Completed"
-priority: "High"
-created: "2026-07-15"
-last_updated: "2026-07-15"
-related_cips: ["000C"]
+id: 2026-07-15_cip000C-path-router
+title: Add catch-all path router for config-based routing
+status: Completed
+priority: High
+created: '2026-07-15'
+last_updated: '2026-07-15'
+related_cips:
+- 000C
+owner: lawrennd
+category: features
 ---
 
 # Task: Add catch-all path router for config-based routing

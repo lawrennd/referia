@@ -1,12 +1,20 @@
 ---
 author: Neil D. Lawrence
-created: "2026-07-15"
-last_updated: "2026-10-06"
+created: '2026-07-15'
+last_updated: '2026-10-06'
 status: Accepted
 related_requirements: []
-related_cips: ["000B"]
-tags: ["web", "multi-config", "routing", "ecosystem", "architecture"]
+related_cips:
+- 000B
+tags:
+- web
+- multi-config
+- routing
+- ecosystem
+- architecture
 compressed: false
+id: 000C
+title: Multi-Config Web Server (Root-Based Path Routing)
 ---
 
 # CIP-000C: Multi-Config Web Server (Root-Based Path Routing)

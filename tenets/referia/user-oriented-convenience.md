@@ -1,14 +1,17 @@
 ---
-id: "user-oriented-convenience"
-title: "User-Oriented Convenience"
-created: "2025-10-10"
-last_updated: "2025-10-10"
-version: "1.0"
+id: user-oriented-convenience
+title: User-Oriented Convenience
+created: '2025-10-10'
+last_updated: '2025-10-10'
+version: '1.0'
 tags:
 - tenet
 - user
 - convenience
 - application
+status: Active
+last_reviewed: '2025-10-10'
+review_frequency: Annual
 ---
 
 # User-Oriented Convenience

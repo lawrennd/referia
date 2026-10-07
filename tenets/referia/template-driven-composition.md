@@ -1,15 +1,18 @@
 ---
-id: "template-driven-composition"
-title: "Template-Driven Interface Composition"
-created: "2025-12-23"
-last_updated: "2025-12-23"
-version: "1.0"
+id: template-driven-composition
+title: Template-Driven Interface Composition
+created: '2025-12-23'
+last_updated: '2025-12-23'
+version: '1.0'
 tags:
 - tenet
 - templates
 - composition
 - configuration
 - reusability
+status: Active
+last_reviewed: '2025-12-23'
+review_frequency: Annual
 ---
 
 # Template-Driven Interface Composition

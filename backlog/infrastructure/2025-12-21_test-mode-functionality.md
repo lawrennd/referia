@@ -1,18 +1,20 @@
 ---
-id: "2025-12-21_test-mode-functionality"
-title: "Test Mode Functionality with Various Backends"
-status: "Completed"
-priority: "Medium"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: ""
-github_issue: ""
-dependencies: "2025-12-21_implement-mode-parameter-compute"
+id: 2025-12-21_test-mode-functionality
+title: Test Mode Functionality with Various Backends
+status: Completed
+priority: Medium
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
+github_issue: ''
+dependencies: 2025-12-21_implement-mode-parameter-compute
 tags:
 - backlog
 - testing
 - infrastructure
 - compute
+category: infrastructure
+related_cips: []
 ---
 
 # Task: Test Mode Functionality with Various Backends

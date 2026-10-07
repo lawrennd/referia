@@ -1,15 +1,18 @@
 ---
-id: "progressive-augmentation"
-title: "Progressive Augmentation of Infrastructure"
-created: "2025-12-23"
-last_updated: "2025-12-23"
-version: "1.0"
+id: progressive-augmentation
+title: Progressive Augmentation of Infrastructure
+created: '2025-12-23'
+last_updated: '2025-12-23'
+version: '1.0'
 tags:
 - tenet
 - architecture
 - layering
 - inheritance
 - lynguine-integration
+status: Active
+last_reviewed: '2025-12-23'
+review_frequency: Annual
 ---
 
 # Progressive Augmentation of Infrastructure

@@ -1,19 +1,22 @@
 ---
-id: "2025-12-17_custom-llm-chapter-queries"
-title: "Custom LLM Query Interface for Chapters"
-status: "Completed"
-priority: "Medium"
-created: "2025-12-17"
-last_updated: "2025-12-17"
-owner: "Neil Lawrence"
-github_issue: ""
-dependencies: "LLM dependencies (poetry install --with llm), existing pdf_extract_text function"
+id: 2025-12-17_custom-llm-chapter-queries
+title: Custom LLM Query Interface for Chapters
+status: Completed
+priority: Medium
+created: '2025-12-17'
+last_updated: '2025-12-17'
+owner: Neil Lawrence
+github_issue: ''
+dependencies: LLM dependencies (poetry install --with llm), existing pdf_extract_text
+  function
 tags:
 - backlog
 - feature
 - llm
 - user-interface
 - thesis-review
+category: features
+related_cips: []
 ---
 
 # Task: Custom LLM Query Interface for Chapters

@@ -1,18 +1,20 @@
 ---
-id: "2025-12-22_document-mode-history-parameters"
-title: "Document Mode and History Parameters for Compute Framework"
-status: "Ready"
-priority: "High"
-created: "2025-12-22"
-last_updated: "2025-12-22"
-owner: ""
-github_issue: ""
-dependencies: ""
+id: 2025-12-22_document-mode-history-parameters
+title: Document Mode and History Parameters for Compute Framework
+status: Ready
+priority: High
+created: '2025-12-22'
+last_updated: '2025-12-22'
+owner: lawrennd
+github_issue: ''
+dependencies: ''
 tags:
 - backlog
 - documentation
 - compute
 - llm
+category: documentation
+related_cips: []
 ---
 
 # Task: Document Mode and History Parameters for Compute Framework

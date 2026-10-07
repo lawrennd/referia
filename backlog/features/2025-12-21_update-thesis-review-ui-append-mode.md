@@ -1,18 +1,20 @@
 ---
-id: "2025-12-21_update-thesis-review-ui-append-mode"
-title: "Update Thesis Review UI to Use Append Mode"
-status: "Completed"
-priority: "Medium"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: ""
-github_issue: ""
-dependencies: "2025-12-21_implement-mode-parameter-compute, 2025-12-21_include-query-flag-llm-custom-query"
+id: 2025-12-21_update-thesis-review-ui-append-mode
+title: Update Thesis Review UI to Use Append Mode
+status: Completed
+priority: Medium
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
+github_issue: ''
+dependencies: 2025-12-21_implement-mode-parameter-compute, 2025-12-21_include-query-flag-llm-custom-query
 tags:
 - backlog
 - feature
 - ui
 - thesis-review
+category: features
+related_cips: []
 ---
 
 # Task: Update Thesis Review UI to Use Append Mode

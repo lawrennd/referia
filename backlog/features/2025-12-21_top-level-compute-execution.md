@@ -1,18 +1,20 @@
 ---
-id: "2025-12-21_top-level-compute-execution"
-title: "Implement automatic execution for top-level compute operations"
-status: "Proposed"
-priority: "Medium"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: "lawrennd"
+id: 2025-12-21_top-level-compute-execution
+title: Implement automatic execution for top-level compute operations
+status: Proposed
+priority: Medium
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
 github_issue: null
 dependencies:
-- "2025-12-21_fix-global-consts-scalar-loading"
+- 2025-12-21_fix-global-consts-scalar-loading
 tags:
 - feature
 - compute
 - architecture
+category: features
+related_cips: []
 ---
 
 # Feature: Implement automatic execution for top-level compute operations

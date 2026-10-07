@@ -1,16 +1,17 @@
 ---
-id: "2026-10-06_cip000F-migrate-rewrite"
-title: "CIP-000F: Full dialect rewrite migrate mode"
-status: "Completed"
-priority: "Low"
-created: "2026-10-06"
-last_updated: "2026-10-06"
-category: "features"
-related_cips: ["000F"]
-owner: ""
+id: 2026-10-06_cip000F-migrate-rewrite
+title: 'CIP-000F: Full dialect rewrite migrate mode'
+status: Completed
+priority: Low
+created: '2026-10-06'
+last_updated: '2026-10-06'
+category: features
+related_cips:
+- 000F
+owner: lawrennd
 dependencies:
-- "2026-10-06_cip000F-extract-normaliser"
-- "2026-10-06_cip000F-migrate-stamp-only"
+- 2026-10-06_cip000F-extract-normaliser
+- 2026-10-06_cip000F-migrate-stamp-only
 tags:
 - backlog
 - cip000F

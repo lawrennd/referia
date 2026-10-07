@@ -1,12 +1,18 @@
 ---
-id: "2026-07-14_web-selector-keyerror"
-title: "KeyError when navigating configs with subseries selector"
-status: "Completed"
-priority: "High"
-created: "2026-07-14"
-last_updated: "2026-07-14"
+id: 2026-07-14_web-selector-keyerror
+title: KeyError when navigating configs with subseries selector
+status: Completed
+priority: High
+created: '2026-07-14'
+last_updated: '2026-07-14'
 related_cips: []
-tags: ["web", "subseries", "pandas", "keyerror"]
+tags:
+- web
+- subseries
+- pandas
+- keyerror
+owner: lawrennd
+category: bugs
 ---
 
 # Bug: KeyError When Navigating Configs with Subseries Selector

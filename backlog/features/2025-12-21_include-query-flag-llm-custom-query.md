@@ -1,18 +1,20 @@
 ---
-id: "2025-12-21_include-query-flag-llm-custom-query"
-title: "Add include_query Flag to llm_custom_query Function"
-status: "Completed"
-priority: "Medium"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: ""
-github_issue: ""
-dependencies: ""
+id: 2025-12-21_include-query-flag-llm-custom-query
+title: Add include_query Flag to llm_custom_query Function
+status: Completed
+priority: Medium
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
+github_issue: ''
+dependencies: ''
 tags:
 - backlog
 - feature
 - llm
 - compute
+category: features
+related_cips: []
 ---
 
 # Task: Add include_query Flag to llm_custom_query Function

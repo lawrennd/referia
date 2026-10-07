@@ -1,12 +1,19 @@
 ---
-id: "2026-07-15_pyminizip-missing-from-dependencies"
-title: "Orphaned pyminizip import in system.py causes CI test collection failure"
-status: "Completed"
-priority: "High"
-created: "2026-07-15"
-last_updated: "2026-07-15"
+id: 2026-07-15_pyminizip-missing-from-dependencies
+title: Orphaned pyminizip import in system.py causes CI test collection failure
+status: Completed
+priority: High
+created: '2026-07-15'
+last_updated: '2026-07-15'
 related_cips: []
-tags: ["ci", "dependencies", "pyminizip", "poetry", "test-collection"]
+tags:
+- ci
+- dependencies
+- pyminizip
+- poetry
+- test-collection
+owner: lawrennd
+category: bugs
 ---
 
 # Bug: Orphaned pyminizip import in system.py causes CI test collection failure

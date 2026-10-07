@@ -1,15 +1,16 @@
 ---
-id: "2026-10-06_cip000F-stamp-machine-configs"
-title: "CIP-000F: Stamp referia_config_version on living machine configs"
-status: "Completed"
-priority: "High"
-created: "2026-10-06"
-last_updated: "2026-10-06"
-category: "infrastructure"
-related_cips: ["000F"]
-owner: ""
+id: 2026-10-06_cip000F-stamp-machine-configs
+title: 'CIP-000F: Stamp referia_config_version on living machine configs'
+status: Completed
+priority: High
+created: '2026-10-06'
+last_updated: '2026-10-06'
+category: infrastructure
+related_cips:
+- 000F
+owner: lawrennd
 dependencies:
-- "2026-10-06_cip000F-migrate-stamp-only"
+- 2026-10-06_cip000F-migrate-stamp-only
 tags:
 - backlog
 - cip000F

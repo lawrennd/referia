@@ -1,11 +1,14 @@
 ---
-id: "2026-07-15_cip000C-create-app-root-refactor"
-title: "Refactor create_app() to accept optional root directory"
-status: "Ready"
-priority: "High"
-created: "2026-07-15"
-last_updated: "2026-07-15"
-related_cips: ["000C"]
+id: 2026-07-15_cip000C-create-app-root-refactor
+title: Refactor create_app() to accept optional root directory
+status: Ready
+priority: High
+created: '2026-07-15'
+last_updated: '2026-07-15'
+related_cips:
+- 000C
+owner: lawrennd
+category: features
 ---
 
 # Task: Refactor create_app() to accept optional root directory

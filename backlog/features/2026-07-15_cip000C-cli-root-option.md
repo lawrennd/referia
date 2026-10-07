@@ -1,11 +1,14 @@
 ---
-id: "2026-07-15_cip000C-cli-root-option"
-title: "Add --root option to referia serve CLI"
-status: "Ready"
-priority: "Medium"
-created: "2026-07-15"
-last_updated: "2026-07-15"
-related_cips: ["000C"]
+id: 2026-07-15_cip000C-cli-root-option
+title: Add --root option to referia serve CLI
+status: Ready
+priority: Medium
+created: '2026-07-15'
+last_updated: '2026-07-15'
+related_cips:
+- 000C
+owner: lawrennd
+category: features
 ---
 
 # Task: Add --root option to referia serve CLI

@@ -1,11 +1,11 @@
 ---
-id: "2025-12-21_fix-llm-integration-test"
-title: "Fix failing LLM summarise function test"
-status: "Proposed"
-priority: "Low"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: "lawrennd"
+id: 2025-12-21_fix-llm-integration-test
+title: Fix failing LLM summarise function test
+status: Proposed
+priority: Low
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
 github_issue: null
 dependencies: null
 tags:
@@ -14,6 +14,8 @@ tags:
 - testing
 - llm
 - integration
+category: bugs
+related_cips: []
 ---
 
 # Bug: Fix failing LLM summarise function test

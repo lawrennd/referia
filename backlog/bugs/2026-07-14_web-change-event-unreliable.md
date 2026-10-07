@@ -1,12 +1,20 @@
 ---
-id: "2026-07-14_web-change-event-unreliable"
-title: "Per-field change events not reliably firing before Save; /save re-runs computes as side effect"
-status: "Completed"
-priority: "High"
-created: "2026-07-14"
-last_updated: "2026-07-14"
-tags: ["web", "htmx", "architecture", "compute", "slider"]
+id: 2026-07-14_web-change-event-unreliable
+title: Per-field change events not reliably firing before Save; /save re-runs computes
+  as side effect
+status: Completed
+priority: High
+created: '2026-07-14'
+last_updated: '2026-07-14'
+tags:
+- web
+- htmx
+- architecture
+- compute
+- slider
 related_cips: []
+owner: lawrennd
+category: bugs
 ---
 
 # Bug: Per-field change events unreliable; Save re-runs computes unsafely

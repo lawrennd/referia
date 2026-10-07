@@ -1,12 +1,18 @@
 ---
-id: "2026-07-14_web-subseries-selector"
-title: "Web interface sub-selector navigation for subseries data"
-status: "Proposed"
-priority: "Medium"
-created: "2026-07-14"
-last_updated: "2026-07-14"
+id: 2026-07-14_web-subseries-selector
+title: Web interface sub-selector navigation for subseries data
+status: Proposed
+priority: Medium
+created: '2026-07-14'
+last_updated: '2026-07-14'
 related_cips: []
-tags: ["web", "subseries", "navigation", "ux"]
+tags:
+- web
+- subseries
+- navigation
+- ux
+owner: lawrennd
+category: features
 ---
 
 # Task: Web Interface Sub-Selector Navigation for Subseries Data

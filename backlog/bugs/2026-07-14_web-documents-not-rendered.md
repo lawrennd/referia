@@ -1,12 +1,21 @@
 ---
-id: "2026-07-14_web-documents-not-rendered"
-title: "Web interface does not render or execute documents section (email, letter, docx)"
-status: "Proposed"
-priority: "Medium"
-created: "2026-07-14"
-last_updated: "2026-07-14"
+id: 2026-07-14_web-documents-not-rendered
+title: Web interface does not render or execute documents section (email, letter,
+  docx)
+status: Proposed
+priority: Medium
+created: '2026-07-14'
+last_updated: '2026-07-14'
 related_cips: []
-tags: ["web", "documents", "email", "docx", "letter", "generation"]
+tags:
+- web
+- documents
+- email
+- docx
+- letter
+- generation
+owner: lawrennd
+category: bugs
 ---
 
 # Bug: Web Interface Does Not Render or Execute the `documents` Section

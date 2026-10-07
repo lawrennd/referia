@@ -1,11 +1,14 @@
 ---
-id: "2026-07-15_cip000C-index-query-param"
-title: "Index and subindex as URL query parameters"
-status: "Ready"
-priority: "High"
-created: "2026-07-15"
-last_updated: "2026-07-15"
-related_cips: ["000C"]
+id: 2026-07-15_cip000C-index-query-param
+title: Index and subindex as URL query parameters
+status: Ready
+priority: High
+created: '2026-07-15'
+last_updated: '2026-07-15'
+related_cips:
+- 000C
+owner: lawrennd
+category: features
 ---
 
 # Task: Index and subindex as URL query parameters

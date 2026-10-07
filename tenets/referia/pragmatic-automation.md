@@ -1,15 +1,18 @@
 ---
-id: "pragmatic-automation"
-title: "Pragmatic Automation for Human Enhancement"
-created: "2025-12-23"
-last_updated: "2025-12-23"
-version: "1.0"
+id: pragmatic-automation
+title: Pragmatic Automation for Human Enhancement
+created: '2025-12-23'
+last_updated: '2025-12-23'
+version: '1.0'
 tags:
 - tenet
 - automation
 - human-enhancement
 - pragmatic
 - tools
+status: Active
+last_reviewed: '2025-12-23'
+review_frequency: Annual
 ---
 
 # Pragmatic Automation for Human Enhancement

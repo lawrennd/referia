@@ -1,18 +1,20 @@
 ---
-id: "2025-12-23_nested-template-expansion"
-title: "Add Recursive/Nested Template Expansion Support"
-status: "Completed"
-priority: "Medium"
-created: "2025-12-23"
-last_updated: "2025-12-23"
-owner: ""
-github_issue: ""
-dependencies: ""
+id: 2025-12-23_nested-template-expansion
+title: Add Recursive/Nested Template Expansion Support
+status: Completed
+priority: Medium
+created: '2025-12-23'
+last_updated: '2025-12-23'
+owner: lawrennd
+github_issue: ''
+dependencies: ''
 tags:
 - backlog
 - feature
 - template-expansion
 - cip-0006
+category: features
+related_cips: []
 ---
 
 # Task: Add Recursive/Nested Template Expansion Support

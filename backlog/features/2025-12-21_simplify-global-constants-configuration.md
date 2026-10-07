@@ -1,12 +1,18 @@
 ---
 id: 2025-12-21_simplify-global-constants-configuration
-title: "Simplify Global Constants Configuration"
+title: Simplify Global Constants Configuration
 status: Proposed
 priority: High
-created: 2025-12-21
+created: &id001 2025-12-21
 updated: 2025-12-21
-owner: TBD
-tags: [usability, configuration, global_consts]
+owner: lawrennd
+tags:
+- usability
+- configuration
+- global_consts
+last_updated: *id001
+category: features
+related_cips: []
 ---
 
 ## Description

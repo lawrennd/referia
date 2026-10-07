@@ -1,18 +1,20 @@
 ---
-id: "2025-12-21_implement-history-parameter-llm-functions"
-title: "Implement History Parameter in LLM Functions"
-status: "Completed"
-priority: "High"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: ""
-github_issue: ""
-dependencies: "2025-12-21_implement-mode-parameter-compute"
+id: 2025-12-21_implement-history-parameter-llm-functions
+title: Implement History Parameter in LLM Functions
+status: Completed
+priority: High
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
+github_issue: ''
+dependencies: 2025-12-21_implement-mode-parameter-compute
 tags:
 - backlog
 - feature
 - llm
 - conversation
+category: features
+related_cips: []
 ---
 
 # Task: Implement History Parameter in LLM Functions

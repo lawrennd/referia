@@ -1,15 +1,16 @@
 ---
-id: "2026-10-06_cip000F-migrate-stamp-only"
-title: "CIP-000F: referia migrate --stamp-only (surgical version insert)"
-status: "Completed"
-priority: "High"
-created: "2026-10-06"
-last_updated: "2026-10-06"
-category: "features"
-related_cips: ["000F"]
-owner: ""
+id: 2026-10-06_cip000F-migrate-stamp-only
+title: 'CIP-000F: referia migrate --stamp-only (surgical version insert)'
+status: Completed
+priority: High
+created: '2026-10-06'
+last_updated: '2026-10-06'
+category: features
+related_cips:
+- 000F
+owner: lawrennd
 dependencies:
-- "2026-10-06_cip000F-detect-dialect"
+- 2026-10-06_cip000F-detect-dialect
 tags:
 - backlog
 - cip000F

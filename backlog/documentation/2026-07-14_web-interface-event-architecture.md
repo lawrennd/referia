@@ -1,11 +1,19 @@
 ---
-id: "2026-07-14_web-interface-event-architecture"
-title: "Document and review web interface event/compute architecture"
-status: "In Progress"
-priority: "High"
-created: "2026-07-14"
-last_updated: "2026-07-14"
-tags: ["web", "htmx", "architecture", "compute", "documentation"]
+id: 2026-07-14_web-interface-event-architecture
+title: Document and review web interface event/compute architecture
+status: In Progress
+priority: High
+created: '2026-07-14'
+last_updated: '2026-07-14'
+tags:
+- web
+- htmx
+- architecture
+- compute
+- documentation
+owner: lawrennd
+category: documentation
+related_cips: []
 ---
 
 # Architecture: Web Interface Event and Compute Flow

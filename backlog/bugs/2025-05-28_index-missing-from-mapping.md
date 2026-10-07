@@ -1,15 +1,17 @@
 ---
-id: "2025-05-28_index-missing-from-mapping"
-title: "Index isn't picked up by the mapping code"
-status: "Closed"
-priority: "High"
-effort: "Medium"
-type: "bug"
-created: "2025-05-28"
-last_updated: "2025-05-28"
-owner: "lawrennd"
+id: 2025-05-28_index-missing-from-mapping
+title: Index isn't picked up by the mapping code
+status: Completed
+priority: High
+effort: Medium
+type: bug
+created: '2025-05-28'
+last_updated: '2025-05-28'
+owner: lawrennd
 github_issue: null
 dependencies: null
+category: bugs
+related_cips: []
 ---
 
 ## Description

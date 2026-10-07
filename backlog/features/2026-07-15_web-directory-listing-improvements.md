@@ -1,11 +1,15 @@
 ---
-id: "2026-07-15_web-directory-listing-improvements"
-title: "Improve root-server directory listing: grouping, metadata, navigation, and filters"
-status: "Completed"
-priority: "Medium"
-created: "2026-07-15"
-last_updated: "2026-07-15"
-related_cips: ["000C"]
+id: 2026-07-15_web-directory-listing-improvements
+title: 'Improve root-server directory listing: grouping, metadata, navigation, and
+  filters'
+status: Completed
+priority: Medium
+created: '2026-07-15'
+last_updated: '2026-07-15'
+related_cips:
+- 000C
+owner: lawrennd
+category: features
 ---
 
 # Task: Improve root-server directory listing

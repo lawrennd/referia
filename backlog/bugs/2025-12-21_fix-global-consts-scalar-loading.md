@@ -1,19 +1,21 @@
 ---
-id: "2025-12-21_fix-global-consts-scalar-loading"
-title: "Fix global_consts loading for scalar values"
-status: "Completed"
-priority: "High"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: "lawrennd"
+id: 2025-12-21_fix-global-consts-scalar-loading
+title: Fix global_consts loading for scalar values
+status: Completed
+priority: High
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
 github_issue: null
 dependencies:
-- "2025-12-21_test-global-consts-loading"
+- 2025-12-21_test-global-consts-loading
 tags:
 - bug
 - global_consts
 - infrastructure
 - parameters
+category: bugs
+related_cips: []
 ---
 
 # Bug: global_consts cannot load scalar constant values

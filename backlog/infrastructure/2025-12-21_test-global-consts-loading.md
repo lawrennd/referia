@@ -1,11 +1,11 @@
 ---
-id: "2025-12-21_test-global-consts-loading"
-title: "Add comprehensive test coverage for global_consts loading"
-status: "Completed"
-priority: "High"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: "lawrennd"
+id: 2025-12-21_test-global-consts-loading
+title: Add comprehensive test coverage for global_consts loading
+status: Completed
+priority: High
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
 github_issue: null
 dependencies: null
 tags:
@@ -14,6 +14,8 @@ tags:
 - infrastructure
 - global_consts
 - configuration
+category: infrastructure
+related_cips: []
 ---
 
 # Task: Add comprehensive test coverage for global_consts loading

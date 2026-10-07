@@ -1,15 +1,18 @@
 ---
-id: "document-centric-management"
-title: "Document-Centric Review Management"
-created: "2025-12-23"
-last_updated: "2025-12-23"
-version: "1.0"
+id: document-centric-management
+title: Document-Centric Review Management
+created: '2025-12-23'
+last_updated: '2025-12-23'
+version: '1.0'
 tags:
 - tenet
 - documents
 - pdf
 - workflow
 - assessment
+status: Active
+last_reviewed: '2025-12-23'
+review_frequency: Annual
 ---
 
 # Document-Centric Review Management

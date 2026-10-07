@@ -1,13 +1,14 @@
 ---
-id: "2026-10-06_strict-columns-duplicate-excel-headers"
-title: "Dialect-aware strict_columns defaults (v1 false, v2 true)"
-status: "Completed"
-priority: "High"
-created: "2026-10-06"
-last_updated: "2026-10-06"
-category: "bugs"
-related_cips: ["000F"]
-owner: ""
+id: 2026-10-06_strict-columns-duplicate-excel-headers
+title: Dialect-aware strict_columns defaults (v1 false, v2 true)
+status: Completed
+priority: High
+created: '2026-10-06'
+last_updated: '2026-10-06'
+category: bugs
+related_cips:
+- 000F
+owner: lawrennd
 dependencies: []
 tags:
 - backlog

@@ -1,11 +1,11 @@
 ---
-id: "2025-12-22_reorganize-test-suite-structure"
-title: "Reorganise Test Suite Structure and Naming Conventions"
-status: "Proposed"
-priority: "Low"
-created: "2025-12-22"
-last_updated: "2025-12-22"
-owner: "lawrennd"
+id: 2025-12-22_reorganize-test-suite-structure
+title: Reorganise Test Suite Structure and Naming Conventions
+status: Proposed
+priority: Low
+created: '2025-12-22'
+last_updated: '2025-12-22'
+owner: lawrennd
 github_issue: null
 dependencies: null
 tags:
@@ -14,6 +14,8 @@ tags:
 - testing
 - organization
 - refactoring
+category: infrastructure
+related_cips: []
 ---
 
 # Task: Reorganise Test Suite Structure and Naming Conventions

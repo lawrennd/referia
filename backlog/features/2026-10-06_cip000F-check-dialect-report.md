@@ -1,15 +1,16 @@
 ---
-id: "2026-10-06_cip000F-check-dialect-report"
-title: "CIP-000F: Extend referia check with dialect reporting"
-status: "Completed"
-priority: "Medium"
-created: "2026-10-06"
-last_updated: "2026-10-06"
-category: "features"
-related_cips: ["000F"]
-owner: ""
+id: 2026-10-06_cip000F-check-dialect-report
+title: 'CIP-000F: Extend referia check with dialect reporting'
+status: Completed
+priority: Medium
+created: '2026-10-06'
+last_updated: '2026-10-06'
+category: features
+related_cips:
+- 000F
+owner: lawrennd
 dependencies:
-- "2026-10-06_cip000F-detect-dialect"
+- 2026-10-06_cip000F-detect-dialect
 tags:
 - backlog
 - cip000F

@@ -1,11 +1,11 @@
 ---
-id: "2025-12-21_verify-no-early-mapping-dependencies"
-title: "Verify no code depends on mappings existing in __init__"
-status: "Completed"
-priority: "High"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: "lawrennd"
+id: 2025-12-21_verify-no-early-mapping-dependencies
+title: Verify no code depends on mappings existing in __init__
+status: Completed
+priority: High
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
 github_issue: null
 dependencies: null
 tags:
@@ -13,6 +13,8 @@ tags:
 - investigation
 - mapping
 - cip0005
+category: infrastructure
+related_cips: []
 ---
 
 # Task: Verify no code depends on mappings existing in __init__

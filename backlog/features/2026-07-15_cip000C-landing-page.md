@@ -1,11 +1,14 @@
 ---
-id: "2026-07-15_cip000C-landing-page"
-title: "Landing page listing all configs under root"
-status: "Completed"
-priority: "Medium"
-created: "2026-07-15"
-last_updated: "2026-07-15"
-related_cips: ["000C"]
+id: 2026-07-15_cip000C-landing-page
+title: Landing page listing all configs under root
+status: Completed
+priority: Medium
+created: '2026-07-15'
+last_updated: '2026-07-15'
+related_cips:
+- 000C
+owner: lawrennd
+category: features
 ---
 
 # Task: Landing page listing all configs under root

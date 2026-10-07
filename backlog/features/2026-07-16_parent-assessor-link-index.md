@@ -1,12 +1,19 @@
 ---
-id: "2026-07-16_parent-assessor-link-index"
-title: "Parent assessor link should carry current index as query parameter"
-status: "Proposed"
-priority: "Medium"
-created: "2026-07-16"
-last_updated: "2026-07-16"
-related_cips: ["000C"]
-tags: ["web", "navigation", "parent-assessor", "linking"]
+id: 2026-07-16_parent-assessor-link-index
+title: Parent assessor link should carry current index as query parameter
+status: Proposed
+priority: Medium
+created: '2026-07-16'
+last_updated: '2026-07-16'
+related_cips:
+- 000C
+tags:
+- web
+- navigation
+- parent-assessor
+- linking
+owner: lawrennd
+category: features
 ---
 
 # Task: Parent assessor link should carry current index as query parameter

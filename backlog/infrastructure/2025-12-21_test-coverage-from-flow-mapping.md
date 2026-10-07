@@ -1,11 +1,11 @@
 ---
-id: "2025-12-21_test-coverage-from-flow-mapping"
-title: "Add test coverage for from_flow() mapping override approach"
-status: "Completed"
-priority: "High"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: "lawrennd"
+id: 2025-12-21_test-coverage-from-flow-mapping
+title: Add test coverage for from_flow() mapping override approach
+status: Completed
+priority: High
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
 github_issue: null
 dependencies: null
 tags:
@@ -13,6 +13,8 @@ tags:
 - testing
 - mapping
 - cip0005
+category: infrastructure
+related_cips: []
 ---
 
 # Task: Add test coverage for from_flow() mapping override approach

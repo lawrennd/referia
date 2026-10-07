@@ -1,17 +1,19 @@
 ---
-id: "2025-12-21_document-mode-include-query"
-title: "Document Mode and include_query Features"
-status: "Proposed"
-priority: "Low"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: ""
-github_issue: ""
-dependencies: "2025-12-21_implement-mode-parameter-compute, 2025-12-21_include-query-flag-llm-custom-query"
+id: 2025-12-21_document-mode-include-query
+title: Document Mode and include_query Features
+status: Proposed
+priority: Low
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
+github_issue: ''
+dependencies: 2025-12-21_implement-mode-parameter-compute, 2025-12-21_include-query-flag-llm-custom-query
 tags:
 - backlog
 - documentation
 - compute
+category: documentation
+related_cips: []
 ---
 
 # Task: Document Mode and include_query Features

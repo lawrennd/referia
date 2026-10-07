@@ -1,11 +1,11 @@
 ---
-id: "2025-12-21_fix-failing-write-modes-tests"
-title: "Fix 7 failing write modes tests"
-status: "Proposed"
-priority: "Medium"
-created: "2025-12-21"
-last_updated: "2025-12-21"
-owner: "lawrennd"
+id: 2025-12-21_fix-failing-write-modes-tests
+title: Fix 7 failing write modes tests
+status: Proposed
+priority: Medium
+created: '2025-12-21'
+last_updated: '2025-12-21'
+owner: lawrennd
 github_issue: null
 dependencies: null
 tags:
@@ -13,6 +13,8 @@ tags:
 - bugs
 - testing
 - write-modes
+category: bugs
+related_cips: []
 ---
 
 # Bug: Fix 7 failing write modes tests
