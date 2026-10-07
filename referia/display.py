@@ -19,7 +19,10 @@ def Scorer(index=None, data=None, user_file="_referia.yml", directory="."):
     :return: The CustomDataFrame object.
     """
 
-    interface = Interface.from_file(user_file=user_file, directory=directory)
+    # Trusted local/Jupyter helper (not HTTP). Opt out of CIP-000A path jail.
+    interface = Interface.from_file(
+        user_file=user_file, directory=directory, unbounded_paths=True
+    )
     
     if data is None:
         data = CustomDataFrame.from_flow(interface)
