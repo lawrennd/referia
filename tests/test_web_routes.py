@@ -705,3 +705,16 @@ class TestDocumentRoutes:
         assert 'class="col-splitter"' in response.text
         assert 'role="separator"' in response.text
         assert "referia.split.viewerPct" in response.text
+
+    def test_page_persists_document_details_open_state(self, tmp_path):
+        reviewer = _build_mock_reviewer()
+        reviewer._directory = str(tmp_path)
+        reviewer.list_pdf_entries.return_value = [
+            {"kind": "editpdf", "n": 0, "label": "proposal", "exists": True},
+        ]
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory=str(tmp_path))
+            with TestClient(app) as c:
+                response = c.get("/")
+        assert 'data-doc-key="editpdf/0"' in response.text
+        assert "referia.pdfEntry.open" in response.text

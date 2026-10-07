@@ -622,6 +622,17 @@ class TestRenderDocumentPanel:
         assert 'src="/record-document/editpdf/0?index=2"' in html
         assert 'href="/record-document/editpdf/0?index=2"' in html
 
+    def test_pdf_entry_has_stable_doc_key(self):
+        from referia.web.render import render_document_panel
+
+        html = render_document_panel(
+            [{"kind": "editpdf", "n": 0, "label": "proposal", "exists": True}],
+            [],
+            current_index="alice",
+        )
+        assert 'data-doc-key="editpdf/0"' in html
+        assert 'class="pdf-entry"' in html
+
     def test_missing_pdf_has_no_iframe(self):
         from referia.web.render import render_document_panel
 

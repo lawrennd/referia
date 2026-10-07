@@ -556,7 +556,9 @@ def render_document_panel(
         n = int(entry.get("n") or 0)
         label = _escape(str(entry.get("label") or kind))
         src = _escape(f"{prefix}/record-document/{kind}/{n}{index_q}")
-        parts.append('<details class="pdf-entry">')
+        # Stable key so open/closed state can survive HTMX index swaps.
+        doc_key = _escape(f"{kind}/{n}")
+        parts.append(f'<details class="pdf-entry" data-doc-key="{doc_key}">')
         parts.append(f"<summary>{label}</summary>")
         if entry.get("exists"):
             parts.append(

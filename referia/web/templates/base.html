@@ -198,6 +198,72 @@
           initSplit(el);
         });
       })();
+
+      /* Keep document <details.pdf-entry> open/closed across HTMX index
+         swaps (e.g. proposal iframe stays expanded on the next record). */
+      (function () {
+        var KEY = "referia.pdfEntry.open";
+
+        function readMap() {
+          try {
+            return JSON.parse(sessionStorage.getItem(KEY) || "{}") || {};
+          } catch (err) {
+            return {};
+          }
+        }
+
+        function writeMap(map) {
+          try { sessionStorage.setItem(KEY, JSON.stringify(map)); } catch (err) {}
+        }
+
+        function docKey(details) {
+          return details.getAttribute("data-doc-key") || "";
+        }
+
+        function applyOpenState(root) {
+          var scope = root && root.querySelectorAll ? root : document;
+          var map = readMap();
+          var nodes = scope.classList && scope.classList.contains("pdf-entry")
+            ? [scope]
+            : scope.querySelectorAll("details.pdf-entry");
+          Array.prototype.forEach.call(nodes, function (d) {
+            var k = docKey(d);
+            if (k && map[k]) d.open = true;
+          });
+        }
+
+        function bindToggles(root) {
+          var scope = root && root.querySelectorAll ? root : document;
+          var nodes = scope.classList && scope.classList.contains("pdf-entry")
+            ? [scope]
+            : scope.querySelectorAll("details.pdf-entry");
+          Array.prototype.forEach.call(nodes, function (d) {
+            if (d.dataset.openBound === "1") return;
+            d.dataset.openBound = "1";
+            d.addEventListener("toggle", function () {
+              var k = docKey(d);
+              if (!k) return;
+              var map = readMap();
+              if (d.open) map[k] = true;
+              else delete map[k];
+              writeMap(map);
+            });
+          });
+        }
+
+        function initDocOpen(root) {
+          applyOpenState(root);
+          bindToggles(root);
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+          initDocOpen(document);
+        });
+        document.addEventListener("htmx:afterSettle", function (evt) {
+          var el = (evt.detail && evt.detail.elt) ? evt.detail.elt : document;
+          initDocOpen(el);
+        });
+      })();
     </script>
 </head>
 <body>
