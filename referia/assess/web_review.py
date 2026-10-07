@@ -94,6 +94,10 @@ class WebReviewer:
         from referia.assess.data import CustomDataFrame
 
         self._directory = str(Path(directory).resolve())
+        # WebReviewer is shared with the HTTP web app (routes.py). Keep the
+        # CIP-000A path jail on by default. Trusted local Jupyter/CLI helpers
+        # (referia.data.Data, referia.display.Scorer) may pass
+        # unbounded_paths=True; this class must not.
         self._interface = Interface.from_file(user_file, self._directory)
 
         # Data loading resolves file paths relative to CWD, so temporarily
@@ -121,9 +125,39 @@ class WebReviewer:
         """Return the currently active record index."""
         return self._data.get_index()
 
+    def _resolve_index_label(self, index: Any) -> Any:
+        """Map *index* onto a typed label present in ``index_list()``.
+
+        HTTP/HTMX query parameters arrive as strings. Allocation indices may
+        be integers (or other non-str types). Prefer exact membership in the
+        data index; otherwise accept a unique match where
+        ``str(label) == str(index)``. Does not treat integers as positional
+        offsets (see backlog ``2026-10-06_web-index-query-string-type``).
+
+        :param index: Label as provided by the caller (typed or string form).
+        :return: The typed label to pass to lynguine ``set_index``.
+        :raises KeyError: If no matching label exists (or the string match
+            is ambiguous).
+        """
+        data_index = self._data.index
+        try:
+            if index in data_index:
+                return index
+        except TypeError:
+            pass
+
+        matches = [idx for idx in self.index_list() if str(idx) == str(index)]
+        if len(matches) == 1:
+            return matches[0]
+        raise KeyError(f'Index "{index}" not found in data')
+
     def set_index(self, index: Any) -> None:
-        """Switch the active record to *index*."""
-        self._data.set_index(index)
+        """Switch the active record to *index*.
+
+        Accepts typed index labels or their string forms (for example
+        ``"2"`` when the allocation index uses integer ``2``).
+        """
+        self._data.set_index(self._resolve_index_label(index))
 
     # ------------------------------------------------------------------
     # Value access

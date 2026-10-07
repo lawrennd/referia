@@ -176,6 +176,11 @@ class TestGetRecord:
         client.get("/record")
         mock_reviewer.set_index.assert_not_called()
 
+    def test_missing_index_returns_404(self, client, mock_reviewer):
+        mock_reviewer.set_index.side_effect = KeyError('Index "99" not found in data')
+        response = client.get("/record", params={"index": "99"})
+        assert response.status_code == 404
+
 
 # ---------------------------------------------------------------------------
 # GET /indices

@@ -134,6 +134,44 @@ class TestWebReviewerConstruction:
         reviewer, _, _ = _build_reviewer(index_vals=["x", "y", "z"])
         assert reviewer.index_list() == ["x", "y", "z"]
 
+    def test_from_file_keeps_path_jail(self, tmp_path):
+        """WebReviewer must not opt out of CIP-000A path jail (HTTP-shared)."""
+        from referia.assess.web_review import WebReviewer
+
+        cfg = tmp_path / "_referia.yml"
+        cfg.write_text(
+            "referia_config_version: 1\n"
+            "title: jail-default\n"
+            "strict_columns: false\n"
+            "allocation:\n"
+            "  type: fake\n"
+            "  index: Name\n"
+            "  nrows: 1\n"
+            "  cols:\n"
+            "    - Name\n"
+        )
+        captured = {}
+
+        def _capture_from_file(*args, **kwargs):
+            captured["args"] = args
+            captured["kwargs"] = kwargs
+            iface = _make_interface()
+            return iface
+
+        mock_data, _ = _make_data(index_vals=["a"])
+        with patch(
+            "referia.config.interface.Interface.from_file",
+            side_effect=_capture_from_file,
+        ), patch(
+            "referia.assess.data.CustomDataFrame.from_flow",
+            return_value=mock_data,
+        ):
+            WebReviewer("_referia.yml", str(tmp_path))
+
+        assert captured["kwargs"].get("unbounded_paths") is not True
+        # Positional call: from_file(user_file, directory) — no unbounded kw.
+        assert "unbounded_paths" not in captured["kwargs"]
+
 
 # ---------------------------------------------------------------------------
 # Tests: index navigation
@@ -150,6 +188,35 @@ class TestSetIndex:
         reviewer, data, _ = _build_reviewer(index_vals=["r0", "r1"])
         reviewer.set_index("r1")
         assert reviewer.get_index() == "r1"
+
+    def test_string_query_coerces_to_integer_label(self):
+        """HTMX sends index=2 as str; allocation may use int Project number."""
+        reviewer, data, _ = _build_reviewer(index_vals=[1, 2, 3])
+        reviewer.set_index("2")
+        data.set_index.assert_called_with(2)
+        assert reviewer.get_index() == 2
+
+    def test_typed_integer_label_still_works(self):
+        reviewer, data, _ = _build_reviewer(index_vals=[1, 2, 3])
+        reviewer.set_index(2)
+        data.set_index.assert_called_with(2)
+
+    def test_string_labels_unchanged(self):
+        reviewer, data, _ = _build_reviewer(index_vals=["alice", "bob"])
+        reviewer.set_index("bob")
+        data.set_index.assert_called_with("bob")
+
+    def test_missing_label_raises_keyerror(self):
+        reviewer, _, _ = _build_reviewer(index_vals=[1, 2, 3])
+        with pytest.raises(KeyError, match="not found"):
+            reviewer.set_index("99")
+
+    def test_numeric_string_is_label_not_positional(self):
+        """index='2' must mean label 2, not index_list()[2] (which would be 3)."""
+        reviewer, data, _ = _build_reviewer(index_vals=[1, 2, 3])
+        reviewer.set_index("2")
+        data.set_index.assert_called_with(2)
+        assert data.set_index.call_args[0][0] != 3
 
 
 # ---------------------------------------------------------------------------

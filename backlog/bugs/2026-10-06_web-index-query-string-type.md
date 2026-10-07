@@ -1,10 +1,10 @@
 ---
 id: "2026-10-06_web-index-query-string-type"
 title: "Web record navigation fails when the index is numeric"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-06"
-last_updated: "2026-10-06"
+last_updated: "2026-10-07"
 category: "bugs"
 related_cips: ["000B"]
 owner: "Neil D. Lawrence"
@@ -42,15 +42,15 @@ Seen 2026-10-06 on
 
 ## Acceptance Criteria
 
-- [ ] `WebReviewer.set_index("2")` selects the row whose index label is
+- [x] `WebReviewer.set_index("2")` selects the row whose index label is
       integer `2` when that label exists.
-- [ ] String labels still work unchanged (`set_index("bob")`).
-- [ ] Ambiguous matches are not treated as positional offsets. `index=2`
+- [x] String labels still work unchanged (`set_index("bob")`).
+- [x] Ambiguous matches are not treated as positional offsets. `index=2`
       must mean the **label** `2` (or `"2"`), not `index_list()[2]`.
-- [ ] `GET /record?index=2` and the root-server equivalent return 200 and
+- [x] `GET /record?index=2` and the root-server equivalent return 200 and
       swap the panel when label `2` exists.
-- [ ] A missing label returns 404 (or a panel error), not an uncaught 500.
-- [ ] Unit tests cover integer, string, and missing labels.
+- [x] A missing label returns 404 (or a panel error), not an uncaught 500.
+- [x] Unit tests cover integer, string, and missing labels.
 
 ## Implementation Notes
 
@@ -86,3 +86,9 @@ are an application-layer concern (explicit/implicit separation).
 Bug confirmed from `referia serve` logs while reviewing ai@cam teaching
 proposals. Config uses integer `Project number` as index. Backlog created;
 not yet implemented.
+
+### 2026-10-07
+
+Implemented: `WebReviewer._resolve_index_label` / `set_index` coerce
+query-string labels; routes map `KeyError` to HTTP 404. Unit tests in
+`test_web_reviewer.py` and `test_web_routes.py`.

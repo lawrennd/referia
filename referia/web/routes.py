@@ -317,6 +317,18 @@ async def index(
     )
 
 
+def _apply_index(reviewer, index: str | None) -> None:
+    """Set *index* on *reviewer*, mapping missing labels to HTTP 404."""
+    if index is None:
+        return
+    from fastapi import HTTPException
+
+    try:
+        reviewer.set_index(index)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Index not found") from exc
+
+
 @router.get("/record", response_class=HTMLResponse)
 async def get_record(request: Request, index: str | None = None):
     """Return the review-panel HTML fragment for *index* (HTMX partial swap).
@@ -325,8 +337,7 @@ async def get_record(request: Request, index: str | None = None):
     ``#review-panel`` div's inner HTML.
     """
     reviewer = _reviewer(request)
-    if index is not None:
-        reviewer.set_index(index)
+    _apply_index(reviewer, index)
     ctx = _panel_response_context(reviewer)
     return _templates(request).TemplateResponse(request, "review_panel.html", ctx)
 
@@ -1094,8 +1105,7 @@ root_router = APIRouter()
 @root_router.get("/{config_path:path}/record", response_class=HTMLResponse)
 async def root_get_record(request: Request, config_path: str, index: str | None = None):
     reviewer = _root_reviewer(request, config_path)
-    if index is not None:
-        reviewer.set_index(index)
+    _apply_index(reviewer, index)
     ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
     return _templates(request).TemplateResponse(request, "review_panel.html", ctx)
 
