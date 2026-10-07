@@ -1,10 +1,10 @@
 ---
 id: "2026-08-18_cip000E-codeql-closure"
 title: "Confirm CodeQL alerts closed and close CIP-000E"
-status: "Ready"
+status: "Completed"
 priority: "Medium"
 created: "2026-08-18"
-last_updated: "2026-08-19"
+last_updated: "2026-10-07"
 category: "infrastructure"
 related_cips: ["000E"]
 owner: "lawrennd"
@@ -34,10 +34,10 @@ GitHub scans can lag one run after merge. Blocked on
 
 ## Acceptance Criteria
 
-- [ ] `gh api repos/lawrennd/referia/code-scanning/alerts?state=open` shows none of #1–#21 still open
+- [x] `gh api repos/lawrennd/referia/code-scanning/alerts?state=open` shows none of #1–#21 still open
       (fixed, or #12 dismissed with documented rationale)
-- [ ] CIP-000E implementation status checkboxes complete
-- [ ] CIP-000E status: Implemented, then Closed after you verify
+- [x] CIP-000E implementation status checkboxes complete
+- [x] CIP-000E status: Implemented, then Closed after you verify
 - [ ] Decision recorded: compress into formal docs now or defer
 
 ## Implementation Notes
@@ -62,3 +62,8 @@ The original four implementation tasks are Completed. CIP-000E is Implemented.
 
 Alert #21 (`list_errors`) remains open. Closure waits on
 `2026-08-19_cip000E-generic-errors-page` then a rescan.
+
+### 2026-10-07
+
+Confirmed via `gh api`: 0 open alerts, 0 dismissed alerts — all #1–#21 fixed by code changes.
+CIP-000E closed. Compression deferred.

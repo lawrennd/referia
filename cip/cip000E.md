@@ -1,12 +1,15 @@
 ---
-author: "lawrennd"
-created: "2026-08-18"
-id: "000E"
-last_updated: "2026-08-19"
-status: "Implemented"
+author: lawrennd
+created: '2026-08-18'
+id: 000E
+last_updated: '2026-10-07'
+status: Closed
 compressed: false
-related_requirements: []
-related_cips: ["000B", "000C"]
+related_requirements:
+- 000B
+related_cips:
+- 000B
+- 000C
 tags:
 - cip
 - security
@@ -15,7 +18,7 @@ tags:
 - path-injection
 - xss
 - github-actions
-title: "Web Layer Security Hardening for CodeQL Findings"
+title: Web Layer Security Hardening for CodeQL Findings
 ---
 
 # CIP-000E: Web Layer Security Hardening for CodeQL Findings
@@ -26,7 +29,7 @@ title: "Web Layer Security Hardening for CodeQL Findings"
 - [x] Accepted — Plan reviewed and approved
 - [x] In Progress — Implementation underway
 - [x] Implemented — Code and workflow changes complete
-- [ ] Closed — CodeQL alerts cleared, tests pass, policy documented
+- [x] Closed — CodeQL alerts cleared, tests pass, policy documented
 - [ ] Rejected
 - [ ] Deferred
 
@@ -285,7 +288,7 @@ automation tenet: security tooling should be satisfied without blocking local re
 - [x] XSS alert resolved or documented (#12)
 - [x] Web route tests extended
 - [x] Full test suite passes
-- [ ] All CodeQL alerts closed on GitHub (#1–#21)
+- [x] All CodeQL alerts closed on GitHub (#1–#21)
 
 ## References
 
