@@ -320,9 +320,10 @@ async def index(
     reviewer, so instead we render a directory listing of all configs found
     under the root.  The ``after``, ``before`` and ``current`` query params
     filter the listing by date range or work-in-progress status.
+    Current-only filtering is on by default; pass ``current=0`` to show all.
     """
     if getattr(request.app.state, "root", None) is not None:
-        current_only = current is not None
+        current_only = _current_only_from_param(current)
         configs = _list_sub_configs(request.app.state.root, "")
         configs = _filter_configs(configs, after=after, before=before, current_only=current_only)
         return _render_directory_listing("", configs, after=after, before=before, current_only=current_only)
@@ -881,6 +882,15 @@ def _inherit_depth(url: str, url_set: set, url_to_inherit: dict, _seen: set | No
     return 0
 
 
+def _current_only_from_param(current: str | None) -> bool:
+    """Resolve the Current-only listing filter from the ``current`` query param.
+
+    Defaults to on when the param is absent so root listings focus on
+    work-in-progress.  Pass ``current=0`` to show all configs.
+    """
+    return current != "0"
+
+
 def _filter_configs(
     configs: list[dict],
     *,
@@ -960,10 +970,14 @@ def _render_directory_listing(
     after_val = _esc(after or "")
     before_val = _esc(before or "")
     current_checked = ' checked' if current_only else ''
+    # Checkbox before hidden so a checked submit sends current=1 first
+    # (FastAPI takes the first value).  Unchecked sends only current=0.
+    # Clear resets dates but leaves Current on (default when param absent).
     filter_form = f"""<form class="filters" method="get">
   <label>After&nbsp;<input type="date" name="after" value="{after_val}"></label>
   <label>Before&nbsp;<input type="date" name="before" value="{before_val}"></label>
   <label><input type="checkbox" name="current" value="1"{current_checked}> Current only</label>
+  <input type="hidden" name="current" value="0">
   <button type="submit">Filter</button>
   <a class="clear" href="?">Clear</a>
 </form>"""
@@ -1488,7 +1502,8 @@ async def root_index(
 
     When the path maps to a directory without a ``_referia.yml``, a listing of
     sub-configs is shown instead.  The ``after``, ``before`` and ``current``
-    query params filter that listing.
+    query params filter that listing.  Current-only is on by default;
+    pass ``current=0`` to show all.
     """
     from fastapi.responses import RedirectResponse
 
@@ -1508,7 +1523,7 @@ async def root_index(
             # No _referia.yml here — show a filtered listing of sub-configs.
             all_configs = _list_sub_configs(request.app.state.root, config_path)
             if all_configs:
-                current_only = current is not None
+                current_only = _current_only_from_param(current)
                 visible = _filter_configs(
                     all_configs, after=after, before=before, current_only=current_only
                 )

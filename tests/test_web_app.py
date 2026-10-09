@@ -318,7 +318,7 @@ class TestRootRouterRoutes:
         app = create_app(root=str(tmp_path))
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
-                resp = client.get("/group/")
+                resp = client.get("/group/?current=0")
         assert resp.status_code == 200
         assert "project" in resp.text
 
@@ -330,7 +330,7 @@ class TestRootRouterRoutes:
         app = create_app(root=str(tmp_path))
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
-                resp = client.get("/a/")
+                resp = client.get("/a/?current=0")
         assert "/a/b/" in resp.text
 
     def test_root_listing_shows_title_from_yml(self, tmp_path):
@@ -341,7 +341,7 @@ class TestRootRouterRoutes:
         app = create_app(root=str(tmp_path))
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
-                resp = client.get("/reviews/")
+                resp = client.get("/reviews/?current=0")
         assert "PhD Thesis Reviews" in resp.text
         assert "Examining 2024 cohort" in resp.text
 
@@ -354,7 +354,7 @@ class TestRootRouterRoutes:
         app = create_app(root=str(tmp_path))
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
-                resp = client.get("/")
+                resp = client.get("/?current=0")
         # Group heading links to the intermediate directory
         assert "/theses/" in resp.text
         assert "intro" in resp.text
@@ -368,7 +368,7 @@ class TestRootRouterRoutes:
         app = create_app(root=str(tmp_path))
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
-                resp = client.get("/group/")
+                resp = client.get("/group/?current=0")
         # The group heading should link to /group/deep/
         assert 'href="/group/deep/"' in resp.text
 
@@ -382,7 +382,7 @@ class TestRootRouterRoutes:
         app = create_app(root=str(tmp_path))
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
-                resp = client.get("/theses/")
+                resp = client.get("/theses/?current=0")
         assert resp.status_code == 200
         assert "href=\"/\"" in resp.text  # parent link to root
 
@@ -393,7 +393,7 @@ class TestRootRouterRoutes:
         (sub / "_referia.yml").write_text("title: PhD")
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
-            resp = client.get("/")
+            resp = client.get("/?current=0")
         assert resp.status_code == 200
         assert "&uarr;" not in resp.text  # no up-arrow
 
@@ -405,7 +405,7 @@ class TestRootRouterRoutes:
         app = create_app(root=str(tmp_path))
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
             with TestClient(app) as client:
-                resp = client.get("/group/")
+                resp = client.get("/group/?current=0")
         assert "2024-03-15" in resp.text
 
     def test_listing_shows_current_badge(self, tmp_path):
@@ -419,20 +419,43 @@ class TestRootRouterRoutes:
                 resp = client.get("/group/")
         assert "current" in resp.text
 
-    def test_current_only_filter_hides_non_current(self, tmp_path):
-        """?current=1 hides entries where current is false/absent."""
+    def test_current_only_defaults_on(self, tmp_path):
+        """Root listing defaults to Current only (hides non-current entries)."""
         for name, yml in [("active", "title: A\ncurrent: true"), ("done", "title: B")]:
             d = tmp_path / name
             d.mkdir()
             (d / "_referia.yml").write_text(yml)
         app = create_app(root=str(tmp_path))
-        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
-            with TestClient(app) as client:
-                resp = client.get("/?current=1")
-        assert "title: A" not in resp.text  # raw yml not shown
+        with TestClient(app) as client:
+            resp = client.get("/")
         assert ">A<" in resp.text or "active" in resp.text.lower()
-        # The non-current entry should not be visible
         assert ">B<" not in resp.text
+        assert 'name="current" value="1" checked' in resp.text
+
+    def test_current_0_shows_all_entries(self, tmp_path):
+        """?current=0 turns Current only off and shows non-current entries."""
+        for name, yml in [("active", "title: A\ncurrent: true"), ("done", "title: B")]:
+            d = tmp_path / name
+            d.mkdir()
+            (d / "_referia.yml").write_text(yml)
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/?current=0")
+        assert ">A<" in resp.text or "active" in resp.text.lower()
+        assert ">B<" in resp.text or "done" in resp.text.lower()
+        assert 'name="current" value="1"' in resp.text
+        assert 'name="current" value="1" checked' not in resp.text
+
+    def test_clear_leaves_current_on(self, tmp_path):
+        """Clear link resets to bare ? so Current only stays on by default."""
+        sub = tmp_path / "proj"
+        sub.mkdir()
+        (sub / "_referia.yml").write_text("title: Project\ncurrent: true")
+        app = create_app(root=str(tmp_path))
+        with TestClient(app) as client:
+            resp = client.get("/?after=2025-01-01&current=0")
+        assert 'href="?"' in resp.text
+        assert 'class="clear"' in resp.text
 
     def test_after_filter_excludes_old_entries(self, tmp_path):
         """?after=2025-01-01 hides configs with dates before that."""
@@ -442,7 +465,7 @@ class TestRootRouterRoutes:
             (d / "_referia.yml").write_text(f"title: {name.title()}\ndate: '{date}'")
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
-            resp = client.get("/?after=2025-01-01")
+            resp = client.get("/?after=2025-01-01&current=0")
         assert "Old" not in resp.text
         assert "New" in resp.text
 
@@ -450,12 +473,13 @@ class TestRootRouterRoutes:
         """Listing page includes a filter form with date and current controls."""
         sub = tmp_path / "proj"
         sub.mkdir()
-        (sub / "_referia.yml").write_text("title: Project")
+        (sub / "_referia.yml").write_text("title: Project\ncurrent: true")
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
             resp = client.get("/")
         assert 'type="date"' in resp.text
         assert 'name="current"' in resp.text
+        assert 'name="current" value="1" checked' in resp.text
 
     # ── Inheritance display ──────────────────────────────────────────────────
 
@@ -476,7 +500,7 @@ class TestRootRouterRoutes:
         )
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
-            resp = client.get("/")
+            resp = client.get("/?current=0")
         text = resp.text
         # Child should be indented (margin-left style applied)
         assert "margin-left" in text
@@ -495,7 +519,7 @@ class TestRootRouterRoutes:
         )
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
-            resp = client.get("/")
+            resp = client.get("/?current=0")
         pos_parent = resp.text.index("People Base")
         pos_child = resp.text.index("People Letters")
         assert pos_parent < pos_child, "Parent should render before child"
@@ -515,7 +539,7 @@ class TestRootRouterRoutes:
         )
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
-            resp = client.get("/")
+            resp = client.get("/?current=0")
         # The child entry in 'emails' group should have an "inherits" annotation.
         assert "inherits&nbsp;" in resp.text
 
@@ -527,7 +551,7 @@ class TestRootRouterRoutes:
             (d / "_referia.yml").write_text(f"title: {name.title()}")
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
-            resp = client.get("/")
+            resp = client.get("/?current=0")
         # The ↳ indent marker should not appear in the list items.
         assert "&#x21b3;" not in resp.text
         # "inherits&nbsp;" is the visible annotation text — not in CSS class names.
@@ -542,7 +566,7 @@ class TestRootRouterRoutes:
         (bad / "_referia.yml").write_text("title: [unclosed bracket")
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
-            resp = client.get("/")
+            resp = client.get("/?current=0")
         # The warning icon entity appears for the broken config.
         assert "&#x26A0;" in resp.text
 
@@ -553,7 +577,7 @@ class TestRootRouterRoutes:
         (bad / "_referia.yml").write_text("title: [unclosed bracket")
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
-            resp = client.get("/")
+            resp = client.get("/?current=0")
         assert "error-banner" in resp.text
         assert "/errors" in resp.text
 
@@ -593,7 +617,7 @@ class TestRootRouterRoutes:
         (bad / "_referia.yml").write_text(yaml_text)
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
-            listing = client.get("/")
+            listing = client.get("/?current=0")
             errors = client.get("/errors")
         assert listing.status_code == 200
         assert errors.status_code == 200
