@@ -1129,7 +1129,29 @@
         <span class="k">for</span> <span class="n">detail</span> <span class="ow">in</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]:</span>
             <span class="n">extract_review</span><span class="p">(</span><span class="n">detail</span><span class="p">,</span> <span class="n">reviewer</span><span class="p">,</span> <span class="n">group_widgets</span><span class="p">)</span>
 
-    
+    <span class="k">elif</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Section&quot;</span><span class="p">:</span>
+        <span class="c1"># Nested widget group (same shape as group). Web renders as</span>
+        <span class="c1"># collapsible &lt;details&gt;; Jupyter shows the title then the children.</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;liquid&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="p">(</span><span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;args&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+        <span class="p">)</span>
+        <span class="n">title</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">title</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">section_widgets</span> <span class="o">=</span> <span class="n">GroupWidgetCluster</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;section&quot;</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="n">reviewer</span><span class="p">)</span>
+        <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">section_widgets</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">title</span><span class="p">:</span>
+            <span class="n">heading</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Markdown&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;liquid&quot;</span><span class="p">:</span> <span class="n">title</span> <span class="k">if</span> <span class="n">title</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;### </span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot; &quot;</span><span class="p">},</span>
+            <span class="p">}</span>
+            <span class="n">extract_review</span><span class="p">(</span><span class="n">heading</span><span class="p">,</span> <span class="n">reviewer</span><span class="p">,</span> <span class="n">section_widgets</span><span class="p">)</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entries&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;children&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">detail</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+            <span class="n">extract_review</span><span class="p">(</span><span class="n">detail</span><span class="p">,</span> <span class="n">reviewer</span><span class="p">,</span> <span class="n">section_widgets</span><span class="p">)</span>
+
     <span class="k">elif</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;composite&quot;</span><span class="p">:</span>
         <span class="n">composite_widget</span> <span class="o">=</span> <span class="n">CompositeWidgetCluster</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">],</span> <span class="n">parent</span><span class="o">=</span><span class="n">reviewer</span><span class="p">)</span>
         <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">composite_widget</span><span class="p">)</span>
