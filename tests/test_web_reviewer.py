@@ -8,6 +8,7 @@ exercise WebReviewer's logic in isolation.
 from __future__ import annotations
 
 import types
+from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
 
 import pandas as pd
@@ -169,8 +170,10 @@ class TestWebReviewerConstruction:
             WebReviewer("_referia.yml", str(tmp_path))
 
         assert captured["kwargs"].get("unbounded_paths") is not True
-        # Positional call: from_file(user_file, directory) — no unbounded kw.
+        # Must stay jailed (no unbounded opt-out); sibling parent may be listed.
         assert "unbounded_paths" not in captured["kwargs"]
+        roots = captured["kwargs"].get("allowed_roots") or []
+        assert str(tmp_path.resolve()) in [str(Path(r).resolve()) for r in roots]
 
 
 # ---------------------------------------------------------------------------
@@ -742,3 +745,127 @@ class TestDocumentEntries:
         roots = reviewer.allowed_roots_for_document("editpdf", 0)
         assert source_dir.resolve() in roots
         assert store_dir.resolve() in roots
+
+
+class TestDocumentGeneration:
+    def test_list_document_entries(self):
+        reviewer, _, _ = _build_reviewer(
+            extra={
+                "documents": [
+                    {"type": "docx", "name": "Letter"},
+                    {"type": "email"},
+                ],
+                "summary_documents": [{"type": "markdown"}],
+            }
+        )
+        docs = reviewer.list_document_entries("documents")
+        assert docs == [
+            {
+                "n": 0,
+                "type": "docx",
+                "label": "Letter",
+                "summary": False,
+                "section": "documents",
+            },
+            {
+                "n": 1,
+                "type": "email",
+                "label": "Create email",
+                "summary": False,
+                "section": "documents",
+            },
+        ]
+        summary = reviewer.list_document_entries("summary_documents")
+        assert summary[0]["label"] == "Create Summary markdown"
+        assert summary[0]["summary"] is True
+
+    def test_template_to_value_viewer(self):
+        reviewer, data, _ = _build_reviewer(
+            viewer=[{"liquid": "Hello {{name}}"}],
+        )
+        data.view_to_value.return_value = "Hello Alice"
+        text = reviewer.template_to_value({"use": "viewer"})
+        assert "Hello Alice" in text
+        data.view_to_value.assert_called()
+
+    def test_create_markdown_writes_without_open(self, tmp_path):
+        out = tmp_path / "out.md"
+        reviewer, data, _ = _build_reviewer(
+            extra={
+                "documents": [
+                    {
+                        "type": "markdown",
+                        "filename": str(out.name),
+                        "directory": str(tmp_path),
+                        "content": "static body",
+                    }
+                ]
+            }
+        )
+        reviewer._directory = str(tmp_path)
+        data.view_to_value.side_effect = lambda t: t
+
+        def _write(data, filename, content, include_content=True):
+            Path(filename).write_text(content or "", encoding="utf-8")
+
+        with patch("lynguine.access.io.write_markdown_file", side_effect=_write) as writer:
+            with patch("referia.system.Sys.open_localfile") as open_local:
+                result = reviewer.generate_document(0, summary=False)
+                open_local.assert_not_called()
+            writer.assert_called_once()
+
+        assert result["status"] == "created"
+        assert result["type"] == "markdown"
+        assert out.is_file()
+        assert result["href"] == f"/document/{out.name}"
+
+    def test_create_email_drafts(self, tmp_path):
+        reviewer, _, _ = _build_reviewer(
+            extra={
+                "documents": [
+                    {"type": "email", "to": "a@example.com", "title": "Hi", "content": "Body"}
+                ]
+            }
+        )
+        reviewer._directory = str(tmp_path)
+        with patch.object(reviewer._system, "create_email") as draft:
+            result = reviewer.generate_document(0)
+            draft.assert_called_once()
+        assert result["status"] == "drafted"
+        assert result["href"] is None
+
+    def test_ensure_edit_pdf_copies(self, tmp_path):
+        config_dir = tmp_path / "review"
+        source_dir = tmp_path / "source"
+        store_dir = tmp_path / "annotated"
+        for d in (config_dir, source_dir, store_dir):
+            d.mkdir()
+        src_pdf = source_dir / "thesis.pdf"
+        src_pdf.write_bytes(b"%PDF-1.1\n%%EOF\n")
+
+        reviewer, _, _ = _build_reviewer(
+            index_vals=["Alice"],
+            col_vals={"ThesisPDF": "thesis.pdf"},
+            extra={
+                "editpdf": [{
+                    "sourcedirectory": str(source_dir),
+                    "storedirectory": str(store_dir),
+                    "field": "ThesisPDF",
+                    "name": "abstract",
+                }],
+            },
+        )
+        reviewer._directory = str(config_dir)
+
+        with patch.object(
+            reviewer._system,
+            "copy_file",
+            side_effect=lambda orig, dest, view, data: Path(dest).write_bytes(
+                Path(orig).read_bytes()
+            ),
+        ):
+            dest = reviewer.ensure_edit_pdf(0)
+
+        assert dest.is_file()
+        assert dest.parent == store_dir.resolve()
+        assert dest.name.startswith("Alice_")

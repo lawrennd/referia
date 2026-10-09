@@ -43,7 +43,9 @@
         });
       })();
 
-      /* Auto-show the status bar when HTMX writes to it, then fade after 3 s */
+      /* Auto-show the status bar when HTMX writes to it, then fade after 3 s.
+         If the fragment carries data-auto-download, start that download too
+         (Create docx / Prepare PDF) — plain <a download> remains as fallback. */
       document.addEventListener("htmx:afterSettle", function (evt) {
         var bar = document.getElementById("status-bar");
         if (!bar) return;
@@ -53,6 +55,19 @@
           bar._timer = setTimeout(function () {
             bar.classList.remove("visible");
           }, 3000);
+          var auto = bar.querySelector("[data-auto-download]");
+          if (auto) {
+            var url = auto.getAttribute("data-auto-download");
+            if (url) {
+              var a = document.createElement("a");
+              a.href = url;
+              a.setAttribute("download", "");
+              a.style.display = "none";
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }
+          }
         }
       });
 

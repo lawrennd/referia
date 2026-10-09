@@ -87,7 +87,13 @@ class WebReviewer:
         reviewer.save_flows()
     """
 
-    def __init__(self, user_file: str = "_referia.yml", directory: str = ".") -> None:
+    def __init__(
+        self,
+        user_file: str = "_referia.yml",
+        directory: str = ".",
+        *,
+        allowed_roots: list | None = None,
+    ) -> None:
         import os
         from pathlib import Path
         from referia.config.interface import Interface
@@ -98,7 +104,23 @@ class WebReviewer:
         # CIP-000A path jail on by default. Trusted local Jupyter/CLI helpers
         # (referia.data.Data, referia.display.Scorer) may pass
         # unbounded_paths=True; this class must not.
-        self._interface = Interface.from_file(user_file, self._directory)
+        #
+        # Default roots: review directory + its parent (sibling ``../info``,
+        # ``../pdfpages`` layouts). Callers in root-server mode should also
+        # pass the serve ``--root`` via *allowed_roots* so configs under that
+        # tree (e.g. ``theses/criteria/``) remain readable.
+        _config_dir = Path(self._directory)
+        _roots: list[str] = [str(_config_dir), str(_config_dir.parent)]
+        if allowed_roots:
+            for root in allowed_roots:
+                if root is None:
+                    continue
+                resolved = str(Path(root).expanduser().resolve())
+                if resolved not in _roots:
+                    _roots.append(resolved)
+        self._interface = Interface.from_file(
+            user_file, self._directory, allowed_roots=_roots
+        )
 
         # Data loading resolves file paths relative to CWD, so temporarily
         # switch to the review directory for the duration of the load.
@@ -643,6 +665,262 @@ class WebReviewer:
             self._data._compute.run(self._data, compute_interface)
         finally:
             os.chdir(_orig)
+
+    # ------------------------------------------------------------------
+    # Document generation (CIP-000B remaining work)
+    # ------------------------------------------------------------------
+
+    @property
+    def _system(self):
+        """Lazily construct a :class:`~referia.system.Sys` for document I/O."""
+        if not hasattr(self, "_system_instance") or self._system_instance is None:
+            from referia.system import Sys
+
+            self._system_instance = Sys(self._interface)
+        return self._system_instance
+
+    def list_document_entries(self, section: str = "documents") -> list[dict]:
+        """Describe ``documents:`` / ``summary_documents:`` action buttons.
+
+        :param section: Interface key, ``\"documents\"`` or
+            ``\"summary_documents\"``.
+        :return: List of ``n``, ``type``, ``label``, ``summary``, ``section``.
+        """
+        summary = section == "summary_documents"
+        entries: list[dict] = []
+        for n, doc in enumerate(self._interface_section(section)):
+            if not isinstance(doc, dict) or "type" not in doc:
+                continue
+            dtype = str(doc["type"])
+            default = f"Create Summary {dtype}" if summary else f"Create {dtype}"
+            label = doc.get("name") or default
+            entries.append(
+                {
+                    "n": n,
+                    "type": dtype,
+                    "label": str(label),
+                    "summary": summary,
+                    "section": section,
+                }
+            )
+        return entries
+
+    def template_to_value(self, template: dict) -> str:
+        """Render a document template field against the current record.
+
+        Mirrors :meth:`referia.assess.review.Reviewer.template_to_value` without
+        widgets.  ``use: review`` / ``use: scorer`` synthesise markdown from
+        current review field values instead of ``WidgetCluster.to_markdown()``.
+        """
+        if not isinstance(template, dict):
+            return str(template or "")
+        if "use" in template:
+            use = template["use"]
+            if use == "viewer":
+                viewer = self._interface.get("viewer", []) or []
+                if not isinstance(viewer, list):
+                    viewer = [viewer]
+                parts = []
+                for view in viewer:
+                    try:
+                        parts.append(str(self._data.view_to_value(view) or ""))
+                    except Exception as exc:
+                        log.debug("viewer template failed: %s", exc)
+                return "\n\n".join(parts)
+            if use in {"scorer", "review"}:
+                return self._review_fields_markdown()
+        return str(self._data.view_to_value(template) or "")
+
+    def _review_fields_markdown(self) -> str:
+        """Best-effort markdown of review fields when widgets are unavailable."""
+        lines: list[str] = []
+        for spec in self.get_review_specs():
+            field = spec.get("field")
+            if not field:
+                continue
+            label = (
+                spec.get("args", {}).get("description")
+                or spec.get("description")
+                or field
+            )
+            val = self.get_value(field)
+            if val is None or (isinstance(val, float) and pd.isna(val)):
+                val = ""
+            lines.append(f"### {label}\n\n{val}\n")
+        return "\n".join(lines)
+
+    def generate_document(self, n: int, *, summary: bool = False) -> dict:
+        """Generate ``documents[n]`` (or ``summary_documents[n]``) and return status.
+
+        :return: Dict with ``type``, ``path`` (filesystem path or ``None``),
+            ``href`` (``/document/...`` download when under the review dir),
+            and ``status`` (``created`` / ``drafted``).
+        """
+        section = "summary_documents" if summary else "documents"
+        docs = self._interface_section(section)
+        if n < 0 or n >= len(docs) or not isinstance(docs[n], dict):
+            raise IndexError(f"No document at {section}[{n}]")
+        return self.create_document(docs[n], summary=summary)
+
+    def create_document(self, document: dict, summary: bool = False) -> dict:
+        """Generate one document spec without opening it in a desktop app.
+
+        Ports :meth:`referia.assess.review.Reviewer.create_document` for the web
+        backend: writes files via ``lynguine.access.io`` and returns a download
+        path instead of calling :meth:`~referia.system.Sys.open_localfile`.
+        """
+        import os
+        from pathlib import Path
+
+        from lynguine import access
+
+        if not isinstance(document, dict) or "type" not in document:
+            raise ValueError("document must be a dict with a type key")
+
+        args = self._document_template_args(document, summary=summary)
+        doctype = document["type"]
+        result: dict[str, Any] = {
+            "type": doctype,
+            "path": None,
+            "href": None,
+            "status": "created",
+        }
+
+        _orig = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            if doctype == "email":
+                self._system.create_email(document, **args)
+                result["status"] = "drafted"
+                return result
+
+            data, filename, content = self._system.create_document_content(
+                document, **args
+            )
+            writers = {
+                "docx": access.io.write_docx_file,
+                "markdown": access.io.write_markdown_file,
+                "letter": access.io.write_letter_file,
+                "formlink": access.io.write_formlink,
+            }
+            writer = writers.get(doctype)
+            if writer is None:
+                # Unknown / excel etc.: use Sys but suppress desktop open.
+                _open = self._system.open_localfile
+                self._system.open_localfile = lambda *_a, **_k: None  # type: ignore[method-assign]
+                try:
+                    self._system.create_document(document, **args)
+                finally:
+                    self._system.open_localfile = _open  # type: ignore[method-assign]
+                filename = args.get("filename") or filename
+            else:
+                writer(data=data, filename=filename, content=content)
+
+            if filename:
+                path = Path(filename).expanduser()
+                if not path.is_absolute():
+                    path = Path(self._directory) / path
+                result["path"] = str(path.resolve())
+                result["href"] = self.document_download_href(path)
+            return result
+        finally:
+            os.chdir(_orig)
+
+    def _document_template_args(self, document: dict, *, summary: bool) -> dict:
+        """Resolve Liquid / view template fields on a document spec."""
+        args: dict[str, Any] = {}
+        template_keys = ("tally", "display", "list", "join", "liquid", "use")
+        for field, value in document.items():
+            if field == "type":
+                continue
+            args[field] = value
+            if value is None or not isinstance(value, dict):
+                continue
+            if not any(k in value for k in template_keys):
+                continue
+            if summary and field in {"content", "body"}:
+                current = self.get_index()
+                parts: list[str] = []
+                for idx in self.index_list():
+                    self.set_index(idx)
+                    parts.append(self.template_to_value(value))
+                    parts.append("\n\n")
+                args[field] = "".join(parts)
+                if current is not None:
+                    self.set_index(current)
+            else:
+                args[field] = self.template_to_value(value)
+
+        if "body" in args:
+            if "content" in args:
+                log.warning("Contents field being overwritten by body in create_document")
+            args["content"] = args["body"]
+        if "header" in args:
+            args["content"] = args["header"] + "\n\n" + args.get("content", "")
+            del args["header"]
+        if "footer" in args:
+            args["content"] = args.get("content", "") + "\n\n" + args["footer"]
+            del args["footer"]
+        return args
+
+    def document_download_href(self, path) -> str | None:
+        """Return a ``/document/...`` href if *path* is under the review directory."""
+        from pathlib import Path
+
+        try:
+            resolved = Path(path).expanduser().resolve()
+            rel = resolved.relative_to(Path(self._directory).resolve())
+        except (OSError, ValueError, TypeError):
+            return None
+        return f"/document/{rel.as_posix()}"
+
+    def ensure_edit_pdf(self, n: int):
+        """Copy/extract ``editpdf[n]`` into ``storedirectory`` and return its Path.
+
+        Mirrors the non-open part of :meth:`referia.system.Sys.edit_files` so
+        the web UI can offer a download instead of launching Preview.
+        """
+        import os
+        from pathlib import Path
+
+        from referia.util.files import to_valid_file
+        from referia.util.misc import renderable
+
+        views = self._interface_section("editpdf")
+        if n < 0 or n >= len(views) or not isinstance(views[n], dict):
+            raise IndexError(f"No editpdf entry at index {n}")
+        view = views[n]
+        val = self._extract_file_value(view)
+        if not isinstance(val, str) or not val:
+            raise FileNotFoundError(f"No file value for editpdf[{n}]")
+        if "storedirectory" not in view or "sourcedirectory" not in view:
+            raise ValueError("editpdf entry requires sourcedirectory and storedirectory")
+
+        source_dir = self._resolve_config_relative_dir(view.get("sourcedirectory"))
+        store_dir = self._resolve_config_relative_dir(view.get("storedirectory"))
+        orig = source_dir / Path(val)
+        if "name" in view:
+            stub = str(view["name"]) + ".pdf"
+        elif renderable(view):
+            stub = self._data.view_to_tmpname(view) + ".pdf"
+        else:
+            stub = orig.name
+        index = self.get_index()
+        dest_name = to_valid_file(str(index)) + "_" + to_valid_file(stub)
+        dest = store_dir / dest_name
+
+        _orig = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            store_dir.mkdir(parents=True, exist_ok=True)
+            if not dest.is_file():
+                self._system.copy_file(str(orig), str(dest), view, self._data)
+        finally:
+            os.chdir(_orig)
+
+        if not dest.is_file():
+            raise FileNotFoundError(f"Could not create edit PDF at {dest}")
+        return dest.resolve()
 
     def _value_updated(self, column: str) -> None:
         """Run on-change side-effects for *column* without touching widgets.

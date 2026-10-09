@@ -674,3 +674,30 @@ class TestRenderDocumentPanel:
         )
         assert "<iframe" not in html
         assert "PDF not found" in html
+
+    def test_document_buttons_rendered(self):
+        from referia.web.render import render_document_panel
+
+        html = render_document_panel(
+            [],
+            [],
+            documents=[{"n": 0, "type": "docx", "label": "Create docx", "summary": False}],
+            summary_documents=[
+                {"n": 0, "type": "letter", "label": "Create Summary letter", "summary": True}
+            ],
+        )
+        assert 'hx-post="/generate-document/0"' in html
+        assert 'hx-post="/generate-summary-document/0"' in html
+        assert "Create docx" in html
+        assert "Create Summary letter" in html
+
+    def test_editpdf_prepare_button(self):
+        from referia.web.render import render_document_panel
+
+        html = render_document_panel(
+            [{"kind": "editpdf", "n": 0, "label": "proposal", "exists": True}],
+            [],
+            current_index="alice",
+        )
+        assert 'hx-post="/edit-pdf/0"' in html
+        assert "Prepare / download PDF" in html
