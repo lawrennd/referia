@@ -226,3 +226,57 @@ def return_shortest(lst):
     :rtype: str
     """
     return min(lst, key=len)
+
+
+def _static_template_hint(value, *, max_len: int = 48) -> str | None:
+    """Extract a short static label from a title/subject template field."""
+    if isinstance(value, str):
+        text = value.strip()
+    elif isinstance(value, dict):
+        raw = value.get("liquid") or value.get("display") or value.get("value")
+        if not isinstance(raw, str):
+            return None
+        text = raw.strip()
+    else:
+        return None
+
+    for marker in ("{{", "{%"):
+        if marker in text:
+            text = text.split(marker, 1)[0]
+    # lynguine display-style ``{field}`` placeholders
+    text = re.split(r"\{[a-zA-Z_]", text, maxsplit=1)[0]
+    text = text.strip(" \t\n\r:-–—|")
+    text = " ".join(text.split())
+    if not text:
+        return None
+    if len(text) > max_len:
+        text = text[: max_len - 1].rstrip() + "…"
+    return text
+
+
+def document_action_label(document, *, summary: bool = False) -> str:
+    """Human-readable Create-document button label.
+
+    Preference order:
+
+    1. Explicit ``name`` (used as the full button text).
+    2. Static text from ``title`` or ``subject`` (Liquid/display templates
+       truncated before the first placeholder).
+    3. Fallback ``Create {type}`` / ``Create Summary {type}``.
+    """
+    prefix = "Create Summary " if summary else "Create "
+    if isinstance(document, dict):
+        name = document.get("name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+        hint = _static_template_hint(document.get("title")) or _static_template_hint(
+            document.get("subject")
+        )
+        if hint:
+            if hint.lower().startswith("create "):
+                return hint
+            return prefix + hint
+        dtype = str(document.get("type") or "document")
+    else:
+        dtype = "document"
+    return prefix + dtype

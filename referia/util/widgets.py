@@ -1230,7 +1230,13 @@ class CreateDocButton(ReferiaButtonWidget):
         :param document: The document to create.
         :type document: str
         """
-        args["description"] = "Create " + args["type"]
+        from referia.util.misc import document_action_label
+
+        document = args.get("document")
+        if isinstance(document, dict):
+            args["description"] = document_action_label(document, summary=False)
+        else:
+            args["description"] = "Create " + args["type"]
         # Explicitly set function to suppress warning
         if "function" not in args:
             args["function"] = ipyw.Button
@@ -1264,7 +1270,13 @@ class CreateSummaryDocButton(ReferiaButtonWidget):
         :param document: The document to create.
         :type document: str
         """
-        args["description"] = "Create Summary " + args["type"]
+        from referia.util.misc import document_action_label
+
+        document = args.get("document")
+        if isinstance(document, dict):
+            args["description"] = document_action_label(document, summary=True)
+        else:
+            args["description"] = "Create Summary " + args["type"]
         # Explicitly set function to suppress warning
         if "function" not in args:
             args["function"] = ipyw.Button

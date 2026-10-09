@@ -94,6 +94,7 @@ Overall: {overallComment} **Score: {overallScore}**"
 
 documents:
 - type: markdown
+  name: "Create gift summary"
   title:
     display: "Gift Summary"
   abstract:
@@ -107,6 +108,7 @@ documents:
   filename:
     display: "{keyname}.md"
 - type: email
+  name: "Create thank-you email"
   title:
     display: "Thanks for the gift of {description}"
   to:
