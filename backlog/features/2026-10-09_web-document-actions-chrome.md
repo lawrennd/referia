@@ -1,7 +1,7 @@
 ---
 id: "2026-10-09_web-document-actions-chrome"
 title: "Web UI: move Create document buttons into fixed action chrome"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-10-09"
 last_updated: "2026-10-09"
@@ -54,49 +54,43 @@ entries).
 
 ## Acceptance Criteria
 
-- [ ] Create / Create Summary document buttons are no longer the primary
+- [x] Create / Create Summary document buttons are no longer the primary
       control cluster inside the scrolling Documents panel (PDF list /
       edit-pdf actions may stay with documents).
-- [ ] Buttons remain available without scrolling the document column
+- [x] Buttons remain available without scrolling the document column
       (top nav and/or fixed bottom chrome).
-- [ ] HTMX behaviour unchanged: `POST /generate-document/{n}` /
+- [x] HTMX behaviour unchanged: `POST /generate-document/{n}` /
       `/generate-summary-document/{n}`, status in `#status-bar`, download
       link when a file is written.
-- [ ] Root-server path prefix rewriting still works for the relocated
+- [x] Root-server path prefix rewriting still works for the relocated
       buttons.
-- [ ] Layout does not obscure `#status-bar` success/error text or the
+- [x] Layout does not obscure `#status-bar` success/error text or the
       download affordance after generation.
-- [ ] Tests updated for wherever the buttons are rendered (template /
+- [x] Tests updated for wherever the buttons are rendered (template /
       render helpers).
 
 ## Implementation Notes
 
 ### Current code
 
-- Buttons built in `referia/web/render.py` → `render_document_panel`
-  (`.document-actions`).
-- Injected via `document_html` into the left column of
-  `referia/web/templates/review_panel.html`.
-- Save / Reload live in `.nav-actions` in the same template (not via
-  widget specs in the web panel path).
+- Buttons built in `referia/web/render.py` → `render_document_actions`
+  (`.nav-document-actions`), injected into `.nav-actions` via
+  `document_actions_html`.
+- Documents panel (`render_document_panel` → `document_html`) is PDFs/URLs
+  only; edit-pdf prepare stays with each PDF entry.
+- Save / Reload live in `.nav-actions` in `review_panel.html`.
 - `#status-bar` is fixed to the bottom in `style.css`.
 
-### Suggested approach
+### Approach taken
 
-1. Decide A vs B (default A unless nav is too crowded).
-2. Pass document action button HTML (or structured entries) into the
-   panel template separately from PDF/URL markup — e.g. split
-   `render_document_panel` into document list vs action buttons, or
-   render actions in the template from `list_document_entries`.
-3. Keep PDF open/create-edit controls near the PDFs if that still makes
-   sense; only relocate **generate document** actions.
-4. CSS: reuse `.widget-button` / distinct class for document actions so
-   they don’t look like Save (green) accidentally.
+**Option A:** `render_document_actions()` + `document_actions_html` in
+`.nav-actions` next to Save/Reload.
 
 ### Out of scope
 
 - Changing generate/download backend behaviour.
 - Moving PopulateButton / per-field compute controls.
+- Option B (bottom bar) unless nav overcrowding becomes a problem.
 
 ## Related
 
@@ -104,8 +98,8 @@ entries).
 - Prior: document generate/download work (`POST /generate-document`,
   auto-download); Documents panel in `render_document_panel`
 - Code: `referia/web/templates/review_panel.html` (`.nav-actions`),
-  `referia/web/render.py` (`render_document_panel`),
-  `referia/web/static/style.css` (`.status-bar`)
+  `referia/web/render.py` (`render_document_actions`,
+  `render_document_panel`), `referia/web/static/style.css`
 
 ## Progress Updates
 
@@ -114,3 +108,9 @@ entries).
 Proposed after live review: Create document controls should sit in fixed
 chrome (bottom bar like status, or with Save/Reload at the top), not only
 inside the scrolling Documents panel.
+
+### 2026-10-09 (implemented)
+
+Option A: Create / Create Summary buttons moved into `.nav-actions` via
+`render_document_actions` / `document_actions_html`. Documents panel no
+longer hosts generate-document buttons.

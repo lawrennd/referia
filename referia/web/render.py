@@ -621,15 +621,48 @@ def render_form(specs: list[dict], data: dict) -> str:
     return f'<form id="review-form" hx-boost="false">\n{inner}\n</form>'
 
 
+def render_document_actions(
+    documents: list[dict] | None = None,
+    summary_documents: list[dict] | None = None,
+) -> str:
+    """HTML for Create / Create Summary document buttons (nav chrome).
+
+    Button specs come from ``WebReviewer.list_document_entries``.  HTMX posts
+    use unprefixed paths (``base.html`` rewrites them in root-server mode).
+
+    Returns an empty string when there are no document actions.
+    """
+    action_entries = list(documents or []) + list(summary_documents or [])
+    if not action_entries:
+        return ""
+    parts = ['<div class="nav-document-actions">']
+    for entry in action_entries:
+        n = int(entry.get("n") or 0)
+        label = _escape(str(entry.get("label") or "Create document"))
+        if entry.get("summary"):
+            action = f"/generate-summary-document/{n}"
+        else:
+            action = f"/generate-document/{n}"
+        parts.append(
+            f'<button type="button" class="widget-button document-button" '
+            f'hx-post="{_escape(action)}" hx-target="#status-bar" '
+            f'hx-swap="innerHTML" hx-disabled-elt="this">'
+            f"{label}</button>"
+        )
+    parts.append("</div>")
+    return "\n".join(parts)
+
+
 def render_document_panel(
     pdfs: list[dict],
     urls: list[dict],
     prefix: str = "",
     current_index: Any = None,
-    documents: list[dict] | None = None,
-    summary_documents: list[dict] | None = None,
 ) -> str:
-    """HTML for PDFs, URL links, and document-generation actions.
+    """HTML for PDFs and URL links in the document column.
+
+    Create-document actions live in the panel nav via
+    :func:`render_document_actions` (not in this panel).
 
     *prefix* is the root-server config path (e.g. ``/theses/examined/introduction``)
     or empty in single-config mode.  Iframe ``src`` values must include it;
@@ -637,38 +670,15 @@ def render_document_panel(
 
     *current_index* is appended as ``?index=`` so each record has a distinct
     document URL (see backlog ``2026-10-07_web-record-document-index-in-url``).
-
-    *documents* / *summary_documents* are button specs from
-    ``WebReviewer.list_document_entries``; HTMX posts use unprefixed paths
-    (``base.html`` rewrites them in root-server mode).
     """
     from urllib.parse import quote
 
-    documents = documents or []
-    summary_documents = summary_documents or []
-    if not pdfs and not urls and not documents and not summary_documents:
+    if not pdfs and not urls:
         return ""
     index_q = ""
     if current_index is not None:
         index_q = f"?index={quote(str(current_index), safe='')}"
     parts = ['<div class="document-panel">', "<h2>Documents</h2>"]
-    action_entries = list(documents) + list(summary_documents)
-    if action_entries:
-        parts.append('<div class="document-actions">')
-        for entry in action_entries:
-            n = int(entry.get("n") or 0)
-            label = _escape(str(entry.get("label") or "Create document"))
-            if entry.get("summary"):
-                action = f"/generate-summary-document/{n}"
-            else:
-                action = f"/generate-document/{n}"
-            parts.append(
-                f'<button type="button" class="widget-button document-button" '
-                f'hx-post="{_escape(action)}" hx-target="#status-bar" '
-                f'hx-swap="innerHTML" hx-disabled-elt="this">'
-                f"{label}</button>"
-            )
-        parts.append("</div>")
     if urls:
         parts.append('<ul class="document-url-list">')
         for entry in urls:
