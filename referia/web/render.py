@@ -564,8 +564,10 @@ def render_document_panel(
     urls: list[dict],
     prefix: str = "",
     current_index: Any = None,
+    documents: list[dict] | None = None,
+    summary_documents: list[dict] | None = None,
 ) -> str:
-    """HTML for PDFs and URL links shown beside the review form.
+    """HTML for PDFs, URL links, and document-generation actions.
 
     *prefix* is the root-server config path (e.g. ``/theses/examined/introduction``)
     or empty in single-config mode.  Iframe ``src`` values must include it;
@@ -573,15 +575,38 @@ def render_document_panel(
 
     *current_index* is appended as ``?index=`` so each record has a distinct
     document URL (see backlog ``2026-10-07_web-record-document-index-in-url``).
+
+    *documents* / *summary_documents* are button specs from
+    ``WebReviewer.list_document_entries``; HTMX posts use unprefixed paths
+    (``base.html`` rewrites them in root-server mode).
     """
     from urllib.parse import quote
 
-    if not pdfs and not urls:
+    documents = documents or []
+    summary_documents = summary_documents or []
+    if not pdfs and not urls and not documents and not summary_documents:
         return ""
     index_q = ""
     if current_index is not None:
         index_q = f"?index={quote(str(current_index), safe='')}"
     parts = ['<div class="document-panel">', "<h2>Documents</h2>"]
+    action_entries = list(documents) + list(summary_documents)
+    if action_entries:
+        parts.append('<div class="document-actions">')
+        for entry in action_entries:
+            n = int(entry.get("n") or 0)
+            label = _escape(str(entry.get("label") or "Create document"))
+            if entry.get("summary"):
+                action = f"/generate-summary-document/{n}"
+            else:
+                action = f"/generate-document/{n}"
+            parts.append(
+                f'<button type="button" class="widget-button document-button" '
+                f'hx-post="{_escape(action)}" hx-target="#status-bar" '
+                f'hx-swap="innerHTML" hx-disabled-elt="this">'
+                f"{label}</button>"
+            )
+        parts.append("</div>")
     if urls:
         parts.append('<ul class="document-url-list">')
         for entry in urls:
@@ -611,6 +636,13 @@ def render_document_panel(
             )
         else:
             parts.append(f'<p class="pdf-missing">PDF not found for {label}.</p>')
+        if kind == "editpdf":
+            parts.append(
+                f'<button type="button" class="widget-button edit-pdf-button" '
+                f'hx-post="/edit-pdf/{n}" hx-target="#status-bar" '
+                f'hx-swap="innerHTML" hx-disabled-elt="this">'
+                f"Prepare / download PDF</button>"
+            )
         parts.append("</details>")
     parts.append("</div>")
     return "\n".join(parts)

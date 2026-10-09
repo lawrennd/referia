@@ -60,6 +60,7 @@ def _build_mock_reviewer() -> MagicMock:
     reviewer.affected_widgets.return_value = {"Comment", "Score"}
     reviewer.list_pdf_entries.return_value = []
     reviewer.list_url_entries.return_value = []
+    reviewer.list_document_entries.return_value = []
     reviewer._directory = "/tmp"
     return reviewer
 
@@ -512,6 +513,89 @@ class TestPostPopulate:
         assert response.status_code == 200
         assert "failed" in response.text.lower()
         assert "internal compute boom" not in response.text
+
+
+# ---------------------------------------------------------------------------
+# POST /generate-document/{n} and /edit-pdf/{n}
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def document_client():
+    """TestClient with generate_document / ensure_edit_pdf mocked."""
+    reviewer = _build_mock_reviewer()
+    reviewer.list_document_entries.side_effect = lambda section="documents": (
+        [{"n": 0, "type": "docx", "label": "Create docx", "summary": False, "section": "documents"}]
+        if section == "documents"
+        else []
+    )
+    reviewer.generate_document.return_value = {
+        "type": "docx",
+        "path": "/tmp/out.docx",
+        "href": "/document/out.docx",
+        "status": "created",
+    }
+    reviewer.ensure_edit_pdf.return_value = MagicMock()
+    reviewer.document_download_href.return_value = "/document/prepared.pdf"
+
+    with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+        app = create_app(user_file="_referia.yml", directory="/tmp")
+        with TestClient(app) as c:
+            yield c, reviewer
+
+
+class TestPostGenerateDocument:
+    def test_returns_download_link(self, document_client):
+        client, reviewer = document_client
+        response = client.post("/generate-document/0")
+        assert response.status_code == 200
+        reviewer.generate_document.assert_called_once_with(0, summary=False)
+        assert "Download" in response.text
+        assert 'href="/document/out.docx"' in response.text
+
+    def test_summary_route_sets_flag(self, document_client):
+        client, reviewer = document_client
+        client.post("/generate-summary-document/0")
+        reviewer.generate_document.assert_called_once_with(0, summary=True)
+
+    def test_missing_index_warns(self, document_client):
+        client, reviewer = document_client
+        reviewer.generate_document.side_effect = IndexError("missing")
+        response = client.post("/generate-document/9")
+        assert response.status_code == 200
+        assert "No document" in response.text
+
+    def test_failure_omits_exception_text(self, document_client):
+        client, reviewer = document_client
+        reviewer.generate_document.side_effect = RuntimeError("secret path /tmp/x")
+        response = client.post("/generate-document/0")
+        assert response.status_code == 200
+        assert "failed" in response.text.lower()
+        assert "secret path" not in response.text
+
+    def test_panel_shows_document_button(self, document_client):
+        client, _ = document_client
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'hx-post="/generate-document/0"' in response.text
+
+
+class TestPostEditPdf:
+    def test_returns_download_link(self, document_client):
+        client, reviewer = document_client
+        response = client.post("/edit-pdf/0")
+        assert response.status_code == 200
+        reviewer.ensure_edit_pdf.assert_called_once_with(0)
+        assert "Download" in response.text
+        assert 'href="/document/prepared.pdf"' in response.text
+
+    def test_failure_omits_exception_text(self, document_client):
+        client, reviewer = document_client
+        reviewer.ensure_edit_pdf.side_effect = RuntimeError("internal pdf boom")
+        response = client.post("/edit-pdf/0")
+        assert response.status_code == 200
+        assert "failed" in response.text.lower()
+        assert "internal pdf boom" not in response.text
 
 
 # ---------------------------------------------------------------------------

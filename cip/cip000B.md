@@ -327,10 +327,9 @@ drives both rendering targets.
 - [x] Integration tests via `TestClient`
 - [x] `pyproject.toml` dependency additions
 - [x] README documentation for `referia serve`
-- [ ] Document *generation* actions (`documents:` buttons +
-  `POST /generate-document` / `POST /edit-pdf`) — remaining work on
-  `backlog/features/2026-07-13_web-document-serving.md`; user-visible gap
-  tracked by `backlog/bugs/2026-07-14_web-documents-not-rendered.md`
+- [x] Document *generation* actions (`documents:` buttons +
+  `POST /generate-document` / `POST /edit-pdf`) — see
+  `backlog/features/2026-07-13_web-document-serving.md`
 
 ## References
 

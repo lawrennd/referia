@@ -1,7 +1,7 @@
 ---
 id: "2026-07-13_web-document-serving"
 title: "Web display system: document serving and system integration"
-status: "In Progress"
+status: "Completed"
 priority: "Medium"
 created: "2026-07-13"
 last_updated: "2026-10-09"
@@ -31,7 +31,8 @@ artefacts (docx, letter, email, and related types) with download or status
 feedback. The goal is feature parity with the Jupyter document workflow for
 local `referia serve`.
 
-Serving and viewing are largely done. Remaining work is **generation actions**.
+Serving, viewing, and generation actions are implemented on branch
+`cip000B-web-document-generation`.
 
 ## Acceptance Criteria
 
@@ -45,13 +46,13 @@ Serving and viewing are largely done. Remaining work is **generation actions**.
 
 ### Open — generation (covers bug `2026-07-14_web-documents-not-rendered`)
 
-- [ ] `WebReviewer` (or equivalent) exposes `documents:` / `summary_documents:` specs to the renderer
-- [ ] Review panel renders one action button per document spec
-- [ ] `POST /generate-document` (or equivalent) runs generation for the chosen spec against the current index
-- [ ] `type: docx` / `type: letter` / `type: markdown` reuse `Reviewer.create_document` → `Sys.create_document` and return a download link or status fragment
-- [ ] `type: email` creates a draft via existing helpers (same-machine) or a usable `mailto:` fallback, with status feedback
-- [ ] `POST /edit-pdf` triggers PDF page extraction and returns a download link for the extracted file
-- [ ] Failures surface clearly in the status bar without crashing the review page
+- [x] `WebReviewer` (or equivalent) exposes `documents:` / `summary_documents:` specs to the renderer
+- [x] Review panel renders one action button per document spec
+- [x] `POST /generate-document` (or equivalent) runs generation for the chosen spec against the current index
+- [x] `type: docx` / `type: letter` / `type: markdown` reuse `Reviewer.create_document` → `Sys.create_document` and return a download link or status fragment
+- [x] `type: email` creates a draft via existing helpers (same-machine) or a usable `mailto:` fallback, with status feedback
+- [x] `POST /edit-pdf` triggers PDF page extraction and returns a download link for the extracted file
+- [x] Failures surface clearly in the status bar without crashing the review page
 
 ## Implementation Notes
 
@@ -102,3 +103,8 @@ Expanded remaining AC to cover full `documents:` parity (docx, letter, email),
 not only Word. Linked bug `2026-07-14_web-documents-not-rendered` as the
 user-visible tracker for this open work. Confirmed: implement under CIP-000B,
 not as a new CIP or a one-line quick fix.
+
+Implemented generation: `WebReviewer.list_document_entries` /
+`generate_document` / `ensure_edit_pdf`; document-panel buttons; routes
+`POST /generate-document/{n}`, `/generate-summary-document/{n}`,
+`/edit-pdf/{n}` (plus root-mode twins). Tests added. Status → Completed.

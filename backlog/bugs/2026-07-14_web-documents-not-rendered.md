@@ -2,7 +2,7 @@
 id: 2026-07-14_web-documents-not-rendered
 title: Web interface does not render or execute documents section (email, letter,
   docx)
-status: Ready
+status: Completed
 priority: Medium
 created: '2026-07-14'
 last_updated: '2026-10-09'
@@ -103,3 +103,7 @@ the web interface; the `documents:` section is silently ignored.
 ### 2026-10-09
 Triaged: not a quick fix, not a new CIP. Linked to CIP-000B and folded into
 `2026-07-13_web-document-serving` as remaining acceptance criteria. Status → Ready.
+
+Implemented on branch `cip000B-web-document-generation`: document action
+buttons, `POST /generate-document`, `POST /generate-summary-document`, and
+`POST /edit-pdf`. Status → Completed.

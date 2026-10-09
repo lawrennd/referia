@@ -30,6 +30,13 @@ All routes share a ``WebReviewer`` instance stored in ``app.state.reviewer``.
     Trigger an on-demand compute function for *field*; return a status
     fragment plus the refreshed widget.
 
+``POST /generate-document/{n}`` / ``POST /generate-summary-document/{n}``
+    Run ``documents:`` / ``summary_documents:`` generation; return status
+    (and a download link when a file was written under the review directory).
+
+``POST /edit-pdf/{n}``
+    Ensure ``editpdf[n]`` is copied/extracted; return a download link.
+
 Root-server mode (``app.state.root`` is a directory path)
 ----------------------------------------------------------
 The ``root_router`` mirrors every single-config route but prefixed with a
@@ -54,6 +61,9 @@ under the root directory.  Reviewers are lazily loaded and cached by
 
 ``POST /{config_path:path}/populate/{field}``
     On-demand compute.
+
+``POST /{config_path:path}/generate-document/{n}`` (and summary / edit-pdf)
+    Document generation actions.
 
 Client-side URL rewriting
 --------------------------
@@ -187,6 +197,19 @@ def _find_populate_spec(reviewer, field: str) -> dict | None:
     return None
 
 
+def _list_document_entries(reviewer, section: str) -> list:
+    """Return document action specs, tolerating mocks without the method."""
+    list_docs = getattr(reviewer, "list_document_entries", None)
+    if not callable(list_docs):
+        return []
+    try:
+        result = list_docs(section)
+    except Exception as exc:
+        log.debug("list_document_entries(%r) failed: %s", section, exc)
+        return []
+    return result if isinstance(result, list) else []
+
+
 def _panel_response_context(reviewer, prefix: str = "") -> dict:
     """Build the shared template context dict for ``review_panel.html``.
 
@@ -209,6 +232,8 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         reviewer.list_url_entries(),
         prefix,
         current_index=current_index,
+        documents=_list_document_entries(reviewer, "documents"),
+        summary_documents=_list_document_entries(reviewer, "summary_documents"),
     )
 
     return {
@@ -421,6 +446,27 @@ async def reload_data(request: Request):
 
     ctx = _panel_response_context(reviewer)
     return templates.TemplateResponse(request, "review_panel.html", ctx)
+
+
+@router.post("/generate-document/{n}", response_class=HTMLResponse)
+async def generate_document(request: Request, n: int):
+    """Generate ``documents[n]`` for the current record."""
+    reviewer = _reviewer(request)
+    return _run_generate_document(reviewer, n, summary=False)
+
+
+@router.post("/generate-summary-document/{n}", response_class=HTMLResponse)
+async def generate_summary_document(request: Request, n: int):
+    """Generate ``summary_documents[n]`` across all indices."""
+    reviewer = _reviewer(request)
+    return _run_generate_document(reviewer, n, summary=True)
+
+
+@router.post("/edit-pdf/{n}", response_class=HTMLResponse)
+async def edit_pdf(request: Request, n: int):
+    """Ensure ``editpdf[n]`` exists (copy/extract) and return a download link."""
+    reviewer = _reviewer(request)
+    return _run_edit_pdf(reviewer, n)
 
 
 @router.post("/populate/{field}", response_class=HTMLResponse)
@@ -1106,6 +1152,66 @@ def _run_populate_and_respond(reviewer, field: str, btn_spec: dict) -> HTMLRespo
     return HTMLResponse('<span class="status-ok">&#10003; Populated</span>\n' + _make_oob(widget_html))
 
 
+def _generation_status_html(result: dict) -> str:
+    """Build a status-bar fragment for a successful document generation."""
+    doctype = _esc(str(result.get("type") or "document"))
+    status = result.get("status") or "created"
+    href = result.get("href")
+    if status == "drafted":
+        return (
+            f'<span class="status-ok">&#10003; Drafted {doctype} email.</span>'
+        )
+    if href:
+        return (
+            f'<span class="status-ok">&#10003; Created {doctype}. '
+            f'<a href="{_esc(href)}" target="_blank" rel="noopener noreferrer">'
+            f"Download</a></span>"
+        )
+    return f'<span class="status-ok">&#10003; Created {doctype}.</span>'
+
+
+def _run_generate_document(
+    reviewer, n: int, *, summary: bool = False
+) -> HTMLResponse:
+    """Shared generate-document logic for single-config and root-mode routes."""
+    action = "Generate summary document" if summary else "Generate document"
+    try:
+        result = reviewer.generate_document(n, summary=summary)
+    except IndexError:
+        return HTMLResponse(
+            f'<span class="status-warning">&#9888; No document at index {int(n)}</span>'
+        )
+    except Exception as exc:
+        _log_route_error(action, exc, n=n, summary=summary)
+        return HTMLResponse(_user_error_html(action))
+    return HTMLResponse(_generation_status_html(result or {}))
+
+
+def _run_edit_pdf(reviewer, n: int) -> HTMLResponse:
+    """Shared edit-pdf logic for single-config and root-mode routes."""
+    try:
+        path = reviewer.ensure_edit_pdf(n)
+    except IndexError:
+        return HTMLResponse(
+            f'<span class="status-warning">&#9888; No editpdf at index {int(n)}</span>'
+        )
+    except Exception as exc:
+        _log_route_error("Prepare PDF", exc, n=n)
+        return HTMLResponse(_user_error_html("Prepare PDF"))
+
+    href = None
+    if hasattr(reviewer, "document_download_href"):
+        href = reviewer.document_download_href(path)
+    if href is None:
+        # Fall back to the record-document route (works after ensure).
+        href = f"/record-document/editpdf/{int(n)}"
+    return HTMLResponse(
+        f'<span class="status-ok">&#10003; PDF ready. '
+        f'<a href="{_esc(href)}" target="_blank" rel="noopener noreferrer">'
+        f"Download</a></span>"
+    )
+
+
 # ===========================================================================
 # Root-server router
 #
@@ -1181,6 +1287,26 @@ async def root_reload(request: Request, config_path: str):
         return HTMLResponse(_user_error_html("Reload"))
     ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
     return templates.TemplateResponse(request, "review_panel.html", ctx)
+
+
+@root_router.post("/{config_path:path}/generate-document/{n}", response_class=HTMLResponse)
+async def root_generate_document(request: Request, config_path: str, n: int):
+    reviewer = _root_reviewer(request, config_path)
+    return _run_generate_document(reviewer, n, summary=False)
+
+
+@root_router.post(
+    "/{config_path:path}/generate-summary-document/{n}", response_class=HTMLResponse
+)
+async def root_generate_summary_document(request: Request, config_path: str, n: int):
+    reviewer = _root_reviewer(request, config_path)
+    return _run_generate_document(reviewer, n, summary=True)
+
+
+@root_router.post("/{config_path:path}/edit-pdf/{n}", response_class=HTMLResponse)
+async def root_edit_pdf(request: Request, config_path: str, n: int):
+    reviewer = _root_reviewer(request, config_path)
+    return _run_edit_pdf(reviewer, n)
 
 
 @root_router.post("/{config_path:path}/populate/{field}", response_class=HTMLResponse)
