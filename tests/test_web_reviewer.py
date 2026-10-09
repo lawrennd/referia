@@ -170,8 +170,10 @@ class TestWebReviewerConstruction:
             WebReviewer("_referia.yml", str(tmp_path))
 
         assert captured["kwargs"].get("unbounded_paths") is not True
-        # Positional call: from_file(user_file, directory) — no unbounded kw.
+        # Must stay jailed (no unbounded opt-out); sibling parent may be listed.
         assert "unbounded_paths" not in captured["kwargs"]
+        roots = captured["kwargs"].get("allowed_roots") or []
+        assert str(tmp_path.resolve()) in [str(Path(r).resolve()) for r in roots]
 
 
 # ---------------------------------------------------------------------------

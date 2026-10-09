@@ -552,6 +552,7 @@ class TestPostGenerateDocument:
         reviewer.generate_document.assert_called_once_with(0, summary=False)
         assert "Download" in response.text
         assert 'href="/document/out.docx"' in response.text
+        assert 'data-auto-download="/document/out.docx"' in response.text
 
     def test_summary_route_sets_flag(self, document_client):
         client, reviewer = document_client
@@ -588,6 +589,7 @@ class TestPostEditPdf:
         reviewer.ensure_edit_pdf.assert_called_once_with(0)
         assert "Download" in response.text
         assert 'href="/document/prepared.pdf"' in response.text
+        assert 'data-auto-download="/document/prepared.pdf"' in response.text
 
     def test_failure_omits_exception_text(self, document_client):
         client, reviewer = document_client

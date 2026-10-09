@@ -545,7 +545,9 @@ main {
     right: 0;
     padding: 0.4rem 1rem;
     font-size: 0.85rem;
-    background: var(--colour-success);
+    /* Default / unknown: muted; success/error/warning set via :has() below.
+       Spans keep white text so they stay readable on the coloured bar. */
+    background: var(--colour-muted);
     color: var(--colour-white);
     display: none;
     z-index: 100;
@@ -555,9 +557,23 @@ main {
     display: block;
 }
 
-.status-ok    { color: var(--colour-success); }
-.status-error { color: var(--colour-error);   }
-.status-warning { color: var(--colour-warning); }
+.status-bar:has(.status-ok) {
+    background: var(--colour-success);
+}
+
+.status-bar:has(.status-error) {
+    background: var(--colour-error);
+}
+
+.status-bar:has(.status-warning) {
+    background: var(--colour-warning);
+}
+
+.status-ok,
+.status-error,
+.status-warning {
+    color: inherit;
+}
 
 /* ── code (inline) ───────────────────────────────────────── */
 

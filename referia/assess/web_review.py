@@ -87,7 +87,13 @@ class WebReviewer:
         reviewer.save_flows()
     """
 
-    def __init__(self, user_file: str = "_referia.yml", directory: str = ".") -> None:
+    def __init__(
+        self,
+        user_file: str = "_referia.yml",
+        directory: str = ".",
+        *,
+        allowed_roots: list | None = None,
+    ) -> None:
         import os
         from pathlib import Path
         from referia.config.interface import Interface
@@ -98,7 +104,23 @@ class WebReviewer:
         # CIP-000A path jail on by default. Trusted local Jupyter/CLI helpers
         # (referia.data.Data, referia.display.Scorer) may pass
         # unbounded_paths=True; this class must not.
-        self._interface = Interface.from_file(user_file, self._directory)
+        #
+        # Default roots: review directory + its parent (sibling ``../info``,
+        # ``../pdfpages`` layouts). Callers in root-server mode should also
+        # pass the serve ``--root`` via *allowed_roots* so configs under that
+        # tree (e.g. ``theses/criteria/``) remain readable.
+        _config_dir = Path(self._directory)
+        _roots: list[str] = [str(_config_dir), str(_config_dir.parent)]
+        if allowed_roots:
+            for root in allowed_roots:
+                if root is None:
+                    continue
+                resolved = str(Path(root).expanduser().resolve())
+                if resolved not in _roots:
+                    _roots.append(resolved)
+        self._interface = Interface.from_file(
+            user_file, self._directory, allowed_roots=_roots
+        )
 
         # Data loading resolves file paths relative to CWD, so temporarily
         # switch to the review directory for the duration of the load.
