@@ -718,19 +718,19 @@ class WebReviewer:
             ``\"summary_documents\"``.
         :return: List of ``n``, ``type``, ``label``, ``summary``, ``section``.
         """
+        from referia.util.misc import document_action_label
+
         summary = section == "summary_documents"
         entries: list[dict] = []
         for n, doc in enumerate(self._interface_section(section)):
             if not isinstance(doc, dict) or "type" not in doc:
                 continue
             dtype = str(doc["type"])
-            default = f"Create Summary {dtype}" if summary else f"Create {dtype}"
-            label = doc.get("name") or default
             entries.append(
                 {
                     "n": n,
                     "type": dtype,
-                    "label": str(label),
+                    "label": document_action_label(doc, summary=summary),
                     "summary": summary,
                     "section": section,
                 }

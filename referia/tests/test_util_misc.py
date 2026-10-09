@@ -4,7 +4,7 @@ import pandas as pd
 from referia.util.misc import (
     identity, filename_to_binary, yyyymmddToDatetime, datetimeToYyyymmdd,
     add_one_to_max, renderable, tallyable, notempty,
-    return_longest, return_shortest
+    return_longest, return_shortest, document_action_label,
 )
 
 def test_identity():
@@ -42,3 +42,25 @@ def test_return_longest():
 
 def test_return_shortest():
     assert return_shortest(["short", "medium", "longest"]) == "short"
+
+
+def test_document_action_label_prefers_name():
+    assert document_action_label({"type": "docx", "name": "Create draft"}) == "Create draft"
+
+
+def test_document_action_label_from_title_liquid():
+    assert document_action_label(
+        {"type": "docx", "title": {"liquid": "Draft Thesis Review"}}
+    ) == "Create Draft Thesis Review"
+    assert document_action_label(
+        {"type": "docx", "title": {"liquid": "Conversation: {{title}}"}}
+    ) == "Create Conversation"
+    assert document_action_label(
+        {"type": "email", "subject": {"liquid": "Draft Thesis Review"}},
+        summary=True,
+    ) == "Create Summary Draft Thesis Review"
+
+
+def test_document_action_label_falls_back_to_type():
+    assert document_action_label({"type": "email"}) == "Create email"
+    assert document_action_label({"type": "letter"}, summary=True) == "Create Summary letter"

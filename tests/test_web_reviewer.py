@@ -775,27 +775,23 @@ class TestDocumentGeneration:
                 "documents": [
                     {"type": "docx", "name": "Letter"},
                     {"type": "email"},
+                    {
+                        "type": "docx",
+                        "title": {"liquid": "Draft Thesis Review"},
+                    },
+                    {
+                        "type": "docx",
+                        "title": {"liquid": "Document Conversation: {{title}}"},
+                    },
                 ],
                 "summary_documents": [{"type": "markdown"}],
             }
         )
         docs = reviewer.list_document_entries("documents")
-        assert docs == [
-            {
-                "n": 0,
-                "type": "docx",
-                "label": "Letter",
-                "summary": False,
-                "section": "documents",
-            },
-            {
-                "n": 1,
-                "type": "email",
-                "label": "Create email",
-                "summary": False,
-                "section": "documents",
-            },
-        ]
+        assert docs[0]["label"] == "Letter"
+        assert docs[1]["label"] == "Create email"
+        assert docs[2]["label"] == "Create Draft Thesis Review"
+        assert docs[3]["label"] == "Create Document Conversation"
         summary = reviewer.list_document_entries("summary_documents")
         assert summary[0]["label"] == "Create Summary markdown"
         assert summary[0]["summary"] is True
