@@ -2,7 +2,7 @@
 author: Neil D. Lawrence
 created: '2026-07-13'
 id: 000B
-last_updated: '2026-10-06'
+last_updated: '2026-10-09'
 status: In Progress
 compressed: false
 related_requirements:
@@ -327,6 +327,10 @@ drives both rendering targets.
 - [x] Integration tests via `TestClient`
 - [x] `pyproject.toml` dependency additions
 - [x] README documentation for `referia serve`
+- [ ] Document *generation* actions (`documents:` buttons +
+  `POST /generate-document` / `POST /edit-pdf`) — remaining work on
+  `backlog/features/2026-07-13_web-document-serving.md`; user-visible gap
+  tracked by `backlog/bugs/2026-07-14_web-documents-not-rendered.md`
 
 ## References
 

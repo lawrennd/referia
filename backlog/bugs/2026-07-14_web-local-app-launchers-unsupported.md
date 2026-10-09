@@ -1,11 +1,12 @@
 ---
 id: 2026-07-14_web-local-app-launchers-unsupported
 title: Web interface cannot support local app launchers (editpdf, urls, editdocx)
-status: Proposed
+status: Ready
 priority: Low
 created: '2026-07-14'
-last_updated: '2026-07-14'
-related_cips: []
+last_updated: '2026-10-09'
+related_cips:
+- '000B'
 tags:
 - web
 - editpdf
@@ -39,46 +40,39 @@ but the *trigger* model is different. There is no equivalent of a Jupyter widget
 button that fires Python code. Additionally, for remote deployments (if ever
 considered) these actions would not be possible at all.
 
-## Current State
+## Current State (2026-10-09)
 
-None of these launchers are rendered as buttons or executed in the web interface.
-The corresponding configuration sections are silently ignored.
+Partially superseded by CIP-000B web document serving:
 
-## Strategy Options (for future discussion)
+| Key | Web status |
+|---|---|
+| `urls` | **Done** — rendered as `<a target="_blank">` links |
+| `localpdf` / viewing `editpdf` paths | **Done** — embedded in document-panel iframes |
+| `editpdf` page extraction → download | **Open** — tracked under `2026-07-13_web-document-serving` (`POST /edit-pdf`) |
+| `editdocx` / `editmd` open-in-app | **Deferred** — no demand yet; Jupyter-only is acceptable |
 
-No implementation decision has been made. Options to evaluate:
+Narrow remaining scope of *this* item to anything not covered by document-serving
+generation routes (mainly optional server-side `open` for extracted PDFs). Prefer
+download links over `subprocess open` for web-native behaviour.
 
-1. **Render buttons, execute server-side (local-only).**  
-   Add `POST /launch/{action}` routes. Since server and browser are on the same Mac,
-   `subprocess.Popen(["open", path])` works and opens the app on the reviewer's
-   desktop. Simple, works for single-user local deployment.  
-   *Risk*: would break if the server is ever run on a remote machine.
+## Strategy (resolved for common cases)
 
-2. **Render viewer pane links for URLs.**  
-   For `urls:` specifically, the web interface could render the URLs as `<a
-   href="..." target="_blank">` links in the viewer panel, which the browser opens
-   natively without server involvement. Low risk, high value for the common case.
-
-3. **Render info-only placeholders.**  
-   Display a read-only block listing the PDF path / URL so the reviewer can open it
-   manually. No automation, but surfaces the information.
-
-4. **Mark as out-of-scope for web interface.**  
-   Accept that the web interface is a review/annotation tool and that local app
-   launching remains a Jupyter-only capability. Document the limitation explicitly.
-
-## Recommended First Step
-
-Implement option 2 (URL links) as an easy win, and option 1 (server-side `open`) for
-`editpdf` since it is the most commonly used launcher in thesis review workflows.
-Defer `editdocx` / `editmd` until there is demand.
+1. ~~Render viewer pane links for URLs~~ — **done**.
+2. ~~Embed PDFs in the document panel~~ — **done**.
+3. Generation / extraction downloads — **in progress** via
+   `2026-07-13_web-document-serving`.
+4. Server-side `open` for local apps — optional, local-only; defer unless a
+   workflow needs it after downloads exist.
+5. `editdocx` / `editmd` — out of scope for web until demanded.
 
 ## Related
 
-- Bug: `2026-07-14_web-documents-not-rendered.md` — `documents:` section also
-  unimplemented; shares some of the same "server-side action" infrastructure needs.
-- Tenet: document-centric-management — referia is designed around side-by-side
-  document viewing and annotation; this limitation is architecturally significant.
+- CIP: 000B
+- Feature: `2026-07-13_web-document-serving.md` — owns `POST /edit-pdf` and
+  generation downloads.
+- Bug: `2026-07-14_web-documents-not-rendered.md` — `documents:` section
+  generation (docx / letter / email).
+- Tenet: document-centric-management
 
 ## Progress Updates
 
@@ -86,3 +80,8 @@ Defer `editdocx` / `editmd` until there is demand.
 Backlog item created to record the limitation and capture strategy options.
 No implementation started. The gap was noticed while testing
 `people/letters/_referia.yml` which uses `editpdf` extensively.
+
+### 2026-10-09
+Triaged against CIP-000B progress. URLs and PDF viewing are done. Remaining
+extraction/generation work lives on `web-document-serving`; this item kept as
+Low/Ready for any leftover local-`open` decisions. Linked to CIP-000B.
