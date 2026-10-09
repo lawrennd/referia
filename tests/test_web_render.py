@@ -745,22 +745,6 @@ class TestRenderDocumentPanel:
         assert "<iframe" not in html
         assert "PDF not found" in html
 
-    def test_document_buttons_rendered(self):
-        from referia.web.render import render_document_panel
-
-        html = render_document_panel(
-            [],
-            [],
-            documents=[{"n": 0, "type": "docx", "label": "Create docx", "summary": False}],
-            summary_documents=[
-                {"n": 0, "type": "letter", "label": "Create Summary letter", "summary": True}
-            ],
-        )
-        assert 'hx-post="/generate-document/0"' in html
-        assert 'hx-post="/generate-summary-document/0"' in html
-        assert "Create docx" in html
-        assert "Create Summary letter" in html
-
     def test_editpdf_prepare_button(self):
         from referia.web.render import render_document_panel
 
@@ -771,3 +755,37 @@ class TestRenderDocumentPanel:
         )
         assert 'hx-post="/edit-pdf/0"' in html
         assert "Prepare / download PDF" in html
+
+    def test_panel_omits_create_document_buttons(self):
+        from referia.web.render import render_document_panel
+
+        html = render_document_panel(
+            [{"kind": "editpdf", "n": 0, "label": "proposal", "exists": True}],
+            [],
+            current_index="alice",
+        )
+        assert "generate-document" not in html
+        assert "nav-document-actions" not in html
+
+
+class TestRenderDocumentActions:
+    def test_empty_when_no_actions(self):
+        from referia.web.render import render_document_actions
+
+        assert render_document_actions() == ""
+        assert render_document_actions([], []) == ""
+
+    def test_document_buttons_rendered(self):
+        from referia.web.render import render_document_actions
+
+        html = render_document_actions(
+            documents=[{"n": 0, "type": "docx", "label": "Create docx", "summary": False}],
+            summary_documents=[
+                {"n": 0, "type": "letter", "label": "Create Summary letter", "summary": True}
+            ],
+        )
+        assert 'class="nav-document-actions"' in html
+        assert 'hx-post="/generate-document/0"' in html
+        assert 'hx-post="/generate-summary-document/0"' in html
+        assert "Create docx" in html
+        assert "Create Summary letter" in html

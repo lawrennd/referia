@@ -84,7 +84,13 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from referia.web.path_safety import PathOutsideRootError, safe_path_under_root, is_path_under_any_root
-from referia.web.render import render_widget, render_form, render_viewer, render_document_panel
+from referia.web.render import (
+    render_widget,
+    render_form,
+    render_viewer,
+    render_document_panel,
+    render_document_actions,
+)
 
 log = logging.getLogger(__name__)
 
@@ -232,6 +238,8 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         reviewer.list_url_entries(),
         prefix,
         current_index=current_index,
+    )
+    document_actions_html = render_document_actions(
         documents=_list_document_entries(reviewer, "documents"),
         summary_documents=_list_document_entries(reviewer, "summary_documents"),
     )
@@ -240,6 +248,7 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         "index_selector": index_selector,
         "viewer_blocks": viewer_blocks,
         "document_html": document_html,
+        "document_actions_html": document_actions_html,
         "form_html": form_html,
         "current_index": current_index,
         "total": len(indices),

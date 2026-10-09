@@ -574,11 +574,17 @@ class TestPostGenerateDocument:
         assert "failed" in response.text.lower()
         assert "secret path" not in response.text
 
-    def test_panel_shows_document_button(self, document_client):
+    def test_panel_shows_document_button_in_nav(self, document_client):
         client, _ = document_client
         response = client.get("/")
         assert response.status_code == 200
         assert 'hx-post="/generate-document/0"' in response.text
+        assert "nav-document-actions" in response.text
+        assert "nav-actions" in response.text
+        # Create buttons live in nav chrome, not the Documents panel body
+        doc_panel_start = response.text.find('class="document-panel"')
+        if doc_panel_start != -1:
+            assert 'hx-post="/generate-document/0"' not in response.text[doc_panel_start:]
 
 
 class TestPostEditPdf:

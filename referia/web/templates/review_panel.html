@@ -15,7 +15,10 @@
         {{ index_selector | safe }}
     </div>
     <div class="nav-counter">{{ position }} / {{ total }}</div>
-    <div class="nav-actions" style="margin-left:auto; display:flex; gap:0.5rem;">
+    <div class="nav-actions">
+        {% if document_actions_html %}
+            {{ document_actions_html | safe }}
+        {% endif %}
         <button class="widget-button save-button"
                 hx-post="/save"
                 hx-target="#status-bar"
