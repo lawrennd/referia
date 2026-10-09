@@ -296,6 +296,31 @@ def _user_error_html(action: str) -> str:
 _BROWSER_ERROR_HINT = "See server log."
 _PARSE_FAIL_TOOLTIP = "Failed to parse. See server log."
 
+# Fixed catalog only (CIP-000E): never interpolate str(exc) or filesystem paths.
+_LOAD_FAIL_GENERIC = "Could not load config. See server log and /errors."
+_LOAD_FAIL_PATH_ESCAPE = (
+    "Could not load config: a configured data path is outside the "
+    "allowed serve roots. See server log and /errors."
+)
+
+
+def _load_failure_detail(exc: BaseException) -> str:
+    """Browser-facing load-failure text keyed by exception type only.
+
+    Must return fixed catalog strings — never ``str(exc)`` — so PathEscape
+    path/root lists stay in the server log (CIP-000E).
+    """
+    if type(exc).__name__ == "PathEscapeError":
+        return _LOAD_FAIL_PATH_ESCAPE
+    return _LOAD_FAIL_GENERIC
+
+
+def _load_failure_hint_for_type(exc_type_name: str) -> str:
+    """Same catalog as :func:`_load_failure_detail`, keyed by type name."""
+    if exc_type_name == "PathEscapeError":
+        return _LOAD_FAIL_PATH_ESCAPE
+    return _BROWSER_ERROR_HINT
+
 
 def _log_route_error(action: str, exc: Exception, **context: Any) -> None:
     extra = " ".join(f"{k}={v!r}" for k, v in context.items())
@@ -691,7 +716,9 @@ def _get_cached_reviewer(app_state, config_file: Path, user_file: str):
                     "type": type(exc).__name__,
                     "time": _time.strftime("%Y-%m-%d %H:%M:%S"),
                 })
-            raise HTTPException(status_code=503, detail="Could not load config")
+            raise HTTPException(
+                status_code=503, detail=_load_failure_detail(exc)
+            ) from exc
         app_state.reviewer_cache[key] = (mtime, reviewer)
 
     return app_state.reviewer_cache[key][1]
@@ -1443,7 +1470,9 @@ async def list_errors(request: Request):
         f'<tr>'
         f'<td><code>{_esc(e["path"])}</code></td>'
         f'<td class="err-type">{_esc(e["type"])}</td>'
-        f'<td class="err-msg">{generic_msg}</td>'
+        f'<td class="err-msg">'
+        f'{_esc(_load_failure_hint_for_type(str(e.get("type") or "")))}'
+        f'</td>'
         f'<td class="err-time">{_esc(e["time"])}</td>'
         f'</tr>'
         for e in reversed(load_errors)

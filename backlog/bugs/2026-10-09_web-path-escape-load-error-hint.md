@@ -1,7 +1,7 @@
 ---
 id: "2026-10-09_web-path-escape-load-error-hint"
 title: "Web 503/load errors should distinguish PathEscape without leaking paths"
-status: "Ready"
+status: "Completed"
 priority: "Medium"
 created: "2026-10-09"
 last_updated: "2026-10-09"
@@ -36,14 +36,14 @@ allowed-roots list into HTTP responses or the `/errors` HTML.
 
 ## Acceptance Criteria
 
-- [ ] When load fails with `PathEscapeError`, the 503 detail uses a **fixed**
+- [x] When load fails with `PathEscapeError`, the 503 detail uses a **fixed**
       catalog sentence naming path / serve-root confinement (not `str(exc)`).
-- [ ] `/errors` load table shows the same fixed hint for `PathEscapeError` rows
+- [x] `/errors` load table shows the same fixed hint for `PathEscapeError` rows
       (config path + type + time remain; no exception payload).
-- [ ] Other load failures stay generic; unique markers in `str(exc)` never appear
+- [x] Other load failures stay generic; unique markers in `str(exc)` never appear
       in 503 body, `/errors`, or the in-memory registry.
-- [ ] Full exception (with paths) remains in the server log via `log.exception`.
-- [ ] Tests cover PathEscape hint present + marker path absent.
+- [x] Full exception (with paths) remains in the server log via `log.exception`.
+- [x] Tests cover PathEscape hint present + marker path absent.
 
 ## Implementation Notes
 
@@ -64,3 +64,8 @@ allowed-roots list into HTTP responses or the `/errors` HTML.
 ### 2026-10-09
 
 Task created after letters 503 diagnosis; implement fixed catalog hints next.
+
+### 2026-10-09 (implemented)
+
+`_load_failure_detail` / `_load_failure_hint_for_type` in `routes.py`; 503 and
+`/errors` use fixed PathEscape wording. Tests in `test_web_app.py`.

@@ -644,11 +644,38 @@ class TestRootRouterRoutes:
             registry = list(app.state.load_errors)
         assert load_resp.status_code == 503
         assert "Could not load config" in load_resp.text
+        assert "allowed serve roots" not in load_resp.text
         assert marker not in load_resp.text
         assert errors.status_code == 200
         assert marker not in errors.text
         assert marker not in str(registry)
         assert "See server log" in errors.text
+        assert str(good / "_referia.yml") in errors.text
+
+    def test_path_escape_load_uses_fixed_hint(self, tmp_path):
+        """PathEscape gets a fixed jail hint; str(exc) paths stay out of HTML."""
+        from lynguine.access.paths import PathEscapeError
+
+        marker = "/UNIQUE_ESCAPED_PATH_xyzzy/secret"
+        good = tmp_path / "jailed"
+        good.mkdir()
+        (good / "_referia.yml").write_text("title: Needs External Data\n")
+        with patch(
+            "referia.assess.web_review.WebReviewer",
+            side_effect=PathEscapeError(marker, [str(tmp_path)]),
+        ):
+            app = create_app(root=str(tmp_path))
+            with TestClient(app) as client:
+                load_resp = client.get("/jailed/")
+                errors = client.get("/errors")
+            registry = list(app.state.load_errors)
+        assert load_resp.status_code == 503
+        assert "allowed serve roots" in load_resp.text
+        assert marker not in load_resp.text
+        assert marker not in errors.text
+        assert marker not in str(registry)
+        assert "PathEscapeError" in errors.text
+        assert "allowed serve roots" in errors.text
         assert str(good / "_referia.yml") in errors.text
 
     def test_root_log_file_created(self, tmp_path):
