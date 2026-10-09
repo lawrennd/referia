@@ -362,28 +362,89 @@ def _evaluate_liquid(template: str, data: dict) -> str:
     return re.sub(r"\{\{\s*(\w+)\s*\}\}", _sub, template)
 
 
-def _render_markdown_widget(spec: dict, value: Any, data: dict | None = None) -> str:
-    args = spec.get("args", {})
-    # Content priority:
-    #   1. top-level liquid: — used by interview/admissions Markdown widgets
-    #      (``{{q1Question}}``) and by %param% expansion ("### Introduction").
-    #      Remaining ``{{column}}`` refs are resolved against the current row.
-    #   2. args.liquid — set by CriterionComment expansion (contains {{columnName}})
-    #   3. args.value / args.description — static configured content
-    #   4. the field's data value
+def _markdown_widget_content(
+    spec: dict, value: Any = None, data: dict | None = None
+) -> str:
+    """Resolve Markdown widget display text (liquid / args / field value).
+
+    Content priority:
+      1. top-level liquid: — interview widgets and %param% headings
+      2. args.liquid — CriterionComment expansion
+      3. args.value / args.description — static configured content
+      4. the field's data value
+    """
+    args = spec.get("args", {}) or {}
     top_liquid = spec.get("liquid")
     if top_liquid and data is not None:
         top_liquid = _evaluate_liquid(top_liquid, data)
     args_liquid = args.get("liquid")
     if args_liquid and data is not None:
         args_liquid = _evaluate_liquid(args_liquid, data)
-    content = (
+    return (
         top_liquid
         or args_liquid
         or args.get("value")
         or args.get("description")
         or (str(value) if value else "")
+        or ""
     )
+
+
+def _heading_only_title(content: str) -> str | None:
+    """If *content* is a single ``##`` / ``###`` heading line, return its title."""
+    if not content or not str(content).strip():
+        return None
+    lines = [ln for ln in str(content).strip().splitlines() if ln.strip()]
+    if len(lines) != 1:
+        return None
+    match = re.match(r"^(#{2,3})\s+(.+)$", lines[0].strip())
+    if not match:
+        return None
+    return match.group(2).strip() or None
+
+
+def _section_boundary(
+    spec: dict, value: Any = None, data: dict | None = None
+) -> tuple[str | None, bool]:
+    """Detect a collapsible section boundary.
+
+    Returns ``(title, omit_widget)`` when this spec starts a new
+    ``<details class="review-section">`` group, else ``(None, False)``.
+
+    * Explicit ``section: "Title"`` on any widget starts a group (widget kept).
+    * Markdown / Criterion whose resolved text is a single ``##`` / ``###``
+      heading starts a group; the heading widget is omitted from the body
+      (title appears only in ``<summary>``).
+    """
+    explicit = spec.get("section")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip(), False
+
+    widget_type = spec.get("type", "")
+    if widget_type == "Markdown":
+        content = _markdown_widget_content(spec, value, data)
+    elif widget_type == "Criterion":
+        template = spec.get("liquid", "") or ""
+        if data is not None and template:
+            template = _evaluate_liquid(template, data)
+        content = template
+    else:
+        return None, False
+
+    title = _heading_only_title(content)
+    if title:
+        return title, True
+    return None, False
+
+
+def _section_key(title: str, index: int) -> str:
+    """Stable key for open/closed persistence across HTMX swaps."""
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", title.strip().lower()).strip("-")
+    return f"{index}/{slug or 'section'}"
+
+
+def _render_markdown_widget(spec: dict, value: Any, data: dict | None = None) -> str:
+    content = _markdown_widget_content(spec, value, data)
     return f'<div class="widget-markdown">{markdown2html(content) if content else ""}</div>'
 
 
@@ -552,9 +613,52 @@ def render_form(specs: list[dict], data: dict) -> str:
         data: Current record data dict mapping field names to values.
 
     Returns:
-        HTML string containing the full review form wrapped in a ``<form>`` element.
+        HTML string containing the full review form wrapped in a ``<form>``
+        element.  Heading-only Markdown/Criterion widgets (``##`` / ``###``)
+        and explicit ``section:`` markers open collapsible
+        ``<details class="review-section">`` groups (closed by default).
     """
-    parts = [render_widget(spec, data.get(spec.get("field", "")), data) for spec in specs]
+    parts: list[str] = []
+    section_parts: list[str] | None = None
+    section_title: str | None = None
+    section_index = 0
+
+    def _flush_section() -> None:
+        nonlocal section_parts, section_title, section_index
+        if section_parts is None or section_title is None:
+            section_parts = None
+            section_title = None
+            return
+        key = _escape(_section_key(section_title, section_index))
+        summary = _escape(section_title)
+        body = "\n".join(section_parts)
+        parts.append(
+            f'<details class="review-section" data-section-key="{key}">\n'
+            f"<summary>{summary}</summary>\n"
+            f'{body}\n'
+            f"</details>"
+        )
+        section_index += 1
+        section_parts = None
+        section_title = None
+
+    for spec in specs:
+        field = spec.get("field", "")
+        value = data.get(field) if field else None
+        title, omit_boundary = _section_boundary(spec, value, data)
+        if title is not None:
+            _flush_section()
+            section_title = title
+            section_parts = []
+            if omit_boundary:
+                continue
+        html = render_widget(spec, value, data)
+        if section_parts is not None:
+            section_parts.append(html)
+        else:
+            parts.append(html)
+
+    _flush_section()
     inner = "\n".join(parts)
     return f'<form id="review-form" hx-boost="false">\n{inner}\n</form>'
 

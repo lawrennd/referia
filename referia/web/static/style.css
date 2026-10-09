@@ -298,6 +298,28 @@ main {
     font-weight: 600;
 }
 
+/* Collapsible chapter / heading groups in the review form (right pane) */
+.review-section {
+    margin: 0 0 0.85rem;
+    border: 1px solid var(--colour-border);
+    border-radius: var(--radius);
+    padding: 0.35rem 0.75rem 0.5rem;
+    background: var(--colour-bg, #fff);
+}
+
+.review-section > summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1.05rem;
+    padding: 0.35rem 0;
+    list-style-position: outside;
+}
+
+.review-section[open] > summary {
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--colour-border);
+}
+
 .pdf-frame {
     width: 100%;
     min-height: 70vh;

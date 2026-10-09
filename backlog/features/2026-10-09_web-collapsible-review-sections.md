@@ -1,7 +1,7 @@
 ---
 id: "2026-10-09_web-collapsible-review-sections"
 title: "Web UI: collapsible review-form sections (chapter / heading groups)"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-10-09"
 last_updated: "2026-10-09"
@@ -44,23 +44,23 @@ blocks that use `##` / `###` headings.
 
 ## Acceptance Criteria
 
-- [ ] Review-form sections that correspond to chapter / major heading groups
+- [x] Review-form sections that correspond to chapter / major heading groups
       can be collapsed and expanded in the web UI (native `<details>` /
       `<summary>` or equivalent).
-- [ ] Default presentation reduces scrolling pain: sections start **closed**,
+- [x] Default presentation reduces scrolling pain: sections start **closed**,
       or at most one section starts open (document the choice).
-- [ ] Expanding a section reveals that section’s widgets (textareas, buttons,
+- [x] Expanding a section reveals that section’s widgets (textareas, buttons,
       checkboxes, etc.); collapsing hides them without losing entered values
       still held in the form / HTMX state.
-- [ ] Open/closed state survives HTMX record / panel swaps in the same way PDF
+- [x] Open/closed state survives HTMX record / panel swaps in the same way PDF
       `<details.pdf-entry>` state is restored (`data-*-key` + existing
       `base.html` pattern), or an equally robust approach.
-- [ ] Works for template-instantiated chapter blocks (the common thesis
+- [x] Works for template-instantiated chapter blocks (the common thesis
       case) without requiring authors to rewrite every field by hand.
-- [ ] Keyboard / accessibility: summary is focusable; collapsed content is
+- [x] Keyboard / accessibility: summary is focusable; collapsed content is
       not in the tab order while closed (native `<details>` satisfies this).
-- [ ] Single-column / narrow layouts remain usable.
-- [ ] Tests cover the HTML structure for at least one multi-section form
+- [x] Single-column / narrow layouts remain usable.
+- [x] Tests cover the HTML structure for at least one multi-section form
       (collapsed wrappers + summary labels).
 
 ## Implementation Notes
@@ -136,3 +136,10 @@ blocks that use `##` / `###` headings.
 Task created (Proposed) after thesis introduction review: Create/download
 works, but long chapter blocks on the right remain painful to scroll;
 PDFs on the left already collapse.
+
+Implemented in `render_form`: heading-only `##`/`###` Markdown (and
+Criterion) widgets open `<details class="review-section">` groups; explicit
+`section: "Title"` also works. Open state persisted via
+`referia.reviewSection.open` in `base.html`. Verified against
+`theses/examined/introduction` (24 sections including Chapter 1–12).
+Status → Completed.
