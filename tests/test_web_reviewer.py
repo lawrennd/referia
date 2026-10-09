@@ -454,6 +454,27 @@ class TestGetWidgetSpecs:
         assert len(result) == 2
         assert result[0]["field"] == "name"
 
+    def test_section_preserved_in_review_specs_flattened_in_widget_specs(self):
+        section = {
+            "type": "Section",
+            "title": "Chapter 1",
+            "entries": [
+                {"type": "Textarea", "field": "ch1Summary"},
+                {"type": "Checkbox", "field": "ch1Flag"},
+            ],
+        }
+        reviewer, _, _ = _build_reviewer(review=[section])
+        review_specs = reviewer.get_review_specs()
+        assert len(review_specs) == 1
+        assert review_specs[0]["type"] == "Section"
+        assert review_specs[0]["title"] == "Chapter 1"
+        assert [e["field"] for e in review_specs[0]["entries"]] == [
+            "ch1Summary",
+            "ch1Flag",
+        ]
+        flat = reviewer.get_widget_specs()
+        assert [e["field"] for e in flat] == ["ch1Summary", "ch1Flag"]
+
     def test_nested_clusters_flattened(self):
         inner = {
             "type": "group",

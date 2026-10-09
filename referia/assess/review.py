@@ -328,7 +328,29 @@ def extract_review(details, reviewer, widgets):
         for detail in details["entries"]:
             extract_review(detail, reviewer, group_widgets)
 
-    
+    elif details["type"] == "Section":
+        # Nested widget group (same shape as group). Web renders as
+        # collapsible <details>; Jupyter shows the title then the children.
+        title = (
+            details.get("title")
+            or details.get("liquid")
+            or (details.get("args") or {}).get("title")
+            or ""
+        )
+        title = str(title).strip()
+        section_widgets = GroupWidgetCluster(name="section", parent=reviewer)
+        widgets.add(section_widgets)
+        if title:
+            heading = {
+                "type": "Markdown",
+                "liquid": title if title.lstrip().startswith("#") else f"### {title}",
+                "args": {"description": " "},
+            }
+            extract_review(heading, reviewer, section_widgets)
+        children = details.get("entries") or details.get("children") or []
+        for detail in children:
+            extract_review(detail, reviewer, section_widgets)
+
     elif details["type"] == "composite":
         composite_widget = CompositeWidgetCluster(name=details["type"], parent=reviewer)
         widgets.add(composite_widget)

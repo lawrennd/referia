@@ -459,6 +459,19 @@ class Interface(lynguine.config.interface.Interface):
                     #raise ValueError("Got here")
                     cluster["type"] = "group"
                     cluster["entries"] = expand_group_review(entry)
+                elif entry["type"] == "Section":
+                    # Collapsible widget group: title + nested entries/children.
+                    cluster["type"] = "Section"
+                    if "title" in entry:
+                        cluster["title"] = entry["title"]
+                    elif "liquid" in entry:
+                        cluster["title"] = entry["liquid"]
+                    if "entries" in entry:
+                        cluster["entries"] = entry["entries"]
+                    elif "children" in entry:
+                        cluster["entries"] = expand_group_review(entry)
+                    else:
+                        cluster["entries"] = []
                 elif entry["type"] in [
                         "Criterion",
                         "CriterionComment",
