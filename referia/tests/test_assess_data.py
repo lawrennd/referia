@@ -555,3 +555,32 @@ def test_from_flow_with_valid_settings(valid_local_settings):
 #    cdf = 
 
        # The number of scored elements is the number of filed in maching "scored:field" in the interface
+
+
+def test_set_value_bool_into_float64_column():
+    """Checkbox True/False must upcast an all-NaN float64 column (web bug)."""
+    cdf = referia.assess.data.CustomDataFrame(
+        {"flag": [np.nan, np.nan]},
+        colspecs={"writedata": ["flag"]},
+    )
+    assert str(cdf._d["writedata"]["flag"].dtype) == "float64"
+    cdf.set_index(cdf.index[0])
+    cdf.set_column("flag")
+    cdf.set_value(True)
+    assert bool(cdf.get_value()) is True
+    assert str(cdf._d["writedata"]["flag"].dtype) == "boolean"
+    cdf.set_value(False)
+    assert bool(cdf.get_value()) is False
+
+
+def test_set_value_float_column_unchanged_for_float():
+    """Numeric writes into float64 columns must not force a bool upcast."""
+    cdf = referia.assess.data.CustomDataFrame(
+        {"score": [1.5, np.nan]},
+        colspecs={"writedata": ["score"]},
+    )
+    cdf.set_index(cdf.index[0])
+    cdf.set_column("score")
+    cdf.set_value(2.25)
+    assert cdf.get_value() == 2.25
+    assert str(cdf._d["writedata"]["score"].dtype) == "float64"
