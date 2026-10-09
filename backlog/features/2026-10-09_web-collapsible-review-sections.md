@@ -143,3 +143,10 @@ Criterion) widgets open `<details class="review-section">` groups; explicit
 `referia.reviewSection.open` in `base.html`. Verified against
 `theses/examined/introduction` (24 sections including Chapter 1–12).
 Status → Completed.
+
+### 2026-10-09 (follow-up)
+
+Heuristic over-collapses non-chapter headings. Superseding approach:
+**explicit declaration only**, with declared title replacing the Markdown
+Chapter header — see
+`2026-10-09_web-explicit-collapsible-sections`.
