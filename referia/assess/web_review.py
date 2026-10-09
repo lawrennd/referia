@@ -55,8 +55,11 @@ log = logging.getLogger(__name__)
 
 # Widget types that contain nested entries rather than being rendered directly.
 _CLUSTER_TYPES = frozenset(
-    {"group", "load", "composite", "loop", "precompute", "postcompute"}
+    {"group", "load", "composite", "loop", "precompute", "postcompute", "Section"}
 )
+
+# Clusters that stay nested for web form rendering (collapsible sections).
+_PRESERVE_CLUSTER_TYPES = frozenset({"Section"})
 
 # Widget types that don't carry a data field (no column to refresh).
 _NON_FIELD_TYPES = frozenset(
@@ -361,15 +364,15 @@ class WebReviewer:
         """Return a flat ordered list of widget spec dicts.
 
         Walks the ``review`` and ``viewer`` sections of the interface config
-        and expands cluster entries recursively.  Each item in the returned
-        list has at least a ``"type"`` key and, for field-bearing widgets, a
-        ``"field"`` key.
+        and expands cluster entries recursively (including ``Section``
+        children).  Each item in the returned list has at least a ``"type"``
+        key and, for field-bearing widgets, a ``"field"`` key.
 
         :return: Ordered list of widget spec dicts (viewer first, then review).
         """
         specs: list[dict] = []
-        self._flatten_entries(self._viewer_raw(), specs)
-        self._flatten_entries(self._review_raw(), specs)
+        self._flatten_entries(self._viewer_raw(), specs, preserve_sections=False)
+        self._flatten_entries(self._review_raw(), specs, preserve_sections=False)
         return specs
 
     def get_viewer_specs(self) -> list[dict]:
@@ -378,16 +381,20 @@ class WebReviewer:
         :return: Flat ordered list of viewer widget spec dicts.
         """
         specs: list[dict] = []
-        self._flatten_entries(self._viewer_raw(), specs)
+        self._flatten_entries(self._viewer_raw(), specs, preserve_sections=False)
         return specs
 
     def get_review_specs(self) -> list[dict]:
-        """Return widget specs from the ``review`` section only.
+        """Return review specs for form rendering.
 
-        :return: Flat ordered list of review widget spec dicts.
+        ``type: Section`` clusters are kept as nested nodes
+        (``title`` + ``entries``) so the web renderer can wrap each group in
+        a collapsible ``<details>``.  Other cluster types are still flattened.
+
+        :return: Ordered list of leaf widgets and Section clusters.
         """
         specs: list[dict] = []
-        self._flatten_entries(self._review_raw(), specs)
+        self._flatten_entries(self._review_raw(), specs, preserve_sections=True)
         return specs
 
     def list_url_entries(self) -> list[dict]:
@@ -601,20 +608,45 @@ class WebReviewer:
             return dest
         return orig
 
-    def _flatten_entries(self, entries: list, out: list) -> None:
-        """Recursively flatten nested review/viewer cluster entries.
+    def _flatten_entries(
+        self, entries: list, out: list, *, preserve_sections: bool = False
+    ) -> None:
+        """Recursively expand nested review/viewer cluster entries.
 
         :param entries: List of widget or cluster dicts.
-        :param out: Accumulator list that receives leaf widget dicts.
+        :param out: Accumulator list that receives leaf widgets (and, when
+            *preserve_sections* is True, nested ``Section`` nodes).
+        :param preserve_sections: Keep ``type: Section`` as a tree node with
+            expanded ``entries`` instead of flattening its children.
         """
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
             entry_type = entry.get("type", "")
-            if entry_type in _CLUSTER_TYPES:
-                sub = entry.get("entries", entry.get("specifications", []))
+            if (
+                preserve_sections
+                and entry_type in _PRESERVE_CLUSTER_TYPES
+            ):
+                sub = entry.get("entries", entry.get("children", []))
+                children: list = []
                 if isinstance(sub, list):
-                    self._flatten_entries(sub, out)
+                    self._flatten_entries(
+                        sub, children, preserve_sections=preserve_sections
+                    )
+                node = dict(entry)
+                node["entries"] = children
+                node.pop("children", None)
+                out.append(node)
+                continue
+            if entry_type in _CLUSTER_TYPES:
+                sub = entry.get(
+                    "entries",
+                    entry.get("children", entry.get("specifications", [])),
+                )
+                if isinstance(sub, list):
+                    self._flatten_entries(
+                        sub, out, preserve_sections=preserve_sections
+                    )
             else:
                 out.append(entry)
 

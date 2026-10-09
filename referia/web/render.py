@@ -390,51 +390,21 @@ def _markdown_widget_content(
     )
 
 
-def _heading_only_title(content: str) -> str | None:
-    """If *content* is a single ``##`` / ``###`` heading line, return its title."""
-    if not content or not str(content).strip():
-        return None
-    lines = [ln for ln in str(content).strip().splitlines() if ln.strip()]
-    if len(lines) != 1:
-        return None
-    match = re.match(r"^(#{2,3})\s+(.+)$", lines[0].strip())
-    if not match:
-        return None
-    return match.group(2).strip() or None
-
-
-def _section_boundary(
-    spec: dict, value: Any = None, data: dict | None = None
-) -> tuple[str | None, bool]:
-    """Detect a collapsible section boundary.
-
-    Returns ``(title, omit_widget)`` when this spec starts a new
-    ``<details class="review-section">`` group, else ``(None, False)``.
-
-    * Explicit ``section: "Title"`` on any widget starts a group (widget kept).
-    * Markdown / Criterion whose resolved text is a single ``##`` / ``###``
-      heading starts a group; the heading widget is omitted from the body
-      (title appears only in ``<summary>``).
-    """
-    explicit = spec.get("section")
-    if isinstance(explicit, str) and explicit.strip():
-        return explicit.strip(), False
-
-    widget_type = spec.get("type", "")
-    if widget_type == "Markdown":
-        content = _markdown_widget_content(spec, value, data)
-    elif widget_type == "Criterion":
-        template = spec.get("liquid", "") or ""
-        if data is not None and template:
-            template = _evaluate_liquid(template, data)
-        content = template
-    else:
-        return None, False
-
-    title = _heading_only_title(content)
-    if title:
-        return title, True
-    return None, False
+def _resolve_section_title(spec: dict, data: dict | None) -> str:
+    """Resolve a Section node's title (optional ``{{liquid}}`` against *data*)."""
+    args = spec.get("args", {}) or {}
+    title = str(
+        spec.get("title")
+        or spec.get("liquid")
+        or args.get("title")
+        or args.get("description")
+        or ""
+    ).strip()
+    if not title:
+        return ""
+    if data is not None and "{{" in title:
+        title = _evaluate_liquid(title, data).strip()
+    return title
 
 
 def _section_key(title: str, index: int) -> str:
@@ -608,58 +578,46 @@ def render_form(specs: list[dict], data: dict) -> str:
     """Render all widget specs for a record into a complete HTML form fragment.
 
     Args:
-        specs: Ordered list of widget spec dicts from
-            ``WebReviewer.get_widget_specs()``.
+        specs: Ordered list of widget / Section-cluster specs from
+            ``WebReviewer.get_review_specs()``.  Nested
+            ``type: Section`` nodes carry ``title`` and ``entries``.
         data: Current record data dict mapping field names to values.
 
     Returns:
         HTML string containing the full review form wrapped in a ``<form>``
-        element.  Heading-only Markdown/Criterion widgets (``##`` / ``###``)
-        and explicit ``section:`` markers open collapsible
-        ``<details class="review-section">`` groups (closed by default).
+        element.  Each ``type: Section`` with ``entries:`` becomes a
+        collapsible ``<details class="review-section">`` (closed by default).
+        Sibling widgets outside a Section stay in the open flow.
     """
-    parts: list[str] = []
-    section_parts: list[str] | None = None
-    section_title: str | None = None
     section_index = 0
 
-    def _flush_section() -> None:
-        nonlocal section_parts, section_title, section_index
-        if section_parts is None or section_title is None:
-            section_parts = None
-            section_title = None
-            return
-        key = _escape(_section_key(section_title, section_index))
-        summary = _escape(section_title)
-        body = "\n".join(section_parts)
-        parts.append(
-            f'<details class="review-section" data-section-key="{key}">\n'
-            f"<summary>{summary}</summary>\n"
-            f'{body}\n'
-            f"</details>"
-        )
-        section_index += 1
-        section_parts = None
-        section_title = None
-
-    for spec in specs:
-        field = spec.get("field", "")
-        value = data.get(field) if field else None
-        title, omit_boundary = _section_boundary(spec, value, data)
-        if title is not None:
-            _flush_section()
-            section_title = title
-            section_parts = []
-            if omit_boundary:
+    def _render_list(items: list[dict]) -> list[str]:
+        nonlocal section_index
+        parts: list[str] = []
+        for spec in items:
+            if not isinstance(spec, dict):
                 continue
-        html = render_widget(spec, value, data)
-        if section_parts is not None:
-            section_parts.append(html)
-        else:
-            parts.append(html)
+            if spec.get("type") == "Section":
+                title = _resolve_section_title(spec, data) or "Section"
+                key = _escape(_section_key(title, section_index))
+                section_index += 1
+                children = spec.get("entries") or spec.get("children") or []
+                if not isinstance(children, list):
+                    children = []
+                body = "\n".join(_render_list(children))
+                parts.append(
+                    f'<details class="review-section" data-section-key="{key}">\n'
+                    f"<summary>{_escape(title)}</summary>\n"
+                    f"{body}\n"
+                    f"</details>"
+                )
+                continue
+            field = spec.get("field", "")
+            value = data.get(field) if field else None
+            parts.append(render_widget(spec, value, data))
+        return parts
 
-    _flush_section()
-    inner = "\n".join(parts)
+    inner = "\n".join(_render_list(specs))
     return f'<form id="review-form" hx-boost="false">\n{inner}\n</form>'
 
 

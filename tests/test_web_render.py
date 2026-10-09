@@ -510,13 +510,23 @@ class TestRenderForm:
         html = render_form(specs, {})
         assert 'value=""' in html
 
-    def test_heading_markdown_opens_collapsible_section(self):
-        """Single ### Markdown lines wrap following widgets in <details>."""
+    def test_section_entries_open_collapsible_group(self):
+        """type: Section with indented entries: wraps children in <details>."""
         specs = [
-            {"type": "Markdown", "liquid": "### Chapter 1"},
-            _w("Textarea", "ch1Summary", args={"description": "Summary"}),
-            {"type": "Markdown", "liquid": "### Chapter 2"},
-            _w("Textarea", "ch2Summary", args={"description": "Summary"}),
+            {
+                "type": "Section",
+                "title": "Chapter 1",
+                "entries": [
+                    _w("Textarea", "ch1Summary", args={"description": "Summary"}),
+                ],
+            },
+            {
+                "type": "Section",
+                "title": "Chapter 2",
+                "entries": [
+                    _w("Textarea", "ch2Summary", args={"description": "Summary"}),
+                ],
+            },
         ]
         html = render_form(specs, {"ch1Summary": "a", "ch2Summary": "b"})
         assert html.count('<details class="review-section"') == 2
@@ -526,41 +536,49 @@ class TestRenderForm:
         assert "<summary>Chapter 2</summary>" in html
         assert 'name="ch1Summary"' in html
         assert 'name="ch2Summary"' in html
-        # Heading body is summary-only (no duplicate h3 from the boundary widget)
+        # Title is summary only — not a Markdown heading in the body
         assert "widget-markdown" not in html
 
-    def test_preamble_widgets_stay_outside_sections(self):
+    def test_heading_markdown_does_not_open_section(self):
+        """Bare ### Markdown is not a section (must use nested entries)."""
+        specs = [
+            {"type": "Markdown", "liquid": "### Chapter 1"},
+            _w("Textarea", "ch1Summary"),
+        ]
+        html = render_form(specs, {"ch1Summary": "a"})
+        assert "review-section" not in html
+        assert "widget-markdown" in html
+        assert 'name="ch1Summary"' in html
+
+    def test_preamble_then_nested_section(self):
         specs = [
             _w("Text", "overall", args={"description": "Overall"}),
-            {"type": "Markdown", "liquid": "## Notes"},
-            _w("Textarea", "notes"),
+            {
+                "type": "Section",
+                "title": "Notes",
+                "entries": [_w("Textarea", "notes")],
+            },
         ]
         html = render_form(specs, {"overall": "x", "notes": "y"})
         assert 'name="overall"' in html
-        # overall appears before the first details
         assert html.index('name="overall"') < html.index('<details class="review-section"')
         assert "<summary>Notes</summary>" in html
         assert 'name="notes"' in html
 
-    def test_explicit_section_keeps_boundary_widget(self):
-        specs = [
-            _w("Text", "intro", section="Introduction"),
-            _w("Textarea", "body"),
-        ]
-        html = render_form(specs, {"intro": "hi", "body": "there"})
+    def test_section_without_entries_is_empty_details(self):
+        """A Section with no children still renders a closed details shell."""
+        specs = [{"type": "Section", "title": "Empty"}]
+        html = render_form(specs, {})
         assert '<details class="review-section"' in html
-        assert "<summary>Introduction</summary>" in html
-        assert 'name="intro"' in html
-        assert 'name="body"' in html
-
-    def test_multiline_markdown_is_not_a_section_boundary(self):
-        specs = [
-            {"type": "Markdown", "liquid": "### Title\n\nMore prose."},
-            _w("Text", "field"),
+        assert "<summary>Empty</summary>" in html
+        # Sibling after the section is not swallowed
+        specs2 = [
+            {"type": "Section", "title": "Empty", "entries": []},
+            _w("Text", "after"),
         ]
-        html = render_form(specs, {"field": "v"})
-        assert "review-section" not in html
-        assert "widget-markdown" in html
+        html2 = render_form(specs2, {"after": "x"})
+        assert 'name="after"' in html2
+        assert html2.index("</details>") < html2.index('name="after"')
 
 
 # ---------------------------------------------------------------------------
