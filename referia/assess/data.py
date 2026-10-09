@@ -2,11 +2,13 @@ import os
 
 import re
 
-import pandas as pd
-
 import datetime
 
 import traceback
+
+import numpy as np
+
+import pandas as pd
 
 from pandas.api.types import is_string_dtype, is_numeric_dtype, is_bool_dtype
 
@@ -876,37 +878,26 @@ class CustomDataFrame(data.CustomDataFrame):
 
         self._update_type(self._writeseries, column, value)
 
-    
+    def set_value(self, value):
+        """Set the focused cell, upcasting column dtype when needed.
 
-    # def set_value(self, value):
-    #     """Set the value of the current cell under focus."""
-    #     column = self.get_column()
-    #     if column is None:
-    #         raise KeyError(f"Warning attempting to write a value {value} when column is not set.")
-    #     if self._globals is not None and column in self._globals.index:
-    #         self._globals.at[self._globals_index, column] = value
-    #         return
-
-        
-    #     index = self.get_index()
-    #     selector = self.get_selector()
-    #     subindex = self.get_subindex()
-    #     # If trying to set a numeric valued column's entry to a string, set the type of column to object.
-    #     if not self.ismutable(column):
-    #         raise KeyError(f"Attempting to write to column \"{column}\" which is read only.")
-        
-    #     col_source = self._col_source(column)
-    #     if not self.isglobal(column):
-    #         self._d[col_source].at[index, column] = value
-    #     elif not self.isseries(column):
-    #         self._d[col_source].at[column] = value
-    #     else:
-    #         self._update_type(self._d[col_source], column, value)
-    #         self._d[col_source].loc[
-    #             self._d[col_source].index.isin([index])
-    #             & (self._d[col_source][selector]==subindex).values,
-    #             column
-    #         ] = value
+        lynguine's ``set_value`` assigns with pandas ``.at``, which raises
+        when a Python ``bool`` is written into a ``float64`` column (common
+        for empty/NaN Checkbox fields).  Before delegating, upcast the
+        underlying column via :meth:`_update_type` so Checkbox/Flag toggles
+        and string writes into numeric columns succeed.
+        """
+        column = self.get_column()
+        if column is not None and column != "_":
+            typ = self._col_source(column)
+            if typ is not None and typ in self._d:
+                frame = self._d[typ]
+                if isinstance(frame, pd.DataFrame) and column in frame.columns:
+                    self._update_type(frame, column, value)
+                elif isinstance(frame, pd.Series) and column in frame.index:
+                    # parameters / globals: single Series of scalars
+                    pass
+        return super().set_value(value)
 
     def drop_column(self, column_name):
         if column_name not in self.columns:
@@ -1436,12 +1427,21 @@ class CustomDataFrame(data.CustomDataFrame):
         :type value: Any
         """
         coltype = df.dtypes[column]
+        # Strict bool check: Python bool is a subclass of int, so prefer
+        # type(value) is bool / numpy bool_ over isinstance(..., int).
+        value_is_bool = type(value) is bool or (
+            isinstance(value, np.generic) and np.issubdtype(type(value), np.bool_)
+        )
+        if is_numeric_dtype(coltype) and not is_bool_dtype(coltype) and value_is_bool:
+            log.debug(
+                f"Changing column \"{column}\" type from {coltype} to "
+                f"'boolean' due to bool input."
+            )
+            df[column] = df[column].astype("boolean")
+            return
         if is_numeric_dtype(coltype) and is_string_dtype(type(value)):
             log.warning(f"Changing column \"{column}\" type to 'object' due to string input.")
             df[column] = df[column].astype("object")
-        if is_numeric_dtype(coltype) and is_bool_dtype(type(value)):
-            log.warning(f"Changing column \"{column}\" type to 'object' due to bool input.")
-            df[column] = df[column].astype("boolean")
 
     @classmethod
     def compute_from_flow(cls, interface) -> Compute:

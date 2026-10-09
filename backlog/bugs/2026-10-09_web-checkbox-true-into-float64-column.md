@@ -1,7 +1,7 @@
 ---
 id: "2026-10-09_web-checkbox-true-into-float64-column"
 title: "Web UI: Checkbox True fails when pandas column dtype is float64"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-10-09"
 last_updated: "2026-10-09"
@@ -60,39 +60,26 @@ after template expansion and start life as empty numeric series.
 
 ## Acceptance Criteria
 
-- [ ] Toggling a Checkbox/Flag whose column is currently `float64` (or all
+- [x] Toggling a Checkbox/Flag whose column is currently `float64` (or all
       NaN) succeeds and stores a boolean (or an agreed serialisable
       equivalent such as `True`/`False` in an object/`bool` dtype).
-- [ ] Unchecking stores `False` (not only clearing to NaN), so the widget
+- [x] Unchecking stores `False` (not only clearing to NaN), so the widget
       round-trips.
-- [ ] Failure mode is covered by a unit/integration test (web coerce +
+- [x] Failure mode is covered by a unit/integration test (web coerce +
       set_value on a float64 column, or lynguine `set_value` alone if the
       fix lands there).
-- [ ] Existing non-checkbox float columns are unchanged.
+- [x] Existing non-checkbox float columns are unchanged.
 
 ## Implementation Notes
 
-**Likely fix layers (prefer one clear owner):**
+**Fix (referia progressive augmentation):** override
+`referia.assess.data.CustomDataFrame.set_value` to call `_update_type`
+before `super().set_value`. When a Python/`numpy` bool is written into a
+numeric non-bool column, upcast to pandas nullable `"boolean"`. String
+into numeric still upcasts to `"object"` (existing behaviour).
 
-1. **lynguine `set_value`** (infrastructure): when assigning a `bool` into a
-   numeric/NaN column, upcast the column (e.g. to `object` or pandas
-   boolean dtype) instead of raising. Aligns with “explicit, predictable”
-   writes from application layers.
-2. **referia web / WebReviewer** (application): before `set_value`, if the
-   widget is Checkbox/Flag and the series dtype cannot hold bool, convert
-   the column dtype. Use when lynguine change is deferred
-   (progressive augmentation).
-
-Avoid silently writing `1.0`/`0.0` unless that is already the on-disk
-convention for that field — Jupyter checkboxes historically use bools.
-
-**Reproduction**
-
-1. `referia serve --root <OneDrive/referia>`
-2. Open `theses/examined/introduction`, expand Chapter 1.
-3. Toggle “Include custom query conversation as context”.
-4. Observe status error; confirm traceback in `referia-server.log` for
-   `ch1SummaryIncludeHistory` / `Invalid value 'True' for dtype 'float64'`.
+lynguine remains the long-term home if this is generalised; referia owns
+the review-facing path today.
 
 ## Related
 
@@ -107,3 +94,9 @@ convention for that field — Jupyter checkboxes historically use bools.
 
 Observed in server log during live thesis introduction review; documented
 as Proposed. Not fixed yet.
+
+### 2026-10-09 (fixed)
+
+Implemented in `referia.assess.data.CustomDataFrame.set_value` +
+`_update_type`. Tests in `referia/tests/test_assess_data.py`. Status →
+Completed.
