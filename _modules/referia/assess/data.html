@@ -119,6 +119,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.reset_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.reset_subindex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.generate_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.generate_subindex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_series_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_series_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.drop_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.drop_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.filter_rows"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter_rows()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_shape"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_shape()</span></code></a></li>
@@ -196,7 +197,6 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_selector"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_selector()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_subindex()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_value_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.shape"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.shape</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.sort_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_index()</span></code></a></li>
@@ -803,11 +803,13 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pandas.api.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_string_dtype</span><span class="p">,</span> <span class="n">is_numeric_dtype</span><span class="p">,</span> <span class="n">is_bool_dtype</span>
 
@@ -1718,37 +1720,29 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_writeseries</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
 
 
-    
+<div class="viewcode-block" id="CustomDataFrame.set_value">
+<a class="viewcode-back" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.set_value">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the focused cell, upcasting column dtype when needed.</span>
 
-    <span class="c1"># def set_value(self, value):</span>
-    <span class="c1">#     &quot;&quot;&quot;Set the value of the current cell under focus.&quot;&quot;&quot;</span>
-    <span class="c1">#     column = self.get_column()</span>
-    <span class="c1">#     if column is None:</span>
-    <span class="c1">#         raise KeyError(f&quot;Warning attempting to write a value {value} when column is not set.&quot;)</span>
-    <span class="c1">#     if self._globals is not None and column in self._globals.index:</span>
-    <span class="c1">#         self._globals.at[self._globals_index, column] = value</span>
-    <span class="c1">#         return</span>
+<span class="sd">        lynguine&#39;s ``set_value`` assigns with pandas ``.at``, which raises</span>
+<span class="sd">        when a Python ``bool`` is written into a ``float64`` column (common</span>
+<span class="sd">        for empty/NaN Checkbox fields).  Before delegating, upcast the</span>
+<span class="sd">        underlying column via :meth:`_update_type` so Checkbox/Flag toggles</span>
+<span class="sd">        and string writes into numeric columns succeed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_column</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">column</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">column</span> <span class="o">!=</span> <span class="s2">&quot;_&quot;</span><span class="p">:</span>
+            <span class="n">typ</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_col_source</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">typ</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
+                <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">and</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_update_type</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="ow">and</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                    <span class="c1"># parameters / globals: single Series of scalars</span>
+                    <span class="k">pass</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
 
-        
-    <span class="c1">#     index = self.get_index()</span>
-    <span class="c1">#     selector = self.get_selector()</span>
-    <span class="c1">#     subindex = self.get_subindex()</span>
-    <span class="c1">#     # If trying to set a numeric valued column&#39;s entry to a string, set the type of column to object.</span>
-    <span class="c1">#     if not self.ismutable(column):</span>
-    <span class="c1">#         raise KeyError(f&quot;Attempting to write to column \&quot;{column}\&quot; which is read only.&quot;)</span>
-        
-    <span class="c1">#     col_source = self._col_source(column)</span>
-    <span class="c1">#     if not self.isglobal(column):</span>
-    <span class="c1">#         self._d[col_source].at[index, column] = value</span>
-    <span class="c1">#     elif not self.isseries(column):</span>
-    <span class="c1">#         self._d[col_source].at[column] = value</span>
-    <span class="c1">#     else:</span>
-    <span class="c1">#         self._update_type(self._d[col_source], column, value)</span>
-    <span class="c1">#         self._d[col_source].loc[</span>
-    <span class="c1">#             self._d[col_source].index.isin([index])</span>
-    <span class="c1">#             &amp; (self._d[col_source][selector]==subindex).values,</span>
-    <span class="c1">#             column</span>
-    <span class="c1">#         ] = value</span>
 
 <div class="viewcode-block" id="CustomDataFrame.drop_column">
 <a class="viewcode-back" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.drop_column">[docs]</a>
@@ -2317,12 +2311,21 @@
 <span class="sd">        :type value: Any</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">coltype</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
+        <span class="c1"># Strict bool check: Python bool is a subclass of int, so prefer</span>
+        <span class="c1"># type(value) is bool / numpy bool_ over isinstance(..., int).</span>
+        <span class="n">value_is_bool</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">bool</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">coltype</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_bool_dtype</span><span class="p">(</span><span class="n">coltype</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value_is_bool</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Changing column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> type from </span><span class="si">{</span><span class="n">coltype</span><span class="si">}</span><span class="s2"> to &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;&#39;boolean&#39; due to bool input.&quot;</span>
+            <span class="p">)</span>
+            <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;boolean&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
         <span class="k">if</span> <span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">coltype</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_string_dtype</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)):</span>
             <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Changing column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> type to &#39;object&#39; due to string input.&quot;</span><span class="p">)</span>
             <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;object&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">coltype</span><span class="p">)</span> <span class="ow">and</span> <span class="n">is_bool_dtype</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)):</span>
-            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Changing column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> type to &#39;object&#39; due to bool input.&quot;</span><span class="p">)</span>
-            <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;boolean&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="CustomDataFrame.compute_from_flow">
 <a class="viewcode-back" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.compute_from_flow">[docs]</a>

@@ -122,6 +122,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.reset_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.reset_subindex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.generate_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.generate_subindex()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.set_series_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_series_value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.set_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.drop_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.drop_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.filter_rows"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.filter_rows()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.get_shape"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.get_shape()</span></code></a></li>
@@ -199,7 +200,6 @@
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.set_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.set_selector"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_selector()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.set_subindex"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_subindex()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.set_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.set_value_column"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.set_value_column()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.shape"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.shape</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.sort_index"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.sort_index()</span></code></a></li>
@@ -3258,6 +3258,17 @@ the focus.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.set_value">
+<span class="sig-name descname"><span class="pre">set_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/assess/data.html#CustomDataFrame.set_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.data.CustomDataFrame.set_value" title="Link to this definition"></a></dt>
+<dd><p>Set the focused cell, upcasting column dtype when needed.</p>
+<p>lynguine’s <code class="docutils literal notranslate"><span class="pre">set_value</span></code> assigns with pandas <code class="docutils literal notranslate"><span class="pre">.at</span></code>, which raises
+when a Python <code class="docutils literal notranslate"><span class="pre">bool</span></code> is written into a <code class="docutils literal notranslate"><span class="pre">float64</span></code> column (common
+for empty/NaN Checkbox fields).  Before delegating, upcast the
+underlying column via <code class="xref py py-meth docutils literal notranslate"><span class="pre">_update_type()</span></code> so Checkbox/Flag toggles
+and string writes into numeric columns succeed.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.drop_column">
 <span class="sig-name descname"><span class="pre">drop_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">column_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/assess/data.html#CustomDataFrame.drop_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.data.CustomDataFrame.drop_column" title="Link to this definition"></a></dt>
 <dd><p>Drop a column from the CustomDataFrame.</p>
@@ -4184,17 +4195,6 @@ is returned. The last row is assumed to be the most recent.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/exceptions.html#KeyError" title="(in Python v3.15)"><strong>KeyError</strong></a> – If the index is not in the DataFrame.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.set_value">
-<span class="sig-name descname"><span class="pre">set_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#referia.assess.data.CustomDataFrame.set_value" title="Link to this definition"></a></dt>
-<dd><p>Set the value that is in the cell defined as focus for the DataFrame.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>value</strong> – The value to set.</p>
 </dd>
 </dl>
 </dd></dl>
