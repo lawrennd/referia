@@ -400,6 +400,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.misc.draft_skills"><code class="docutils literal notranslate"><span class="pre">draft_skills()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.misc.return_longest"><code class="docutils literal notranslate"><span class="pre">return_longest()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.misc.return_shortest"><code class="docutils literal notranslate"><span class="pre">return_shortest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../modules/util.html#referia.util.misc.document_action_label"><code class="docutils literal notranslate"><span class="pre">document_action_label()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/util.html#system-utilities">System Utilities</a><ul>
@@ -2165,7 +2166,13 @@
 <span class="sd">        :param document: The document to create.</span>
 <span class="sd">        :type document: str</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">args</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Create &quot;</span> <span class="o">+</span> <span class="n">args</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">referia.util.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">document_action_label</span>
+
+        <span class="n">document</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;document&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">args</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">document_action_label</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="n">summary</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">args</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Create &quot;</span> <span class="o">+</span> <span class="n">args</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
         <span class="c1"># Explicitly set function to suppress warning</span>
         <span class="k">if</span> <span class="s2">&quot;function&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
             <span class="n">args</span><span class="p">[</span><span class="s2">&quot;function&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ipyw</span><span class="o">.</span><span class="n">Button</span>
@@ -2205,7 +2212,13 @@
 <span class="sd">        :param document: The document to create.</span>
 <span class="sd">        :type document: str</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">args</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Create Summary &quot;</span> <span class="o">+</span> <span class="n">args</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">referia.util.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">document_action_label</span>
+
+        <span class="n">document</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;document&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">args</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">document_action_label</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="n">summary</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">args</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Create Summary &quot;</span> <span class="o">+</span> <span class="n">args</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span>
         <span class="c1"># Explicitly set function to suppress warning</span>
         <span class="k">if</span> <span class="s2">&quot;function&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
             <span class="n">args</span><span class="p">[</span><span class="s2">&quot;function&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ipyw</span><span class="o">.</span><span class="n">Button</span>

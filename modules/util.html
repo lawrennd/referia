@@ -403,6 +403,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#referia.util.misc.draft_skills"><code class="docutils literal notranslate"><span class="pre">draft_skills()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#referia.util.misc.return_longest"><code class="docutils literal notranslate"><span class="pre">return_longest()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#referia.util.misc.return_shortest"><code class="docutils literal notranslate"><span class="pre">return_shortest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#referia.util.misc.document_action_label"><code class="docutils literal notranslate"><span class="pre">document_action_label()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#system-utilities">System Utilities</a><ul>
@@ -1399,6 +1400,27 @@ Key referia-specific text processing functions include:</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="referia.util.misc.document_action_label">
+<span class="sig-prename descclassname"><span class="pre">referia.util.misc.</span></span><span class="sig-name descname"><span class="pre">document_action_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">document</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">summary</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/util/misc.html#document_action_label"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.util.misc.document_action_label" title="Link to this definition"></a></dt>
+<dd><p>Human-readable Create-document button label.</p>
+<p>Preference order:</p>
+<ol class="arabic simple">
+<li><p>Explicit <code class="docutils literal notranslate"><span class="pre">name</span></code> (used as the full button text).</p></li>
+<li><p>Static text from <code class="docutils literal notranslate"><span class="pre">title</span></code> or <code class="docutils literal notranslate"><span class="pre">subject</span></code> (Liquid/display templates
+truncated before the first placeholder).</p></li>
+<li><p>Fallback <code class="docutils literal notranslate"><span class="pre">Create</span> <span class="pre">{type}</span></code> / <code class="docutils literal notranslate"><span class="pre">Create</span> <span class="pre">Summary</span> <span class="pre">{type}</span></code>.</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>summary</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/functions.html#bool" title="(in Python v3.15)"><em>bool</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#str" title="(in Python v3.15)">str</a></p>
 </dd>
 </dl>
 </dd></dl>
