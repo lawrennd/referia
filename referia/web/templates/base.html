@@ -293,6 +293,64 @@
           "referia.reviewSection.open", "data-section-key"
         );
       })();
+
+      /* Keep left viewer + window scroll across HTMX #review-panel swaps
+         (record change, reload).  .viewer-col scrolls independently;
+         the review form uses window/page scroll. */
+      (function () {
+        var pending = null;
+
+        function isReviewPanelTarget(target) {
+          return !!(target && target.id === "review-panel");
+        }
+
+        function capture() {
+          var viewer = document.querySelector(".viewer-col");
+          return {
+            viewer: viewer ? viewer.scrollTop : 0,
+            window: window.scrollY || document.documentElement.scrollTop || 0
+          };
+        }
+
+        function clamp(el, value) {
+          var max = 0;
+          if (el === window) {
+            max = Math.max(
+              0,
+              (document.documentElement.scrollHeight || 0) - window.innerHeight
+            );
+          } else if (el) {
+            max = Math.max(0, el.scrollHeight - el.clientHeight);
+          }
+          if (isNaN(value) || value < 0) return 0;
+          return Math.min(value, max);
+        }
+
+        function restore(pos) {
+          if (!pos) return;
+          var viewer = document.querySelector(".viewer-col");
+          if (viewer) viewer.scrollTop = clamp(viewer, pos.viewer || 0);
+          window.scrollTo(0, clamp(window, pos.window || 0));
+        }
+
+        document.addEventListener("htmx:beforeSwap", function (evt) {
+          if (!evt.detail || !isReviewPanelTarget(evt.detail.target)) return;
+          pending = capture();
+        });
+
+        document.addEventListener("htmx:afterSettle", function () {
+          if (!pending) return;
+          var pos = pending;
+          pending = null;
+          /* Double rAF: run after sticky-height / MathJax layout in other
+             afterSettle handlers. */
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              restore(pos);
+            });
+          });
+        });
+      })();
     </script>
 </head>
 <body>
