@@ -1,7 +1,7 @@
 ---
 id: "000D"
 title: "Index navigation chrome hides when there is only one choice"
-status: "Ready"
+status: "In Progress"
 priority: "Medium"
 created: "2026-10-11"
 last_updated: "2026-10-11"
@@ -60,3 +60,6 @@ Requirement drafted from root-overview / filter-bar discussion. Status Proposed.
 
 ### 2026-10-11 (later)
 Marked **Ready**. Implementing HOW: referia CIP-0010 (nav chrome + root overview); depends on lynguine REQ-000C / CIP-0010 Phase 3 for named singleton `index`.
+
+### 2026-10-11 (backlog)
+Marked **In Progress**. Backlog: `2026-10-11_singleton-navigation-chrome` (plus root/overview tasks under CIP-0010).
