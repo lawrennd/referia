@@ -144,13 +144,35 @@ class TestRootServerMode:
             with TestClient(app):
                 MockRev.assert_not_called()
 
-    def test_root_slash_returns_listing_in_root_mode(self, tmp_path):
-        """In root mode, GET / returns the directory listing (not 503)."""
+    def test_root_slash_returns_listing_when_no_root_yml(self, tmp_path):
+        """In root mode without {root}/_referia.yml, GET / lists configs (CIP-000C)."""
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
             resp = client.get("/")
         assert resp.status_code == 200
         assert "Reviews under" in resp.text
+
+    def test_root_slash_loads_referia_yml_when_present(self, tmp_path):
+        """CIP-0010: GET / loads {root}/_referia.yml instead of the listing."""
+        (tmp_path / "_referia.yml").write_text("title: Root Overview\n")
+        mock_rev = _mock_reviewer()
+        with patch("referia.assess.web_review.WebReviewer", return_value=mock_rev):
+            app = create_app(root=str(tmp_path))
+            with TestClient(app) as client:
+                resp = client.get("/")
+        assert resp.status_code == 200
+        assert "Reviews under" not in resp.text
+        assert "<!DOCTYPE html>" in resp.text
+        mock_rev.index_list.assert_called()
+
+    def test_root_slash_record_serves_root_yml(self, tmp_path):
+        """Unprefixed /record uses {root}/_referia.yml when present."""
+        (tmp_path / "_referia.yml").write_text("title: Root Overview\n")
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            app = create_app(root=str(tmp_path))
+            with TestClient(app) as client:
+                resp = client.get("/record")
+        assert resp.status_code == 200
 
 
 # ---------------------------------------------------------------------------

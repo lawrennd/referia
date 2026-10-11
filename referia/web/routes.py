@@ -44,6 +44,12 @@ The ``root_router`` mirrors every single-config route but prefixed with a
 under the root directory.  Reviewers are lazily loaded and cached by
 ``_get_cached_reviewer``.
 
+``GET /``
+    When ``{root}/_referia.yml`` exists, the review page for that config
+    (CIP-0010).  Otherwise the CIP-000C directory listing of configs under
+    the root.  Unprefixed action routes (``/record``, ``/save``, …) serve
+    the root config when present.
+
 ``GET /{config_path:path}``
     Full page for the named config (last in root_router to act as catch-all).
 
@@ -128,17 +134,22 @@ def _coerce_form_value(raw: Any, spec: dict | None) -> Any:
 
 def _reviewer(request: Request):
     reviewer = request.app.state.reviewer
-    if reviewer is None:
-        from fastapi import HTTPException
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Review session could not be initialised. "
-                "Check the server log for startup errors — likely a missing or "
-                "malformed _referia.yml, or a data file that could not be loaded."
-            ),
-        )
-    return reviewer
+    if reviewer is not None:
+        return reviewer
+    # Root-server: unprefixed routes (``/record``, ``/save``, …) serve
+    # ``{root}/_referia.yml`` when present (CIP-0010).
+    root = getattr(request.app.state, "root", None)
+    if root is not None and (Path(root) / "_referia.yml").exists():
+        return _root_reviewer(request, "")
+    from fastapi import HTTPException
+    raise HTTPException(
+        status_code=503,
+        detail=(
+            "Review session could not be initialised. "
+            "Check the server log for startup errors — likely a missing or "
+            "malformed _referia.yml, or a data file that could not be loaded."
+        ),
+    )
 
 
 def _templates(request: Request):
@@ -350,17 +361,46 @@ async def index(
 ):
     """Render the full review page for the current record.
 
-    In root-server mode (``app.state.root`` is set) there is no single
-    reviewer, so instead we render a directory listing of all configs found
-    under the root.  The ``after``, ``before`` and ``current`` query params
-    filter the listing by date range or work-in-progress status.
-    Current-only filtering is on by default; pass ``current=0`` to show all.
+    In root-server mode (``app.state.root`` is set): when ``{root}/_referia.yml``
+    exists, load it like any other config (CIP-0010).  Otherwise fall back to
+    the CIP-000C directory listing.  Listing query params ``after``, ``before``
+    and ``current`` apply only to that fallback; current-only is on by default
+    (pass ``current=0`` to show all).
     """
     if getattr(request.app.state, "root", None) is not None:
-        current_only = _current_only_from_param(current)
-        configs = _list_sub_configs(request.app.state.root, "")
-        configs = _filter_configs(configs, after=after, before=before, current_only=current_only)
-        return _render_directory_listing("", configs, after=after, before=before, current_only=current_only)
+        from fastapi import HTTPException as _HTTPException
+
+        try:
+            reviewer = _root_reviewer(request, "")
+        except _HTTPException as exc:
+            if exc.status_code == 404:
+                current_only = _current_only_from_param(current)
+                configs = _list_sub_configs(request.app.state.root, "")
+                configs = _filter_configs(
+                    configs, after=after, before=before, current_only=current_only
+                )
+                return _render_directory_listing(
+                    "", configs, after=after, before=before, current_only=current_only
+                )
+            raise
+
+        ctx = _panel_response_context(reviewer, "")
+        return _templates(request).TemplateResponse(
+            request,
+            "base.html",
+            {
+                "title": "Referia",
+                "config": "_referia.yml",
+                "directory": (
+                    reviewer._directory
+                    if hasattr(reviewer, "_directory")
+                    else request.app.state.root
+                ),
+                "cache_bust": request.app.state.start_time,
+                "config_path_prefix": "",
+                **ctx,
+            },
+        )
 
     reviewer = _reviewer(request)
     ctx = _panel_response_context(reviewer)
