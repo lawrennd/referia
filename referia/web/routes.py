@@ -17,6 +17,10 @@ All routes share a ``WebReviewer`` instance stored in ``app.state.reviewer``.
     Accept a form value, call ``WebReviewer.set_value()``, return a status
     fragment plus OOB widget refreshes for all affected columns.
 
+``POST /field-bulk/{column}``
+    Set *column* on every index in the current filtered working set
+    (inline_list select-all); return a refreshed review panel.
+
 ``POST /save``
     Persist data; return a status fragment.
 
@@ -43,6 +47,12 @@ The ``root_router`` mirrors every single-config route but prefixed with a
 ``{config_path:path}`` segment that maps a URL path to a ``_referia.yml``
 under the root directory.  Reviewers are lazily loaded and cached by
 ``_get_cached_reviewer``.
+
+``GET /``
+    When ``{root}/_referia.yml`` exists, the review page for that config
+    (CIP-0010).  Otherwise the CIP-000C directory listing of configs under
+    the root.  Unprefixed action routes (``/record``, ``/save``, …) serve
+    the root config when present.
 
 ``GET /{config_path:path}``
     Full page for the named config (last in root_router to act as catch-all).
@@ -90,6 +100,8 @@ from referia.web.render import (
     render_viewer,
     render_document_panel,
     render_document_actions,
+    render_filter_bar,
+    render_inline_listing,
 )
 
 log = logging.getLogger(__name__)
@@ -128,17 +140,22 @@ def _coerce_form_value(raw: Any, spec: dict | None) -> Any:
 
 def _reviewer(request: Request):
     reviewer = request.app.state.reviewer
-    if reviewer is None:
-        from fastapi import HTTPException
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Review session could not be initialised. "
-                "Check the server log for startup errors — likely a missing or "
-                "malformed _referia.yml, or a data file that could not be loaded."
-            ),
-        )
-    return reviewer
+    if reviewer is not None:
+        return reviewer
+    # Root-server: unprefixed routes (``/record``, ``/save``, …) serve
+    # ``{root}/_referia.yml`` when present (CIP-0010).
+    root = getattr(request.app.state, "root", None)
+    if root is not None and (Path(root) / "_referia.yml").exists():
+        return _root_reviewer(request, "")
+    from fastapi import HTTPException
+    raise HTTPException(
+        status_code=503,
+        detail=(
+            "Review session could not be initialised. "
+            "Check the server log for startup errors — likely a missing or "
+            "malformed _referia.yml, or a data file that could not be loaded."
+        ),
+    )
 
 
 def _templates(request: Request):
@@ -225,35 +242,176 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
     """
     indices = reviewer.index_list()
     current_index = reviewer.get_index()
-    data = _current_data(reviewer)
+    try:
+        layout = reviewer.get_display_layout()
+    except ValueError as exc:
+        log.error("Invalid display.layout: %s", exc)
+        layout = "side_by_side"
 
     viewer_blocks = [
         reviewer.render_viewer_html(spec)
         for spec in reviewer.get_viewer_specs()
     ]
-    form_html = render_form(reviewer.get_review_specs(), data)
-    index_selector = _render_index_selector(indices, current_index)
-    document_html = render_document_panel(
-        reviewer.list_pdf_entries(),
-        reviewer.list_url_entries(),
-        prefix,
-        current_index=current_index,
-    )
+
+    row_forms: list[dict] = []
+    listing_html = ""
+    form_html = ""
+    filter_bar_html = ""
+    working = indices
+    if layout == "inline_list":
+        working = reviewer.working_indices()
+        filter_state = reviewer.get_filter_state()
+        group_by = _inline_list_group_by(filter_state)
+        filter_bar_html = render_filter_bar(
+            reviewer.get_filter_specs(),
+            reviewer.get_sort_specs(),
+            filter_state,
+        )
+        review_specs = reviewer.get_review_specs()
+        listing_entries: list[dict] = []
+        saved = current_index
+        try:
+            for idx in working:
+                reviewer.set_index(idx)
+                data = _current_data(reviewer)
+                listing_entries.append(
+                    {
+                        "index": idx,
+                        "data": data,
+                        "href": _inline_list_href(reviewer, data, prefix),
+                        "group": _inline_list_group(
+                            reviewer, data, group_by=group_by
+                        ),
+                    }
+                )
+        finally:
+            if saved is not None:
+                try:
+                    reviewer.set_index(saved)
+                except Exception:
+                    pass
+        listing_html = render_inline_listing(
+            listing_entries, review_specs, group_by=group_by
+        )
+        index_selector = ""
+        document_html = ""
+        position = len(working)
+        total = len(working)
+    else:
+        data = _current_data(reviewer)
+        form_html = render_form(reviewer.get_review_specs(), data)
+        index_selector = _render_index_selector(indices, current_index)
+        document_html = render_document_panel(
+            reviewer.list_pdf_entries(),
+            reviewer.list_url_entries(),
+            prefix,
+            current_index=current_index,
+        )
+        position = (
+            (indices.index(current_index) + 1) if current_index in indices else "?"
+        )
+        total = len(indices)
+
     document_actions_html = render_document_actions(
         documents=_list_document_entries(reviewer, "documents"),
         summary_documents=_list_document_entries(reviewer, "summary_documents"),
     )
 
     return {
+        "layout": layout,
         "index_selector": index_selector,
+        "filter_bar_html": filter_bar_html,
         "viewer_blocks": viewer_blocks,
         "document_html": document_html,
         "document_actions_html": document_actions_html,
         "form_html": form_html,
+        "row_forms": row_forms,
+        "listing_html": listing_html,
         "current_index": current_index,
-        "total": len(indices),
-        "position": (indices.index(current_index) + 1) if current_index in indices else "?",
+        "total": total,
+        "position": position,
     }
+
+
+def _inline_list_href(reviewer, data: dict, prefix: str = "") -> str | None:
+    """Best-effort link into a discovered child review config."""
+    for key in ("config_url", "configUrl", "url"):
+        raw = data.get(key)
+        if raw:
+            return str(raw)
+    src = data.get("sourceDirectory")
+    if not src:
+        return None
+    try:
+        base = Path(getattr(reviewer, "_directory", ".")).resolve()
+        rel = Path(src).expanduser().resolve().relative_to(base)
+    except (OSError, ValueError):
+        return None
+    rel_url = str(rel).replace("\\", "/").strip("/")
+    if not rel_url:
+        return None
+    # Root-server: prefix is the overview config path; child is a sibling URL.
+    if prefix:
+        parent = prefix.rstrip("/").rsplit("/", 1)[0] if "/" in prefix.rstrip("/") else ""
+        root_prefix = f"{parent}/{rel_url}" if parent else f"/{rel_url}"
+        if not root_prefix.startswith("/"):
+            root_prefix = "/" + root_prefix
+        return root_prefix.rstrip("/") + "/"
+    return f"/{rel_url}/"
+
+
+_INLINE_LIST_GROUP_BY = frozenset({"directory", "version"})
+
+
+def _inline_list_group_by(filter_state: dict | None) -> str:
+    """Return the active inline_list group-by mode (default ``directory``)."""
+    raw = (filter_state or {}).get("_group") or "directory"
+    key = str(raw).strip().lower()
+    return key if key in _INLINE_LIST_GROUP_BY else "directory"
+
+
+def _inline_list_group(
+    reviewer, data: dict, *, group_by: str = "directory"
+) -> str:
+    """Group label for listing sections.
+
+    ``directory`` (default): top-level path under the review root (CIP-000C).
+    ``version``: ``referia_config_version`` as ``v1`` / ``v2`` / ``unknown``.
+    """
+    mode = group_by if group_by in _INLINE_LIST_GROUP_BY else "directory"
+    if mode == "version":
+        raw = data.get("referia_config_version")
+        if raw is None or raw == "":
+            raw = data.get("version")
+        if raw is None or raw == "":
+            return "unknown"
+        text = str(raw).strip()
+        if text.lower().startswith("v") and text[1:].isdigit():
+            return text.lower()
+        if text.isdigit():
+            return f"v{text}"
+        return text
+
+    src = data.get("sourceDirectory")
+    if not src:
+        return ""
+    src_path = Path(str(src)).expanduser()
+    try:
+        base = Path(getattr(reviewer, "_directory", ".")).resolve()
+        if src_path.is_absolute():
+            abs_src = src_path.resolve()
+        else:
+            abs_src = (base / src_path).resolve()
+        rel = abs_src.relative_to(base)
+    except (OSError, ValueError):
+        parts = [p for p in src_path.parts if p not in (".", "")]
+        if len(parts) > 1:
+            return str(parts[0])
+        return ""
+    parts = list(rel.parts)
+    if len(parts) <= 1:
+        return ""
+    return str(parts[0])
 
 
 def _render_panel(reviewer, request: Request, prefix: str = "") -> str:
@@ -350,17 +508,46 @@ async def index(
 ):
     """Render the full review page for the current record.
 
-    In root-server mode (``app.state.root`` is set) there is no single
-    reviewer, so instead we render a directory listing of all configs found
-    under the root.  The ``after``, ``before`` and ``current`` query params
-    filter the listing by date range or work-in-progress status.
-    Current-only filtering is on by default; pass ``current=0`` to show all.
+    In root-server mode (``app.state.root`` is set): when ``{root}/_referia.yml``
+    exists, load it like any other config (CIP-0010).  Otherwise fall back to
+    the CIP-000C directory listing.  Listing query params ``after``, ``before``
+    and ``current`` apply only to that fallback; current-only is on by default
+    (pass ``current=0`` to show all).
     """
     if getattr(request.app.state, "root", None) is not None:
-        current_only = _current_only_from_param(current)
-        configs = _list_sub_configs(request.app.state.root, "")
-        configs = _filter_configs(configs, after=after, before=before, current_only=current_only)
-        return _render_directory_listing("", configs, after=after, before=before, current_only=current_only)
+        from fastapi import HTTPException as _HTTPException
+
+        try:
+            reviewer = _root_reviewer(request, "")
+        except _HTTPException as exc:
+            if exc.status_code == 404:
+                current_only = _current_only_from_param(current)
+                configs = _list_sub_configs(request.app.state.root, "")
+                configs = _filter_configs(
+                    configs, after=after, before=before, current_only=current_only
+                )
+                return _render_directory_listing(
+                    "", configs, after=after, before=before, current_only=current_only
+                )
+            raise
+
+        ctx = _panel_response_context(reviewer, "")
+        return _templates(request).TemplateResponse(
+            request,
+            "base.html",
+            {
+                "title": "Referia",
+                "config": "_referia.yml",
+                "directory": (
+                    reviewer._directory
+                    if hasattr(reviewer, "_directory")
+                    else request.app.state.root
+                ),
+                "cache_bust": request.app.state.start_time,
+                "config_path_prefix": "",
+                **ctx,
+            },
+        )
 
     reviewer = _reviewer(request)
     ctx = _panel_response_context(reviewer)
@@ -417,11 +604,28 @@ async def update_field(request: Request, column: str):
     The primary response target is ``#status-bar`` (set by the HTMX attributes
     on every field control in ``render.py``).  Affected widget divs are returned
     as HTMX OOB swaps so the page reflects computed side-effects.
+
+    Optional form field ``index`` (from inline_list ``hx-vals``) selects the
+    tall-table row to update before writing *column*.
     """
     reviewer = _reviewer(request)
     form = await request.form()
     raw_value = form.get(column)
-    log.debug("update_field: column=%r raw_value=%r form_keys=%s", column, raw_value, list(form.keys()))
+    record_index = form.get("index")
+    log.debug(
+        "update_field: column=%r raw_value=%r index=%r form_keys=%s",
+        column,
+        raw_value,
+        record_index,
+        list(form.keys()),
+    )
+
+    if record_index is not None and str(record_index) != "":
+        try:
+            reviewer.set_index(record_index)
+        except Exception as exc:
+            _log_route_error("Update", exc, column=column, index=record_index)
+            return HTMLResponse(_user_error_html("Update"))
 
     spec = _find_spec(reviewer, column)
     value: Any = _coerce_form_value(raw_value, spec)
@@ -436,14 +640,125 @@ async def update_field(request: Request, column: str):
     # Build OOB refreshes for all affected widgets
     data = _current_data(reviewer)
     parts = [status_html]
+    oob_index = record_index if record_index not in (None, "") else None
     for col in reviewer.affected_widgets(column):
         affected_spec = _find_spec(reviewer, col)
         if affected_spec:
             val = reviewer.get_value(col)
-            widget_html = render_widget(affected_spec, val, data)
+            widget_html = render_widget(
+                affected_spec, val, data, record_index=oob_index
+            )
             parts.append(_make_oob(widget_html))
 
     return HTMLResponse("\n".join(parts))
+
+
+@router.post("/field-bulk/{column}", response_class=HTMLResponse)
+async def update_field_bulk(request: Request, column: str):
+    """Set *column* on all filtered working-set rows; return a refreshed panel."""
+    reviewer = _reviewer(request)
+    templates = _templates(request)
+    form = await request.form()
+    raw_value = form.get(column)
+    spec = _find_spec(reviewer, column)
+    value: Any = _coerce_form_value(raw_value, spec)
+
+    saved = None
+    try:
+        saved = reviewer.get_index()
+    except Exception:
+        pass
+
+    try:
+        for idx in reviewer.working_indices():
+            reviewer.set_index(idx)
+            reviewer.set_value(column, value)
+    except Exception as exc:
+        _log_route_error("Bulk update", exc, column=column)
+        return HTMLResponse(_user_error_html("Bulk update"))
+    finally:
+        if saved is not None:
+            try:
+                reviewer.set_index(saved)
+            except Exception:
+                pass
+
+    ctx = _panel_response_context(reviewer)
+    return templates.TemplateResponse(request, "review_panel.html", ctx)
+
+
+def _parse_filter_form(form, reviewer) -> dict:
+    """Build filter_state dict from an HTMX filter-bar form post."""
+    state: dict = {}
+    for spec in reviewer.get_filter_specs():
+        if not isinstance(spec, dict):
+            continue
+        field = str(spec.get("field") or "")
+        if not field:
+            continue
+        ftype = str(spec.get("type") or "categorical")
+        if ftype == "boolean":
+            raw = form.get(f"filter__{field}")
+            if raw is not None:
+                state[field] = str(raw)
+        elif ftype == "date_range":
+            after = form.get(f"filter__{field}__after") or ""
+            before = form.get(f"filter__{field}__before") or ""
+            state[field] = {"after": str(after), "before": str(before)}
+        elif ftype == "contains":
+            query = form.get(f"filter__{field}__query") or ""
+            mode = str(form.get(f"filter__{field}__mode") or "words").lower()
+            if mode not in ("words", "exact"):
+                mode = "words"
+            state[field] = {"query": str(query), "mode": mode}
+        else:
+            # Single-select (Any = empty) or legacy multi-select
+            getlist = getattr(form, "getlist", None)
+            if callable(getlist):
+                vals = getlist(f"filter__{field}")
+            else:
+                raw = form.get(f"filter__{field}")
+                vals = [raw] if raw is not None else []
+            cleaned = [str(v) for v in vals if v is not None and str(v) != ""]
+            state[field] = cleaned
+    sort_val = form.get("sort")
+    if sort_val:
+        state["_sort"] = str(sort_val)
+    group_val = form.get("group")
+    if group_val:
+        key = str(group_val).strip().lower()
+        if key in _INLINE_LIST_GROUP_BY:
+            state["_group"] = key
+    return state
+
+
+@router.post("/filters", response_class=HTMLResponse)
+async def apply_filters(request: Request):
+    """Apply filter/sort bar values and return a refreshed review panel."""
+    reviewer = _reviewer(request)
+    templates = _templates(request)
+    form = await request.form()
+    try:
+        reviewer.set_filter_state(_parse_filter_form(form, reviewer))
+    except Exception as exc:
+        _log_route_error("Filters", exc)
+        return HTMLResponse(_user_error_html("Filters"))
+    ctx = _panel_response_context(reviewer)
+    return templates.TemplateResponse(request, "review_panel.html", ctx)
+
+
+@router.post("/filters/clear", response_class=HTMLResponse)
+async def clear_filters(request: Request):
+    """Clear filter/sort session state and return a refreshed review panel."""
+    reviewer = _reviewer(request)
+    templates = _templates(request)
+    try:
+        reviewer.clear_filters()
+    except Exception as exc:
+        _log_route_error("Filters", exc)
+        return HTMLResponse(_user_error_html("Filters"))
+    ctx = _panel_response_context(reviewer)
+    return templates.TemplateResponse(request, "review_panel.html", ctx)
 
 
 @router.post("/save", response_class=HTMLResponse)
@@ -1340,6 +1655,14 @@ async def root_update_field(request: Request, config_path: str, column: str):
     reviewer = _root_reviewer(request, config_path)
     form = await request.form()
     raw_value = form.get(column)
+    record_index = form.get("index")
+
+    if record_index is not None and str(record_index) != "":
+        try:
+            reviewer.set_index(record_index)
+        except Exception as exc:
+            _log_route_error("Update", exc, column=column, index=record_index)
+            return HTMLResponse(_user_error_html("Update"))
 
     spec = _find_spec(reviewer, column)
     value: Any = _coerce_form_value(raw_value, spec)
@@ -1353,14 +1676,77 @@ async def root_update_field(request: Request, config_path: str, column: str):
 
     data = _current_data(reviewer)
     parts = [status_html]
+    oob_index = record_index if record_index not in (None, "") else None
     for col in reviewer.affected_widgets(column):
         affected_spec = _find_spec(reviewer, col)
         if affected_spec:
             val = reviewer.get_value(col)
-            widget_html = render_widget(affected_spec, val, data)
+            widget_html = render_widget(
+                affected_spec, val, data, record_index=oob_index
+            )
             parts.append(_make_oob(widget_html))
 
     return HTMLResponse("\n".join(parts))
+
+
+@root_router.post("/{config_path:path}/field-bulk/{column}", response_class=HTMLResponse)
+async def root_update_field_bulk(request: Request, config_path: str, column: str):
+    reviewer = _root_reviewer(request, config_path)
+    templates = _templates(request)
+    form = await request.form()
+    raw_value = form.get(column)
+    spec = _find_spec(reviewer, column)
+    value: Any = _coerce_form_value(raw_value, spec)
+
+    saved = None
+    try:
+        saved = reviewer.get_index()
+    except Exception:
+        pass
+
+    try:
+        for idx in reviewer.working_indices():
+            reviewer.set_index(idx)
+            reviewer.set_value(column, value)
+    except Exception as exc:
+        _log_route_error("Bulk update", exc, column=column)
+        return HTMLResponse(_user_error_html("Bulk update"))
+    finally:
+        if saved is not None:
+            try:
+                reviewer.set_index(saved)
+            except Exception:
+                pass
+
+    ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
+    return templates.TemplateResponse(request, "review_panel.html", ctx)
+
+
+@root_router.post("/{config_path:path}/filters", response_class=HTMLResponse)
+async def root_apply_filters(request: Request, config_path: str):
+    reviewer = _root_reviewer(request, config_path)
+    templates = _templates(request)
+    form = await request.form()
+    try:
+        reviewer.set_filter_state(_parse_filter_form(form, reviewer))
+    except Exception as exc:
+        _log_route_error("Filters", exc)
+        return HTMLResponse(_user_error_html("Filters"))
+    ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
+    return templates.TemplateResponse(request, "review_panel.html", ctx)
+
+
+@root_router.post("/{config_path:path}/filters/clear", response_class=HTMLResponse)
+async def root_clear_filters(request: Request, config_path: str):
+    reviewer = _root_reviewer(request, config_path)
+    templates = _templates(request)
+    try:
+        reviewer.clear_filters()
+    except Exception as exc:
+        _log_route_error("Filters", exc)
+        return HTMLResponse(_user_error_html("Filters"))
+    ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
+    return templates.TemplateResponse(request, "review_panel.html", ctx)
 
 
 @root_router.post("/{config_path:path}/save", response_class=HTMLResponse)

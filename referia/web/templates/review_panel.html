@@ -2,19 +2,26 @@
   review_panel.html — inner content of #review-panel
 
   Variables expected from the route:
-    index_selector  : HTML string for the <select> nav widget
-    viewer_blocks   : list of HTML strings (viewer column)
-    form_html       : HTML string for the review <form>
+    layout          : "side_by_side" | "inline_list"
+    index_selector  : HTML string for the <select> nav widget (side_by_side)
+    filter_bar_html : HTML string for filter/sort bar (inline_list)
+    viewer_blocks   : list of HTML strings (optional intro chrome)
+    form_html       : HTML string for the review <form> (side_by_side)
+    listing_html    : directory-listing style rows (inline_list)
     current_index   : the active record index (for display)
-    position        : 1-based position in the index list
-    total           : total number of records
+    position        : 1-based position in the index list / working-set size
+    total           : total number of records / working-set size
 -->
-<div class="panel-nav">
+<div class="panel-nav{% if layout == 'inline_list' and filter_bar_html %} panel-nav-with-filters{% endif %}">
+    {% if layout == "inline_list" %}
+    <div class="nav-counter">{{ total }} item{% if total != 1 %}s{% endif %}</div>
+    {% else %}
     <div class="nav-selector">
         <label for="index-select" class="nav-label">Record:</label>
         {{ index_selector | safe }}
     </div>
     <div class="nav-counter">{{ position }} / {{ total }}</div>
+    {% endif %}
     <div class="nav-actions">
         {% if document_actions_html %}
             {{ document_actions_html | safe }}
@@ -30,6 +37,24 @@
     </div>
 </div>
 
+{% if layout == "inline_list" and filter_bar_html %}
+<div class="panel-filters">
+    {{ filter_bar_html | safe }}
+</div>
+{% endif %}
+
+{% if layout == "inline_list" %}
+<div class="inline-list-page">
+    {% if viewer_blocks %}
+    <div class="inline-list-intro">
+        {% for block in viewer_blocks %}
+        {{ block | safe }}
+        {% endfor %}
+    </div>
+    {% endif %}
+    {{ listing_html | safe }}
+</div>
+{% else %}
 <div class="two-col">
     <div class="viewer-col">
         {% if viewer_blocks %}
@@ -54,3 +79,4 @@
         {{ form_html | safe }}
     </div>
 </div>
+{% endif %}

@@ -789,3 +789,129 @@ class TestRenderDocumentActions:
         assert 'hx-post="/generate-summary-document/0"' in html
         assert "Create docx" in html
         assert "Create Summary letter" in html
+
+
+class TestInlineListRecordIndex:
+    def test_hx_vals_and_scoped_dom_id(self):
+        from referia.web.render import render_widget, render_form, render_filter_bar
+
+        html = render_widget(_w("Checkbox", "complete"), True, record_index="cfg/a")
+        assert 'hx-vals="' in html
+        assert "cfg/a" in html or "cfg" in html
+        assert 'id="widget-complete-' in html
+
+        form = render_form([_w("Text", "notes")], {"notes": ""}, record_index="r1")
+        assert 'id="review-form-r1"' in form
+        assert "hx-vals=" in form
+
+        bar = render_filter_bar(
+            [
+                {"field": "complete", "type": "boolean", "label": "Done"},
+                {"field": "title", "type": "contains", "label": "Title"},
+            ],
+            [{"field": "date", "order": "desc"}],
+            {
+                "complete": "any",
+                "title": {"query": "admissions", "mode": "words"},
+            },
+        )
+        assert 'hx-post="/filters"' in bar
+        assert "filter__complete" in bar
+        assert 'class="filters inline-listing-filters"' in bar
+        assert 'name="group"' in bar
+        assert "Group by" in bar
+        assert 'value="directory"' in bar
+        assert 'value="version"' in bar
+        assert 'name="filter__title__query"' in bar
+        assert 'value="admissions"' in bar
+        assert 'name="filter__title__mode"' in bar
+        assert 'value="words" selected' in bar
+
+        bar_ver = render_filter_bar([], [], {"_group": "version"})
+        assert 'value="version" selected' in bar_ver
+
+
+class TestInlineListing:
+    def test_directory_listing_shape_with_complete_checkbox(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "spring",
+                    "href": "/spring/",
+                    "group": "",
+                    "data": {
+                        "title": "Spring reviews",
+                        "date": "2026-03-01",
+                        "description": "Q1 work",
+                        "complete": False,
+                        "referia_config_version": 1,
+                    },
+                },
+                {
+                    "index": "autumn",
+                    "href": "/autumn/",
+                    "group": "",
+                    "data": {
+                        "title": "Autumn reviews",
+                        "date": "2026-09-15",
+                        "description": "Q3 work",
+                        "complete": True,
+                        "referia_config_version": 2,
+                    },
+                },
+            ],
+            [
+                {"type": "Checkbox", "field": "complete", "args": {"description": "Complete"}},
+                {"type": "SaveButton"},
+            ],
+        )
+        assert 'class="inline-listing"' in html
+        assert 'class="complete-check"' in html
+        assert "complete-check-label" in html
+        assert "Done" in html
+        assert "Select all filtered" in html
+        assert 'hx-post="/field-bulk/complete"' in html
+        assert "select-all-entry" in html
+        assert "Spring reviews" in html
+        assert "Autumn reviews" in html
+        assert 'href="/spring/"' in html
+        assert 'target="_blank"' in html
+        assert "badge-complete" in html
+        assert "badge-version" in html
+        assert "v1" in html
+        assert "v2" in html
+        assert "Q1 work" in html
+        assert "entry-extras" not in html
+        assert "SaveButton" not in html
+        # select-all + two row checkboxes
+        assert html.count('type="checkbox"') == 3
+
+    def test_empty_listing_message(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing([], [{"type": "Checkbox", "field": "complete"}])
+        assert "No rows match" in html
+        assert "Select all filtered" not in html
+
+    def test_group_heading_style_by_mode(self):
+        from referia.web.render import render_inline_listing
+
+        entries = [
+            {
+                "index": "a",
+                "group": "templates",
+                "data": {"title": "A", "complete": False},
+            }
+        ]
+        specs = [{"type": "Checkbox", "field": "complete"}]
+        by_dir = render_inline_listing(entries, specs, group_by="directory")
+        assert "<h2>templates/</h2>" in by_dir
+        by_ver = render_inline_listing(
+            [{"index": "a", "group": "v2", "data": {"title": "A", "complete": False}}],
+            specs,
+            group_by="version",
+        )
+        assert "<h2>v2</h2>" in by_ver
+        assert "<h2>v2/</h2>" not in by_ver

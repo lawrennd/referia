@@ -95,6 +95,34 @@ class TestSingleConfigMode:
         assert body["status"] == "degraded"
         assert body["reviewer"] == "failed"
 
+    def test_field_bulk_sets_all_working_indices(self):
+        mock_rev = _mock_reviewer()
+        mock_rev.working_indices.return_value = ["a", "b", "c"]
+        mock_rev.get_display_layout.return_value = "inline_list"
+        mock_rev.get_filter_specs.return_value = []
+        mock_rev.get_sort_specs.return_value = []
+        mock_rev.get_filter_state.return_value = {}
+        complete_spec = {"type": "Checkbox", "field": "complete"}
+        mock_rev.get_review_specs.return_value = [complete_spec]
+        mock_rev.get_widget_specs.return_value = [complete_spec]
+        mock_rev.list_pdf_entries.return_value = []
+        mock_rev.list_url_entries.return_value = []
+        mock_rev.list_document_entries.return_value = []
+        mock_rev.affected_widgets.return_value = []
+        with patch("referia.assess.web_review.WebReviewer", return_value=mock_rev):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                resp = client.post(
+                    "/field-bulk/complete",
+                    data={"complete": "true"},
+                )
+        assert resp.status_code == 200
+        assert mock_rev.set_value.call_count == 3
+        assert all(
+            call.args == ("complete", True)
+            for call in mock_rev.set_value.call_args_list
+        )
+
 
 # ---------------------------------------------------------------------------
 # Root-server mode
@@ -144,13 +172,111 @@ class TestRootServerMode:
             with TestClient(app):
                 MockRev.assert_not_called()
 
-    def test_root_slash_returns_listing_in_root_mode(self, tmp_path):
-        """In root mode, GET / returns the directory listing (not 503)."""
+    def test_root_slash_returns_listing_when_no_root_yml(self, tmp_path):
+        """In root mode without {root}/_referia.yml, GET / lists configs (CIP-000C)."""
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
             resp = client.get("/")
         assert resp.status_code == 200
         assert "Reviews under" in resp.text
+
+    def test_root_slash_loads_referia_yml_when_present(self, tmp_path):
+        """CIP-0010: GET / loads {root}/_referia.yml instead of the listing."""
+        (tmp_path / "_referia.yml").write_text("title: Root Overview\n")
+        mock_rev = _mock_reviewer()
+        with patch("referia.assess.web_review.WebReviewer", return_value=mock_rev):
+            app = create_app(root=str(tmp_path))
+            with TestClient(app) as client:
+                resp = client.get("/")
+        assert resp.status_code == 200
+        assert "Reviews under" not in resp.text
+        assert "<!DOCTYPE html>" in resp.text
+        mock_rev.index_list.assert_called()
+
+    def test_root_slash_record_serves_root_yml(self, tmp_path):
+        """Unprefixed /record uses {root}/_referia.yml when present."""
+        (tmp_path / "_referia.yml").write_text("title: Root Overview\n")
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            app = create_app(root=str(tmp_path))
+            with TestClient(app) as client:
+                resp = client.get("/record")
+        assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# inline_list grouping
+# ---------------------------------------------------------------------------
+
+class TestInlineListGroup:
+    def test_relative_source_directory_uses_top_level(self, tmp_path):
+        from referia.web.routes import _inline_list_group
+
+        reviewer = MagicMock()
+        reviewer._directory = str(tmp_path)
+        group = _inline_list_group(
+            reviewer,
+            {
+                "sourceDirectory": (
+                    "templates/2026-10-09_recurring/"
+                    "mphil-admissions/interview-setup"
+                )
+            },
+        )
+        assert group == "templates"
+
+    def test_absolute_source_directory_uses_top_level(self, tmp_path):
+        from referia.web.routes import _inline_list_group
+
+        leaf = (
+            tmp_path
+            / "applications"
+            / "2025-01-27_phd"
+            / "interview-setup"
+        )
+        leaf.mkdir(parents=True)
+        reviewer = MagicMock()
+        reviewer._directory = str(tmp_path)
+        assert _inline_list_group(
+            reviewer, {"sourceDirectory": str(leaf)}
+        ) == "applications"
+
+    def test_shallow_path_has_no_group(self, tmp_path):
+        from referia.web.routes import _inline_list_group
+
+        reviewer = MagicMock()
+        reviewer._directory = str(tmp_path)
+        assert _inline_list_group(reviewer, {"sourceDirectory": "."}) == ""
+        assert _inline_list_group(
+            reviewer, {"sourceDirectory": "solo.yml"}
+        ) == ""
+
+    def test_group_by_version(self, tmp_path):
+        from referia.web.routes import _inline_list_group, _inline_list_group_by
+
+        reviewer = MagicMock()
+        reviewer._directory = str(tmp_path)
+        assert (
+            _inline_list_group(
+                reviewer,
+                {"referia_config_version": 2, "sourceDirectory": "a/b"},
+                group_by="version",
+            )
+            == "v2"
+        )
+        assert (
+            _inline_list_group(
+                reviewer,
+                {"referia_config_version": "v1"},
+                group_by="version",
+            )
+            == "v1"
+        )
+        assert (
+            _inline_list_group(reviewer, {}, group_by="version") == "unknown"
+        )
+        assert _inline_list_group_by({"_group": "version"}) == "version"
+        assert _inline_list_group_by({}) == "directory"
+        assert _inline_list_group_by({"_group": "nope"}) == "directory"
 
 
 # ---------------------------------------------------------------------------

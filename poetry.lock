@@ -2940,7 +2940,7 @@ XlsxWriter = "*"
 type = "git"
 url = "https://github.com/lawrennd/lynguine.git"
 reference = "main"
-resolved_reference = "4f68587d9e65321d0471d19066d89e54386a5fa7"
+resolved_reference = "a87fb3518987e584326054025d3025630d710205"
 
 [[package]]
 name = "markdown"
