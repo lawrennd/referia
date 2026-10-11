@@ -1,7 +1,7 @@
 ---
 id: "2026-10-11_overview-pattern-a-filters"
 title: "Overview Pattern A presentation + general filters bar"
-status: "Ready"
+status: "Abandoned"
 priority: "High"
 created: "2026-10-11"
 last_updated: "2026-10-11"
@@ -10,45 +10,38 @@ related_cips: ["0010"]
 owner: "Neil D. Lawrence"
 dependencies:
 - "2026-10-11_root-load-referia-yml"
-- "2026-10-11_singleton-navigation-chrome"
 tags:
 - backlog
 - features
-- web
-- filters
-- wide-flatten
+- abandoned
 - cip0010
 ---
 
 # Task: Overview Pattern A presentation + filters
 
-> **Note**: Backlog tasks are DOING the work defined in CIPs (HOW).
-> Use `related_cips` to link to CIPs. Don't link directly to requirements (bottom-up pattern).
+> **Abandoned** — superseded by tall-first same-page plan (no required `wide_flatten` / Pattern A for overviews).
 
 ## Description
 
-Wire the root/overview experience: tall discovery + tall `complete` scores (Pattern A), Liquid/`flattenKeys` / wide view names, Save on tall store, and a general collapsible `filters:` bar (boolean tristate, date range, categorical; default cleared). Example root `_referia.yml` + short docs. No `mode: catalog`.
+Originally: wire overview via Pattern A + `flattenKeys` / wide names + filters. Design shifted: lynguine keeps **tall** discovery/scores; referia `display.layout: inline_list` lists them with `rows` + filter/sort.
 
 ## Acceptance Criteria
 
-- [ ] Pattern A: filtered tall set → `flattenKeys` / wide view for Liquid; Save writes tall `complete`
-- [ ] `filters:` declared in config; bar under panel-nav; collapsible; default clear
-- [ ] Example root `_referia.yml` (wide_flatten + tall yaml/csv scores) documented
-- [ ] Tests: overview load, tall Save, filters; assert no catalog mode flag
-- [ ] Optional secondary `rows` Liquid path documented or deferred explicitly
-
-## Implementation Notes
-
-- Depends on lynguine Phase 3 wrapping `index` for `index: root` overview configs
-- See CIP-0010 implementation status checklist
+- [ ] ~~Pattern A / wide_flatten overview~~ — abandoned
+- [ ] See replacement tasks below
 
 ## Related
 
 - CIP: 0010
-- Depends on: `2026-10-11_root-load-referia-yml`, `2026-10-11_singleton-navigation-chrome`
+- Superseded by: `2026-10-11_inline-list-same-page`
+- Also: lynguine `2026-10-11_directory-include-start-directory`
 
 ## Progress Updates
 
 ### 2026-10-11
 
 Task created (Ready) from Accepted CIP-0010.
+
+### 2026-10-11 (later)
+
+Abandoned after tall-first design shift (checkpoint `37ed710`, then CIP amend). Replacement: `2026-10-11_inline-list-same-page`.

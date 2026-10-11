@@ -19,39 +19,39 @@ tags:
 
 # Task: Evaluate retiring Jupyter as a review display surface
 
-> **Note**: This is a **decision / discovery** task, not an implement-drop ticket.
-> Named layouts (REQ-000E / CIP-0010) are **web-first**; Jupyter parity is explicitly out of scope there.
+> **Decision / discovery** task — not an implement-drop ticket.
+> CIP-0010 now requires **list + filter/sort on Jupyter** while notebook display exists (`inline-list-same-page`). This evaluation is about the long-term stack, not blocking that work.
 
 ## Description
 
-CIP-000B and REQ-0008 established a web review path while leaving the Jupyter (`Reviewer` / ipywidgets) path intact for expert users. As web becomes the primary surface for multi-config hosting, filters, and named layout compositions, maintaining two display stacks may cost more than it helps.
+CIP-000B / REQ-0008 left Jupyter display intact. Web is primary for multi-config hosting; `inline_list` will also land on Jupyter. Decide whether to keep Jupyter as a peer display surface, legacy-only, or retire it on a timeline.
 
-This task asks: should referia **retire Jupyter as a display/rendering surface** (keep notebooks only for authoring/debug/compute experiments), keep it as a long-term peer, or shrink it to a documented legacy path?
-
-Do **not** remove Jupyter support as part of this task. Produce a written recommendation that can amend REQ-0008 / CIP-000B if accepted.
+Do **not** remove Jupyter as part of this task. Produce a written recommendation that can amend REQ-0008 / CIP-000B if accepted.
 
 ## Acceptance Criteria
 
-- [ ] Inventory what still depends on Jupyter display (`Reviewer`, `util/widgets.py`, example notebooks, docs, CI)
-- [ ] List capabilities web still lacks vs Jupyter for real review workflows (if any)
-- [ ] Recommend one of: keep peer / legacy-only / retire-with-timeline — with rationale against REQ-0008
-- [ ] If retire or legacy: draft the requirement/CIP amendment text (do not apply until product Accept)
-- [ ] Explicitly state impact on named layouts (already web-first) and on authors who only use notebooks today
+- [ ] Inventory Jupyter display dependencies (`Reviewer`, widgets, notebooks, CI)
+- [ ] Compare cost of dual stacks after `inline_list` exists on both surfaces
+- [ ] Recommend: keep peer / legacy-only / retire-with-timeline — vs REQ-0008
+- [ ] If retire or legacy: draft requirement/CIP amendment text (do not apply until Accept)
+- [ ] Note impact on authors who only use notebooks today
 
 ## Implementation Notes
 
-- Related: CIP-000B (web display; Jupyter untouched by design), REQ-0008 (web without Jupyter **and** Jupyter continues), CIP-0010 / REQ-000E (web-first layouts)
-- Prefer a short decision note in a CIP amendment or requirements update over a parallel architecture doc
-- Poetry / `jupyter` dependency and security surface are inputs to the cost side, not the whole decision
+- Do not block `2026-10-11_inline-list-same-page`
+- Related: CIP-000B, REQ-0008, CIP-0010 / REQ-000E
 
 ## Related
 
 - CIP: 000B, 0010
-- Requirements: REQ-0008, REQ-000E
-- Documentation: CIP-000B motivation (local desktop without Jupyter overhead)
+- Sibling: `2026-10-11_inline-list-same-page`
 
 ## Progress Updates
 
 ### 2026-10-11
 
-Task created (Proposed). Triggered while specifying named layout compositions: implement layouts web-first; park Jupyter display future as an explicit product decision rather than inventing notebook layout parity.
+Task created (Proposed). Originally framed as alternative to inventing Jupyter layout parity.
+
+### 2026-10-11 (later)
+
+Updated: list layout now includes Jupyter behavioural contract; this task stays Low product-decision, not a substitute for implementing notebook list chrome.

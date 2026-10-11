@@ -45,15 +45,16 @@ New compositions may be added over time as named options; each remains a deliber
 - [ ] Authors are **not** required (or invited) to set fine geometry: no freeform region coordinates, splitter recipes, or per-widget absolute placement as the authoring model
 - [ ] The same named-composition mechanism applies generally (any review), not only root/catalog configs
 - [ ] Adding a new composition is a deliberate product/design step (new named option), not unbounded author inventiveness
-- [ ] Named layouts are required on the **web** review surface; Jupyter parity is not required by this requirement
+- [ ] Under the list composition, filter/sort chrome replaces the index selector (same idea on web and Jupyter)
+- [ ] List composition works on web; Jupyter gets the same behavioural contract (list + filter/sort, not one-row browsing as the primary chrome)
 
 ## Notes
 
-Complements REQ-000D (when to hide nav chrome). CIP-0010 should take the inline-list composition as the first concrete HOW for overview configs; the default side-by-side composition remains for thesis/document reviews.
+Complements REQ-000D (when to hide nav chrome for singletons). CIP-0010: `display.layout: inline_list` is the option that lists the tall working set; lynguine keeps discovery/store results; referia owns page composition.
 
 Analogy for authors and docs: **document class, not desktop publishing**.
 
-**Web-first:** Satisfying this requirement means the web path honours `display.layout`. Whether Jupyter remains a display surface at all is a separate product decision (does not block Accept of this requirement).
+Long-term Jupyter-as-display retirement remains a separate product question; it does not block list-layout behaviour on notebooks while Jupyter display exists.
 ## References
 
 - Tenet: [template-driven-composition](../tenets/referia/template-driven-composition.md)

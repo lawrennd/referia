@@ -42,8 +42,6 @@ CIP-0010: when `{root}/_referia.yml` exists, serve it like any other config revi
 ## Related
 
 - CIP: 0010
-- Depends on: lynguine CIP-0010 Phase 3 for named singleton overview configs
-
 ## Progress Updates
 
 ### 2026-10-11
@@ -52,4 +50,8 @@ Task created (Ready) from Accepted CIP-0010.
 
 ### 2026-10-11 (later)
 
-Completed: root `GET /` loads `{root}/_referia.yml` when present (listing fallback unchanged); unprefixed action routes serve the root config; lynguine lock at `a87fb35` (Phase 3).
+Completed: root `GET /` loads `{root}/_referia.yml` when present (listing fallback unchanged); unprefixed action routes serve the root config; lynguine lock at `a87fb35`.
+
+### 2026-10-11 (tall-first)
+
+Still complete. Overview presentation no longer requires wide_flatten / wrapping singleton index — see `2026-10-11_inline-list-same-page`.
