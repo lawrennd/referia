@@ -17,8 +17,10 @@ render_form(specs, data) -> str
 """
 
 import html as _html
+import json
 import logging
 import re
+from contextvars import ContextVar
 from typing import Any
 from urllib.parse import quote
 
@@ -28,6 +30,9 @@ log = logging.getLogger(__name__)
 
 # Field names already warned about (avoid flooding logs on every re-render).
 _warned_dom_ids: set[str] = set()
+
+# Optional record index for inline_list per-row widgets (hx-vals + unique DOM ids).
+_record_index_ctx: ContextVar[Any] = ContextVar("referia_record_index", default=None)
 
 
 # ---------------------------------------------------------------------------
@@ -81,16 +86,24 @@ def _htmx_field_attrs(column: str, trigger: str = "change") -> str:
     clicking Save is captured.  Use ``"change, mouseup"`` for range sliders so
     that a drag-and-release is captured even when the browser doesn't fire
     ``change`` until focus leaves the element.
+
+    When a record index is active (inline_list per-row forms), includes
+    ``hx-vals`` so ``/field/{column}`` can update the correct tall row.
     """
     col = _escape(column)
     col_url = _url_path_segment(column)
-    return (
+    attrs = (
         f'name="{col}" '
         f'hx-post="/field/{col_url}" '
         f'hx-trigger="{trigger}" '
         f'hx-target="#status-bar" '
         f'hx-swap="innerHTML"'
     )
+    record_index = _record_index_ctx.get()
+    if record_index is not None:
+        vals = _escape(json.dumps({"index": str(record_index)}))
+        attrs += f' hx-vals="{vals}"'
+    return attrs
 
 
 def _visibility_style(spec: dict, data: dict) -> str:
@@ -125,12 +138,16 @@ def _wrap_widget(inner: str, spec: dict, data: dict) -> str:
     duplicate-id collisions with their target widget.
     """
     widget_type = spec.get("type", "")
+    record_index = _record_index_ctx.get()
+    index_suffix = (
+        f"-{_widget_dom_id(str(record_index))}" if record_index is not None else ""
+    )
     if widget_type == "PopulateButton":
         col = _populate_button_target(spec)
-        css_id = f' id="btn-widget-{_widget_dom_id(col)}"' if col else ""
+        css_id = f' id="btn-widget-{_widget_dom_id(col)}{index_suffix}"' if col else ""
     else:
         col = spec.get("field", "")
-        css_id = f' id="widget-{_widget_dom_id(col)}"' if col else ""
+        css_id = f' id="widget-{_widget_dom_id(col)}{index_suffix}"' if col else ""
     vis = _visibility_style(spec, data)
     return f'<div class="widget-container"{css_id}{vis}>\n{inner}\n</div>'
 
@@ -527,7 +544,13 @@ _RENDERERS: dict[str, Any] = {
 # Public API
 # ---------------------------------------------------------------------------
 
-def render_widget(spec: dict, value: Any = None, data: dict | None = None) -> str:
+def render_widget(
+    spec: dict,
+    value: Any = None,
+    data: dict | None = None,
+    *,
+    record_index: Any = None,
+) -> str:
     """Render a single widget specification dict to an HTML string.
 
     Args:
@@ -535,22 +558,28 @@ def render_widget(spec: dict, value: Any = None, data: dict | None = None) -> st
             optionally ``visible_if``.
         value: Current data value for the widget's field.
         data: Full record data dict used to evaluate ``visible_if`` conditions.
+        record_index: When set (inline_list), scopes HTMX posts and DOM ids
+            to that tall-table row.
 
     Returns:
         HTML string wrapped in ``<div class="widget-container">``.
     """
     if data is None:
         data = {}
-    widget_type = spec.get("type", "")
-    renderer = _RENDERERS.get(widget_type)
-    if renderer is None:
-        return f'<!-- unsupported widget type: {_escape(widget_type)} -->'
-    # Criterion renderers need the full row data to evaluate Liquid expressions.
-    if widget_type in _DATA_AWARE_RENDERERS:
-        inner = renderer(spec, value, data)
-    else:
-        inner = renderer(spec, value)
-    return _wrap_widget(inner, spec, data)
+    token = _record_index_ctx.set(record_index)
+    try:
+        widget_type = spec.get("type", "")
+        renderer = _RENDERERS.get(widget_type)
+        if renderer is None:
+            return f'<!-- unsupported widget type: {_escape(widget_type)} -->'
+        # Criterion renderers need the full row data to evaluate Liquid expressions.
+        if widget_type in _DATA_AWARE_RENDERERS:
+            inner = renderer(spec, value, data)
+        else:
+            inner = renderer(spec, value)
+        return _wrap_widget(inner, spec, data)
+    finally:
+        _record_index_ctx.reset(token)
 
 
 def render_viewer(view_spec: dict, content: str) -> str:
@@ -574,7 +603,12 @@ def render_viewer(view_spec: dict, content: str) -> str:
     return f'<div class="viewer viewer-html">{content}</div>'
 
 
-def render_form(specs: list[dict], data: dict) -> str:
+def render_form(
+    specs: list[dict],
+    data: dict,
+    *,
+    record_index: Any = None,
+) -> str:
     """Render all widget specs for a record into a complete HTML form fragment.
 
     Args:
@@ -582,6 +616,8 @@ def render_form(specs: list[dict], data: dict) -> str:
             ``WebReviewer.get_review_specs()``.  Nested
             ``type: Section`` nodes carry ``title`` and ``entries``.
         data: Current record data dict mapping field names to values.
+        record_index: When set, scopes field posts/ids to that record
+            (``inline_list`` per-row forms).
 
     Returns:
         HTML string containing the full review form wrapped in a ``<form>``
@@ -614,11 +650,379 @@ def render_form(specs: list[dict], data: dict) -> str:
                 continue
             field = spec.get("field", "")
             value = data.get(field) if field else None
-            parts.append(render_widget(spec, value, data))
+            parts.append(
+                render_widget(spec, value, data, record_index=record_index)
+            )
         return parts
 
     inner = "\n".join(_render_list(specs))
-    return f'<form id="review-form" hx-boost="false">\n{inner}\n</form>'
+    if record_index is not None:
+        form_id = f'review-form-{_widget_dom_id(str(record_index))}'
+    else:
+        form_id = "review-form"
+    return f'<form id="{form_id}" hx-boost="false">\n{inner}\n</form>'
+
+
+def render_filter_bar(
+    filter_specs: list[dict],
+    sort_specs: list[dict],
+    filter_state: dict | None = None,
+) -> str:
+    """HTML for the inline_list filter/sort bar (directory-listing style)."""
+    state = filter_state or {}
+    parts = [
+        '<form class="filters inline-listing-filters" hx-post="/filters" '
+        'hx-target="#review-panel" hx-swap="innerHTML">',
+    ]
+    for spec in filter_specs or []:
+        if not isinstance(spec, dict):
+            continue
+        field = str(spec.get("field") or "")
+        if not field:
+            continue
+        ftype = str(spec.get("type") or "categorical")
+        label = _escape(spec.get("label") or field)
+        fname = _escape(field)
+        current = state.get(field)
+        if ftype == "boolean":
+            selected = str(current) if current is not None else "any"
+            parts.append(f"<label>{label}&nbsp;")
+            parts.append(f'<select name="filter__{fname}">')
+            for opt, opt_label in (
+                ("any", "Any"),
+                ("true", "True"),
+                ("false", "False"),
+            ):
+                sel = " selected" if selected == opt else ""
+                parts.append(
+                    f'<option value="{opt}"{sel}>{opt_label}</option>'
+                )
+            parts.append("</select></label>")
+        elif ftype == "date_range":
+            after = ""
+            before = ""
+            if isinstance(current, dict):
+                after = str(current.get("after") or "")
+                before = str(current.get("before") or "")
+            parts.append(
+                f"<label>{label} after&nbsp;<input type=\"date\" "
+                f'name="filter__{fname}__after" value="{_escape(after)}"></label>'
+            )
+            parts.append(
+                f"<label>{label} before&nbsp;<input type=\"date\" "
+                f'name="filter__{fname}__before" value="{_escape(before)}"></label>'
+            )
+        elif ftype == "contains":
+            query = ""
+            mode = "words"
+            if isinstance(current, dict):
+                query = str(current.get("query") or "")
+                mode = str(current.get("mode") or "words").lower()
+            if mode not in ("words", "exact"):
+                mode = "words"
+            parts.append(f"<label>{label}&nbsp;")
+            parts.append(
+                f'<input type="search" name="filter__{fname}__query" '
+                f'value="{_escape(query)}" placeholder="contains…" '
+                f'size="18">'
+            )
+            parts.append(
+                f'<select name="filter__{fname}__mode" '
+                f'title="Match mode">'
+            )
+            for opt, opt_label in (("words", "Words"), ("exact", "Exact")):
+                sel = " selected" if mode == opt else ""
+                parts.append(
+                    f'<option value="{opt}"{sel}>{opt_label}</option>'
+                )
+            parts.append("</select></label>")
+        else:
+            values = spec.get("values") or []
+            if not isinstance(values, list):
+                values = []
+            if isinstance(current, (list, set, tuple)):
+                selected = str(next(iter(current), "")) if current else ""
+            else:
+                selected = str(current) if current not in (None, "") else ""
+            parts.append(f"<label>{label}&nbsp;")
+            parts.append(f'<select name="filter__{fname}">')
+            parts.append('<option value="">Any</option>')
+            for val in values:
+                sel = " selected" if str(val) == selected else ""
+                parts.append(
+                    f'<option value="{_escape(val)}"{sel}>{_escape(val)}</option>'
+                )
+            parts.append("</select></label>")
+
+    if sort_specs:
+        sort_current = str(state.get("_sort") or "")
+        parts.append("<label>Sort&nbsp;<select name=\"sort\">")
+        parts.append('<option value="">Default</option>')
+        seen_fields: set[str] = set()
+        for spec in sort_specs:
+            if not isinstance(spec, dict):
+                continue
+            field = str(spec.get("field") or "")
+            if not field or field in seen_fields:
+                continue
+            seen_fields.add(field)
+            for order, order_label in (("desc", "newest"), ("asc", "oldest")):
+                key = f"{field}:{order}"
+                sel = " selected" if sort_current == key else ""
+                option_label = _escape(f"{field} ({order_label})")
+                parts.append(
+                    f'<option value="{_escape(key)}"{sel}>{option_label}</option>'
+                )
+        parts.append("</select></label>")
+
+    group_current = str(state.get("_group") or "directory").lower()
+    if group_current not in {"directory", "version"}:
+        group_current = "directory"
+    parts.append(
+        '<label>Group by&nbsp;'
+        '<select name="group" onchange="this.form.requestSubmit()">'
+    )
+    for key, label in (
+        ("directory", "Directory"),
+        ("version", "Version"),
+    ):
+        sel = " selected" if group_current == key else ""
+        parts.append(f'<option value="{key}"{sel}>{label}</option>')
+    parts.append("</select></label>")
+
+    parts.append('<button type="submit">Filter</button>')
+    parts.append(
+        '<button type="button" class="clear" '
+        'hx-post="/filters/clear" hx-target="#review-panel" '
+        'hx-swap="innerHTML">Clear</button>'
+    )
+    parts.append("</form>")
+    return "\n".join(parts)
+
+
+def _split_review_specs_for_listing(
+    specs: list[dict],
+) -> tuple[dict | None, list[dict]]:
+    """Pull out the ``complete`` Checkbox; return (complete_spec, other_specs).
+
+    Save/Reload buttons are omitted from per-row extras (nav already has Save).
+    """
+    complete_spec = None
+    extras: list[dict] = []
+    for spec in specs or []:
+        if not isinstance(spec, dict):
+            continue
+        wtype = spec.get("type", "")
+        if wtype in {"SaveButton", "ReloadButton"}:
+            continue
+        if (
+            complete_spec is None
+            and wtype in {"Checkbox", "Flag"}
+            and str(spec.get("field") or "") == "complete"
+        ):
+            complete_spec = spec
+            continue
+        extras.append(spec)
+    return complete_spec, extras
+
+
+def render_complete_checkbox(
+    value: Any,
+    *,
+    record_index: Any,
+    field: str = "complete",
+) -> str:
+    """Leading complete toggle for a listing row (checkbox + Done label)."""
+    checked = " checked" if bool(value) else ""
+    token = _record_index_ctx.set(record_index)
+    try:
+        dom = (
+            f'widget-{_widget_dom_id(field)}-'
+            f'{_widget_dom_id(str(record_index))}'
+        )
+        return (
+            f'<div class="widget-container complete-toggle" id="{dom}">'
+            f'<label class="complete-check" title="Mark complete">'
+            f'<input type="checkbox" {_htmx_field_attrs(field)} '
+            f'value="true"{checked} aria-label="Complete">'
+            f'<span class="complete-check-label">Done</span>'
+            f"</label></div>"
+        )
+    finally:
+        _record_index_ctx.reset(token)
+
+
+def render_select_all_checkbox(
+    all_complete: bool,
+    *,
+    field: str = "complete",
+    count: int = 0,
+) -> str:
+    """Listing-row control that sets *field* on every filtered index."""
+    checked = " checked" if all_complete else ""
+    col = _escape(field)
+    col_url = _url_path_segment(field)
+    n = int(count)
+    noun = "config" if n == 1 else "configs"
+    return (
+        f'<div class="widget-container complete-toggle" id="select-all-{_widget_dom_id(field)}">'
+        f'<label class="complete-check" title="Set Done on all filtered rows">'
+        f'<input type="checkbox" name="{col}" value="true"{checked} '
+        f'aria-label="Select all filtered" '
+        f'hx-post="/field-bulk/{col_url}" '
+        f'hx-trigger="change" '
+        f'hx-target="#review-panel" '
+        f'hx-swap="innerHTML">'
+        f'<span class="complete-check-label">Done</span>'
+        f"</label></div>"
+        f'<div class="entry-main">'
+        f'<span class="entry-title">Select all filtered</span>'
+        f'<span class="badge-meta">{n} {noun}</span>'
+        f'<span class="desc">Sets Done on every config matching the current filters.</span>'
+        f"</div>"
+    )
+
+
+def _version_badge(data: dict) -> str:
+    """Render ``referia_config_version`` (or ``version``) as a compact badge."""
+    raw = data.get("referia_config_version")
+    if raw is None or raw == "":
+        raw = data.get("version")
+    if raw is None or raw == "":
+        return ""
+    return f'<span class="badge-version">v{_escape(raw)}</span>'
+
+
+def render_inline_listing(
+    entries: list[dict],
+    review_specs: list[dict],
+    *,
+    group_by: str = "directory",
+) -> str:
+    """Directory-listing style list for ``display.layout: inline_list``.
+
+    Each *entry* is a dict with keys:
+    ``index``, ``data`` (row dict), optional ``href``, optional ``group``.
+    A leading Complete checkbox is promoted when ``review`` has
+    ``field: complete``; remaining widgets render as compact extras.
+    When a complete field exists, a select-all row is prepended.
+
+    *group_by* controls section heading style (``directory`` adds a trailing
+    slash; ``version`` does not).
+    """
+    complete_spec, extra_specs = _split_review_specs_for_listing(review_specs)
+    complete_field = (
+        str(complete_spec.get("field")) if complete_spec else "complete"
+    )
+
+    # Group by entry["group"] preserving first-seen order.
+    groups: list[tuple[str, list[dict]]] = []
+    seen: dict[str, list[dict]] = {}
+    for entry in entries:
+        group = str(entry.get("group") or "")
+        if group not in seen:
+            seen[group] = []
+            groups.append((group, seen[group]))
+        seen[group].append(entry)
+
+    if not entries:
+        return '<p class="no-rows">No rows match the current filters.</p>'
+
+    sections: list[str] = ['<div class="inline-listing">']
+    if complete_spec is not None:
+        all_done = all(
+            bool((entry.get("data") or {}).get(complete_field))
+            for entry in entries
+        )
+        sections.append('<section class="select-all-section">')
+        sections.append("<ul>")
+        sections.append('<li class="inline-entry select-all-entry">')
+        sections.append(
+            render_select_all_checkbox(
+                all_done, field=complete_field, count=len(entries)
+            )
+        )
+        sections.append("</li>")
+        sections.append("</ul>")
+        sections.append("</section>")
+
+    for group_name, group_entries in groups:
+        sections.append("<section>")
+        if group_name:
+            heading = (
+                f"{_escape(group_name)}/"
+                if group_by == "directory"
+                else _escape(group_name)
+            )
+            sections.append(f"<h2>{heading}</h2>")
+        sections.append("<ul>")
+        for entry in group_entries:
+            idx = entry.get("index")
+            data = entry.get("data") or {}
+            href = entry.get("href")
+            title = data.get("title") or data.get("Title") or idx
+            date = data.get("date") or data.get("Date") or ""
+            desc = data.get("description") or data.get("Description") or ""
+            complete_val = data.get(complete_field)
+            is_complete = bool(complete_val)
+            li_class = "inline-entry"
+            if is_complete:
+                li_class += " is-complete"
+
+            sections.append(f'<li class="{li_class}" data-index="{_escape(idx)}">')
+            if complete_spec is not None:
+                sections.append(
+                    render_complete_checkbox(
+                        complete_val, record_index=idx, field=complete_field
+                    )
+                )
+            sections.append('<div class="entry-main">')
+            if href:
+                sections.append(
+                    f'<a class="entry-title" href="{_escape(href)}" '
+                    f'target="_blank" rel="noopener noreferrer">'
+                    f"{_escape(title)}</a>"
+                )
+            else:
+                sections.append(
+                    f'<span class="entry-title">{_escape(title)}</span>'
+                )
+            if is_complete:
+                sections.append(
+                    '<span class="badge-complete">complete</span>'
+                )
+            version_html = _version_badge(data)
+            if version_html:
+                sections.append(version_html)
+            if date:
+                sections.append(
+                    f'<span class="date">{_escape(date)}</span>'
+                )
+            if desc:
+                sections.append(
+                    f'<span class="desc">{_escape(desc)}</span>'
+                )
+            if extra_specs:
+                extras_html = []
+                for spec in extra_specs:
+                    field = spec.get("field", "")
+                    value = data.get(field) if field else None
+                    extras_html.append(
+                        render_widget(
+                            spec, value, data, record_index=idx
+                        )
+                    )
+                sections.append(
+                    '<div class="entry-extras">'
+                    + "\n".join(extras_html)
+                    + "</div>"
+                )
+            sections.append("</div>")  # entry-main
+            sections.append("</li>")
+        sections.append("</ul>")
+        sections.append("</section>")
+    sections.append("</div>")
+    return "\n".join(sections)
 
 
 def render_document_actions(

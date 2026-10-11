@@ -1,0 +1,169 @@
+# Example root overview (referia CIP-0010 / display.layout: inline_list).
+# Serve from this directory (or a parent root that contains it) with the web app.
+# Nested child configs below are discovered via yaml_directory; this file itself
+# is omitted by include_start_directory: false.
+referia_config_version: 2
+title: "Referia — overview (inline_list example)"
+description: "Tall discovery of nested _referia.yml plus same-page Done marking."
+date: 2026-10-11
+
+display:
+  layout: inline_list
+  filter_defaults:
+    complete: false
+    date:
+      after: today-30d
+      before: today+30d
+    _sort: date:asc
+    _group: directory
+
+# Programme manager contact — from people markdown (not hardcoded in templates).
+# This example uses a local stub; production points at people/_people/ (or mlatcl).
+constants:
+  type: markdown
+  directory: ./info
+  filename: hanni-sondermann.md
+  index: layout
+  select: person
+  fields:
+    - name: pm_email
+      liquid: "{{ crsid }}@cam.ac.uk"
+    - name: pm_name
+      liquid: "{{ given }} {{ family }}"
+    - name: pm_given
+      liquid: "{{ given }}"
+    - name: pm_position
+      liquid: "{{ position }}"
+
+input:
+  type: yaml_directory
+  index: sourceDirectory
+  source:
+    - directory: .
+      glob: "**/_referia.yml"
+      recursive: true
+      include_start_directory: false
+  fields:
+    - title
+    - description
+    - date
+    - referia_config_version
+  store_fields:
+    directory: sourceDirectory
+    filename: sourceFile
+    root: sourceRoot
+  compute:
+    - field: depth
+      function: render_liquid
+      args:
+        template: >-
+          {% if sourceDirectory == "." or sourceDirectory == "" %}0{% else %}{{ sourceDirectory | split: "/" | size }}{% endif %}
+      row_args:
+        sourceDirectory: sourceDirectory
+    - field: today
+      function: today
+
+output:
+  type: yaml
+  index: sourceDirectory
+  filename: overview-scores.yml
+  directory: ./info
+  columns:
+    - complete
+
+review:
+  - type: Checkbox
+    field: complete
+    default: false
+    args:
+      description: Complete
+  - type: SaveButton
+
+filters:
+  - field: complete
+    type: boolean
+    label: Complete
+  - field: referia_config_version
+    type: categorical
+    label: Version
+    values: [1, 2]
+  - field: title
+    type: contains
+    label: Title
+  - field: date
+    type: date_range
+    label: Date
+
+sort:
+  - field: date
+    order: asc
+
+viewer:
+  - liquid: |
+      Tick **Done** on each row, or use Select all filtered at the top.
+      Clear restores incomplete + today±30 days, directory groups, oldest first.
+
+summary_documents:
+  - type: docx
+    name: "Seasonal briefing (Word)"
+    title: "Referia — seasonal work briefing"
+    filename:
+      liquid: "info/{{today}}_seasonal-work-briefing.docx"
+    author:
+      display: "Neil D. Lawrence"
+    date:
+      liquid: "{{today}}"
+    header:
+      liquid: |
+        # Seasonal review work
+
+        Prepared {{today}} for **{{pm_name}}**
+        ({{pm_position}}, {{pm_email}}).
+    body:
+      liquid: |
+        ## {{title}}
+
+        - **Date:** {{date}}
+        - **Path:** `{{sourceDirectory}}`
+        {% if description %}{{description}}{% endif %}
+    footer:
+      display: "End of seasonal briefing."
+
+  - type: email
+    name: "Email programme manager"
+    to:
+      liquid: "{{pm_email}}"
+    title:
+      liquid: "Referia seasonal work — {{today}}"
+    header:
+      liquid: |
+        Hi {{pm_given}},
+
+        Incomplete review configs in the current filter window ({{today}}):
+    body:
+      liquid: |
+        ### {{title}}
+
+        - **Date:** {{date}}
+        - **Path:** `{{sourceDirectory}}`
+    footer:
+      display: |
+        Best wishes,
+        Neil
+
+  - type: markdown
+    name: "Markdown catalog"
+    title: "Referia seasonal catalog"
+    filename:
+      liquid: "info/{{today}}_seasonal-work-catalog.md"
+    header:
+      liquid: |
+        # Referia seasonal catalog ({{today}})
+    body:
+      liquid: |
+        ## {{title}}
+
+        - **Date:** {{date}}
+        - **Path:** `{{sourceDirectory}}`
+    footer:
+      display: "End of catalog snapshot."

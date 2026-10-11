@@ -68,15 +68,24 @@ def _make_data(index_vals=None, col_vals=None):
     data.set_column.side_effect = lambda c: current_col.__setitem__(0, c)
 
     def _get_value():
-        return storage.get(current_col[0])
+        col = current_col[0]
+        idx = current_index[0]
+        if (idx, col) in storage:
+            return storage[(idx, col)]
+        return storage.get(col)
 
     def _set_value(v):
-        storage[current_col[0]] = v
+        col = current_col[0]
+        idx = current_index[0]
+        storage[(idx, col)] = v
+        storage[col] = v
 
     data.get_value.side_effect = _get_value
     data.set_value.side_effect = _set_value
 
     def _at_access(idx, col):
+        if (idx, col) in storage:
+            return storage[(idx, col)]
         return storage.get(col)
 
     data.at.__getitem__ = lambda self_inner, key: _at_access(*key)
@@ -86,9 +95,11 @@ def _make_data(index_vals=None, col_vals=None):
     data.load_flows.return_value = None
     data.set_dtype.return_value = None
     data.viewer_to_value.return_value = "combined"
+    data.view_to_value.return_value = "combined"
 
     def _to_pandas():
-        return pd.DataFrame(storage, index=index_vals)
+        cols = [c for c in storage if not isinstance(c, tuple)]
+        return pd.DataFrame({c: storage.get(c) for c in cols}, index=index_vals)
 
     data.to_pandas.side_effect = _to_pandas
 
@@ -116,6 +127,8 @@ def _build_reviewer(review=None, viewer=None, index_vals=None, col_vals=None, co
     reviewer._interface = iface
     reviewer._data = data
     reviewer._directory = "/tmp"
+    reviewer._filter_state = reviewer.get_filter_defaults()
+    reviewer._field_defaults = reviewer._build_field_defaults()
     return reviewer, data, storage
 
 
@@ -851,6 +864,50 @@ class TestDocumentGeneration:
         assert result["status"] == "drafted"
         assert result["href"] is None
 
+    def test_summary_document_uses_working_indices(self, tmp_path):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a", "b"],
+            col_vals={"title": "", "complete": False},
+            extra={
+                "display": {"layout": "inline_list"},
+                "filters": [{"field": "complete", "type": "boolean"}],
+                "summary_documents": [
+                    {
+                        "type": "markdown",
+                        "filename": {"display": "out.md"},
+                        "body": {"liquid": "{{title}}\n"},
+                    }
+                ],
+            },
+        )
+        reviewer._directory = str(tmp_path)
+        storage[("a", "title")] = "Keep"
+        storage[("a", "complete")] = False
+        storage[("b", "title")] = "Drop"
+        storage[("b", "complete")] = True
+        reviewer.set_filter_state({"complete": "false"})
+
+        # Resolve liquid body against the current row (mock default is "combined").
+        def _view_to_value(template):
+            if isinstance(template, dict) and "liquid" in template:
+                return str(storage.get((data.get_index(), "title"), "") or "")
+            if isinstance(template, dict) and "display" in template:
+                return str(template["display"])
+            return "combined"
+
+        data.view_to_value.side_effect = _view_to_value
+
+        written = {}
+
+        def _write(*, data, filename, content):
+            written["content"] = content
+            Path(tmp_path, filename).write_text(content or "")
+
+        with patch("lynguine.access.io.write_markdown_file", side_effect=_write):
+            reviewer.generate_document(0, summary=True)
+        assert "Keep" in written["content"]
+        assert "Drop" not in written["content"]
+
     def test_ensure_edit_pdf_copies(self, tmp_path):
         config_dir = tmp_path / "review"
         source_dir = tmp_path / "source"
@@ -886,3 +943,215 @@ class TestDocumentGeneration:
         assert dest.is_file()
         assert dest.parent == store_dir.resolve()
         assert dest.name.startswith("Alice_")
+
+
+# ---------------------------------------------------------------------------
+# Tests: display.layout inline_list (CIP-0010)
+# ---------------------------------------------------------------------------
+
+
+class TestDisplayLayout:
+    def test_default_side_by_side(self):
+        reviewer, _, _ = _build_reviewer()
+        assert reviewer.get_display_layout() == "side_by_side"
+
+    def test_inline_list(self):
+        reviewer, _, _ = _build_reviewer(extra={"display": {"layout": "inline_list"}})
+        assert reviewer.get_display_layout() == "inline_list"
+
+    def test_unknown_layout_raises(self):
+        reviewer, _, _ = _build_reviewer(extra={"display": {"layout": "tableau"}})
+        with pytest.raises(ValueError, match="Unknown display.layout"):
+            reviewer.get_display_layout()
+
+
+class TestRowsAndFilters:
+    def test_get_rows_includes_index_and_columns(self):
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a", "b"],
+            col_vals={"title": "shared"},
+            extra={"display": {"layout": "inline_list"}},
+        )
+        storage[("a", "title")] = "Alpha"
+        storage[("b", "title")] = "Beta"
+        rows = reviewer.get_rows()
+        assert [r["_index"] for r in rows] == ["a", "b"]
+        assert rows[0]["title"] == "Alpha"
+        assert rows[1]["title"] == "Beta"
+
+    def test_boolean_filter_shrinks_working_set(self):
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a", "b", "c"],
+            col_vals={"complete": False},
+            extra={
+                "display": {"layout": "inline_list"},
+                "filters": [{"field": "complete", "type": "boolean"}],
+            },
+        )
+        storage[("a", "complete")] = True
+        storage[("b", "complete")] = False
+        storage[("c", "complete")] = True
+        reviewer.set_filter_state({"complete": "true"})
+        assert reviewer.working_indices() == ["a", "c"]
+
+    def test_boolean_filter_false_includes_unset(self):
+        """Unset/NaN complete should match Complete=False (incomplete work)."""
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a", "b", "c"],
+            col_vals={"title": "x"},
+            review=[{"type": "Checkbox", "field": "complete", "default": False}],
+            extra={
+                "display": {"layout": "inline_list"},
+                "filters": [{"field": "complete", "type": "boolean"}],
+            },
+        )
+        storage[("a", "complete")] = True
+        storage[("b", "complete")] = None
+        storage[("c", "complete")] = False
+        reviewer.set_filter_state({"complete": "false"})
+        assert reviewer.working_indices() == ["b", "c"]
+
+    def test_contains_filter_words_and_exact(self):
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a", "b", "c"],
+            col_vals={"title": ""},
+            extra={
+                "display": {"layout": "inline_list"},
+                "filters": [{"field": "title", "type": "contains"}],
+            },
+        )
+        storage[("a", "title")] = "MPhil Admissions Interview"
+        storage[("b", "title")] = "PhD admissions overview"
+        storage[("c", "title")] = "Supervision notes"
+        reviewer.set_filter_state(
+            {"title": {"query": "admissions mphil", "mode": "words"}}
+        )
+        assert reviewer.working_indices() == ["a"]
+        reviewer.set_filter_state(
+            {"title": {"query": "admissions", "mode": "exact"}}
+        )
+        assert reviewer.working_indices() == ["a", "b"]
+        reviewer.set_filter_state(
+            {"title": {"query": "Admissions Interview", "mode": "exact"}}
+        )
+        assert reviewer.working_indices() == ["a"]
+
+    def test_filter_defaults_seed_and_clear(self):
+        from datetime import date
+
+        from referia.assess.web_review import resolve_filter_defaults
+
+        fixed = date(2026, 10, 11)
+        resolved = resolve_filter_defaults(
+            {
+                "complete": False,
+                "date": {"after": "today-30d", "before": "today+30d"},
+                "_sort": "date:asc",
+                "_group": "directory",
+            },
+            today=fixed,
+        )
+        assert resolved["complete"] == "false"
+        assert resolved["date"]["after"] == "2026-09-11"
+        assert resolved["date"]["before"] == "2026-11-10"
+        assert resolved["_sort"] == "date:asc"
+        assert resolved["_group"] == "directory"
+
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a", "b", "c"],
+            col_vals={"complete": False, "date": "2026-10-01"},
+            extra={
+                "display": {
+                    "layout": "inline_list",
+                    "filter_defaults": {
+                        "complete": False,
+                        "date": {
+                            "after": "2026-09-01",
+                            "before": "2026-11-01",
+                        },
+                        "_sort": "date:asc",
+                        "_group": "directory",
+                    },
+                },
+                "filters": [
+                    {"field": "complete", "type": "boolean"},
+                    {"field": "date", "type": "date_range"},
+                ],
+                "sort": [{"field": "date", "order": "asc"}],
+            },
+        )
+        storage[("a", "complete")] = False
+        storage[("a", "date")] = "2026-10-01"
+        storage[("b", "complete")] = True
+        storage[("b", "date")] = "2026-10-05"
+        storage[("c", "complete")] = False
+        storage[("c", "date")] = "2025-01-01"  # outside window
+        assert reviewer.get_filter_state()["complete"] == "false"
+        assert reviewer.get_filter_state()["_sort"] == "date:asc"
+        assert reviewer.working_indices() == ["a"]
+        reviewer.set_filter_state({"complete": "any"})
+        # No date window; config sort keeps oldest-first order.
+        assert reviewer.working_indices() == ["c", "a", "b"]
+        reviewer.clear_filters()
+        assert reviewer.get_filter_state()["complete"] == "false"
+        assert reviewer.working_indices() == ["a"]
+
+    def test_checkbox_default_applies_when_missing(self):
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"title": "x"},
+            review=[{"type": "Checkbox", "field": "complete"}],
+        )
+        storage[("a", "complete")] = None
+        reviewer.set_index("a")
+        assert reviewer.get_value("complete") is False
+        assert reviewer._field_defaults.get("complete") is False
+
+    def test_explicit_default_overrides_checkbox(self):
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"title": "x"},
+            review=[
+                {
+                    "type": "Checkbox",
+                    "field": "complete",
+                    "default": True,
+                }
+            ],
+        )
+        storage[("a", "complete")] = None
+        reviewer.set_index("a")
+        assert reviewer.get_value("complete") is True
+
+    def test_sort_orders_working_indices(self):
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a", "b", "c"],
+            col_vals={"date": "2020-01-01"},
+            extra={
+                "display": {"layout": "inline_list"},
+                "sort": [{"field": "date", "order": "desc"}],
+            },
+        )
+        storage[("a", "date")] = "2024-01-01"
+        storage[("b", "date")] = "2026-06-01"
+        storage[("c", "date")] = "2025-03-01"
+        assert reviewer.working_indices() == ["b", "c", "a"]
+
+    def test_render_viewer_html_passes_rows_local(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"title": "Alpha"},
+            extra={"display": {"layout": "inline_list"}},
+        )
+        storage[("a", "title")] = "Alpha"
+        captured = {}
+
+        def _capture(view, kwargs=None, local=None):
+            captured["local"] = local
+            return "## list"
+
+        data.view_to_value.side_effect = _capture
+        html = reviewer.render_viewer_html({"type": "Markdown", "liquid": "{{ rows }}"})
+        assert "rows" in (captured.get("local") or {})
+        assert captured["local"]["rows"][0]["title"] == "Alpha"
+        assert "list" in html or "viewer" in html

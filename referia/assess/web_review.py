@@ -45,6 +45,8 @@ web_reviewer.affected_widgets(column) -> set[str]
 from __future__ import annotations
 
 import logging
+import re
+from datetime import date, timedelta
 from typing import Any
 
 import pandas as pd
@@ -66,6 +68,57 @@ _NON_FIELD_TYPES = frozenset(
     {"Label", "HTML", "HTMLMath", "Markdown",
      "SaveButton", "ReloadButton", "PopulateButton"}
 )
+
+# referia CIP-0010 display layouts (viewer/review chrome).
+_VALID_DISPLAY_LAYOUTS = frozenset({"side_by_side", "inline_list"})
+
+# Relative calendar tokens for ``display.filter_defaults`` date bounds.
+_RELATIVE_DATE_RE = re.compile(r"^today(?:([+-])(\d+)d)?$", re.IGNORECASE)
+
+
+def resolve_relative_date(value: Any, *, today: date | None = None) -> str:
+    """Resolve ``today`` / ``today±Nd`` tokens to ISO dates; pass other strings through."""
+    if value is None:
+        return ""
+    text = str(value).strip()
+    match = _RELATIVE_DATE_RE.match(text)
+    if not match:
+        return text
+    base = today or date.today()
+    sign, amount = match.group(1), match.group(2)
+    if sign is None:
+        return base.isoformat()
+    delta = timedelta(days=int(amount))
+    return (base - delta if sign == "-" else base + delta).isoformat()
+
+
+def resolve_filter_defaults(
+    raw: dict[str, Any], *, today: date | None = None
+) -> dict[str, Any]:
+    """Normalise ``display.filter_defaults`` for session filter state.
+
+    Booleans become ``\"true\"`` / ``\"false\"``. Nested dicts (e.g. date_range)
+    resolve relative date strings on each value.
+    """
+    out: dict[str, Any] = {}
+    for key, value in raw.items():
+        name = str(key)
+        if isinstance(value, dict):
+            out[name] = {
+                str(sub_key): (
+                    resolve_relative_date(sub_val, today=today)
+                    if isinstance(sub_val, str)
+                    else sub_val
+                )
+                for sub_key, sub_val in value.items()
+            }
+        elif isinstance(value, bool):
+            out[name] = "true" if value else "false"
+        elif isinstance(value, str):
+            out[name] = resolve_relative_date(value, today=today)
+        else:
+            out[name] = value
+    return out
 
 
 class WebReviewer:
@@ -138,6 +191,12 @@ class WebReviewer:
         if indices:
             self._data.set_index(indices[0])
 
+        # Session filter/sort state for display.layout: inline_list (CIP-0010).
+        # Seed from ``display.filter_defaults`` when present (Clear restores it).
+        self._filter_state: dict[str, Any] = self.get_filter_defaults()
+        # Review-widget defaults (``default:`` / Checkbox→False) for missing cells.
+        self._field_defaults: dict[str, Any] = self._build_field_defaults()
+
     # ------------------------------------------------------------------
     # Index management
     # ------------------------------------------------------------------
@@ -185,8 +244,316 @@ class WebReviewer:
         self._data.set_index(self._resolve_index_label(index))
 
     # ------------------------------------------------------------------
+    # Display layout (CIP-0010)
+    # ------------------------------------------------------------------
+
+    def _display_config(self) -> dict:
+        """Return the ``display:`` mapping from the interface (or empty)."""
+        display = self._interface.get("display") if hasattr(self._interface, "get") else None
+        if display is None:
+            try:
+                display = self._interface["display"] if "display" in self._interface else None
+            except Exception:
+                display = None
+        return display if isinstance(display, dict) else {}
+
+    def get_display_layout(self) -> str:
+        """Return ``display.layout`` from config (default ``side_by_side``).
+
+        :raises ValueError: If the configured layout name is unknown.
+        """
+        display = self._display_config()
+        layout = display.get("layout", "side_by_side")
+        if layout is None:
+            return "side_by_side"
+        layout = str(layout)
+        if layout not in _VALID_DISPLAY_LAYOUTS:
+            raise ValueError(
+                f"Unknown display.layout {layout!r}; "
+                f"expected one of {sorted(_VALID_DISPLAY_LAYOUTS)}"
+            )
+        return layout
+
+    def get_filter_specs(self) -> list:
+        """Return ``filters:`` specs from the interface (may be empty)."""
+        specs = self._interface.get("filters") if hasattr(self._interface, "get") else None
+        if specs is None:
+            try:
+                specs = self._interface["filters"] if "filters" in self._interface else []
+            except Exception:
+                specs = []
+        return specs if isinstance(specs, list) else []
+
+    def get_sort_specs(self) -> list:
+        """Return ``sort:`` specs from the interface (may be empty)."""
+        specs = self._interface.get("sort") if hasattr(self._interface, "get") else None
+        if specs is None:
+            try:
+                specs = self._interface["sort"] if "sort" in self._interface else []
+            except Exception:
+                specs = []
+        return specs if isinstance(specs, list) else []
+
+    def get_filter_defaults(self) -> dict[str, Any]:
+        """Return resolved ``display.filter_defaults`` (session start / Clear).
+
+        Relative date tokens ``today``, ``today-30d``, ``today+30d`` become
+        ISO calendar dates. Boolean values become ``\"true\"`` / ``\"false\"``
+        strings to match the filter-bar form state.
+        """
+        raw = self._display_config().get("filter_defaults")
+        if not isinstance(raw, dict):
+            return {}
+        return resolve_filter_defaults(raw)
+
+    def get_filter_state(self) -> dict[str, Any]:
+        """Return the current session filter/sort UI state."""
+        if not hasattr(self, "_filter_state") or self._filter_state is None:
+            self._filter_state = self.get_filter_defaults()
+        return self._filter_state
+
+    def set_filter_state(self, state: dict[str, Any] | None) -> None:
+        """Replace session filter/sort UI state."""
+        self._filter_state = dict(state or {})
+
+    def clear_filters(self) -> None:
+        """Restore session filters to ``display.filter_defaults`` (or empty)."""
+        self._filter_state = self.get_filter_defaults()
+
+    def working_indices(self) -> list:
+        """Indices after applying session filters and sort (tall working set)."""
+        indices = list(self.index_list())
+        state = self.get_filter_state()
+        saved = None
+        try:
+            saved = self.get_index()
+        except Exception:
+            pass
+
+        def _cell(idx: Any, field: str) -> Any:
+            try:
+                self.set_index(idx)
+                return self.get_value(field)
+            except Exception:
+                try:
+                    row = self.get_row_data()
+                    return row.get(field)
+                except Exception:
+                    return None
+
+        try:
+            for spec in self.get_filter_specs():
+                if not isinstance(spec, dict):
+                    continue
+                field = spec.get("field")
+                if not field:
+                    continue
+                ftype = str(spec.get("type") or "categorical")
+                constraint = state.get(field)
+                if ftype == "boolean":
+                    if constraint in (None, "", "any"):
+                        continue
+                    want_true = str(constraint).lower() == "true"
+                    # Missing/NaN complete counts as not done (matches UI checkbox).
+                    indices = [
+                        idx
+                        for idx in indices
+                        if (
+                            self._coerce_bool_cell(_cell(idx, field)) is True
+                        )
+                        is want_true
+                    ]
+                elif ftype == "date_range":
+                    if not isinstance(constraint, dict):
+                        continue
+                    after = constraint.get("after") or None
+                    before = constraint.get("before") or None
+                    if not after and not before:
+                        continue
+                    kept = []
+                    for idx in indices:
+                        raw = _cell(idx, field)
+                        try:
+                            ts = pd.to_datetime(raw, errors="coerce")
+                        except Exception:
+                            ts = pd.NaT
+                        if pd.isna(ts):
+                            continue
+                        if after:
+                            try:
+                                if ts < pd.to_datetime(after):
+                                    continue
+                            except Exception:
+                                continue
+                        if before:
+                            try:
+                                if ts > pd.to_datetime(before):
+                                    continue
+                            except Exception:
+                                continue
+                        kept.append(idx)
+                    indices = kept
+                elif ftype == "contains":
+                    if not isinstance(constraint, dict):
+                        continue
+                    query = str(constraint.get("query") or "").strip()
+                    if not query:
+                        continue
+                    mode = str(constraint.get("mode") or "words").lower()
+                    if mode not in ("words", "exact"):
+                        mode = "words"
+                    indices = [
+                        idx
+                        for idx in indices
+                        if self._contains_match(_cell(idx, field), query, mode)
+                    ]
+                else:
+                    selected = constraint
+                    if not selected:
+                        continue
+                    if not isinstance(selected, (list, set, tuple)):
+                        selected = [selected]
+                    selected_strs = {str(v) for v in selected}
+                    indices = [
+                        idx
+                        for idx in indices
+                        if str(_cell(idx, field)) in selected_strs
+                    ]
+
+            sort_key = state.get("_sort")
+            sort_specs = self.get_sort_specs()
+            if sort_key and isinstance(sort_key, str) and ":" in sort_key:
+                field, order = sort_key.rsplit(":", 1)
+                sort_specs = [{"field": field, "order": order}]
+            if sort_specs:
+                # Stable multi-key sort from last key to first.
+                for spec in reversed(sort_specs):
+                    if not isinstance(spec, dict):
+                        continue
+                    field = spec.get("field")
+                    if not field:
+                        continue
+                    order = str(spec.get("order") or "asc").lower()
+                    reverse = order == "desc"
+
+                    def _sort_val(idx: Any, _field: str = field) -> Any:
+                        val = _cell(idx, _field)
+                        try:
+                            ts = pd.to_datetime(val, errors="coerce")
+                            if not pd.isna(ts):
+                                return (0, ts)
+                        except Exception:
+                            pass
+                        if val is None:
+                            return (2, "")
+                        return (1, str(val))
+
+                    indices = sorted(indices, key=_sort_val, reverse=reverse)
+        finally:
+            if saved is not None:
+                try:
+                    self.set_index(saved)
+                except Exception:
+                    pass
+        return indices
+
+    @staticmethod
+    def _coerce_bool_cell(val: Any) -> bool | None:
+        """Map a cell to True/False/None for tristate boolean filters."""
+        import math
+
+        if val is None:
+            return None
+        if isinstance(val, bool):
+            return val
+        if isinstance(val, float) and math.isnan(val):
+            return None
+        if isinstance(val, (int, float)) and val in (0, 1):
+            return bool(val)
+        text = str(val).strip().lower()
+        if text in ("true", "1", "yes"):
+            return True
+        if text in ("false", "0", "no"):
+            return False
+        return None
+
+    @staticmethod
+    def _contains_match(val: Any, query: str, mode: str = "words") -> bool:
+        """Case-insensitive contains match for ``type: contains`` filters.
+
+        *exact*: query appears as a contiguous substring.
+        *words*: every whitespace-separated token appears somewhere in the value.
+        """
+        hay = str(val if val is not None else "").casefold()
+        needle = (query or "").strip().casefold()
+        if not needle:
+            return True
+        if mode == "exact":
+            return needle in hay
+        tokens = [t for t in needle.split() if t]
+        if not tokens:
+            return True
+        return all(token in hay for token in tokens)
+
+    def get_rows(self) -> list[dict]:
+        """Build Liquid ``rows`` from the filtered+sorted tall working set.
+
+        Each element is a plain dict of column values for one index, plus
+        ``_index`` holding the record index label.
+        """
+        saved = None
+        try:
+            saved = self.get_index()
+        except Exception:
+            pass
+        rows: list[dict] = []
+        try:
+            for idx in self.working_indices():
+                self.set_index(idx)
+                row = dict(self.get_row_data())
+                row["_index"] = idx
+                rows.append(row)
+        finally:
+            if saved is not None:
+                try:
+                    self.set_index(saved)
+                except Exception:
+                    pass
+        return rows
+
+    # ------------------------------------------------------------------
     # Value access
     # ------------------------------------------------------------------
+
+    def _build_field_defaults(self) -> dict[str, Any]:
+        """Collect per-field defaults from ``review:`` widget specs.
+
+        Honour explicit ``default:`` / ``value:`` (Jupyter parity).  Checkbox
+        and Flag widgets default to ``False`` when unset so incomplete work is
+        an explicit boolean rather than missing/NaN.
+        """
+        defaults: dict[str, Any] = {}
+        for spec in self._review_raw():
+            if not isinstance(spec, dict):
+                continue
+            field = spec.get("field")
+            if not field:
+                continue
+            field = str(field)
+            if "default" in spec:
+                detail = spec["default"]
+                if isinstance(detail, dict):
+                    if "value" in detail:
+                        defaults[field] = detail["value"]
+                else:
+                    defaults[field] = detail
+                continue
+            if "value" in spec:
+                defaults[field] = spec["value"]
+                continue
+            if spec.get("type") in {"Checkbox", "Flag"}:
+                defaults[field] = False
+        return defaults
 
     def get_value(self, column: str) -> Any:
         """Return the current value of *column* for the active record.
@@ -197,8 +564,11 @@ class WebReviewer:
         mirrors what the Jupyter interface achieves via ``remove_nan()``
         before passing values to widgets.
 
+        When the cell is missing, apply a review-widget default when one is
+        configured (or Checkbox/Flag → ``False``).
+
         :param column: Name of the data column.
-        :return: The stored value, with NaN replaced by ``None``.
+        :return: The stored value, with NaN replaced by ``None`` (or default).
         """
         import math
         import numpy as np
@@ -207,19 +577,25 @@ class WebReviewer:
         self._data.set_column(column)
         val = self._data.get_value()
         # Normalise all NaN-like sentinels to None.
+        missing = False
         try:
             if val is None:
-                return None
-            if isinstance(val, float) and math.isnan(val):
-                return None
-            if isinstance(val, (np.floating,)) and np.isnan(val):
-                return None
-            if isinstance(val, np.datetime64) and np.isnat(val):
-                return None
-            if pd.api.types.is_scalar(val) and pd.isnull(val):
-                return None
+                missing = True
+            elif isinstance(val, float) and math.isnan(val):
+                missing = True
+            elif isinstance(val, (np.floating,)) and np.isnan(val):
+                missing = True
+            elif isinstance(val, np.datetime64) and np.isnat(val):
+                missing = True
+            elif pd.api.types.is_scalar(val) and pd.isnull(val):
+                missing = True
         except (TypeError, ValueError):
             pass
+        if missing:
+            defaults = getattr(self, "_field_defaults", None) or {}
+            if column in defaults:
+                return defaults[column]
+            return None
         return val
 
     def get_row_data(self) -> dict:
@@ -499,13 +875,27 @@ class WebReviewer:
         Uses ``CustomDataFrame.view_to_value()`` to resolve Liquid / display
         templates, then ``render_viewer()`` to produce the HTML string.
 
+        Under ``display.layout: inline_list``, injects Liquid local ``rows``
+        (filtered+sorted tall working set) so templates can
+        ``{% for row in rows %}``.
+
         :param viewer_spec: A viewer spec dict (``liquid``, ``display``, etc.).
         :return: Rendered HTML string (empty string on evaluation failure).
         """
         from referia.web.render import render_viewer as _render_viewer_html
 
+        local: dict[str, Any] = {}
         try:
-            content = self._data.view_to_value(viewer_spec) or ""
+            if self.get_display_layout() == "inline_list":
+                local["rows"] = self.get_rows()
+        except ValueError:
+            raise
+        except Exception as exc:
+            log.debug("Could not build rows for viewer: %s", exc)
+            local["rows"] = []
+
+        try:
+            content = self._data.view_to_value(viewer_spec, local=local) or ""
         except Exception as exc:
             log.debug("Could not evaluate viewer spec %r: %s", viewer_spec, exc)
             content = ""
@@ -873,7 +1263,12 @@ class WebReviewer:
             if summary and field in {"content", "body"}:
                 current = self.get_index()
                 parts: list[str] = []
-                for idx in self.index_list():
+                # Honour session filters/sort (inline_list working set).
+                try:
+                    indices = self.working_indices()
+                except Exception:
+                    indices = self.index_list()
+                for idx in indices:
                     self.set_index(idx)
                     parts.append(self.template_to_value(value))
                     parts.append("\n\n")

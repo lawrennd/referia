@@ -99,24 +99,28 @@
         }
       });
 
-      /* Measure the sticky header + nav heights and publish as CSS custom properties
-         so dependent rules (panel-nav top, viewer-col top/max-height) stay accurate
-         without hard-coding pixel values.
-         --header-height : height of .site-header
-         --nav-height    : height of .panel-nav
-         --sticky-offset : sum of both (= where content starts below all sticky bars)
+      /* Measure sticky chrome heights and publish as CSS custom properties
+         so panel-nav / panel-filters / viewer-col stay accurate without
+         hard-coded pixel values.
+         --header-height  : .site-header
+         --nav-height     : .panel-nav
+         --filters-height : .panel-filters (0 when absent)
+         --sticky-offset  : sum (= where scrolling content starts)
 
          IMPORTANT: called via DOMContentLoaded (not immediately) so the body
          elements actually exist when the measurements are taken. */
       function updateStickyHeights() {
         var h = document.querySelector(".site-header");
         var n = document.querySelector(".panel-nav");
+        var f = document.querySelector(".panel-filters");
         var hh = h ? h.offsetHeight : 0;
         var nh = n ? n.offsetHeight : 0;
+        var fh = f ? f.offsetHeight : 0;
         var root = document.documentElement;
         root.style.setProperty("--header-height", hh + "px");
         root.style.setProperty("--nav-height",    nh + "px");
-        root.style.setProperty("--sticky-offset", (hh + nh) + "px");
+        root.style.setProperty("--filters-height", fh + "px");
+        root.style.setProperty("--sticky-offset", (hh + nh + fh) + "px");
       }
       document.addEventListener("DOMContentLoaded", updateStickyHeights);
       window.addEventListener("resize", updateStickyHeights);
