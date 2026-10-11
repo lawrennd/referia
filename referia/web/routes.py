@@ -434,7 +434,7 @@ def _render_index_selector(indices: list, current_index: Any) -> str:
         '        hx-get="/record"\n'
         '        hx-trigger="change"\n'
         '        hx-target="#review-panel"\n'
-        '        hx-swap="innerHTML">\n'
+        '        hx-swap="innerHTML focus-scroll:false">\n'
         f"{options}\n"
         "</select>"
     )
