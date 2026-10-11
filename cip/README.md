@@ -42,6 +42,7 @@ Each CIP can have one of the following statuses:
 - [CIP-000D](./cip000D.md): LangChain 1.x Migration for LLM Integration (In Progress)
 - [CIP-000E](./cip000E.md): Web Layer Security Hardening for CodeQL Findings (Implemented)
 - [CIP-000F](./cip000F.md): Detect, version, and migrate referia config dialects (Closed)
+- [CIP-0010](./cip0010.md): Config-driven root as ordinary `_referia.yml` (Pattern A tall store + wide/`flattenKeys` view) + `complete` + tristate filters; retire leaf `current` later (Accepted; lynguine 000F Closed, 0010 In Progress — Phase 3 index amend)
 
 ## Creating a Good CIP
 
