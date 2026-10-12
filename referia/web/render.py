@@ -685,7 +685,13 @@ def render_filter_bar(
         fname = _escape(field)
         current = state.get(field)
         if ftype == "boolean":
-            selected = str(current) if current is not None else "any"
+            selected = (
+                str(current).strip().lower()
+                if current is not None and str(current).strip() != ""
+                else "any"
+            )
+            if selected not in {"any", "true", "false"}:
+                selected = "any"
             parts.append(f"<label>{label}&nbsp;")
             parts.append(f'<select name="filter__{fname}">')
             for opt, opt_label in (
