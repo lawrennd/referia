@@ -493,6 +493,46 @@ span.entry-title {
     margin-top: 0.1rem;
 }
 
+.inline-listing details.entry-detail {
+    margin-top: 0.35rem;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.inline-listing details.entry-detail > summary {
+    cursor: pointer;
+    color: #1a4f7a;
+    font-weight: 500;
+    list-style: none;
+    user-select: none;
+}
+
+.inline-listing details.entry-detail > summary::-webkit-details-marker {
+    display: none;
+}
+
+.inline-listing details.entry-detail > summary::before {
+    content: "▸ ";
+    display: inline-block;
+    width: 0.9em;
+    color: #888;
+}
+
+.inline-listing details.entry-detail[open] > summary::before {
+    content: "▾ ";
+}
+
+.inline-listing .entry-detail-body {
+    margin-top: 0.35rem;
+    padding: 0.45rem 0.55rem;
+    background: #f7f9fb;
+    border: 1px solid #e0e6ed;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    line-height: 1.45;
+    color: #444;
+}
+
 .entry-extras {
     display: flex;
     flex-wrap: wrap;
