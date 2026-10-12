@@ -98,7 +98,10 @@ def resolve_filter_defaults(
     """Normalise ``display.filter_defaults`` for session filter state.
 
     Booleans become ``\"true\"`` / ``\"false\"``. Nested dicts (e.g. date_range)
-    resolve relative date strings on each value.
+    resolve relative date strings on each value. Tristate boolean strings
+    (``Any`` / ``True`` / ``False``, any capitalisation) become lowercase
+    ``any`` / ``true`` / ``false`` so they match the filter bar and
+    ``working_indices``.
     """
     out: dict[str, Any] = {}
     for key, value in raw.items():
@@ -115,7 +118,11 @@ def resolve_filter_defaults(
         elif isinstance(value, bool):
             out[name] = "true" if value else "false"
         elif isinstance(value, str):
-            out[name] = resolve_relative_date(value, today=today)
+            lowered = value.strip().lower()
+            if lowered in {"any", "true", "false"}:
+                out[name] = lowered
+            else:
+                out[name] = resolve_relative_date(value, today=today)
         else:
             out[name] = value
     return out
@@ -363,9 +370,14 @@ class WebReviewer:
                 ftype = str(spec.get("type") or "categorical")
                 constraint = state.get(field)
                 if ftype == "boolean":
-                    if constraint in (None, "", "any"):
+                    # Accept Any/any/empty; capitalised YAML ``Any`` used to
+                    # fall through and behave like False (not == "true").
+                    if constraint is None or str(constraint).strip().lower() in (
+                        "",
+                        "any",
+                    ):
                         continue
-                    want_true = str(constraint).lower() == "true"
+                    want_true = str(constraint).strip().lower() == "true"
                     # Missing/NaN complete counts as not done (matches UI checkbox).
                     indices = [
                         idx

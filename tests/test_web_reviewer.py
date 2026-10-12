@@ -1056,6 +1056,11 @@ class TestRowsAndFilters:
         assert resolved["date"]["before"] == "2026-11-10"
         assert resolved["_sort"] == "date:asc"
         assert resolved["_group"] == "directory"
+        # YAML ``Any`` / ``True`` must not stay title-cased (that used to
+        # make ``complete: Any`` filter as incomplete-only).
+        assert resolve_filter_defaults({"complete": "Any"})["complete"] == "any"
+        assert resolve_filter_defaults({"complete": "True"})["complete"] == "true"
+        assert resolve_filter_defaults({"complete": "FALSE"})["complete"] == "false"
 
         reviewer, _, storage = _build_reviewer(
             index_vals=["a", "b", "c"],
@@ -1092,9 +1097,41 @@ class TestRowsAndFilters:
         reviewer.set_filter_state({"complete": "any"})
         # No date window; config sort keeps oldest-first order.
         assert reviewer.working_indices() == ["c", "a", "b"]
+        # Capitalised ``Any`` (as written in YAML) must also mean no filter.
+        reviewer.set_filter_state({"complete": "Any"})
+        assert reviewer.working_indices() == ["c", "a", "b"]
         reviewer.clear_filters()
         assert reviewer.get_filter_state()["complete"] == "false"
         assert reviewer.working_indices() == ["a"]
+
+    def test_filter_defaults_any_does_not_hide_complete(self):
+        """``complete: Any`` must not shrink the working set like False."""
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a", "b"],
+            col_vals={"complete": False, "date": "2026-10-01"},
+            extra={
+                "display": {
+                    "layout": "inline_list",
+                    "filter_defaults": {
+                        "complete": "Any",
+                        "date": {
+                            "after": "2026-09-01",
+                            "before": "2026-11-01",
+                        },
+                    },
+                },
+                "filters": [
+                    {"field": "complete", "type": "boolean"},
+                    {"field": "date", "type": "date_range"},
+                ],
+            },
+        )
+        storage[("a", "complete")] = False
+        storage[("a", "date")] = "2026-10-01"
+        storage[("b", "complete")] = True
+        storage[("b", "date")] = "2026-10-05"
+        assert reviewer.get_filter_state()["complete"] == "any"
+        assert set(reviewer.working_indices()) == {"a", "b"}
 
     def test_checkbox_default_applies_when_missing(self):
         reviewer, _, storage = _build_reviewer(
