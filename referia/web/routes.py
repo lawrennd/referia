@@ -291,7 +291,10 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
                 except Exception:
                     pass
         listing_html = render_inline_listing(
-            listing_entries, review_specs, group_by=group_by
+            listing_entries,
+            review_specs,
+            group_by=group_by,
+            detail_field=reviewer.get_display_detail_field(),
         )
         index_selector = ""
         document_html = ""

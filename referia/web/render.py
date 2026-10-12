@@ -898,6 +898,7 @@ def render_inline_listing(
     review_specs: list[dict],
     *,
     group_by: str = "directory",
+    detail_field: str | None = None,
 ) -> str:
     """Directory-listing style list for ``display.layout: inline_list``.
 
@@ -909,8 +910,13 @@ def render_inline_listing(
 
     *group_by* controls section heading style (``directory`` adds a trailing
     slash; ``version`` does not).
+
+    *detail_field* (from ``display.detail_field``) optionally names a tall
+    column whose non-empty value is shown in a closed ``<details>`` under
+    the row (e.g. ``abstract``).
     """
     complete_spec, extra_specs = _split_review_specs_for_listing(review_specs)
+    detail_key = str(detail_field).strip() if detail_field else ""
     complete_field = (
         str(complete_spec.get("field")) if complete_spec else "complete"
     )
@@ -1002,6 +1008,29 @@ def render_inline_listing(
                 sections.append(
                     f'<span class="desc">{_escape(desc)}</span>'
                 )
+            if detail_key:
+                detail_val = data.get(detail_key)
+                if detail_val is None or detail_val == "":
+                    # Case-insensitive fallback (YAML / pandas quirks).
+                    for k, v in data.items():
+                        if str(k).lower() == detail_key.lower():
+                            detail_val = v
+                            break
+                detail_text = (
+                    str(detail_val).strip()
+                    if detail_val is not None
+                    else ""
+                )
+                if detail_text:
+                    label = detail_key.replace("_", " ").strip().title() or "Detail"
+                    sections.append(
+                        f'<details class="entry-detail" '
+                        f'data-detail-field="{_escape(detail_key)}">'
+                        f"<summary>{_escape(label)}</summary>"
+                        f'<div class="entry-detail-body">'
+                        f"{_escape(detail_text)}"
+                        f"</div></details>"
+                    )
             if extra_specs:
                 extras_html = []
                 for spec in extra_specs:

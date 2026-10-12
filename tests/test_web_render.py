@@ -915,3 +915,55 @@ class TestInlineListing:
         )
         assert "<h2>v2</h2>" in by_ver
         assert "<h2>v2/</h2>" not in by_ver
+
+    def test_detail_field_renders_collapsible_when_present(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "talk-a",
+                    "data": {
+                        "title": "Talk A",
+                        "description": "subtitle · venue",
+                        "abstract": "Long abstract about the talk.",
+                        "complete": False,
+                    },
+                },
+                {
+                    "index": "talk-b",
+                    "data": {
+                        "title": "Talk B",
+                        "abstract": "",
+                        "complete": False,
+                    },
+                },
+            ],
+            [{"type": "Checkbox", "field": "complete"}],
+            detail_field="abstract",
+        )
+        assert 'class="entry-detail"' in html
+        assert 'data-detail-field="abstract"' in html
+        assert "<summary>Abstract</summary>" in html
+        assert "Long abstract about the talk." in html
+        # Empty abstract: only one details block (talk-a)
+        assert html.count('class="entry-detail"') == 1
+
+    def test_detail_field_omitted_by_default(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "talk-a",
+                    "data": {
+                        "title": "Talk A",
+                        "abstract": "Should not appear without detail_field.",
+                        "complete": False,
+                    },
+                }
+            ],
+            [{"type": "Checkbox", "field": "complete"}],
+        )
+        assert "entry-detail" not in html
+        assert "Should not appear" not in html

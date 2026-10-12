@@ -274,6 +274,18 @@ class WebReviewer:
             )
         return layout
 
+    def get_display_detail_field(self) -> str | None:
+        """Return ``display.detail_field`` for collapsible inline_list row body.
+
+        When set (e.g. ``abstract``), ``render_inline_listing`` wraps that
+        column in a closed ``<details>`` under each row. Empty / missing
+        values skip the details chrome.
+        """
+        raw = self._display_config().get("detail_field")
+        if raw is None or raw == "":
+            return None
+        return str(raw)
+
     def get_filter_specs(self) -> list:
         """Return ``filters:`` specs from the interface (may be empty)."""
         specs = self._interface.get("filters") if hasattr(self._interface, "get") else None
