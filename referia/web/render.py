@@ -44,6 +44,31 @@ def _escape(value: Any) -> str:
     return _html.escape(str(value) if value is not None else "")
 
 
+_A_TAG_RE = re.compile(r"<a\b([^>]*)>", re.IGNORECASE)
+
+
+def _ensure_links_new_tab(html: str) -> str:
+    """Add ``target="_blank"`` (and ``rel``) to anchors that lack a target.
+
+    Listing title / url / PDF links already set this explicitly. Markdown and
+    HTML viewer content from Liquid does not, so course-site and similar links
+    would navigate away from the review session without this pass.
+    """
+    if not html or "<a" not in html.lower():
+        return html
+
+    def _fix(match: re.Match[str]) -> str:
+        attrs = match.group(1)
+        if re.search(r"\btarget\s*=", attrs, re.IGNORECASE):
+            return match.group(0)
+        extra = ' target="_blank"'
+        if not re.search(r"\brel\s*=", attrs, re.IGNORECASE):
+            extra += ' rel="noopener noreferrer"'
+        return f"<a{attrs}{extra}>"
+
+    return _A_TAG_RE.sub(_fix, html)
+
+
 def _widget_dom_id(field: str) -> str:
     """Return a CSS/HTML-safe id fragment for a field name.
 
@@ -432,7 +457,8 @@ def _section_key(title: str, index: int) -> str:
 
 def _render_markdown_widget(spec: dict, value: Any, data: dict | None = None) -> str:
     content = _markdown_widget_content(spec, value, data)
-    return f'<div class="widget-markdown">{markdown2html(content) if content else ""}</div>'
+    rendered = _ensure_links_new_tab(markdown2html(content) if content else "")
+    return f'<div class="widget-markdown">{rendered}</div>'
 
 
 def _render_criterion(spec: dict, value: Any, data: dict | None = None) -> str:
@@ -598,9 +624,9 @@ def render_viewer(view_spec: dict, content: str) -> str:
     """
     view_type = view_spec.get("type", "Markdown")
     if view_type in {"Markdown", "HTMLMath"}:
-        rendered = markdown2html(content) if content else ""
+        rendered = _ensure_links_new_tab(markdown2html(content) if content else "")
         return f'<div class="viewer viewer-markdown">{rendered}</div>'
-    return f'<div class="viewer viewer-html">{content}</div>'
+    return f'<div class="viewer viewer-html">{_ensure_links_new_tab(content)}</div>'
 
 
 def render_form(

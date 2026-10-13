@@ -474,6 +474,31 @@ class TestRenderViewer:
         html = render_viewer({"type": "Markdown"}, "")
         assert "viewer" in html
 
+    def test_markdown_links_open_in_new_tab(self):
+        html = render_viewer(
+            {"type": "Markdown"},
+            "[Course site](https://example.com/iei)",
+        )
+        assert 'href="https://example.com/iei"' in html
+        assert 'target="_blank"' in html
+        assert 'rel="noopener noreferrer"' in html
+
+    def test_html_viewer_links_open_in_new_tab(self):
+        html = render_viewer(
+            {"type": "HTML"},
+            '<a href="https://example.com">site</a>',
+        )
+        assert 'target="_blank"' in html
+        assert 'rel="noopener noreferrer"' in html
+
+    def test_existing_target_not_duplicated(self):
+        html = render_viewer(
+            {"type": "HTML"},
+            '<a href="https://example.com" target="_self">stay</a>',
+        )
+        assert html.count("target=") == 1
+        assert 'target="_self"' in html
+
 
 # ---------------------------------------------------------------------------
 # render_form
