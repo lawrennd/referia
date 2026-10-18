@@ -49,7 +49,7 @@ not.
       OOB-replace the triggering column’s widget. Prefer also skipping any
       currently focused widget if detectable without fragile heuristics; at
       minimum never rebuild the field that fired the request.
-- [ ] Optional interim: narrow `affected_widgets` enough that unchanged
+- [x] Optional interim: narrow `affected_widgets` enough that unchanged
       independent fields are not rebuilt on every blur — without blocking on a
       full dependency-graph CIP.
 - [x] Green `✓ Updated` toast still appears on successful update.
@@ -100,4 +100,10 @@ Moved Proposed → Ready → In Progress; starting implementation.
 
 Applied `focus-scroll:false` on field/status-bar HTMX swaps; `update_field` /
 `root_update_field` skip OOB for the triggering column. Route tests updated.
-Deferred: narrowing `affected_widgets` graph; live smoke on serve.
+
+### 2026-10-18 (narrow affected_widgets)
+
+First patch was insufficient: skipping only the triggering field still
+OOB-replaced the *newly focused* field (and every other widget). Narrowed
+`affected_widgets` to `visible_if` dependents + combinator widget fields.
+Live smoke after serve restart.

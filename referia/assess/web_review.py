@@ -36,10 +36,8 @@ web_reviewer.get_widget_specs() -> list[dict]
     and ``interface["viewer"]``.
 
 web_reviewer.affected_widgets(column) -> set[str]
-    Column names whose displayed values may change after *column* is updated.
-    The current implementation returns all field-bearing widget columns so the
-    web layer simply re-renders the whole form; a dependency-tracking
-    optimisation is deferred to a follow-on CIP.
+    Column names whose displayed values may change after *column* is updated
+    (``visible_if`` dependents and combinator widget fields — not the whole form).
 """
 
 from __future__ import annotations
@@ -74,6 +72,15 @@ _VALID_DISPLAY_LAYOUTS = frozenset({"side_by_side", "inline_list"})
 
 # Relative calendar tokens for ``display.filter_defaults`` date bounds.
 _RELATIVE_DATE_RE = re.compile(r"^today(?:([+-])(\d+)d)?$", re.IGNORECASE)
+
+
+def _visible_if_depends_on(condition: Any, column: str) -> bool:
+    """True when a widget ``visible_if`` condition references *column*."""
+    if isinstance(condition, str):
+        return condition == column
+    if isinstance(condition, dict):
+        return str(condition.get("field") or "") == column
+    return False
 
 
 def resolve_relative_date(value: Any, *, today: date | None = None) -> str:
@@ -1182,18 +1189,40 @@ class WebReviewer:
     def affected_widgets(self, column: str) -> set[str]:
         """Return column names that may need refreshing after *column* changes.
 
-        The current implementation conservatively returns **all** field-bearing
-        widget columns so the web layer re-renders the complete form.  A
-        finer-grained dependency graph is deferred to a follow-on CIP.
+        Returns only widgets that actually depend on *column*:
+
+        * fields whose ``visible_if`` references *column*
+        * combinator output fields that are shown as widgets (recomputed in
+          :meth:`_value_updated`)
+
+        Independent textareas/sliders are **not** returned.  Rebuilding the
+        whole form on every blur destroyed the control the user had just
+        focused (CoE 2026-10-18).  A fuller dependency graph (Liquid viewers,
+        cross-field computes) can extend this later without reverting to
+        “refresh everything”.
 
         :param column: The column that was just updated.
-        :return: Set of column names to refresh.
+        :return: Set of column names to refresh (may be empty).
         """
-        return {
+        out: set[str] = set()
+        widget_fields = {
             spec["field"]
             for spec in self.get_widget_specs()
             if "field" in spec
         }
+        for spec in self.get_widget_specs():
+            field = spec.get("field")
+            if not field or field == column:
+                continue
+            if _visible_if_depends_on(spec.get("visible_if"), column):
+                out.add(field)
+        for view in self._interface.get("combinator") or []:
+            if not isinstance(view, dict):
+                continue
+            cfield = view.get("field")
+            if cfield and cfield in widget_fields and cfield != column:
+                out.add(cfield)
+        return out
 
     # ------------------------------------------------------------------
     # Internal on-change logic (mirrors Reviewer.value_updated without widgets)
