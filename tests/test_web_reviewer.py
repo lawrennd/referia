@@ -507,6 +507,26 @@ class TestGetWidgetSpecs:
         assert len(result) == 1
         assert result[0]["field"] == "val"
 
+    def test_precompute_specs_not_flattened_as_widgets(self):
+        """Non-empty precompute must not become form widgets (visible_if OOB)."""
+        soft_fill = {
+            "field": "Email Comment",
+            "function": "render_liquid",
+            "args": {"template": "hello"},
+        }
+        textarea = {
+            "type": "Textarea",
+            "field": "Email Comment",
+            "visible_if": "Interview",
+            "args": {"description": "Email Comment"},
+        }
+        precompute = {"type": "precompute", "specifications": [soft_fill]}
+        reviewer, _, _ = _build_reviewer(review=[precompute, textarea])
+        result = reviewer.get_widget_specs()
+        assert len(result) == 1
+        assert result[0]["type"] == "Textarea"
+        assert result[0].get("visible_if") == "Interview"
+
     def test_register_review_computes_copies_precompute_specs(self):
         """CoE 2026-10-18: precompute must be registered, not only skipped as widgets."""
         specs = [

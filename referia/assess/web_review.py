@@ -1170,6 +1170,13 @@ class WebReviewer:
                 node.pop("children", None)
                 out.append(node)
                 continue
+            # Soft-fill / compute clusters are registered separately
+            # (_register_review_computes). Expanding them here would inject
+            # compute dicts (field + function, no widget type) into the form
+            # and steal OOB refreshes from real widgets of the same field
+            # (e.g. Email Comment Textarea with visible_if).
+            if entry_type in {"precompute", "postcompute"}:
+                continue
             if entry_type in _CLUSTER_TYPES:
                 sub = entry.get(
                     "entries",
@@ -1280,15 +1287,16 @@ class WebReviewer:
             if not isinstance(doc, dict) or "type" not in doc:
                 continue
             dtype = str(doc["type"])
-            entries.append(
-                {
-                    "n": n,
-                    "type": dtype,
-                    "label": document_action_label(doc, summary=summary),
-                    "summary": summary,
-                    "section": section,
-                }
-            )
+            entry = {
+                "n": n,
+                "type": dtype,
+                "label": document_action_label(doc, summary=summary),
+                "summary": summary,
+                "section": section,
+            }
+            if "visible_if" in doc:
+                entry["visible_if"] = doc["visible_if"]
+            entries.append(entry)
         return entries
 
     def template_to_value(self, template: dict) -> str:

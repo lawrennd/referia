@@ -135,17 +135,27 @@ def _htmx_field_attrs(column: str, trigger: str = "change") -> str:
 
 
 def _visibility_style(spec: dict, data: dict) -> str:
-    """Return ``style="display:none"`` when a ``visible_if`` condition is false."""
+    """Return ``style="display:none"`` when a ``visible_if`` condition is false.
+
+    String conditions (``visible_if: "Interview"``) use checkbox truthiness so
+    ``False`` / ``\"False\"`` / ``0`` hide the widget — plain ``bool()`` would
+    treat the string ``\"False\"`` as visible.
+    """
     condition = spec.get("visible_if")
     if condition is None:
         return ""
     if isinstance(condition, str):
-        hidden = not bool(data.get(condition))
+        hidden = not _checkbox_checked(data.get(condition))
     elif isinstance(condition, dict):
         field_name = condition.get("field", "")
         expected = condition.get("value")
+        if expected is None and "equals" in condition:
+            expected = condition.get("equals")
         current = data.get(field_name)
-        hidden = str(current) != str(expected) if expected is not None else not bool(current)
+        if expected is None:
+            hidden = not _checkbox_checked(current)
+        else:
+            hidden = str(current) != str(expected)
     else:
         hidden = False
     return ' style="display:none"' if hidden else ""
@@ -330,11 +340,36 @@ def _render_radio(spec: dict, value: Any) -> str:
     return label + f'<fieldset class="widget-radio">{radios}</fieldset>'
 
 
+def _checkbox_checked(value: Any) -> bool:
+    """Whether a Checkbox/Flag cell should render checked.
+
+    Soft-fill often stores ``\"True\"`` / ``\"False\"`` strings from Liquid.
+    Plain ``bool(value)`` treats every non-empty string as checked, so
+    ``\"False\"`` would appear selected.
+    """
+    import math
+
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, float) and math.isnan(value):
+        return False
+    if isinstance(value, (int, float)) and value in (0, 1):
+        return bool(value)
+    text = str(value).strip().lower()
+    if text in ("true", "1", "yes"):
+        return True
+    if text in ("false", "0", "no", ""):
+        return False
+    return bool(value)
+
+
 def _render_checkbox(spec: dict, value: Any) -> str:
     column = spec.get("field", "")
     args = spec.get("args", {})
     description = args.get("description", "") or column
-    checked = " checked" if bool(value) else ""
+    checked = " checked" if _checkbox_checked(value) else ""
     return (
         f'<label class="widget-checkbox">'
         f'<input type="checkbox" {_htmx_field_attrs(column)} value="true"{checked}>'
@@ -871,7 +906,7 @@ def render_complete_checkbox(
     field: str = "complete",
 ) -> str:
     """Leading complete toggle for a listing row (checkbox + Done label)."""
-    checked = " checked" if bool(value) else ""
+    checked = " checked" if _checkbox_checked(value) else ""
     token = _record_index_ctx.set(record_index)
     try:
         dom = (
@@ -1095,19 +1130,27 @@ def render_inline_listing(
 def render_document_actions(
     documents: list[dict] | None = None,
     summary_documents: list[dict] | None = None,
+    data: dict | None = None,
 ) -> str:
     """HTML for Create / Create Summary document buttons (nav chrome).
 
     Button specs come from ``WebReviewer.list_document_entries``.  HTMX posts
     use unprefixed paths (``base.html`` rewrites them in root-server mode).
 
-    Returns an empty string when there are no document actions.
+    Optional *data* evaluates each entry's ``visible_if`` (same rules as review
+    widgets).  The container always has ``id="nav-document-actions"`` so field
+    updates can OOB-swap it when visibility changes.
+
+    Returns an empty string when there are no document actions at all.
     """
     action_entries = list(documents or []) + list(summary_documents or [])
     if not action_entries:
         return ""
-    parts = ['<div class="nav-document-actions">']
+    parts = ['<div class="nav-document-actions" id="nav-document-actions">']
     for entry in action_entries:
+        if data is not None and entry.get("visible_if") is not None:
+            if _visibility_style(entry, data):
+                continue
         n = int(entry.get("n") or 0)
         label = _escape(str(entry.get("label") or "Create document"))
         if entry.get("summary"):
