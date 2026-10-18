@@ -3550,6 +3550,13 @@
 <span class="sd">            This method provides a way to set the value of a single element, similar to pandas&#39; .at accessor.</span>
 <span class="sd">            It expects a single label for both row and column and updates the value at that location.</span>
 
+<span class="sd">            Writes are routed to the store declared in ``colspecs`` (via</span>
+<span class="sd">            ``coltype``).  Iterating ``_d`` and writing into the first frame</span>
+<span class="sd">            that lacks the row is unsafe: an empty ``output`` index would</span>
+<span class="sd">            steal values intended for ``cache`` (e.g. dict results from</span>
+<span class="sd">            ``extract_form_fields``), while ``get`` still reads ``cache`` via</span>
+<span class="sd">            colspecs and returns ``None``.</span>
+
 <span class="sd">            :param key: A tuple containing the row and column label.</span>
 <span class="sd">            :param value: The new value to set at the specified location.</span>
 <span class="sd">            :raises KeyError: If the specified key is not a tuple or if it does not correspond</span>
@@ -3567,28 +3574,47 @@
                     <span class="sa">f</span><span class="s2">&quot;Column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">col_label</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> is immutable and cannot be modified.&quot;</span>
                 <span class="p">)</span>
 
-            <span class="c1"># Setting the value</span>
+            <span class="n">typ</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">coltype</span><span class="p">(</span><span class="n">col_label</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">typ</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
+                    <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Cannot modify individual elements in &#39;parameters&#39; type data.&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">and</span> <span class="n">col_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">col_label</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">and</span> <span class="n">row_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                    <span class="n">empty</span> <span class="o">=</span> <span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">}</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">empty</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="n">row_label</span><span class="p">])]</span>
+                    <span class="p">)</span>
+                <span class="n">_set_value_with_coercion</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+                <span class="k">return</span>
+
+            <span class="c1"># Fallback when the column is not yet in colspecs: find an</span>
+            <span class="c1"># existing (row, column) cell, else refuse rather than inventing</span>
+            <span class="c1"># the column on an unrelated empty store.</span>
             <span class="n">data_modified</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">for</span> <span class="n">typ</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">_d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">row_label</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span> <span class="ow">and</span> <span class="n">col_label</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-                    <span class="n">_set_value_with_coercion</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-                    <span class="n">data_modified</span> <span class="o">=</span> <span class="kc">True</span>
-                    <span class="k">break</span>
-                <span class="k">if</span> <span class="n">row_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span> <span class="ow">and</span> <span class="n">typ</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
-                    <span class="c1"># Add row indexed by row_label to pd.DataFrame data</span>
-                    <span class="n">_set_value_with_coercion</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-                    <span class="n">data_modified</span> <span class="o">=</span> <span class="kc">True</span>
-                    <span class="k">break</span>
-                <span class="k">elif</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
-                    <span class="k">if</span> <span class="n">col_label</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="ow">and</span> <span class="n">col_label</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
                         <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
                             <span class="sa">f</span><span class="s2">&quot;Cannot modify individual elements in &#39;parameters&#39; type data.&quot;</span>
                         <span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span>
+                    <span class="ow">and</span> <span class="n">row_label</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span>
+                    <span class="ow">and</span> <span class="n">col_label</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span>
+                <span class="p">):</span>
+                    <span class="n">_set_value_with_coercion</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">row_label</span><span class="p">,</span> <span class="n">col_label</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                    <span class="n">data_modified</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
 
             <span class="k">if</span> <span class="ow">not</span> <span class="n">data_modified</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Key </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> not found in the CustomDataFrame&quot;</span><span class="p">)</span>
 
-            <span class="c1"># Update the data object with the modified data</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data_object</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
 
     <span class="k">class</span><span class="w"> </span><span class="nc">_LocAccessor</span><span class="p">(</span><span class="n">Accessor</span><span class="p">):</span>

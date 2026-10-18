@@ -814,6 +814,11 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">..util.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">isna</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..util.liquid</span><span class="w"> </span><span class="kn">import</span> <span class="n">url_escape</span><span class="p">,</span> <span class="n">markdownify</span><span class="p">,</span> <span class="n">relative_url</span><span class="p">,</span> <span class="n">absolute_url</span><span class="p">,</span> <span class="n">to_i</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..access.documents.segment</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">document_segment</span><span class="p">,</span>
+    <span class="n">extract_form_fields</span><span class="p">,</span>
+    <span class="n">extract_references</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">cntxt</span> <span class="o">=</span> <span class="n">Context</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;lynguine&quot;</span><span class="p">)</span>
            
@@ -1368,6 +1373,49 @@
                     <span class="s2">&quot;format&quot;</span><span class="p">:</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="p">},</span>
                 <span class="s2">&quot;docstr&quot;</span> <span class="p">:</span> <span class="s2">&quot;Return today&#39;s date as a string.&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;document_segment&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">document_segment</span><span class="p">,</span>
+                <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;strategy&quot;</span><span class="p">:</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;aspect&quot;</span><span class="p">:</span> <span class="s2">&quot;body_chunks&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;reader&quot;</span><span class="p">:</span> <span class="s2">&quot;pdf&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;on_sparse_text&quot;</span><span class="p">:</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Segment a PDF/DOCX path into unit dicts (CIP-0013). &quot;</span>
+                    <span class="s2">&quot;Store in one field (list); use segment_pdf_frame for exploded rows.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;extract_references&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">extract_references</span><span class="p">,</span>
+                <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;strategy&quot;</span><span class="p">:</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;reader&quot;</span><span class="p">:</span> <span class="s2">&quot;pdf&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;on_sparse_text&quot;</span><span class="p">:</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Extract bibliographic reference strings from a PDF &quot;</span>
+                    <span class="s2">&quot;(aspect=references; CIP-0013).&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;extract_form_fields&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">extract_form_fields</span><span class="p">,</span>
+                <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;strategy&quot;</span><span class="p">:</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;reader&quot;</span><span class="p">:</span> <span class="s2">&quot;pdf&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;on_sparse_text&quot;</span><span class="p">:</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Extract a single structured form_fields record from a PDF &quot;</span>
+                    <span class="s2">&quot;(CIP-0013 YAML strategies / form_fields engine).&quot;</span>
+                <span class="p">),</span>
             <span class="p">},</span>
         <span class="p">]</span>
     
