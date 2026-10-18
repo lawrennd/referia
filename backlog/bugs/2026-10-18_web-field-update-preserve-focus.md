@@ -1,7 +1,7 @@
 ---
 id: "2026-10-18_web-field-update-preserve-focus"
 title: "Preserve focus when web field update records (stop OOB rebuild stealing caret)"
-status: "Proposed"
+status: "In Progress"
 priority: "High"
 created: "2026-10-18"
 last_updated: "2026-10-18"
@@ -91,3 +91,7 @@ Related prior art: `backlog/features/2026-10-11_preserve-scroll-across-record-sw
 
 Task created from CoE after operator report of focus jump to green status bar
 on field leave. No code change yet — backlog-first.
+
+### 2026-10-18 (status)
+
+Moved Proposed → Ready → In Progress; starting implementation.
