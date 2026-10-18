@@ -608,6 +608,10 @@ async def update_field(request: Request, column: str):
     on every field control in ``render.py``).  Affected widget divs are returned
     as HTMX OOB swaps so the page reflects computed side-effects.
 
+    The triggering *column* is never OOB-replaced: the browser already holds
+    its value, and replacing it would destroy the control the user just
+    focused after blur (CoE 2026-10-18).
+
     Optional form field ``index`` (from inline_list ``hx-vals``) selects the
     tall-table row to update before writing *column*.
     """
@@ -640,11 +644,13 @@ async def update_field(request: Request, column: str):
         _log_route_error("Update", exc, column=column)
         return HTMLResponse(_user_error_html("Update"))
 
-    # Build OOB refreshes for all affected widgets
+    # Build OOB refreshes for dependents (never the triggering field itself)
     data = _current_data(reviewer)
     parts = [status_html]
     oob_index = record_index if record_index not in (None, "") else None
     for col in reviewer.affected_widgets(column):
+        if col == column:
+            continue
         affected_spec = _find_spec(reviewer, col)
         if affected_spec:
             val = reviewer.get_value(col)
@@ -1681,6 +1687,8 @@ async def root_update_field(request: Request, config_path: str, column: str):
     parts = [status_html]
     oob_index = record_index if record_index not in (None, "") else None
     for col in reviewer.affected_widgets(column):
+        if col == column:
+            continue
         affected_spec = _find_spec(reviewer, col)
         if affected_spec:
             val = reviewer.get_value(col)

@@ -225,14 +225,25 @@ class TestPostField:
     def test_response_contains_oob_swaps_for_affected_widgets(self, client, mock_reviewer):
         mock_reviewer.affected_widgets.return_value = {"Comment", "Score"}
         response = client.post("/field/Comment", data={"Comment": "x"})
-        # Both affected widget divs should appear in the OOB response
-        assert 'id="widget-Comment"' in response.text
+        # Dependents are OOB-swapped; the triggering field is not (focus preserve)
+        assert 'id="widget-Comment"' not in response.text
         assert 'id="widget-Score"' in response.text
 
-    def test_oob_swaps_carry_hx_swap_oob_attribute(self, client, mock_reviewer):
+    def test_oob_swaps_omit_triggering_column(self, client, mock_reviewer):
         mock_reviewer.affected_widgets.return_value = {"Comment"}
         response = client.post("/field/Comment", data={"Comment": "x"})
+        assert 'id="widget-Comment"' not in response.text
+        assert "Updated" in response.text or "&#10003;" in response.text
+
+    def test_oob_swaps_carry_hx_swap_oob_attribute(self, client, mock_reviewer):
+        mock_reviewer.affected_widgets.return_value = {"Comment", "Score"}
+        response = client.post("/field/Comment", data={"Comment": "x"})
         assert 'hx-swap-oob="true"' in response.text
+        assert 'id="widget-Score"' in response.text
+
+    def test_field_controls_use_focus_scroll_false(self, client):
+        response = client.get("/")
+        assert 'hx-swap="innerHTML focus-scroll:false"' in response.text
 
     def test_unknown_column_does_not_crash(self, client, mock_reviewer):
         mock_reviewer.set_value.side_effect = KeyError("no such column")

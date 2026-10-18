@@ -41,21 +41,21 @@ not.
 
 ## Acceptance Criteria
 
-- [ ] Field HTMX swaps that target `#status-bar` use
+- [x] Field HTMX swaps that target `#status-bar` use
       `hx-swap="innerHTML focus-scroll:false"` (same discipline as the record
       index select). Apply consistently to other status-bar posts where cheap
       (Save / Reload / Populate) unless a reason not to is documented.
-- [ ] `POST /field/{column}` (and root-prefixed equivalent) does **not**
+- [x] `POST /field/{column}` (and root-prefixed equivalent) does **not**
       OOB-replace the triggering column’s widget. Prefer also skipping any
       currently focused widget if detectable without fragile heuristics; at
       minimum never rebuild the field that fired the request.
 - [ ] Optional interim: narrow `affected_widgets` enough that unchanged
       independent fields are not rebuilt on every blur — without blocking on a
       full dependency-graph CIP.
-- [ ] Green `✓ Updated` toast still appears on successful update.
-- [ ] Computed / timestamp / combinator side-effects that *do* depend on the
+- [x] Green `✓ Updated` toast still appears on successful update.
+- [x] Computed / timestamp / combinator side-effects that *do* depend on the
       changed column still refresh (do not regress real dependent updates).
-- [ ] Unit/route test(s): response OOB set excludes the triggering column;
+- [x] Unit/route test(s): response OOB set excludes the triggering column;
       existing OOB tests updated accordingly.
 - [ ] Smoke: edit field A, Tab (or click) to field B — B keeps focus while the
       status toast may still show.
@@ -95,3 +95,9 @@ on field leave. No code change yet — backlog-first.
 ### 2026-10-18 (status)
 
 Moved Proposed → Ready → In Progress; starting implementation.
+
+### 2026-10-18 (implementation)
+
+Applied `focus-scroll:false` on field/status-bar HTMX swaps; `update_field` /
+`root_update_field` skip OOB for the triggering column. Route tests updated.
+Deferred: narrowing `affected_widgets` graph; live smoke on serve.
