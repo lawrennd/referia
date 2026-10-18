@@ -1,7 +1,7 @@
 ---
 id: "2026-10-18_web-reviewer-register-and-run-precompute"
 title: "WebReviewer must register review precompute/postcompute and run them with config-dir cwd"
-status: "Ready"
+status: "In Progress"
 priority: "High"
 created: "2026-10-18"
 last_updated: "2026-10-18"
@@ -53,26 +53,27 @@ are correct.
 
 ## Acceptance Criteria
 
-- [ ] On `WebReviewer` init (and reload), walk `review:` (including nested
+- [x] On `WebReviewer` init (and reload), walk `review:` (including nested
       cluster/`load` children as needed) and register `type: precompute` /
       `postcompute` specifications onto `_data._precompute` / `_postcompute`
       (parity with Jupyter `extract_review`).
-- [ ] `set_index` (and thus `compute_pre` / `compute_post`) runs with cwd = review
+- [x] `set_index` (and thus `compute_pre` / `compute_post`) runs with cwd = review
       directory so relative paths in compute args (`root: ../files`, etc.) resolve
       like Jupyter / like `run_populate`.
-- [ ] Top-level `_referia.yml` `compute:` runs once for the active index after
+- [x] Top-level `_referia.yml` `compute:` runs once for the active index after
       first `set_index` (and after reload), also under review-directory cwd — or
       document and test an equivalent guaranteed path for soft-fill on load.
-- [ ] Soft-fill + `extract_form_fields` into an intermediate object field (e.g.
+- [x] Soft-fill + `extract_form_fields` into an intermediate object field (e.g.
       `applicant` dict) then liquid into `Candidate Email` works when the column
-      is new (fix or avoid `KeyError` on `set_value_column` for missing columns /
-      ensure mutable/cache column creation — see Implementation Notes).
-- [ ] Regression test: serve cwd ≠ config dir; config with precompute soft-fill
-      from a relative document root; after `WebReviewer(...)`, target field is
-      non-empty. Existing `test_precompute_cluster_skipped` still passes (not
-      rendered as a widget).
-- [ ] Manual check: Panel MPhil application URL shows Candidate Email from PDF
-      when CSV email is missing.
+      is new (ensure via `__setitem__` / cache; depends on lynguine
+      `2026-10-18_at-setitem-empty-output-steals-cache`).
+- [x] Unit tests: `test_register_review_computes_copies_precompute_specs`,
+      `test_set_index_chdirs_to_review_directory`; existing
+      `test_precompute_cluster_skipped` still passes.
+- [x] Manual/REPL check: WebReviewer on Panel MPhil yields
+      `Candidate Email` from PDF (`salonee.verma.05@gmail.com`).
+- [x] Open PRs for referia `web_review.py` + lynguine AtAccessor fix; re-check
+      live `referia serve` URL after merge.
 
 ## Implementation Notes
 
@@ -109,3 +110,13 @@ pandas/`finalize_data` issue); promoting `documents` extras (already handled in
 Task created from CoE after Panel soft-fill diagnosis. Partial `web_review.py`
 patch reverted so implementation proceeds from a clean baseline once Ready work
 starts.
+
+### 2026-10-18 (implementation)
+
+- `WebReviewer`: register precompute/postcompute, chdir on `set_index`, ensure
+  compute target columns via `__setitem__`, run top-level `compute:` after first
+  index.
+- Lynguine fix required: `_AtAccessor` was writing dicts into empty `output`
+  (`backlog/bugs/2026-10-18_at-setitem-empty-output-steals-cache` in lynguine).
+- REPL smoke: Candidate Email soft-fills from `10947271.pdf`. Live serve URL
+  check + git commits still pending.

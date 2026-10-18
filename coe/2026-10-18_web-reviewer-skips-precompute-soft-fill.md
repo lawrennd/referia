@@ -80,6 +80,10 @@ parity gaps. No data corruption; fields simply never suggested.
 - 2026-10-18 — Reproduce: `WebReviewer` has `_precompute == []`; Candidate Email
   `None`; extract with `root: ../files` from serve cwd → `FileNotFoundError`
 - 2026-10-18 — Partial code fix started then reverted; CoE + backlog opened first
+- 2026-10-18 — After registration+chdir+ensure-columns: extract still logged a
+  dict set, but `get_value(applicant)` returned `None` — lynguine
+  `_AtAccessor.__setitem__` wrote into empty `output` when the row was
+  missing there, while `coltype` still pointed at `cache`
 
 ## Evidence / metrics
 
@@ -162,10 +166,15 @@ extract/soft-fill silently never populate review widgets.
 6. *(optional)* **Why** would fixing registration alone still fail extract?
    - Because `compute_pre` would run with serve cwd, so `root: ../files` would not
      find the PDF unless set_index/compute also chdirs to the review directory.
+7. *(optional)* **Why** did extract still leave Candidate Email empty after
+   registration, chdir, and ensuring the `applicant` cache column?
+   - Because lynguine `.at` wrote the dict into an empty `output` frame (missing-row
+     branch) while reads used `cache` via colspecs — a second silent failure mode.
 
 **Root cause(s)**: Incomplete Jupyter→web parity for review compute hooks, compounded
-by cwd-relative path resolution during compute (same class of bug as web localpdf).
-Silent success (empty soft-fill) hid the gap until an operator noticed missing fields.
+by cwd-relative path resolution during compute (same class of bug as web localpdf),
+and a lynguine `.at` routing bug when `output` has no rows. Silent success (empty
+soft-fill) hid the gaps until an operator noticed missing fields.
 
 ## Traceability artifacts missing or incorrect
 
@@ -185,6 +194,9 @@ Silent success (empty soft-fill) hid the gap until an operator noticed missing f
 - [x] Register and run `review` precompute/postcompute (and top-level `compute:`) under
       WebReviewer with review-directory cwd — owner: Neil D. Lawrence —
       `backlog/bugs/2026-10-18_web-reviewer-register-and-run-precompute.md`
+- [x] Lynguine: route `CustomDataFrame.at` writes by colspecs (empty output must not
+      steal cache) — owner: Neil D. Lawrence —
+      `/Users/neil/lawrennd/lynguine/backlog/bugs/2026-10-18_at-setitem-empty-output-steals-cache.md`
 
 ### CIPs
 

@@ -507,6 +507,43 @@ class TestGetWidgetSpecs:
         assert len(result) == 1
         assert result[0]["field"] == "val"
 
+    def test_register_review_computes_copies_precompute_specs(self):
+        """CoE 2026-10-18: precompute must be registered, not only skipped as widgets."""
+        specs = [
+            {"field": "email", "function": "render_liquid", "args": {"template": "x"}},
+            {"field": "applicant", "function": "extract_form_fields"},
+        ]
+        precompute = {"type": "precompute", "specifications": specs}
+        reviewer, data, _ = _build_reviewer(review=[precompute])
+        data._precompute = []
+        data._postcompute = []
+        reviewer._register_review_computes()
+        assert data._precompute == specs
+
+    def test_set_index_chdirs_to_review_directory(self, tmp_path, monkeypatch):
+        """compute_pre must see config-relative paths (serve cwd ≠ review dir)."""
+        import os
+
+        review_dir = tmp_path / "review"
+        review_dir.mkdir()
+        serve_cwd = tmp_path / "serve"
+        serve_cwd.mkdir()
+        monkeypatch.chdir(serve_cwd)
+
+        seen = {}
+
+        def _set_index(label):
+            seen["cwd"] = os.getcwd()
+            seen["label"] = label
+
+        reviewer, data, _ = _build_reviewer(index_vals=["r0", "r1"])
+        reviewer._directory = str(review_dir.resolve())
+        data.set_index.side_effect = _set_index
+        reviewer.set_index("r1")
+        assert Path(seen["cwd"]).resolve() == review_dir.resolve()
+        assert seen["label"] == "r1"
+        assert Path(os.getcwd()).resolve() == serve_cwd.resolve()
+
     def test_non_list_viewer_wrapped(self):
         viewer = {"type": "Markdown", "display": "text"}
         reviewer, _, _ = _build_reviewer(viewer=viewer)
