@@ -186,10 +186,18 @@ def _find_spec(reviewer, column: str) -> dict | None:
 
     Skips PopulateButton specs because they share ``field`` with their target
     widget; use :func:`_find_populate_spec` to locate buttons specifically.
+    Also skips entries without a renderable widget ``type`` (e.g. compute
+    specs that must not steal OOB refreshes from real widgets).
     """
+    from referia.web.render import _RENDERERS
+
     for spec in reviewer.get_widget_specs():
-        if spec.get("field") == column and spec.get("type") != "PopulateButton":
-            return spec
+        if spec.get("field") != column:
+            continue
+        wtype = spec.get("type")
+        if wtype == "PopulateButton" or wtype not in _RENDERERS:
+            continue
+        return spec
     return None
 
 
@@ -258,6 +266,7 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
     form_html = ""
     filter_bar_html = ""
     working = indices
+    row_data: dict = {}
     if layout == "inline_list":
         working = reviewer.working_indices()
         filter_state = reviewer.get_filter_state()
@@ -300,9 +309,13 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         document_html = ""
         position = len(working)
         total = len(working)
+        try:
+            row_data = _current_data(reviewer)
+        except Exception:
+            row_data = {}
     else:
-        data = _current_data(reviewer)
-        form_html = render_form(reviewer.get_review_specs(), data)
+        row_data = _current_data(reviewer)
+        form_html = render_form(reviewer.get_review_specs(), row_data)
         index_selector = _render_index_selector(indices, current_index)
         document_html = render_document_panel(
             reviewer.list_pdf_entries(),
@@ -318,6 +331,7 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
     document_actions_html = render_document_actions(
         documents=_list_document_entries(reviewer, "documents"),
         summary_documents=_list_document_entries(reviewer, "summary_documents"),
+        data=row_data,
     )
 
     return {
@@ -497,6 +511,23 @@ def _make_oob(widget_html: str) -> str:
     )
 
 
+def _document_actions_oob(reviewer, data: dict) -> str:
+    """Render nav document buttons with OOB swap for visibility updates."""
+    html = render_document_actions(
+        documents=_list_document_entries(reviewer, "documents"),
+        summary_documents=_list_document_entries(reviewer, "summary_documents"),
+        data=data,
+    )
+    if not html:
+        # Keep a stable target so buttons can reappear after becoming visible.
+        html = '<div class="nav-document-actions" id="nav-document-actions"></div>'
+    return html.replace(
+        'id="nav-document-actions"',
+        'id="nav-document-actions" hx-swap-oob="true"',
+        1,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -658,6 +689,7 @@ async def update_field(request: Request, column: str):
                 affected_spec, val, data, record_index=oob_index
             )
             parts.append(_make_oob(widget_html))
+    parts.append(_document_actions_oob(reviewer, data))
 
     return HTMLResponse("\n".join(parts))
 
@@ -1696,6 +1728,7 @@ async def root_update_field(request: Request, config_path: str, column: str):
                 affected_spec, val, data, record_index=oob_index
             )
             parts.append(_make_oob(widget_html))
+    parts.append(_document_actions_oob(reviewer, data))
 
     return HTMLResponse("\n".join(parts))
 

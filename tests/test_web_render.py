@@ -273,6 +273,42 @@ class TestCheckbox:
         html = render_widget(_w("Checkbox", "done", args={"description": "Mark complete"}), False)
         assert "Mark complete" in html
 
+    def test_string_false_unchecked(self):
+        """Liquid soft-fill stores \"False\"; plain bool() would check it."""
+        html = render_widget(_w("Checkbox", "done"), "False")
+        assert "checked" not in html
+
+    def test_string_true_checked(self):
+        html = render_widget(_w("Checkbox", "done"), "True")
+        assert "checked" in html
+
+    def test_numeric_zero_unchecked(self):
+        html = render_widget(_w("Checkbox", "done"), 0)
+        assert "checked" not in html
+        html = render_widget(_w("Checkbox", "done"), 0.0)
+        assert "checked" not in html
+
+    def test_numeric_one_checked(self):
+        html = render_widget(_w("Checkbox", "done"), 1)
+        assert "checked" in html
+
+    def test_nan_unchecked(self):
+        html = render_widget(_w("Checkbox", "done"), float("nan"))
+        assert "checked" not in html
+
+    def test_numpy_bool_false_unchecked(self):
+        np = pytest.importorskip("numpy")
+        html = render_widget(_w("Checkbox", "done"), np.bool_(False))
+        assert "checked" not in html
+
+    def test_complete_checkbox_string_false_unchecked(self):
+        from referia.web.render import render_complete_checkbox
+
+        html = render_complete_checkbox(
+            "False", field="complete", record_index="alice"
+        )
+        assert "checked" not in html
+
 
 # ---------------------------------------------------------------------------
 # Combobox
@@ -443,6 +479,34 @@ class TestVisibleIf:
     def test_no_visible_if_always_shown(self):
         html = render_widget(_w("Text", "x"), "v", data={})
         assert 'display:none' not in html
+
+    def test_string_false_hides_string_condition(self):
+        """Checkbox soft-fill \"False\" must hide dependents (not bool(\"False\"))."""
+        spec = _w("Textarea", "Email Comment", visible_if="Interview")
+        html = render_widget(spec, "", data={"Interview": "False"})
+        assert 'display:none' in html
+
+    def test_bool_false_hides_string_condition(self):
+        spec = _w("Textarea", "Email Comment", visible_if="Interview")
+        html = render_widget(spec, "", data={"Interview": False})
+        assert 'display:none' in html
+
+    def test_numpy_bool_false_hides_string_condition(self):
+        np = pytest.importorskip("numpy")
+        spec = _w("Textarea", "Email Comment", visible_if="Interview")
+        html = render_widget(spec, "", data={"Interview": np.bool_(False)})
+        assert 'display:none' in html
+
+    def test_dict_equals_alias(self):
+        """visible_if dict may use equals (affected_widgets) as well as value."""
+        spec = _w("Text", "detail", visible_if={"field": "Status", "equals": "yes"})
+        assert 'display:none' in render_widget(spec, "", data={"Status": "no"})
+        assert 'display:none' not in render_widget(spec, "", data={"Status": "yes"})
+
+    def test_dict_without_expected_uses_checkbox_truthiness(self):
+        spec = _w("Text", "detail", visible_if={"field": "Interview"})
+        assert 'display:none' in render_widget(spec, "", data={"Interview": "False"})
+        assert 'display:none' not in render_widget(spec, "", data={"Interview": True})
 
 
 # ---------------------------------------------------------------------------
@@ -820,10 +884,63 @@ class TestRenderDocumentActions:
             ],
         )
         assert 'class="nav-document-actions"' in html
+        assert 'id="nav-document-actions"' in html
         assert 'hx-post="/generate-document/0"' in html
         assert 'hx-post="/generate-summary-document/0"' in html
         assert "Create docx" in html
         assert "Create Summary letter" in html
+
+    def test_visible_if_hides_gated_button(self):
+        from referia.web.render import render_document_actions
+
+        entries = [
+            {
+                "n": 0,
+                "type": "email",
+                "label": "Create Email",
+                "summary": False,
+                "visible_if": "Interview",
+            }
+        ]
+        hidden = render_document_actions(documents=entries, data={"Interview": False})
+        assert "Create Email" not in hidden
+        assert 'id="nav-document-actions"' in hidden
+
+        shown = render_document_actions(documents=entries, data={"Interview": True})
+        assert "Create Email" in shown
+        assert 'hx-post="/generate-document/0"' in shown
+
+    def test_visible_if_string_false_hides_button(self):
+        from referia.web.render import render_document_actions
+
+        entries = [
+            {
+                "n": 0,
+                "type": "email",
+                "label": "Create Email",
+                "summary": False,
+                "visible_if": "Interview",
+            }
+        ]
+        html = render_document_actions(documents=entries, data={"Interview": "False"})
+        assert "Create Email" not in html
+
+    def test_without_data_ignores_visible_if(self):
+        """When data is omitted (legacy callers), buttons still render."""
+        from referia.web.render import render_document_actions
+
+        html = render_document_actions(
+            documents=[
+                {
+                    "n": 0,
+                    "type": "email",
+                    "label": "Create Email",
+                    "summary": False,
+                    "visible_if": "Interview",
+                }
+            ]
+        )
+        assert "Create Email" in html
 
 
 class TestInlineListRecordIndex:

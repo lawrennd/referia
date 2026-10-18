@@ -279,6 +279,135 @@ class TestPostField:
         args = mock_reviewer.set_value.call_args
         assert args[0][1] is False
 
+    def test_field_update_includes_document_actions_oob(self, client, mock_reviewer):
+        """Interview-gated Create Email must OOB-refresh with the field update."""
+        mock_reviewer.list_document_entries.side_effect = lambda section="documents": (
+            [
+                {
+                    "n": 0,
+                    "type": "email",
+                    "label": "Create Email",
+                    "summary": False,
+                    "section": "documents",
+                    "visible_if": "Interview",
+                }
+            ]
+            if section == "documents"
+            else []
+        )
+        mock_reviewer.get_row_data.return_value = {"Interview": True, "Comment": "x"}
+        mock_reviewer.affected_widgets.return_value = set()
+        response = client.post("/field/Interview", data={"Interview": "true"})
+        assert response.status_code == 200
+        assert 'id="nav-document-actions"' in response.text
+        assert 'hx-swap-oob="true"' in response.text
+        assert "Create Email" in response.text
+
+    def test_field_update_hides_gated_document_action(self, client, mock_reviewer):
+        mock_reviewer.list_document_entries.side_effect = lambda section="documents": (
+            [
+                {
+                    "n": 0,
+                    "type": "email",
+                    "label": "Create Email",
+                    "summary": False,
+                    "section": "documents",
+                    "visible_if": "Interview",
+                }
+            ]
+            if section == "documents"
+            else []
+        )
+        mock_reviewer.get_row_data.return_value = {"Interview": False}
+        mock_reviewer.affected_widgets.return_value = set()
+        response = client.post("/field/Interview", data={})
+        assert response.status_code == 200
+        assert 'id="nav-document-actions"' in response.text
+        assert 'hx-swap-oob="true"' in response.text
+        assert "Create Email" not in response.text
+
+
+# ---------------------------------------------------------------------------
+# _find_spec / document-actions OOB helpers
+# ---------------------------------------------------------------------------
+
+
+class TestFindSpecSkipsNonRenderers:
+    """Compute-like specs must not steal the OOB refresh from real widgets."""
+
+    def test_prefers_textarea_over_compute_dict(self):
+        from referia.web.routes import _find_spec
+
+        reviewer = MagicMock()
+        reviewer.get_widget_specs.return_value = [
+            {
+                "field": "Email Comment",
+                "function": "render_liquid",
+                "args": {"template": "x"},
+            },
+            {
+                "type": "Textarea",
+                "field": "Email Comment",
+                "visible_if": "Interview",
+                "args": {"description": "Email Comment"},
+            },
+        ]
+        spec = _find_spec(reviewer, "Email Comment")
+        assert spec is not None
+        assert spec["type"] == "Textarea"
+
+    def test_skips_populate_button(self):
+        from referia.web.routes import _find_spec
+
+        reviewer = MagicMock()
+        reviewer.get_widget_specs.return_value = [
+            {"type": "PopulateButton", "field": "Summary", "args": {}},
+            {"type": "Textarea", "field": "Summary", "args": {}},
+        ]
+        spec = _find_spec(reviewer, "Summary")
+        assert spec["type"] == "Textarea"
+
+    def test_returns_none_when_only_compute(self):
+        from referia.web.routes import _find_spec
+
+        reviewer = MagicMock()
+        reviewer.get_widget_specs.return_value = [
+            {"field": "Email Comment", "function": "render_liquid"},
+        ]
+        assert _find_spec(reviewer, "Email Comment") is None
+
+
+class TestDocumentActionsOob:
+    def test_empty_actions_still_emit_stable_oob_target(self):
+        from referia.web.routes import _document_actions_oob
+
+        reviewer = MagicMock()
+        reviewer.list_document_entries.return_value = []
+        html = _document_actions_oob(reviewer, {})
+        assert 'id="nav-document-actions"' in html
+        assert 'hx-swap-oob="true"' in html
+
+    def test_visible_button_included(self):
+        from referia.web.routes import _document_actions_oob
+
+        reviewer = MagicMock()
+        reviewer.list_document_entries.side_effect = lambda section="documents": (
+            [
+                {
+                    "n": 0,
+                    "type": "email",
+                    "label": "Create Email",
+                    "summary": False,
+                    "visible_if": "Interview",
+                }
+            ]
+            if section == "documents"
+            else []
+        )
+        html = _document_actions_oob(reviewer, {"Interview": True})
+        assert "Create Email" in html
+        assert 'hx-swap-oob="true"' in html
+
 
 # ---------------------------------------------------------------------------
 # POST /save
@@ -697,6 +826,71 @@ class TestCurrentDataIncludesVisibleIfFields:
         assert response.status_code == 200
         # Widget should have display:none because forewordPresent is missing/falsy
         assert 'style="display:none"' in response.text
+
+    def test_string_false_hides_visible_if_widget(self, mock_reviewer, client):
+        """Soft-fill \"False\" must hide dependents in the full panel render."""
+        mock_reviewer.get_review_specs.return_value = [
+            {
+                "type": "Textarea",
+                "field": "Email Comment",
+                "args": {"description": "Email Comment"},
+                "visible_if": "Interview",
+            }
+        ]
+        mock_reviewer.get_widget_specs.return_value = list(
+            mock_reviewer.get_review_specs.return_value
+        )
+        mock_reviewer.get_row_data.return_value = {
+            "Email Comment": "draft",
+            "Interview": "False",
+        }
+        mock_reviewer.get_value.return_value = "draft"
+
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'style="display:none"' in response.text
+
+    def test_panel_hides_gated_document_action(self, mock_reviewer, client):
+        mock_reviewer.list_document_entries.side_effect = lambda section="documents": (
+            [
+                {
+                    "n": 0,
+                    "type": "email",
+                    "label": "Create Email",
+                    "summary": False,
+                    "section": "documents",
+                    "visible_if": "Interview",
+                }
+            ]
+            if section == "documents"
+            else []
+        )
+        mock_reviewer.get_row_data.return_value = {"Interview": False}
+        response = client.get("/")
+        assert response.status_code == 200
+        assert 'id="nav-document-actions"' in response.text
+        assert "Create Email" not in response.text
+
+    def test_panel_shows_gated_document_action_when_true(self, mock_reviewer, client):
+        mock_reviewer.list_document_entries.side_effect = lambda section="documents": (
+            [
+                {
+                    "n": 0,
+                    "type": "email",
+                    "label": "Create Email",
+                    "summary": False,
+                    "section": "documents",
+                    "visible_if": "Interview",
+                }
+            ]
+            if section == "documents"
+            else []
+        )
+        mock_reviewer.get_row_data.return_value = {"Interview": True}
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "Create Email" in response.text
+        assert 'hx-post="/generate-document/0"' in response.text
 
 
 # ---------------------------------------------------------------------------

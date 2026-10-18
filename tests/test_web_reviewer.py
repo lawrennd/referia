@@ -507,6 +507,72 @@ class TestGetWidgetSpecs:
         assert len(result) == 1
         assert result[0]["field"] == "val"
 
+    def test_precompute_specs_not_flattened_as_widgets(self):
+        """Non-empty precompute must not become form widgets (visible_if OOB)."""
+        soft_fill = {
+            "field": "Email Comment",
+            "function": "render_liquid",
+            "args": {"template": "hello"},
+        }
+        textarea = {
+            "type": "Textarea",
+            "field": "Email Comment",
+            "visible_if": "Interview",
+            "args": {"description": "Email Comment"},
+        }
+        precompute = {"type": "precompute", "specifications": [soft_fill]}
+        reviewer, _, _ = _build_reviewer(review=[precompute, textarea])
+        result = reviewer.get_widget_specs()
+        assert len(result) == 1
+        assert result[0]["type"] == "Textarea"
+        assert result[0].get("visible_if") == "Interview"
+
+    def test_postcompute_specs_not_flattened_as_widgets(self):
+        soft_fill = {
+            "field": "Email Comment",
+            "function": "render_liquid",
+            "args": {"template": "bye"},
+        }
+        textarea = {
+            "type": "Textarea",
+            "field": "Email Comment",
+            "args": {"description": "Email Comment"},
+        }
+        postcompute = {"type": "postcompute", "specifications": [soft_fill]}
+        reviewer, _, _ = _build_reviewer(review=[textarea, postcompute])
+        result = reviewer.get_widget_specs()
+        assert len(result) == 1
+        assert result[0]["type"] == "Textarea"
+
+    def test_nested_precompute_not_in_widget_specs(self):
+        """precompute under a group is registered but never flattened as widgets."""
+        soft_fill = {
+            "field": "Candidate Email",
+            "function": "render_liquid",
+            "args": {"template": "{{x}}"},
+        }
+        review = [
+            {
+                "type": "group",
+                "entries": [
+                    {"type": "precompute", "specifications": [soft_fill]},
+                    {
+                        "type": "Text",
+                        "field": "Candidate Email",
+                        "args": {"description": "Email"},
+                    },
+                ],
+            }
+        ]
+        reviewer, data, _ = _build_reviewer(review=review)
+        data._precompute = []
+        reviewer._register_review_computes()
+        assert data._precompute == [soft_fill]
+        widgets = reviewer.get_widget_specs()
+        assert len(widgets) == 1
+        assert widgets[0]["type"] == "Text"
+        assert widgets[0]["field"] == "Candidate Email"
+
     def test_register_review_computes_copies_precompute_specs(self):
         """CoE 2026-10-18: precompute must be registered, not only skipped as widgets."""
         specs = [
@@ -1090,6 +1156,19 @@ class TestDocumentGeneration:
         summary = reviewer.list_document_entries("summary_documents")
         assert summary[0]["label"] == "Create Summary markdown"
         assert summary[0]["summary"] is True
+
+    def test_list_document_entries_preserves_visible_if(self):
+        reviewer, _, _ = _build_reviewer(
+            extra={
+                "documents": [
+                    {"type": "email", "visible_if": "Interview"},
+                    {"type": "docx", "name": "Always"},
+                ],
+            }
+        )
+        docs = reviewer.list_document_entries("documents")
+        assert docs[0]["visible_if"] == "Interview"
+        assert "visible_if" not in docs[1]
 
     def test_template_to_value_viewer(self):
         reviewer, data, _ = _build_reviewer(
