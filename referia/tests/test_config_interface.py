@@ -1,5 +1,4 @@
 import yaml
-import pandas as pd
 import pytest
 from referia.config.interface import Interface
 from unittest.mock import patch, MagicMock
@@ -47,7 +46,9 @@ def test_interface_initialization(sample_data):
 
 def test_expand_review_cluster(sample_data):
     with patch('lynguine.access.io.read_yaml_file') as mock_open:
-        mock_open.return_value = pd.DataFrame(sample_data)
+        # read_yaml_file must return parsed YAML (mapping or sequence of
+        # mappings); lynguine converts that to a DataFrame in read_yaml.
+        mock_open.return_value = [{"type": "Checkbox", "field": "loaded_field"}]
         expanded = Interface._expand_review_cluster(sample_data['review'])
         
         assert len(expanded) == 5

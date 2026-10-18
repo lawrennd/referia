@@ -2759,7 +2759,6 @@ description = "Powerful and Pythonic XML processing library combining libxml2/li
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
-markers = "sys_platform == \"darwin\""
 files = [
     {file = "lxml-6.1.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:09dd5b7075dc2f7709654a46543ba1ea3c2e217b2ed8fbd413a8a945a0f40f60"},
     {file = "lxml-6.1.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:f6ac4ef4d82dff54670227a69c67782ae0b811b5cf6b17954f1e8f7502fc0d1d"},
@@ -2928,7 +2927,9 @@ numpy = ">=1.0.0,<2.0.0"
 openpyxl = "*"
 pandas = "*"
 pylatexenc = "*"
+pymupdf = {version = ">=1.24.0", optional = true}
 pypandoc = "*"
+python-docx = {version = ">=1.1.0", optional = true}
 python-frontmatter = "*"
 python-liquid = "*"
 pyyaml = "*"
@@ -2936,11 +2937,14 @@ pyzmq = "^25.1.2"
 wget = "*"
 XlsxWriter = "*"
 
+[package.extras]
+documents = ["pymupdf (>=1.24.0)", "python-docx (>=1.1.0)"]
+
 [package.source]
 type = "git"
 url = "https://github.com/lawrennd/lynguine.git"
 reference = "main"
-resolved_reference = "a87fb3518987e584326054025d3025630d710205"
+resolved_reference = "05685e6eca03fa728b9b318dc498a2f977396e51"
 
 [[package]]
 name = "markdown"
@@ -4545,6 +4549,27 @@ files = [
 ]
 
 [[package]]
+name = "pymupdf"
+version = "1.28.2"
+description = "A high performance Python library for data extraction, analysis, conversion & manipulation of PDF (and other) documents."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "pymupdf-1.28.2-cp310-abi3-macosx_10_15_x86_64.whl", hash = "sha256:5fc315b425ff1f7afdd1ea2f348205cb19b806767daae7ce4d64115799c2bae1"},
+    {file = "pymupdf-1.28.2-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:7113846b35dbf0a033f088e4f4fb543dabeb4b0b12c112966a1ca1ee2d5eacae"},
+    {file = "pymupdf-1.28.2-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:3050a233dde1211efe89ada74e2add6238436434159f46097a1423aad2842545"},
+    {file = "pymupdf-1.28.2-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:397d6715c1f0df7548a92d0afd8ce370fc48fa47aeefac16be2bc04a16a8227f"},
+    {file = "pymupdf-1.28.2-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:f89fb2d86d07d643a269f17a093105057e20c79c1d06c103b53600067b6d2b01"},
+    {file = "pymupdf-1.28.2-cp310-abi3-win32.whl", hash = "sha256:530ef543a3885b3b81cb72a854e7c5a625a9233201221132bb6c31698c6a2bdb"},
+    {file = "pymupdf-1.28.2-cp310-abi3-win_amd64.whl", hash = "sha256:ebd244918798502d7b4504c90410d1711a4d7675a32584ca30f1bab419ecbffe"},
+    {file = "pymupdf-1.28.2-cp310-abi3-win_arm64.whl", hash = "sha256:ffe91a24edc75c80da2a4b62f50fc0f54632d34fc8fe4cbc48e5c7ff07cf8fb4"},
+    {file = "pymupdf-1.28.2-cp313-abi3-pyemscripten_2025_0_wasm32.whl", hash = "sha256:2e1b574c0fd2cb238021033fd3c0f9c4388816638df064e4bfb56d9d81736dc8"},
+    {file = "pymupdf-1.28.2-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:fd481ed48bef56305c41fb7e05a055c03345c899c7b101dad086258b438f8168"},
+    {file = "pymupdf-1.28.2.tar.gz", hash = "sha256:5e0be7908a715aa20333caddd73f1d6f01e4cd0c26e869fa2dd0b7f344da2249"},
+]
+
+[[package]]
 name = "pypandoc"
 version = "1.17"
 description = "Thin wrapper for pandoc."
@@ -4658,6 +4683,22 @@ files = [
 
 [package.dependencies]
 six = ">=1.5"
+
+[[package]]
+name = "python-docx"
+version = "1.2.0"
+description = "Create, read, and update Microsoft Word .docx files."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "python_docx-1.2.0-py3-none-any.whl", hash = "sha256:3fd478f3250fbbbfd3b94fe1e985955737c145627498896a8a6bf81f4baf66c7"},
+    {file = "python_docx-1.2.0.tar.gz", hash = "sha256:7bc9d7b7d8a69c9c02ca09216118c86552704edc23bac179283f2e38f86220ce"},
+]
+
+[package.dependencies]
+lxml = ">=3.1.0"
+typing_extensions = ">=4.9.0"
 
 [[package]]
 name = "python-dotenv"
@@ -7290,4 +7331,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "7eb42e25e7755142097f759b85efa74cea095b8b866dd3b1659bb7f58ddef463"
+content-hash = "f293949bebceb813ea1574cd87a973668dbe2ec47b1b6b7ef62e96dd1b27dd8a"

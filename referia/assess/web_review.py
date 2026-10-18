@@ -187,9 +187,18 @@ class WebReviewer:
         finally:
             os.chdir(_orig)
 
+        # Jupyter Reviewer registers these while building widgets; web must
+        # do the same so soft-fill / extract runs on index change (CoE
+        # 2026-10-18_web-reviewer-skips-precompute-soft-fill).
+        self._register_review_computes()
+        self._ensure_compute_target_columns()
+
         indices = list(self._data.index)
         if indices:
-            self._data.set_index(indices[0])
+            # set_index triggers compute_pre; keep cwd on the review dir so
+            # relative roots (e.g. extract_form_fields root: ../files) resolve.
+            self.set_index(indices[0])
+            self._run_interface_compute()
 
         # Session filter/sort state for display.layout: inline_list (CIP-0010).
         # Seed from ``display.filter_defaults`` when present (Clear restores it).
@@ -240,8 +249,19 @@ class WebReviewer:
 
         Accepts typed index labels or their string forms (for example
         ``"2"`` when the allocation index uses integer ``2``).
+
+        Chdirs to the review directory while ``compute_pre`` / ``compute_post``
+        run so relative paths in compute specs resolve like Jupyter.
         """
-        self._data.set_index(self._resolve_index_label(index))
+        import os
+
+        label = self._resolve_index_label(index)
+        _orig = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            self._data.set_index(label)
+        finally:
+            os.chdir(_orig)
 
     # ------------------------------------------------------------------
     # Display layout (CIP-0010)
@@ -738,11 +758,15 @@ class WebReviewer:
         finally:
             os.chdir(_orig)
 
+        self._register_review_computes()
+        self._ensure_compute_target_columns()
+
         indices = list(self._data.index)
         if current_index is not None and current_index in indices:
-            self._data.set_index(current_index)
+            self.set_index(current_index)
         elif indices:
-            self._data.set_index(indices[0])
+            self.set_index(indices[0])
+        self._run_interface_compute()
 
     # ------------------------------------------------------------------
     # Widget spec extraction
@@ -920,6 +944,93 @@ class WebReviewer:
     def _review_raw(self) -> list:
         review = self._interface.get("review", []) or []
         return review if isinstance(review, list) else [review]
+
+    def _register_review_computes(self) -> None:
+        """Copy ``type: precompute`` / ``postcompute`` specs onto the data object.
+
+        Mirrors Jupyter :func:`~referia.assess.review.extract_review` so
+        soft-fill and PDF extract run when the active index changes.
+        """
+        self._data._precompute = []
+        self._data._postcompute = []
+        self._collect_review_computes(self._review_raw())
+
+    def _collect_review_computes(self, entries: list) -> None:
+        for entry in entries or []:
+            if not isinstance(entry, dict):
+                continue
+            entry_type = entry.get("type")
+            if entry_type == "precompute":
+                specs = entry.get("specifications", [])
+                if isinstance(specs, list):
+                    self._data._precompute.extend(specs)
+                elif specs:
+                    self._data._precompute.append(specs)
+            elif entry_type == "postcompute":
+                specs = entry.get("specifications", [])
+                if isinstance(specs, list):
+                    self._data._postcompute.extend(specs)
+                elif specs:
+                    self._data._postcompute.append(specs)
+            elif entry_type in _CLUSTER_TYPES:
+                sub = entry.get(
+                    "entries",
+                    entry.get("children", entry.get("specifications", [])),
+                )
+                if isinstance(sub, list):
+                    self._collect_review_computes(sub)
+
+    def _compute_field_names(self, specs: list) -> list[str]:
+        names: list[str] = []
+        for spec in specs or []:
+            if not isinstance(spec, dict):
+                continue
+            fields = spec.get("field")
+            if fields is None:
+                continue
+            if isinstance(fields, list):
+                names.extend(str(f) for f in fields if f and f != "_")
+            elif fields and fields != "_":
+                names.append(str(fields))
+        return names
+
+    def _ensure_compute_target_columns(self) -> None:
+        """Create missing cache columns for precompute / top-level compute fields.
+
+        ``set_value_column`` refuses unknown columns; soft-fill into a new
+        object field (e.g. ``applicant`` from ``extract_form_fields``) needs
+        the column to exist first.
+        """
+        specs: list = list(getattr(self._data, "_precompute", []) or [])
+        specs.extend(getattr(self._data, "_postcompute", []) or [])
+        if "compute" in self._interface:
+            top = self._interface["compute"]
+            if isinstance(top, list):
+                specs.extend(top)
+            elif isinstance(top, dict):
+                specs.append(top)
+
+        for col in self._compute_field_names(specs):
+            if col in self._data.columns:
+                continue
+            # Prefer __setitem__ (cache path). referia.add_column requires
+            # series/scores and fails when only input/output are present.
+            self._data[col] = None
+
+    def _run_interface_compute(self) -> None:
+        """Run top-level ``compute:`` for the current index (cwd = review dir)."""
+        import os
+
+        if "compute" not in self._interface:
+            return
+        _orig = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            self._data._compute.run(
+                self._data, {"compute": self._interface["compute"]}
+            )
+        finally:
+            os.chdir(_orig)
 
     def _interface_section(self, key: str) -> list:
         try:

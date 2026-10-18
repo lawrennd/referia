@@ -507,6 +507,43 @@ class TestGetWidgetSpecs:
         assert len(result) == 1
         assert result[0]["field"] == "val"
 
+    def test_register_review_computes_copies_precompute_specs(self):
+        """CoE 2026-10-18: precompute must be registered, not only skipped as widgets."""
+        specs = [
+            {"field": "email", "function": "render_liquid", "args": {"template": "x"}},
+            {"field": "applicant", "function": "extract_form_fields"},
+        ]
+        precompute = {"type": "precompute", "specifications": specs}
+        reviewer, data, _ = _build_reviewer(review=[precompute])
+        data._precompute = []
+        data._postcompute = []
+        reviewer._register_review_computes()
+        assert data._precompute == specs
+
+    def test_set_index_chdirs_to_review_directory(self, tmp_path, monkeypatch):
+        """compute_pre must see config-relative paths (serve cwd ≠ review dir)."""
+        import os
+
+        review_dir = tmp_path / "review"
+        review_dir.mkdir()
+        serve_cwd = tmp_path / "serve"
+        serve_cwd.mkdir()
+        monkeypatch.chdir(serve_cwd)
+
+        seen = {}
+
+        def _set_index(label):
+            seen["cwd"] = os.getcwd()
+            seen["label"] = label
+
+        reviewer, data, _ = _build_reviewer(index_vals=["r0", "r1"])
+        reviewer._directory = str(review_dir.resolve())
+        data.set_index.side_effect = _set_index
+        reviewer.set_index("r1")
+        assert Path(seen["cwd"]).resolve() == review_dir.resolve()
+        assert seen["label"] == "r1"
+        assert Path(os.getcwd()).resolve() == serve_cwd.resolve()
+
     def test_non_list_viewer_wrapped(self):
         viewer = {"type": "Markdown", "display": "text"}
         reviewer, _, _ = _build_reviewer(viewer=viewer)
@@ -515,6 +552,218 @@ class TestGetWidgetSpecs:
         )
         result = reviewer.get_widget_specs()
         assert result[0]["type"] == "Markdown"
+
+
+# ---------------------------------------------------------------------------
+# Tests: review precompute / postcompute registration (CoE 2026-10-18)
+# ---------------------------------------------------------------------------
+
+
+class TestReviewComputeRegistration:
+    def test_register_postcompute_and_single_spec(self):
+        """postcompute list + non-list specification both land on the data object."""
+        post_list = [{"field": "summary", "function": "render_liquid"}]
+        post_one = {"field": "flag", "function": "identity"}
+        pre_one = {"field": "email", "function": "render_liquid"}
+        review = [
+            "skip-me",  # non-dict ignored
+            {"type": "precompute", "specifications": pre_one},
+            {"type": "postcompute", "specifications": post_list},
+            {"type": "postcompute", "specifications": post_one},
+        ]
+        reviewer, data, _ = _build_reviewer(review=review)
+        reviewer._register_review_computes()
+        assert data._precompute == [pre_one]
+        assert data._postcompute == post_list + [post_one]
+
+    def test_collect_nested_precompute_under_group(self):
+        """precompute nested under cluster types must still be registered."""
+        nested_specs = [{"field": "applicant", "function": "extract_form_fields"}]
+        review = [
+            {
+                "type": "group",
+                "children": [
+                    {"type": "precompute", "specifications": nested_specs},
+                    {"type": "Text", "field": "notes"},
+                ],
+            }
+        ]
+        reviewer, data, _ = _build_reviewer(review=review)
+        reviewer._register_review_computes()
+        assert data._precompute == nested_specs
+
+    def test_compute_field_names_filters_placeholders(self):
+        reviewer, _, _ = _build_reviewer()
+        names = reviewer._compute_field_names(
+            [
+                "not-a-dict",
+                {"function": "noop"},  # no field
+                {"field": "_"},
+                {"field": ["email", "_", "", "name"]},
+                {"field": "solo"},
+            ]
+        )
+        assert names == ["email", "name", "solo"]
+
+    def test_ensure_compute_target_columns_creates_missing(self):
+        """Missing soft-fill targets are created via cache __setitem__."""
+        specs = [
+            {"field": "applicant", "function": "extract_form_fields"},
+            {"field": "email", "function": "render_liquid"},
+        ]
+        reviewer, data, _ = _build_reviewer(
+            review=[{"type": "precompute", "specifications": specs}],
+            col_vals={"email": "already@example.com"},
+        )
+        # Real list so membership checks work; MagicMock columns is a list above.
+        data.columns = ["email"]
+        assigned = {}
+
+        def _setitem(key, value):
+            assigned[key] = value
+            if key not in data.columns:
+                data.columns = list(data.columns) + [key]
+
+        data.__setitem__.side_effect = _setitem
+        data._precompute = specs
+        data._postcompute = []
+        reviewer._ensure_compute_target_columns()
+        assert "applicant" in assigned
+        assert assigned["applicant"] is None
+        assert "email" not in assigned  # already present
+
+    def test_ensure_includes_top_level_compute_list_and_dict(self):
+        reviewer, data, _ = _build_reviewer(
+            extra={
+                "compute": [
+                    {"field": "from_list", "function": "render_liquid"},
+                ]
+            }
+        )
+        data.columns = []
+        assigned = {}
+        data.__setitem__.side_effect = lambda k, v: assigned.__setitem__(k, v)
+        data._precompute = []
+        data._postcompute = []
+        reviewer._ensure_compute_target_columns()
+        assert "from_list" in assigned
+
+        # dict form of top-level compute
+        iface = _make_interface(extra={"compute": {"field": "from_dict", "function": "noop"}})
+        reviewer._interface = iface
+        assigned.clear()
+        reviewer._ensure_compute_target_columns()
+        assert "from_dict" in assigned
+
+    def test_run_interface_compute_chdirs_and_delegates(self, tmp_path, monkeypatch):
+        import os
+
+        review_dir = tmp_path / "review"
+        review_dir.mkdir()
+        other = tmp_path / "other"
+        other.mkdir()
+        monkeypatch.chdir(other)
+
+        seen = {}
+        reviewer, data, _ = _build_reviewer(
+            extra={"compute": [{"field": "x", "function": "noop"}]}
+        )
+        reviewer._directory = str(review_dir.resolve())
+        compute = MagicMock()
+
+        def _run(df, cfg):
+            seen["cwd"] = os.getcwd()
+            seen["cfg"] = cfg
+
+        compute.run.side_effect = _run
+        data._compute = compute
+        reviewer._run_interface_compute()
+        assert Path(seen["cwd"]).resolve() == review_dir.resolve()
+        assert seen["cfg"] == {"compute": [{"field": "x", "function": "noop"}]}
+        assert Path(os.getcwd()).resolve() == other.resolve()
+
+    def test_run_interface_compute_noop_without_compute(self):
+        reviewer, data, _ = _build_reviewer()
+        data._compute = MagicMock()
+        reviewer._run_interface_compute()
+        data._compute.run.assert_not_called()
+
+    def test_load_flows_reregisters_and_runs_compute(self, tmp_path, monkeypatch):
+        """reload path must re-register precompute and run top-level compute."""
+        import os
+
+        review_dir = tmp_path / "review"
+        review_dir.mkdir()
+        monkeypatch.chdir(tmp_path)
+
+        specs = [{"field": "applicant", "function": "extract_form_fields"}]
+        reviewer, data, _ = _build_reviewer(
+            review=[{"type": "precompute", "specifications": specs}],
+            extra={"compute": [{"field": "x", "function": "noop"}]},
+            index_vals=["r0", "r1"],
+        )
+        reviewer._directory = str(review_dir.resolve())
+        reviewer.set_index("r1")  # side_effect-backed get_index tracks this
+
+        mock_new = MagicMock()
+        mock_new.index = ["r0", "r1"]
+        mock_new.columns = []
+        mock_new._compute = MagicMock()
+        assigned = {}
+        mock_new.__setitem__.side_effect = lambda k, v: assigned.__setitem__(k, v)
+
+        with patch(
+            "referia.assess.data.CustomDataFrame.from_flow",
+            return_value=mock_new,
+        ):
+            reviewer.load_flows(reload=True)
+
+        assert mock_new._precompute == specs
+        assert "applicant" in assigned
+        mock_new.set_index.assert_called_with("r1")
+        mock_new._compute.run.assert_called_once()
+        assert Path(os.getcwd()).resolve() == tmp_path.resolve()
+
+    def test_init_registers_computes_and_runs_interface_compute(self, tmp_path):
+        """Real __init__ must register review computes before first set_index."""
+        from referia.assess.web_review import WebReviewer
+
+        cfg = tmp_path / "_referia.yml"
+        cfg.write_text(
+            "referia_config_version: 1\n"
+            "title: compute-init\n"
+            "strict_columns: false\n"
+            "allocation:\n"
+            "  type: fake\n"
+            "  index: Name\n"
+            "  nrows: 1\n"
+            "  cols:\n"
+            "    - Name\n"
+        )
+        specs = [{"field": "applicant", "function": "extract_form_fields"}]
+        iface = _make_interface(
+            review=[{"type": "precompute", "specifications": specs}],
+            extra={"compute": [{"field": "ready", "function": "noop"}]},
+        )
+        mock_data, _ = _make_data(index_vals=["a"])
+        mock_data.columns = []
+        mock_data._compute = MagicMock()
+        assigned = {}
+        mock_data.__setitem__.side_effect = lambda k, v: assigned.__setitem__(k, v)
+
+        with patch(
+            "referia.config.interface.Interface.from_file",
+            return_value=iface,
+        ), patch(
+            "referia.assess.data.CustomDataFrame.from_flow",
+            return_value=mock_data,
+        ):
+            WebReviewer("_referia.yml", str(tmp_path))
+
+        assert mock_data._precompute == specs
+        assert "applicant" in assigned
+        mock_data.set_index.assert_called()
+        mock_data._compute.run.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
