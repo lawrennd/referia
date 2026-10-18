@@ -3,7 +3,7 @@ id: "2026-10-18_web-reviewer-skips-precompute-soft-fill"
 title: "WebReviewer never registers review precompute; soft-fill/PDF extract silent on web"
 class: 1
 owner: "Neil D. Lawrence"
-status: "Analysed"
+status: "Closed"
 created: "2026-10-18"
 last_updated: "2026-10-18"
 incident_date: "2026-10-18"
@@ -208,8 +208,13 @@ soft-fill) hid the gaps until an operator noticed missing fields.
 
 ### Validation tripwires
 
-- [ ] WebReviewer test: `type: precompute` soft-fill populates a field after init when
-      serve cwd ≠ config directory — owner: Neil D. Lawrence — implement with the backlog task
+- [x] WebReviewer tests: `test_register_review_computes_copies_precompute_specs`,
+      `test_set_index_chdirs_to_review_directory` (serve cwd ≠ config dir) —
+      owner: Neil D. Lawrence — shipped in referia PR #27
+- [x] Lynguine regression: `test_at_setitem_routes_dict_to_cache_when_output_index_empty`
+      — shipped in lynguine PR #42
+- [x] Operator validation: Panel MPhil/PhD applications reviewed with soft-fill
+      working after merge
 
 ## Checklist
 
@@ -223,4 +228,4 @@ soft-fill) hid the gaps until an operator noticed missing fields.
 - [x] Missing/incorrect traceability artifacts identified
 - [x] Follow-up outputs listed with owners (and created)
 - [x] CoE status updated to Analysed once outputs are created
-- [ ] CoE status updated to Closed once outputs are implemented
+- [x] CoE status updated to Closed once outputs are implemented

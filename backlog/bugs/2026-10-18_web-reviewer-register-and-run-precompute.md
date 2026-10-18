@@ -1,7 +1,7 @@
 ---
 id: "2026-10-18_web-reviewer-register-and-run-precompute"
 title: "WebReviewer must register review precompute/postcompute and run them with config-dir cwd"
-status: "In Progress"
+status: "Completed"
 priority: "High"
 created: "2026-10-18"
 last_updated: "2026-10-18"
@@ -118,5 +118,9 @@ starts.
   index.
 - Lynguine fix required: `_AtAccessor` was writing dicts into empty `output`
   (`backlog/bugs/2026-10-18_at-setitem-empty-output-steals-cache` in lynguine).
-- REPL smoke: Candidate Email soft-fills from `10947271.pdf`. Live serve URL
-  check + git commits still pending.
+- REPL smoke: Candidate Email soft-fills from `10947271.pdf`.
+
+### 2026-10-18 (closed)
+
+Merged: referia PR #27, lynguine PR #42. Operator validated by reviewing Panel
+applications with soft-fill. CoE closed. Task Completed.
