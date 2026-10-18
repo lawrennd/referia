@@ -499,6 +499,16 @@ class TestRenderViewer:
         assert html.count("target=") == 1
         assert 'target="_self"' in html
 
+    def test_existing_rel_kept_when_adding_target(self):
+        """Links with rel but no target get target=_blank without a second rel."""
+        html = render_viewer(
+            {"type": "HTML"},
+            '<a href="https://example.com" rel="nofollow">site</a>',
+        )
+        assert 'target="_blank"' in html
+        assert html.count("rel=") == 1
+        assert 'rel="nofollow"' in html
+
 
 # ---------------------------------------------------------------------------
 # render_form
@@ -854,6 +864,30 @@ class TestInlineListRecordIndex:
 
         bar_ver = render_filter_bar([], [], {"_group": "version"})
         assert 'value="version" selected' in bar_ver
+
+    def test_boolean_filter_invalid_value_falls_back_to_any(self):
+        """Unknown boolean filter state must select Any, not a blank option."""
+        from referia.web.render import render_filter_bar
+
+        bar = render_filter_bar(
+            [{"field": "complete", "type": "boolean", "label": "Done"}],
+            [],
+            {"complete": "Maybe"},
+        )
+        # Invalid values coerce to any (see render_filter_bar boolean branch).
+        assert 'value="any" selected' in bar
+        assert 'value="true" selected' not in bar
+        assert 'value="false" selected' not in bar
+
+    def test_boolean_filter_title_case_any_selected(self):
+        from referia.web.render import render_filter_bar
+
+        bar = render_filter_bar(
+            [{"field": "complete", "type": "boolean", "label": "Done"}],
+            [],
+            {"complete": "Any"},
+        )
+        assert 'value="any" selected' in bar
 
 
 class TestInlineListing:
