@@ -772,17 +772,50 @@ class TestReviewComputeRegistration:
 
 
 class TestAffectedWidgets:
-    def test_returns_all_field_columns(self):
+    def test_independent_fields_not_affected(self):
+        """Blur refresh must not rebuild unrelated fields (focus preserve)."""
         specs = [
             {"type": "Text", "field": "name"},
             {"type": "IntSlider", "field": "score"},
             {"type": "SaveButton"},  # no field
         ]
         reviewer, _, _ = _build_reviewer(review=specs)
-        affected = reviewer.affected_widgets("name")
-        assert "name" in affected
-        assert "score" in affected
-        assert len(affected) == 2
+        assert reviewer.affected_widgets("name") == set()
+
+    def test_visible_if_dependent_is_affected(self):
+        specs = [
+            {"type": "Checkbox", "field": "Interview"},
+            {
+                "type": "Textarea",
+                "field": "Email Comment",
+                "visible_if": "Interview",
+            },
+        ]
+        reviewer, _, _ = _build_reviewer(review=specs)
+        assert reviewer.affected_widgets("Interview") == {"Email Comment"}
+
+    def test_visible_if_dict_form_is_affected(self):
+        specs = [
+            {"type": "Text", "field": "Status"},
+            {
+                "type": "Textarea",
+                "field": "Notes",
+                "visible_if": {"field": "Status", "equals": "yes"},
+            },
+        ]
+        reviewer, _, _ = _build_reviewer(review=specs)
+        assert reviewer.affected_widgets("Status") == {"Notes"}
+
+    def test_combinator_widget_field_is_affected(self):
+        specs = [
+            {"type": "IntSlider", "field": "score"},
+            {"type": "Text", "field": "total"},
+        ]
+        reviewer, _, _ = _build_reviewer(
+            review=specs,
+            combinator=[{"field": "total", "liquid": "{{score}}"}],
+        )
+        assert reviewer.affected_widgets("score") == {"total"}
 
     def test_affected_widgets_ignores_button_types(self):
         specs = [
@@ -790,7 +823,7 @@ class TestAffectedWidgets:
             {"type": "Textarea", "field": "text"},
         ]
         reviewer, _, _ = _build_reviewer(review=specs)
-        assert reviewer.affected_widgets("text") == {"text"}
+        assert reviewer.affected_widgets("text") == set()
 
 
 # ---------------------------------------------------------------------------

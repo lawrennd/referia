@@ -114,6 +114,9 @@ def _htmx_field_attrs(column: str, trigger: str = "change") -> str:
 
     When a record index is active (inline_list per-row forms), includes
     ``hx-vals`` so ``/field/{column}`` can update the correct tall row.
+
+    Uses ``focus-scroll:false`` so swapping into ``#status-bar`` does not
+    scroll/jump focus toward the green toast (CoE 2026-10-18).
     """
     col = _escape(column)
     col_url = _url_path_segment(column)
@@ -122,7 +125,7 @@ def _htmx_field_attrs(column: str, trigger: str = "change") -> str:
         f'hx-post="/field/{col_url}" '
         f'hx-trigger="{trigger}" '
         f'hx-target="#status-bar" '
-        f'hx-swap="innerHTML"'
+        f'hx-swap="innerHTML focus-scroll:false"'
     )
     record_index = _record_index_ctx.get()
     if record_index is not None:
@@ -482,7 +485,8 @@ def _render_save_button(spec: dict, value: Any) -> str:
     # not need to re-collect form values via hx-include.
     return (
         f'<button class="widget-button save-button" '
-        f'hx-post="/save" hx-target="#status-bar" hx-swap="innerHTML">'
+        f'hx-post="/save" hx-target="#status-bar" '
+        f'hx-swap="innerHTML focus-scroll:false">'
         f"{_escape(label)}</button>"
     )
 
@@ -492,7 +496,8 @@ def _render_reload_button(spec: dict, value: Any) -> str:
     label = args.get("description", "Reload")
     return (
         f'<button class="widget-button reload-button" '
-        f'hx-post="/reload" hx-target="#status-bar" hx-swap="innerHTML">'
+        f'hx-post="/reload" hx-target="#status-bar" '
+        f'hx-swap="innerHTML focus-scroll:false">'
         f"{_escape(label)}</button>"
     )
 
@@ -526,7 +531,8 @@ def _render_populate_button(spec: dict, value: Any) -> str:
     indicator = f"widget-{_widget_dom_id(target)}"
     return (
         f'<button class="widget-button populate-button" '
-        f'hx-post="/populate/{col_url}" hx-target="#status-bar" hx-swap="innerHTML" '
+        f'hx-post="/populate/{col_url}" hx-target="#status-bar" '
+        f'hx-swap="innerHTML focus-scroll:false" '
         f'hx-indicator="#{indicator}" hx-disabled-elt="this">'
         f"{_escape(label)}</button>"
     )
@@ -1111,7 +1117,7 @@ def render_document_actions(
         parts.append(
             f'<button type="button" class="widget-button document-button" '
             f'hx-post="{_escape(action)}" hx-target="#status-bar" '
-            f'hx-swap="innerHTML" hx-disabled-elt="this">'
+            f'hx-swap="innerHTML focus-scroll:false" hx-disabled-elt="this">'
             f"{label}</button>"
         )
     parts.append("</div>")
@@ -1177,7 +1183,7 @@ def render_document_panel(
             parts.append(
                 f'<button type="button" class="widget-button edit-pdf-button" '
                 f'hx-post="/edit-pdf/{n}" hx-target="#status-bar" '
-                f'hx-swap="innerHTML" hx-disabled-elt="this">'
+                f'hx-swap="innerHTML focus-scroll:false" hx-disabled-elt="this">'
                 f"Prepare / download PDF</button>"
             )
         parts.append("</details>")
