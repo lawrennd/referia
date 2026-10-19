@@ -1,4 +1,44 @@
+# =============================================================================
+# Subject grain — local U_q Assess
+# =============================================================================
+#
+# Interactive soft MPPCA review: one Bishop–Tipping local U_q plane at a time.
+# The analyst focuses a topic, proposes a soft split of its mass, then Confirm
+# (seal) or Undo (restore). EM knobs and the topic-naming prompt live in
+# collapsible review sections.
+#
+# Typical loop
+# ------------
+#   1. Open review → precompute titles the k=1 seed if label_model ≠ stub.
+#   2. Focus topic dropdown swaps which local plane the plot shows.
+#   3. Click a phrase → pins selected_phrase in review (read-only).
+#   4. Propose split → grows the catalogue; pending overlay until Confirm/Undo.
+#   5. Confirm seals per-topic planes; Undo restores the pre-Propose snapshot.
+#
+# Controls vs catalogue (do not conflate)
+# --------------------------------------
+#   Controls (Propose / Name *read*; Confirm / Undo never rewrite):
+#     sigma2, sigma2_mode, em_accept, em_preview, label_prompt, label_model
+#   Catalogue / UI state (split + naming *write*):
+#     responsibilities, uq_by_topic, uq_spec, topic_keys, topic_labels,
+#     topic_parent, topic_tree, pending_proposal, split_undo, focus_topic
+#
+# Compute functions (registered in referia.assess.compute)
+# -------------------------------------------------------
+#   subject_grain_ensure_seed_names  — on load: name provisional Topic N seeds
+#   subject_grain_propose_split      — soft split + snapshot; may auto-name kids
+#   subject_grain_confirm_split      — seal overlay → per-topic planes
+#   subject_grain_undo_split         — restore catalogue from split_undo
+#   subject_grain_name_focus_topic   — LLM/stub title focus + provisional labels
+#
+# Data layout (see also README.md)
+# --------------------------------
+#   info/records.yml  — Access: phrases + embeddings (input)
+#   info/scores.yml   — Assess: focus / R / planes / controls (output)
+#
 # Soft MPPCA Assess: focus swaps the local U_q plane; Propose → Confirm / Undo.
+# =============================================================================
+
 referia_config_version: 2
 title: "Subject grain — local U_q (Assess)"
 description: >
@@ -8,14 +48,38 @@ description: >
 date: 2026-10-19
 
 display:
-  layout: side_by_side
+  layout: side_by_side   # viewer (plot + actions) | review (controls + notes)
 
+# -----------------------------------------------------------------------------
+# Access — phrase corpus and embeddings (committed seed; bake via build_records)
+# -----------------------------------------------------------------------------
 input:
   type: yaml
   index: Name
   filename: records.yml
   directory: ./info
 
+# -----------------------------------------------------------------------------
+# Assess — persisted review state. Columns below are what get written to scores.
+# -----------------------------------------------------------------------------
+# Field roles (quick map):
+#   focus_topic       — which topic's local plane is shown (viewer dropdown)
+#   selected_phrase   — phrase pinned by plot click (review Markdown)
+#   topic_keys        — live catalogue keys, e.g. ["T0"] then ["T0","T1",…]
+#   topic_labels      — key → human title (or provisional Topic N / «…»→unnamed)
+#   topic_parent      — living genealogy: key → parent *label* (not key);
+#                       remapped on Propose, restored on Undo
+#   topic_tree        — derived Markdown: soft-mass table + genealogy tree
+#   responsibilities  — soft mass matrix R (n_phrases × n_topics)
+#   uq_by_topic       — map topic_key → Plotly figure spec (local U_q plane)
+#   uq_spec           — currently displayed figure (often uq_by_topic[focus])
+#   sigma2 / mode     — PPCA noise control (fixed | profile)
+#   em_accept/preview — EM iteration budgets for accept vs preview paths
+#   label_prompt/model— topic-naming prompt (must keep <<PHRASES>>) and model
+#   pending_proposal  — non-null while a split awaits Confirm / Undo
+#   split_undo        — catalogue snapshot taken at Propose (for Undo)
+#   notes             — free-text analyst notes
+# -----------------------------------------------------------------------------
 output:
   type: yaml
   index: Name
@@ -41,7 +105,13 @@ output:
     - split_undo
     - notes
 
+# =============================================================================
+# Viewer (left pane) — plane, focus, and split actions
+# =============================================================================
 viewer:
+  # Intro copy + live topic list + pending-split banner.
+  # topic_parent entries whose parent label is no longer a live topic_labels
+  # value are suppressed (avoids ghost "← Topic 0" after a soft split).
   - liquid: |
       ## {{ Title }}
 
@@ -60,6 +130,10 @@ viewer:
       {{ pending_proposal.parent }} → k={{ pending_proposal.k_before }}→{{ pending_proposal.k_after }},
       focus={{ pending_proposal.focus }}. Confirm or Undo.</p>
       {% endif %}
+
+  # Owns which local U_q plane is shown. Options come from topic_keys;
+  # display text from topic_labels. Fallback options keep the widget valid
+  # before scores.yml exists.
   - type: Dropdown
     field: focus_topic
     args:
@@ -67,6 +141,15 @@ viewer:
       options_field: topic_keys
       options_labels_field: topic_labels
       options: ["T0"]
+
+  # Local U_q scatter for the focus topic.
+  # figure_source: resolve the Plotly JSON from uq_by_topic[focus_topic]
+  # (so changing Focus redraws without a separate compute).
+  # click_point: write selected_phrase only — Focus owns the plane; we do
+  # not mirror into selected_topic (that pattern is for multi-topic ink;
+  # see examples/topic_scatter_click). No responsibility_ink highlight:
+  # this panel is already one topic's local plane (ink greys soft-mass
+  # points wrongly on child topics).
   - type: PlotlyFigure
     field: uq_spec
     figure_source:
@@ -77,19 +160,28 @@ viewer:
       click_point:
         - set_field: selected_phrase
           from: customdata.phrase
-    # Focus topic (viewer dropdown) owns which plane is shown; phrase clicks
-    # only write selected_phrase. No selected_topic mirror — that field is for
-    # multi-topic scatter highlight (see examples/topic_scatter_click).
-    # No highlight ink: this panel is already one topic's local U_q plane.
-    # responsibility_ink was greying soft-mass points on T1 (and similar).
     size:
-      mode: container
-      observe: true
+      mode: container      # grow with the viewer pane (ignore layout.height)
+      observe: true        # ResizeObserver on splitter / pane changes
       aspect_ratio: 4/3
-  # Catalogue writes only — never sigma2 / em_* / label_* (those are controls).
+
+  # ---------------------------------------------------------------------------
+  # Split actions — catalogue writes only.
+  # Never list sigma2 / em_* / label_* in `field:` (those are controls).
+  # `field:` = columns this button's compute may write; `row_args` = inputs.
+  # ---------------------------------------------------------------------------
+
+  # subject_grain_propose_split
+  #   Reads:  embeddings, R, phrases, focus, sigma2, em_accept, labels/parent,
+  #           label_model, label_prompt
+  #   Writes: uq_spec (pending overlay), uq_by_topic, topic_keys, R, focus,
+  #           topic_labels (placeholders or LLM titles), topic_parent,
+  #           topic_tree, pending_proposal, split_undo (pre-Propose snapshot)
+  #   Side:   when label_model ≠ stub, names new children in the same click
+  #           via subject_grain_name_focus_topic (no separate Name step).
+  #   UI:     hidden while pending_proposal is set (Confirm/Undo own that state).
   - type: PopulateButton
     field: _propose_split
-    # Hide while a split is pending (Confirm / Undo own that state).
     visible_if:
       field: pending_proposal
       not: true
@@ -119,10 +211,16 @@ viewer:
           em_accept: em_accept
           topic_labels: topic_labels
           topic_parent: topic_parent
-          # Non-stub → Propose names children in the same click (no separate
-          # Name step required). stub keeps «Parent» → (unnamed t).
+          # Non-stub → Propose names children in the same click.
+          # stub keeps temporary «Parent» → (unnamed t) placeholders.
           label_model: label_model
           label_prompt: label_prompt
+
+  # subject_grain_confirm_split
+  #   Reads:  pending_proposal (incl. planes_after_accept baked at Propose)
+  #   Writes: uq_spec + uq_by_topic (per-topic planes); clears pending + undo
+  #   Note:   genealogy already lives in topic_parent from Propose — Confirm
+  #           does not re-touch labels / R / controls.
   - type: PopulateButton
     field: _confirm_split
     visible_if: pending_proposal
@@ -139,6 +237,12 @@ viewer:
         refresh: true
         row_args:
           pending_proposal: pending_proposal
+
+  # subject_grain_undo_split
+  #   Reads:  split_undo snapshot; live sigma2 (redraw planes at current σ²)
+  #   Writes: restores keys / R / focus / labels / parent / tree / planes;
+  #           clears pending_proposal and split_undo
+  #   Note:   never writes EM or label controls.
   - type: PopulateButton
     field: _undo_split
     visible_if: pending_proposal
@@ -165,9 +269,15 @@ viewer:
           phrases: phrases
           sigma2: sigma2
 
+# =============================================================================
+# Review (right pane) — seed naming, pin, EM controls, LLM naming, tree, notes
+# =============================================================================
 review:
-  # Name provisional seed labels (Topic 0 / T0) from cluster phrases on open
-  # when label_model is not stub. Idempotent once titled — no re-LLM.
+  # subject_grain_ensure_seed_names (runs once when the row loads)
+  #   If any topic_labels are still provisional (Topic N / (unnamed…)) and
+  #   label_model ≠ stub → LLM-title them from cluster phrases.
+  #   Already-named labels are left alone (idempotent; no re-LLM).
+  #   With stub / offline: no-op (keeps provisional titles).
   - type: precompute
     specifications:
       - function: subject_grain_ensure_seed_names
@@ -185,13 +295,16 @@ review:
           topic_keys: topic_keys
           label_prompt: label_prompt
           label_model: label_model
-  # Read-only pin from plot click (source=viewer OOB-refreshes this field).
+
+  # Read-only pin from plot click (viewer OOB-refreshes this field).
   - type: Markdown
     field: selected_phrase
     liquid: |
       **Selected phrase**
 
       {{ selected_phrase }}
+
+  # EM / PPCA knobs used by Propose (and Undo redraw). Confirm never touches these.
   - type: Section
     title: EM parameters
     entries:
@@ -207,21 +320,29 @@ review:
           min: 0.0001
           max: 2.0
           step: 0.01
+      # Max EM iterations when accepting a proposed local fit (Propose path).
       - type: BoundedIntText
         field: em_accept
         args:
           description: EM accept
           min: 1
           max: 50
+      # Optional lighter budget for preview / exploratory fits (reserved).
       - type: BoundedIntText
         field: em_preview
         args:
           description: EM preview
           min: 0
           max: 50
+
+  # Topic naming — prompt + model, plus an on-demand Name button.
+  # Propose already names children when label_model ≠ stub; use Name to
+  # re-title the focus topic and any remaining provisional labels.
   - type: Section
     title: LLM topic naming
     entries:
+      # Must keep the <<PHRASES>> placeholder — prepare_label substitutes
+      # exemplar phrases from the focus soft mass here.
       - type: Textarea
         field: label_prompt
         args:
@@ -235,13 +356,22 @@ review:
             description: ONE English sentence explaining what the phrases have in common.
             Phrases:
             <<PHRASES>>
+      # stub = offline placeholders; live models need OPENAI_API_KEY.
+      # Propose with stub never calls an LLM.
       - type: Dropdown
         field: label_model
         args:
           description: Label model (stub = offline; Propose never calls an LLM)
           options: ["gpt-4.1-mini", "gpt-4o-mini", "stub"]
-      # Re-name / name seed Topic N without splitting. Propose already names
-      # children when label_model is not stub.
+
+      # subject_grain_name_focus_topic
+      #   Reads:  phrases, R, focus, labels/parent/keys, prompt, model,
+      #           pending + planes (to relabel a pending overlay)
+      #   Writes: topic_labels, topic_parent (remap + prune seed ghosts),
+      #           topic_tree; may refresh uq_spec / uq_by_topic / pending
+      #           overlay titles when a split is still pending
+      #   When:   on-demand re-name; also invoked automatically from Propose
+      #           when label_model ≠ stub
       - type: PopulateButton
         field: _name_focus_topic
         args:
@@ -269,12 +399,16 @@ review:
               pending_proposal: pending_proposal
               uq_spec: uq_spec
               uq_by_topic: uq_by_topic
+
+  # Derived Markdown view (soft-association table + genealogy). Rewritten
+  # whenever topology, labels, or responsibilities change.
   - type: Markdown
     field: topic_tree
     liquid: |
       **Topics**
 
       {{ topic_tree }}
+
   - type: Textarea
     field: notes
     args:
