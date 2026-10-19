@@ -1746,6 +1746,204 @@ def interactive(function, **kwargs):
         newargs[key] = widget.widget
     ipyw.interactive(function, **newargs)
 
+
+class PlotlyFigureViewer(ReferiaWidget):
+    """Interactive Plotly figure in the Jupyter viewer pane (CIP-0011).
+
+    Uses ``ReferiaWidget`` (not stateful) because the shell is a ``VBox``
+    with no ``value`` trait; selection sync goes through review fields.
+    """
+
+    def __init__(self, **args):
+        self._viewer_spec = dict(args.pop("viewer_spec", {}) or {})
+        self._figure_widget = None
+        self._field_name = args.pop("field_name", None)
+        args.pop("column_name", None)
+        for key in ("on", "highlight", "field", "type", "description"):
+            args.pop(key, None)
+        args.setdefault("function", ipyw.VBox)
+        args.setdefault("children", [])
+        super().__init__(**args)
+        self.private = True
+        self.refresh()
+
+    @classmethod
+    def _default_widget(cls):
+        return ipyw.VBox
+
+    @property
+    def name(self):
+        return self._field_name
+
+    def refresh(self):
+        from referia.assess.viewer_bindings import (
+            apply_highlight,
+            field_updates_from_click,
+            highlight_binding,
+            parse_figure_spec,
+        )
+
+        parent = self._parent
+        spec = self._viewer_spec
+        field = spec.get("field")
+        raw = None
+        if parent is not None and field:
+            try:
+                parent.set_column(str(field))
+                raw = parent.get_value()
+            except Exception as exc:
+                log.debug(f"PlotlyFigureViewer field read failed: {exc}")
+        figure = parse_figure_spec(raw) or {
+            "data": [],
+            "layout": {"title": {"text": "No figure data"}},
+        }
+        hl = highlight_binding(spec)
+        selected = None
+        if hl and parent is not None:
+            try:
+                parent.set_column(hl["from_field"])
+                selected = parent.get_value()
+            except Exception:
+                selected = None
+            figure = apply_highlight(
+                figure, selected=selected, mode=hl.get("mode", "default")
+            ) or figure
+
+        try:
+            import plotly.graph_objects as go
+        except ImportError:
+            msg = (
+                "Plotly is not installed. Install plotly for Jupyter "
+                "interactive figures, or use the web reviewer."
+            )
+            self.widget.children = [ipyw.HTML(value=f"<em>{msg}</em>")]
+            self._figure_widget = None
+            return
+
+        fig = go.Figure(data=figure.get("data"), layout=figure.get("layout"))
+        fw = go.FigureWidget(fig)
+        self._figure_widget = fw
+
+        def _on_click(trace, points, selector):
+            if not points.point_inds:
+                return
+            idx = points.point_inds[0]
+            custom = None
+            if getattr(trace, "customdata", None) is not None:
+                try:
+                    custom = trace.customdata[idx]
+                except Exception:
+                    custom = trace.customdata
+            payload = {
+                "customdata": custom,
+                "pointNumber": idx,
+                "x": points.xs[0] if points.xs else None,
+                "y": points.ys[0] if points.ys else None,
+            }
+            updates = field_updates_from_click(spec, payload)
+            if parent is None:
+                return
+            for col, value in updates.items():
+                try:
+                    parent.set_column(col)
+                    parent.set_value(value)
+                except Exception as exc:
+                    log.error(f"Plotly click set_value({col}) failed: {exc}")
+            try:
+                parent._widgets.refresh()
+            except Exception as exc:
+                log.debug(f"Post-click refresh failed: {exc}")
+
+        for trace in fw.data:
+            try:
+                trace.on_click(_on_click)
+            except Exception as exc:
+                log.debug(f"Could not bind plotly on_click: {exc}")
+
+        self.widget.children = [fw]
+
+    def to_markdown(self):
+        return ""
+
+    def get_value(self):
+        return None
+
+    def set_value(self, value):
+        pass
+
+    def has_trait(self, name):
+        return False
+
+
+class StaticImageViewer(ReferiaWidget):
+    """Static image entry in the Jupyter viewer pane (CIP-0011)."""
+
+    def __init__(self, **args):
+        self._viewer_spec = dict(args.pop("viewer_spec", {}) or {})
+        self._field_name = args.pop("field_name", None)
+        args.pop("column_name", None)
+        for key in ("on", "highlight", "field", "type", "description"):
+            args.pop(key, None)
+        args.setdefault("function", ipyw.HTML)
+        args.setdefault("value", "")
+        super().__init__(**args)
+        self.private = True
+        self.refresh()
+
+    @classmethod
+    def _default_widget(cls):
+        return ipyw.HTML
+
+    @property
+    def name(self):
+        return self._field_name
+
+    def refresh(self):
+        spec = self._viewer_spec
+        parent = self._parent
+        src = ""
+        field = spec.get("field")
+        if parent is not None and field:
+            try:
+                parent.set_column(str(field))
+                val = parent.get_value()
+                src = "" if val is None else str(val)
+            except Exception as exc:
+                log.debug(f"StaticImageViewer field read failed: {exc}")
+        elif parent is not None and any(
+            k in spec for k in ("liquid", "display", "join", "tally")
+        ):
+            try:
+                src = parent._data.viewer_to_value(
+                    {k: spec[k] for k in ("liquid", "display", "join", "tally") if k in spec}
+                ) or ""
+            except Exception as exc:
+                log.debug(f"StaticImageViewer liquid failed: {exc}")
+        esc = str(src).replace('"', "&quot;")
+        self.widget.value = (
+            f'<img src="{esc}" alt="viewer image" style="max-width:100%;" />'
+            if src
+            else "<em>No image</em>"
+        )
+
+    def to_markdown(self):
+        return ""
+
+    def get_value(self):
+        try:
+            return self.widget.value
+        except Exception:
+            return None
+
+    def set_value(self, value):
+        try:
+            self.widget.value = value
+        except Exception:
+            pass
+
+    def has_trait(self, name):
+        return False
+
     
 populate_widgets(list_stateful_widgets)
 populate_element_widgets(list_stateful_widgets)

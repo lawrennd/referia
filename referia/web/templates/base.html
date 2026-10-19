@@ -27,6 +27,10 @@
       };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" id="MathJax-script" async crossorigin="anonymous"></script>
+    {% if needs_plotly %}
+    <!-- Plotly.js for interactive viewer figures (CIP-0011). TODO: vendor for offline. -->
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.35.2/dist/plotly.min.js" crossorigin="anonymous"></script>
+    {% endif %}
     <script>
       /* Root-server mode: CONFIG_PATH is the URL prefix for this config (e.g.
          "/theses/examined/introduction").  In single-config mode it is empty.
@@ -147,6 +151,92 @@
         var el = (evt.detail && evt.detail.elt) ? evt.detail.elt : document.body;
         typesetMath(el);
       });
+
+      /* Interactive Plotly viewers (CIP-0011): render specs and POST click
+         bindings to /field/{col} with source=viewer so review widgets refresh. */
+      (function () {
+        function parseJsonScript(root, cls) {
+          var el = root.querySelector("script." + cls);
+          if (!el) return null;
+          try { return JSON.parse(el.textContent || "null"); }
+          catch (e) { return null; }
+        }
+
+        function resolvePath(obj, path) {
+          if (!path) return undefined;
+          var parts = String(path).split(".");
+          var cur = obj;
+          for (var i = 0; i < parts.length; i++) {
+            if (cur == null) return undefined;
+            cur = cur[parts[i]];
+          }
+          return cur;
+        }
+
+        function postField(column, value) {
+          if (!column || typeof htmx === "undefined") return;
+          var vals = {};
+          vals[column] = value == null ? "" : value;
+          vals.source = "viewer";
+          htmx.ajax("POST", "/field/" + encodeURIComponent(column), {
+            values: vals,
+            target: "#status-bar",
+            swap: "innerHTML"
+          });
+        }
+
+        function bindPlot(container) {
+          if (!container || container.dataset.plotlyBound === "1") return;
+          if (typeof Plotly === "undefined") return;
+          var target = container.querySelector(".plotly-target");
+          var fig = parseJsonScript(container, "plotly-spec");
+          var bindings = parseJsonScript(container, "plotly-bindings") || [];
+          if (!target || !fig) return;
+          container.dataset.plotlyBound = "1";
+          Plotly.react(target, fig.data || [], fig.layout || {}, {responsive: true});
+          target.on("plotly_click", function (ev) {
+            if (!ev || !ev.points || !ev.points.length) return;
+            var pt = ev.points[0];
+            var payload = {
+              customdata: pt.customdata,
+              pointNumber: pt.pointNumber,
+              curveNumber: pt.curveNumber,
+              x: pt.x,
+              y: pt.y
+            };
+            for (var i = 0; i < bindings.length; i++) {
+              var action = bindings[i];
+              if (!action || !action.set_field) continue;
+              var val = resolvePath(payload, action.from);
+              if (val === undefined) continue;
+              if (typeof val === "object") {
+                try { val = JSON.stringify(val); } catch (e) { val = String(val); }
+              }
+              postField(action.set_field, val);
+            }
+          });
+        }
+
+        function initPlots(root) {
+          var scope = root || document;
+          var nodes = scope.querySelectorAll
+            ? scope.querySelectorAll(".viewer-plotly")
+            : [];
+          if (scope.classList && scope.classList.contains("viewer-plotly")) {
+            bindPlot(scope);
+          }
+          Array.prototype.forEach.call(nodes, bindPlot);
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+          initPlots(document);
+        });
+        document.addEventListener("htmx:afterSettle", function (evt) {
+          var el = (evt.detail && evt.detail.elt) ? evt.detail.elt : document;
+          initPlots(el);
+          initPlots(document);
+        });
+      })();
 
       /* Resizable document / review split.  Ratio stored in localStorage and
          reapplied after HTMX swaps recreate .two-col inside #review-panel. */

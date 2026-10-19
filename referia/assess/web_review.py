@@ -924,20 +924,39 @@ class WebReviewer:
                 continue
         return roots
 
-    def render_viewer_html(self, viewer_spec: dict) -> str:
+    def has_plotly_viewer(self) -> bool:
+        """True when any ``viewer:`` entry is a ``PlotlyFigure`` (CIP-0011)."""
+        from referia.assess.viewer_bindings import viewer_entry_type
+
+        return any(
+            viewer_entry_type(spec) == "PlotlyFigure"
+            for spec in self.get_viewer_specs()
+        )
+
+    def render_viewer_html(
+        self, viewer_spec: dict, *, viewer_index: int = 0
+    ) -> str:
         """Evaluate *viewer_spec* against the current record and return HTML.
 
-        Uses ``CustomDataFrame.view_to_value()`` to resolve Liquid / display
-        templates, then ``render_viewer()`` to produce the HTML string.
+        Liquid / Markdown entries use ``view_to_value()`` then ``render_viewer()``.
+        Interactive types (``PlotlyFigure``, ``StaticImage``) skip Liquid and
+        load structured field data (CIP-0011).
 
         Under ``display.layout: inline_list``, injects Liquid local ``rows``
         (filtered+sorted tall working set) so templates can
         ``{% for row in rows %}``.
 
         :param viewer_spec: A viewer spec dict (``liquid``, ``display``, etc.).
+        :param viewer_index: Position among viewer entries (stable DOM id).
         :return: Rendered HTML string (empty string on evaluation failure).
         """
+        from referia.assess.viewer_bindings import is_interactive_viewer_type
         from referia.web.render import render_viewer as _render_viewer_html
+
+        if is_interactive_viewer_type(viewer_spec):
+            return self._render_interactive_viewer_html(
+                viewer_spec, viewer_index=viewer_index
+            )
 
         local: dict[str, Any] = {}
         try:
@@ -954,7 +973,63 @@ class WebReviewer:
         except Exception as exc:
             log.debug("Could not evaluate viewer spec %r: %s", viewer_spec, exc)
             content = ""
-        return _render_viewer_html(viewer_spec, content)
+        return _render_viewer_html(
+            viewer_spec, content, viewer_index=viewer_index
+        )
+
+    def _render_interactive_viewer_html(
+        self, viewer_spec: dict, *, viewer_index: int = 0
+    ) -> str:
+        """Render PlotlyFigure / StaticImage from field (or liquid URL) data."""
+        from referia.assess.viewer_bindings import (
+            highlight_binding,
+            parse_figure_spec,
+            viewer_entry_type,
+        )
+        from referia.web.render import render_viewer as _render_viewer_html
+
+        vtype = viewer_entry_type(viewer_spec)
+        field = viewer_spec.get("field")
+        highlight_value = None
+        hl = highlight_binding(viewer_spec)
+        if hl:
+            try:
+                highlight_value = self.get_value(hl["from_field"])
+            except Exception:
+                highlight_value = None
+
+        if vtype == "PlotlyFigure":
+            raw = None
+            if field:
+                try:
+                    raw = self.get_value(str(field))
+                except Exception as exc:
+                    log.debug("PlotlyFigure field %r: %s", field, exc)
+            figure = parse_figure_spec(raw)
+            return _render_viewer_html(
+                viewer_spec,
+                "",
+                figure=figure,
+                highlight_value=highlight_value,
+                viewer_index=viewer_index,
+            )
+
+        # StaticImage: field value or liquid-evaluated URL/path
+        content = ""
+        if field:
+            try:
+                val = self.get_value(str(field))
+                content = "" if val is None else str(val)
+            except Exception as exc:
+                log.debug("StaticImage field %r: %s", field, exc)
+        elif any(k in viewer_spec for k in ("liquid", "display", "join", "tally")):
+            try:
+                content = self._data.view_to_value(viewer_spec) or ""
+            except Exception as exc:
+                log.debug("StaticImage liquid: %s", exc)
+        return _render_viewer_html(
+            viewer_spec, content, viewer_index=viewer_index
+        )
 
     def _viewer_raw(self) -> list:
         viewer = self._interface.get("viewer", []) or []

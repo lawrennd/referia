@@ -649,25 +649,96 @@ def render_widget(
         _record_index_ctx.reset(token)
 
 
-def render_viewer(view_spec: dict, content: str) -> str:
+def render_viewer(
+    view_spec: dict,
+    content: str = "",
+    *,
+    figure: dict | None = None,
+    highlight_value: Any = None,
+    viewer_index: int = 0,
+) -> str:
     """Render a pre-evaluated viewer entry to an HTML string.
 
     Liquid / display templates are resolved by ``WebReviewer`` before calling
-    this function; ``content`` is the resulting plain string.
+    this function for Markdown/HTML entries.  Interactive types
+    (``PlotlyFigure``, ``StaticImage``) receive structured ``figure`` / URL
+    content instead (CIP-0011).
 
     Args:
         view_spec: Viewer spec dict (keys: ``type``, optionally ``liquid``,
-            ``display``).
-        content: Pre-rendered string content to display.
+            ``display``, ``on``, ``highlight``, ``field``).
+        content: Pre-rendered string content (Markdown/HTML) or image URL.
+        figure: Plotly-like ``{data, layout}`` dict for ``PlotlyFigure``.
+        highlight_value: Current value of ``highlight.from_field`` (optional).
+        viewer_index: Stable index among ``viewer:`` entries (DOM id).
 
     Returns:
         HTML string for the viewer block.
     """
-    view_type = view_spec.get("type", "Markdown")
+    from referia.assess.viewer_bindings import (
+        click_point_actions,
+        highlight_binding,
+        viewer_entry_type,
+    )
+
+    view_type = viewer_entry_type(view_spec)
+    if view_type == "PlotlyFigure":
+        return _render_plotly_viewer(
+            view_spec,
+            figure=figure,
+            highlight_value=highlight_value,
+            viewer_index=viewer_index,
+            click_actions=click_point_actions(view_spec),
+            highlight=highlight_binding(view_spec),
+        )
+    if view_type == "StaticImage":
+        src = _escape(content or "")
+        return (
+            f'<div class="viewer viewer-image" id="viewer-image-{viewer_index}">'
+            f'<img src="{src}" alt="viewer image" loading="lazy" />'
+            f"</div>"
+        )
     if view_type in {"Markdown", "HTMLMath"}:
         rendered = _ensure_links_new_tab(markdown2html(content) if content else "")
         return f'<div class="viewer viewer-markdown">{rendered}</div>'
     return f'<div class="viewer viewer-html">{_ensure_links_new_tab(content)}</div>'
+
+
+def _render_plotly_viewer(
+    view_spec: dict,
+    *,
+    figure: dict | None,
+    highlight_value: Any,
+    viewer_index: int,
+    click_actions: list[dict[str, Any]],
+    highlight: dict[str, str] | None,
+) -> str:
+    """Emit a Plotly container with JSON spec and click-binding metadata."""
+    from referia.assess.viewer_bindings import apply_highlight
+
+    mode = (highlight or {}).get("mode", "default")
+    from_field = (highlight or {}).get("from_field", "")
+    fig = apply_highlight(figure, selected=highlight_value, mode=mode) if figure else None
+    if fig is None:
+        fig = {"data": [], "layout": {"title": {"text": "No figure data"}}}
+    fig_json = json.dumps(fig, default=str)
+    bindings_json = json.dumps(click_actions, default=str)
+    hl_attr = _escape(from_field) if from_field else ""
+    mode_attr = _escape(mode)
+    vid = f"viewer-plotly-{viewer_index}"
+    tid = f"plotly-target-{viewer_index}"
+    return (
+        f'<div class="viewer viewer-plotly" id="{vid}" '
+        f'data-viewer-index="{viewer_index}" '
+        f'data-highlight-field="{hl_attr}" '
+        f'data-highlight-mode="{mode_attr}">'
+        f'<div class="plotly-target" id="{tid}"></div>'
+        f'<script type="application/json" class="plotly-spec">'
+        f"{_html.escape(fig_json)}</script>"
+        f'<script type="application/json" class="plotly-bindings">'
+        f"{_html.escape(bindings_json)}</script>"
+        f"</div>"
+    )
 
 
 def render_form(

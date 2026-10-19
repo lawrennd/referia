@@ -1,7 +1,7 @@
 ---
 id: "000F"
 title: "Interactive viewer components can share context fields with review"
-status: "Proposed"
+status: "In Progress"
 priority: "High"
 created: "2026-10-19"
 last_updated: "2026-10-19"

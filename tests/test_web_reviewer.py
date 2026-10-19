@@ -1553,3 +1553,141 @@ class TestRowsAndFilters:
         assert "rows" in (captured.get("local") or {})
         assert captured["local"]["rows"][0]["title"] == "Alpha"
         assert "list" in html or "viewer" in html
+
+
+class TestInteractiveViewerHtml:
+    """CIP-0011: typed PlotlyFigure / StaticImage under viewer:."""
+
+    def test_has_plotly_viewer(self):
+        reviewer, _, _ = _build_reviewer(
+            viewer=[
+                {"type": "Markdown", "liquid": "x"},
+                {"type": "PlotlyFigure", "field": "fig"},
+            ]
+        )
+        assert reviewer.has_plotly_viewer() is True
+
+    def test_has_plotly_viewer_false_for_liquid_only(self):
+        reviewer, _, _ = _build_reviewer(
+            viewer=[{"type": "Markdown", "liquid": "x"}]
+        )
+        assert reviewer.has_plotly_viewer() is False
+
+    def test_render_plotly_figure_from_field(self):
+        fig = {
+            "data": [
+                {
+                    "type": "scatter",
+                    "x": [0, 1],
+                    "y": [0, 1],
+                    "customdata": [{"topic": "A"}, {"topic": "B"}],
+                }
+            ],
+            "layout": {},
+        }
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"topic_scatter_spec": fig, "selected_topic": "B"},
+            viewer=[
+                {
+                    "type": "PlotlyFigure",
+                    "field": "topic_scatter_spec",
+                    "on": {
+                        "click_point": [
+                            {"set_field": "selected_topic", "from": "customdata.topic"}
+                        ]
+                    },
+                    "highlight": {"from_field": "selected_topic"},
+                }
+            ],
+        )
+        storage[("a", "topic_scatter_spec")] = fig
+        storage[("a", "selected_topic")] = "B"
+        html = reviewer.render_viewer_html(
+            reviewer.get_viewer_specs()[0], viewer_index=0
+        )
+        assert 'class="viewer viewer-plotly"' in html
+        assert "plotly-spec" in html
+        assert "selected_topic" in html
+        # Liquid path must not be used for typed figures
+        reviewer._data.view_to_value.assert_not_called()
+
+    def test_render_plotly_figure_missing_field_still_emits_container(self):
+        reviewer, _, _ = _build_reviewer(
+            index_vals=["a"],
+            viewer=[{"type": "PlotlyFigure", "field": "missing_fig"}],
+        )
+        html = reviewer.render_viewer_html(
+            {"type": "PlotlyFigure", "field": "missing_fig"}, viewer_index=2
+        )
+        assert 'id="viewer-plotly-2"' in html
+        assert "No figure data" in html or "plotly-spec" in html
+
+    def test_render_static_image_from_field(self):
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"photo": "https://example.com/p.png"},
+            viewer=[{"type": "StaticImage", "field": "photo"}],
+        )
+        storage[("a", "photo")] = "https://example.com/p.png"
+        html = reviewer.render_viewer_html(
+            {"type": "StaticImage", "field": "photo"}, viewer_index=1
+        )
+        assert 'class="viewer viewer-image"' in html
+        assert "https://example.com/p.png" in html
+
+    def test_render_static_image_from_liquid(self):
+        reviewer, data, _ = _build_reviewer(
+            index_vals=["a"],
+            viewer=[{"type": "StaticImage", "liquid": "{{ photo }}"}],
+        )
+        data.view_to_value.return_value = "https://example.com/liq.png"
+        html = reviewer.render_viewer_html(
+            {"type": "StaticImage", "liquid": "{{ photo }}"}, viewer_index=0
+        )
+        assert "https://example.com/liq.png" in html
+        data.view_to_value.assert_called()
+
+    def test_plotly_field_and_highlight_errors_are_soft(self):
+        reviewer, _, _ = _build_reviewer(
+            index_vals=["a"],
+            viewer=[
+                {
+                    "type": "PlotlyFigure",
+                    "field": "fig",
+                    "highlight": {"from_field": "selected_topic"},
+                }
+            ],
+        )
+        reviewer.get_value = MagicMock(side_effect=RuntimeError("boom"))
+        html = reviewer.render_viewer_html(
+            {
+                "type": "PlotlyFigure",
+                "field": "fig",
+                "highlight": {"from_field": "selected_topic"},
+            },
+            viewer_index=0,
+        )
+        assert "viewer-plotly" in html
+
+    def test_static_image_liquid_error_is_soft(self):
+        reviewer, data, _ = _build_reviewer(
+            index_vals=["a"],
+            viewer=[{"type": "StaticImage", "liquid": "{{ photo }}"}],
+        )
+        data.view_to_value.side_effect = RuntimeError("liq fail")
+        html = reviewer.render_viewer_html(
+            {"type": "StaticImage", "liquid": "{{ photo }}"}, viewer_index=0
+        )
+        assert "viewer-image" in html or "No image" in html
+
+    def test_static_image_field_error_is_soft(self):
+        reviewer, _, _ = _build_reviewer(
+            index_vals=["a"],
+            viewer=[{"type": "StaticImage", "field": "photo"}],
+        )
+        reviewer.get_value = MagicMock(side_effect=RuntimeError("boom"))
+        html = reviewer.render_viewer_html(
+            {"type": "StaticImage", "field": "photo"}, viewer_index=0
+        )
+        assert "viewer-image" in html or "No image" in html

@@ -593,6 +593,21 @@ span.entry-title {
     margin-bottom: 0;
 }
 
+.viewer-plotly {
+    width: 100%;
+    min-height: 280px;
+}
+
+.viewer-plotly .plotly-target {
+    width: 100%;
+    min-height: 280px;
+}
+
+.viewer-image img {
+    max-width: 100%;
+    height: auto;
+}
+
 .viewer-markdown h1,
 .viewer-markdown h2,
 .viewer-markdown h3 {

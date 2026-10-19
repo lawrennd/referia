@@ -59,7 +59,8 @@ from ..util.widgets import (
     ElementIntSlider, ElementFloatSlider, ElementCheckbox, ElementRadioButtons,
     ElementText, ElementTextarea, ElementIntText, ElementCombobox, ElementDropdown,
     ElementLabel, ElementHTML, ElementHTMLMath, ElementDatePicker, ElementMarkdown,
-    ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText
+    ElementFlag, ElementSelect, ElementSelectMultiple, ElementBoundedFloatText,
+    PlotlyFigureViewer, StaticImageViewer,
 )
 
 from ..config import interface
@@ -675,20 +676,52 @@ class Reviewer(DisplaySystem):
         :param views: The views to be displayed.
         :type views: dict
         """
+        from referia.assess.viewer_bindings import viewer_entry_type
+
         widgets = WidgetCluster(name="viewer", parent=self._widgets, viewer=True)
         if type(views) is not list:
             views = [views]
 
         for count, view in enumerate(views):
             label = "_viewer_label" + str(count)
-            args = {
-                "description": " ",
-                "field_name": label,
-                "column_name": label,
-                **view,
-                "parent": self,
-            }
-            widgets.add(**{label: Markdown(**args)})
+            view_dict = view if isinstance(view, dict) else {"liquid": str(view)}
+            vtype = viewer_entry_type(view_dict)
+            if vtype == "PlotlyFigure":
+                widgets.add(
+                    **{
+                        label: PlotlyFigureViewer(
+                            description=" ",
+                            field_name=label,
+                            column_name=label,
+                            parent=self,
+                            viewer_spec=view_dict,
+                        )
+                    }
+                )
+            elif vtype == "StaticImage":
+                widgets.add(
+                    **{
+                        label: StaticImageViewer(
+                            description=" ",
+                            field_name=label,
+                            column_name=label,
+                            parent=self,
+                            viewer_spec=view_dict,
+                        )
+                    }
+                )
+            else:
+                args = {
+                    "description": " ",
+                    "field_name": label,
+                    "column_name": label,
+                    **view_dict,
+                    "parent": self,
+                }
+                # Interactive-only keys must not reach Markdown / Liquid path.
+                for key in ("on", "highlight", "type"):
+                    args.pop(key, None)
+                widgets.add(**{label: Markdown(**args)})
         return widgets
 
     def _create_review(self, reviewers):
