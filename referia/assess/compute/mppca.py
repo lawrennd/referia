@@ -1,26 +1,14 @@
 """Mixture of probabilistic PCA for soft phrase→topic geometry.
 
-**Packaging (vongole-bound).** Assessment compute under
-``referia.assess.compute`` — destined for vongole (lynguine CIP-0007).
-Pure numpy / scikit-learn only: no review UI, paths, or checkpoints.
-Topic-naming helpers here are prompt/exemplar/stub/parse only — live LLM
-calls are wired in ``referia.assess.compute.Compute`` (``.env`` keys).
-Downstream Address stages (e.g. pub-dialogue) stay thin consumers.
-
-CIP-0017: k-means initialises component means; EM updates responsibilities
-under shared fixed topic noise ``sigma2`` (topic σ² fixed per run,
-independent of lens-level σ²*). Soft responsibilities are the primary
-return; harden helpers are for LLM/report boundaries only.
-
-PPCA factor truncation: eigenvalues above ``sigma2`` are retained
-(same ARD-style rule as lens PPCA in Address).
+Pure numpy / scikit-learn model code: fit, responsibilities, propose-split,
+and catalogue state updates used by Assess. Figure JSON and LLM prompt text
+live elsewhere (``referia.util.plotly_figures``, review config /
+``topic_naming``).
 """
 
 from __future__ import annotations
 
 import hashlib
-import json
-import re
 from typing import Any, Optional, Sequence
 
 import numpy as np
@@ -29,7 +17,6 @@ from sklearn.cluster import KMeans
 __all__ = [
     "DEFAULT_TOPIC_SIGMA2",
     "DEFAULT_TOPIC_SIGMA2_GRID",
-    "DEFAULT_TOPIC_LABEL_PROMPT",
     "log_likelihood_ppca",
     "fit_weighted_ppca",
     "mppca_fit",
@@ -39,32 +26,14 @@ __all__ = [
     "subject_grain_propose_split",
     "subject_grain_confirm_split",
     "subject_grain_undo_split",
-    "subject_grain_prepare_label",
-    "subject_grain_stub_label",
-    "subject_grain_parse_label_reply",
-    "subject_grain_apply_focus_label",
     "topic_fit_diagnostics",
     "profile_topic_sigma2",
     "responsibilities_to_labels",
     "example_phrases_for_soft_topics",
     "mppca_topics",
     "component_local_plane",
-    "local_uq_plotly_spec",
-    "proposed_split_plotly_spec",
     "topic_keys",
 ]
-
-# Default LLM naming prompt (Assess shell / referia Textarea). Placeholders
-# use <<PHRASES>>; callers substitute exemplars before sending to an LLM.
-DEFAULT_TOPIC_LABEL_PROMPT = (
-    "Summarise this soft topic for a human analyst. "
-    "Return JSON with keys label and description. "
-    "label: ONE short English title (at most six words) — translate if the "
-    "phrases are not in English; not an id, hash, list, sentiment tag, or '?'. "
-    "description: ONE English sentence explaining what the phrases have in common.\n"
-    "Phrases:\n<<PHRASES>>"
-)
-
 
 def log_likelihood_ppca(
     centroids: np.ndarray, lens_fit: dict, sigma2: float
@@ -91,8 +60,7 @@ def log_likelihood_ppca(
     return -0.5 * mahalanobis_sq - 0.5 * log_det
 
 # Fallback single-value floor if profiling is skipped. Prefer
-# :func:`profile_topic_sigma2` (CIP-0017: short profile grid, then fix).
-# Independent of lens σ²*.
+# :func:`profile_topic_sigma2` (short profile grid, then fix).
 DEFAULT_TOPIC_SIGMA2: float = 0.01
 
 # Log-spaced candidate floors for one-shot topic σ² profiling.
@@ -227,7 +195,7 @@ def mppca_fit(
     k :
         Number of topic components.
     sigma2 :
-        Shared topic noise floor (fixed for this run; CIP-0017).
+        Shared topic noise floor (fixed for this run).
     seed :
         K-means / reproducibility seed.
     max_iter :
@@ -382,10 +350,9 @@ def profile_topic_sigma2(
 ) -> dict[str, Any]:
     r"""Sweep topic σ² and pick the softest floor that does not collapse.
 
-    CIP-0017: topic σ² is profiled once per analysis config, then held fixed
-    (independent of lens σ²*). Among grid values whose fit keeps enough MAP
-    topics and separated means, choose the **largest** σ² (softest / fewest
-    factors) — that is the collapse-avoiding analogue of the lens σ²* band.
+    Topic σ² is profiled once per analysis config, then held fixed. Among
+    grid values whose fit keeps enough MAP topics and separated means,
+    choose the **largest** σ² (softest / fewest factors).
 
     Returns
     -------
@@ -474,9 +441,8 @@ def responsibilities_to_labels(
 ) -> np.ndarray:
     """MAP (hard) topic labels from soft responsibilities.
 
-    **Late view only** — for LLM labelling / lens-partition prompts and
-    human tables. Soft responsibilities remain the primary stored state
-    (CIP-0017).
+    **Late view only** — for labelling prompts and human tables. Soft
+    responsibilities remain the primary stored state.
 
     Rows that are all-zero or non-finite receive ``empty_label`` (default
     ``-1``) instead of a spurious argmax onto topic 0.
@@ -697,474 +663,6 @@ def component_local_plane(
                 var = max(var, lams[j])
         scales[j] = float(np.sqrt(max(var, 0.0)))
     return mu, Q[:, :need], scales, q_model
-
-
-def _ellipse_polyline(
-    center: np.ndarray,
-    cov2: np.ndarray,
-    *,
-    n: int = 64,
-) -> tuple[list[float], list[float]] | None:
-    """Sample a 1-SD ellipse in the plane as closed polylines (JSON-safe)."""
-    c = np.asarray(center, float).ravel()[:2]
-    C = np.asarray(cov2, float)
-    if c.size < 2 or C.shape != (2, 2) or not np.isfinite(C).all():
-        return None
-    try:
-        vals, vecs = np.linalg.eigh(C)
-    except np.linalg.LinAlgError:
-        return None
-    vals = np.clip(vals, 0.0, None)
-    if float(vals.sum()) <= 0:
-        return None
-    t = np.linspace(0.0, 2.0 * np.pi, n, endpoint=True)
-    circle = np.column_stack([np.cos(t), np.sin(t)])
-    pts = circle @ (vecs * np.sqrt(vals)[None, :]).T + c
-    return pts[:, 0].tolist(), pts[:, 1].tolist()
-
-
-_UQ_PALETTE = ("#2a78d6", "#eb6834", "#3d9b8f", "#8b5cf6", "#c45c26", "#5a6a7a")
-
-
-def local_uq_plotly_spec(
-    embeddings: np.ndarray,
-    responsibilities: np.ndarray,
-    *,
-    focus: int,
-    component_fits: Sequence[dict] | None = None,
-    phrases: Sequence[Any] | None = None,
-    sigma2: float | None = None,
-    title: str | None = None,
-    topic_prefix: str = "T",
-    hover_max_chars: int = 72,
-) -> dict[str, Any] | None:
-    """Bishop–Tipping local ``U_q`` panel as Plotly.js figure JSON.
-
-    Every phrase is projected onto the focus component's local plane. Markers
-    are uniform solid dark — this panel *is* the component view, so soft mass
-    is not used for colour or size (chrome must not apply ``responsibility_ink``
-    on top). ``customdata`` still carries phrase / topic / responsibilities for
-    click bindings.
-
-    Returns ``None`` when the plane cannot be formed.
-    """
-    X = np.asarray(embeddings, float)
-    R = np.asarray(responsibilities, float)
-    focus = int(focus)
-    if X.ndim != 2 or len(X) < 2 or R.ndim != 2 or R.shape[0] != len(X):
-        return None
-    if focus < 0 or focus >= R.shape[1]:
-        return None
-    if not np.isfinite(X).all() or not np.isfinite(R).all():
-        return None
-
-    cf = None
-    if component_fits is not None and 0 <= focus < len(component_fits):
-        cf = component_fits[focus]
-    plane = component_local_plane(X, R[:, focus], cf, q_viz=2)
-    if plane is None:
-        return None
-    mu, U, scales, q_model = plane
-    xy = (X - mu) @ U
-    if not np.isfinite(xy).all():
-        return None
-
-    k = R.shape[1]
-    keys = topic_keys(k, prefix=topic_prefix)
-    labels = responsibilities_to_labels(R)
-    mass = np.clip(R[:, focus], 0.0, 1.0)
-    phrase_list: list[str] = []
-    if phrases is None:
-        phrase_list = [f"phrase {i}" for i in range(len(X))]
-    else:
-        phrase_list = [str(p) for p in phrases]
-        if len(phrase_list) != len(X):
-            phrase_list = (phrase_list + ["—"] * len(X))[: len(X)]
-
-    order = np.arange(len(X), dtype=int)
-    hover_short: list[str] = []
-    customdata: list[dict[str, Any]] = []
-    for i in order:
-        text = " ".join(phrase_list[i].split()) or "—"
-        short = text if len(text) <= hover_max_chars else text[: hover_max_chars - 1] + "…"
-        hover_short.append(short)
-        lab = int(labels[i])
-        topic = keys[lab] if 0 <= lab < k else keys[0]
-        customdata.append(
-            {
-                "topic": topic,
-                "phrase": text,
-                "responsibilities": {
-                    keys[j]: float(R[i, j]) for j in range(k)
-                },
-            }
-        )
-
-    if title is None:
-        title = f"Topic {keys[focus]} — local U_q (model q={q_model})"
-
-    s0 = float(scales[0]) if len(scales) > 0 else 0.0
-    s1 = float(scales[1]) if len(scales) > 1 else 0.0
-    if sigma2 is not None and float(sigma2) > 0:
-        s0 = float(np.sqrt(s0 ** 2 + float(sigma2)))
-        s1 = float(np.sqrt(s1 ** 2 + float(sigma2)))
-
-    colour = _UQ_PALETTE[focus % len(_UQ_PALETTE)]
-    traces: list[dict[str, Any]] = [
-        {
-            "type": "scatter",
-            "mode": "markers",
-            "name": "phrases",
-            "x": xy[order, 0].tolist(),
-            "y": xy[order, 1].tolist(),
-            "text": hover_short,
-            "customdata": customdata,
-            "hovertemplate": "%{text}<extra></extra>",
-            "marker": {
-                "size": 5,
-                "color": "#0b0b0b",
-                "opacity": 1.0,
-                "line": {"width": 0},
-            },
-            "showlegend": False,
-        }
-    ]
-    poly = _ellipse_polyline(
-        np.zeros(2),
-        np.diag([max(s0, 1e-9) ** 2, max(s1, 1e-9) ** 2]),
-    )
-    if poly is not None and (s0 > 0 or s1 > 0):
-        xs, ys = poly
-        traces.append(
-            {
-                "type": "scatter",
-                "mode": "lines",
-                "name": "1-SD local U_q",
-                "x": xs,
-                "y": ys,
-                "line": {"color": colour, "width": 1.5},
-                "hoverinfo": "skip",
-                "showlegend": True,
-            }
-        )
-    traces.append(
-        {
-            "type": "scatter",
-            "mode": "markers",
-            "name": "μ",
-            "x": [0.0],
-            "y": [0.0],
-            "marker": {
-                "symbol": "x",
-                "size": 14,
-                "color": colour,
-                "line": {"width": 1.2, "color": "#0b0b0b"},
-            },
-            "hoverinfo": "skip",
-            "showlegend": False,
-        }
-    )
-
-    w = mass
-    wsum = float(w.sum()) or 1.0
-    mid = (xy * w[:, None]).sum(axis=0) / wsum
-    spread = np.sqrt((((xy - mid) ** 2) * w[:, None]).sum(axis=0) / wsum)
-    half = float(max(1.5 * float(np.max(spread)), 0.5))
-
-    return {
-        "data": traces,
-        "layout": {
-            "title": {
-                "text": title,
-                "x": 0.0,
-                "xanchor": "left",
-                "font": {"size": 14, "color": "#0b0b0b"},
-            },
-            "xaxis": {
-                "title": "local PC1 (U_q)",
-                "range": [float(mid[0] - half), float(mid[0] + half)],
-                "scaleanchor": "y",
-                "scaleratio": 1,
-                "gridcolor": "#e4e3df",
-                "zeroline": False,
-            },
-            "yaxis": {
-                "title": "local PC2 (U_q)",
-                "range": [float(mid[1] - half), float(mid[1] + half)],
-                "gridcolor": "#e4e3df",
-                "zeroline": False,
-            },
-            "plot_bgcolor": "white",
-            "paper_bgcolor": "white",
-            "margin": {"l": 50, "r": 20, "t": 50, "b": 50},
-            "height": 460,
-            "width": 520,
-            "legend": {
-                "orientation": "h",
-                "yanchor": "bottom",
-                "y": 1.02,
-                "x": 0,
-            },
-        },
-    }
-
-
-def _ppca_cov(component_fit: dict, sigma2: float) -> np.ndarray:
-    """Ambient covariance for a PPCA component: ``U diag(λ) Uᵀ + σ² I``."""
-    mu = np.asarray(component_fit["mu"], float).ravel()
-    d = int(mu.shape[0])
-    Cov = np.eye(d) * float(max(sigma2, 0.0))
-    U = np.asarray(component_fit.get("U_q"), float)
-    lam = np.asarray(component_fit.get("lambdas_q"), float).ravel()
-    if U.ndim == 2 and U.shape[0] == d and U.size and lam.size:
-        q = min(U.shape[1], len(lam))
-        if q > 0:
-            Cov = Cov + (U[:, :q] * lam[:q]) @ U[:, :q].T
-    return Cov
-
-
-def _clip_label(text: str, n: int = 28) -> str:
-    s = " ".join(str(text).split())
-    if len(s) <= n:
-        return s
-    return s[: max(1, n - 1)] + "…"
-
-
-def proposed_split_plotly_spec(
-    embeddings: np.ndarray,
-    *,
-    parent_mass: np.ndarray,
-    parent_component_fit: dict,
-    child_component_fits: Sequence[dict],
-    responsibilities: np.ndarray | None = None,
-    phrases: Sequence[Any] | None = None,
-    child_labels: Sequence[str] | None = None,
-    parent_label: str | None = None,
-    sigma2: float = 0.0,
-    title: str | None = None,
-    hover_max_chars: int = 72,
-) -> dict[str, Any] | None:
-    """Proposed split overlay: parent ellipse + child ellipses in parent ``U_q``.
-
-    Points are uniform solid dark — the proposal is about the child ellipses,
-    not responsibility ink. Solid muted 1-SD ellipse is the combined parent;
-    dashed coloured ellipses are the proposed children (local cov projected
-    into the parent plane).
-    """
-    X = np.asarray(embeddings, float)
-    mass = np.asarray(parent_mass, float).ravel()
-    if X.ndim != 2 or len(X) < 2 or mass.shape[0] != len(X):
-        return None
-    if not child_component_fits:
-        return None
-    if not np.isfinite(X).all() or not np.isfinite(mass).all():
-        return None
-
-    plane = component_local_plane(X, mass, parent_component_fit, q_viz=2)
-    if plane is None:
-        return None
-    mu, U, _scales, q_model = plane
-    xy = (X - mu) @ U
-    if not np.isfinite(xy).all():
-        return None
-
-    parent_name = parent_label or "parent"
-    if title is None:
-        title = (
-            f"Proposed split of «{_clip_label(parent_name, 40)}» "
-            f"— parent U_q (q={q_model})"
-        )
-
-    phrase_list: list[str]
-    if phrases is None:
-        phrase_list = [f"phrase {i}" for i in range(len(X))]
-    else:
-        phrase_list = [str(p) for p in phrases]
-        if len(phrase_list) != len(X):
-            phrase_list = (phrase_list + ["—"] * len(X))[: len(X)]
-
-    R = None
-    if responsibilities is not None:
-        R = np.asarray(responsibilities, float)
-        if R.ndim != 2 or R.shape[0] != len(X):
-            R = None
-    keys = topic_keys(R.shape[1]) if R is not None else []
-    labels = responsibilities_to_labels(R) if R is not None else None
-
-    # Stable draw order; colour/size do not encode responsibilities.
-    order = np.arange(len(X), dtype=int)
-    hover_short: list[str] = []
-    customdata: list[dict[str, Any]] = []
-    for i in order:
-        text = " ".join(phrase_list[i].split()) or "—"
-        short = text if len(text) <= hover_max_chars else text[: hover_max_chars - 1] + "…"
-        hover_short.append(short)
-        if R is not None and labels is not None:
-            lab = int(labels[i])
-            topic = keys[lab] if 0 <= lab < len(keys) else (keys[0] if keys else "T0")
-            customdata.append(
-                {
-                    "topic": topic,
-                    "phrase": text,
-                    "responsibilities": {
-                        keys[j]: float(R[i, j]) for j in range(len(keys))
-                    },
-                }
-            )
-        else:
-            customdata.append({"topic": "", "phrase": text, "responsibilities": {}})
-
-    traces: list[dict[str, Any]] = [
-        {
-            "type": "scatter",
-            "mode": "markers",
-            "name": "phrases",
-            "x": xy[order, 0].tolist(),
-            "y": xy[order, 1].tolist(),
-            "text": hover_short,
-            "customdata": customdata,
-            "hovertemplate": "%{text}<extra></extra>",
-            "marker": {
-                "size": 5,
-                "color": "#0b0b0b",
-                "opacity": 1.0,
-                "line": {"width": 0},
-            },
-            "showlegend": False,
-        }
-    ]
-
-    # Combined parent (solid) at the origin of the parent plane.
-    Cov_p = _ppca_cov(parent_component_fit, float(sigma2))
-    C2_p = U.T @ Cov_p @ U
-    parent_poly = _ellipse_polyline(np.zeros(2), C2_p)
-    if parent_poly is not None:
-        xs, ys = parent_poly
-        traces.append(
-            {
-                "type": "scatter",
-                "mode": "lines",
-                "name": f"parent «{_clip_label(parent_name, 20)}»",
-                "x": xs,
-                "y": ys,
-                "line": {"color": "#8a8680", "width": 2.0, "dash": "solid"},
-                "hoverinfo": "skip",
-                "showlegend": True,
-            }
-        )
-    traces.append(
-        {
-            "type": "scatter",
-            "mode": "markers",
-            "name": "parent μ",
-            "x": [0.0],
-            "y": [0.0],
-            "marker": {
-                "symbol": "x",
-                "size": 12,
-                "color": "#8a8680",
-                "line": {"width": 1.2, "color": "#0b0b0b"},
-            },
-            "hoverinfo": "skip",
-            "showlegend": False,
-        }
-    )
-
-    anchors: list[np.ndarray] = [np.zeros(2)]
-    for j, cf in enumerate(child_component_fits):
-        colour = _UQ_PALETTE[j % len(_UQ_PALETTE)]
-        mu_c = np.asarray(cf["mu"], float).ravel()
-        center = (mu_c - mu) @ U
-        Cov = _ppca_cov(cf, float(sigma2))
-        C2 = U.T @ Cov @ U
-        name = None
-        if child_labels is not None and j < len(child_labels):
-            name = str(child_labels[j])
-        if not name:
-            name = f"child {j}"
-        short = _clip_label(name, 28)
-        poly = _ellipse_polyline(center, C2)
-        if poly is not None:
-            xs, ys = poly
-            traces.append(
-                {
-                    "type": "scatter",
-                    "mode": "lines",
-                    "name": short,
-                    "x": xs,
-                    "y": ys,
-                    "line": {"color": colour, "width": 1.8, "dash": "dash"},
-                    "hoverinfo": "skip",
-                    "showlegend": True,
-                }
-            )
-        traces.append(
-            {
-                "type": "scatter",
-                "mode": "markers+text",
-                "name": f"{short} μ",
-                "x": [float(center[0])],
-                "y": [float(center[1])],
-                "text": [short],
-                "textposition": "top right",
-                "textfont": {"size": 10, "color": colour},
-                "marker": {
-                    "symbol": "x",
-                    "size": 14,
-                    "color": colour,
-                    "line": {"width": 1.2, "color": "#0b0b0b"},
-                },
-                "hoverinfo": "skip",
-                "showlegend": False,
-            }
-        )
-        if np.isfinite(center).all():
-            anchors.append(np.asarray(center, float).ravel()[:2])
-
-    w = np.clip(mass, 0.0, None)
-    wsum = float(w.sum()) or 1.0
-    mid = (xy * w[:, None]).sum(axis=0) / wsum
-    spread = np.sqrt((((xy - mid) ** 2) * w[:, None]).sum(axis=0) / wsum)
-    half = float(max(1.5 * float(np.max(spread)), 0.5))
-    for a in anchors:
-        half = max(half, float(np.max(np.abs(a - mid))) + 0.3)
-
-    return {
-        "data": traces,
-        "layout": {
-            "title": {
-                "text": title,
-                "x": 0.0,
-                "xanchor": "left",
-                "font": {"size": 14, "color": "#0b0b0b"},
-            },
-            "xaxis": {
-                "title": "parent local PC1 (U_q)",
-                "range": [float(mid[0] - half), float(mid[0] + half)],
-                "scaleanchor": "y",
-                "scaleratio": 1,
-                "gridcolor": "#e4e3df",
-                "zeroline": False,
-            },
-            "yaxis": {
-                "title": "parent local PC2 (U_q)",
-                "range": [float(mid[1] - half), float(mid[1] + half)],
-                "gridcolor": "#e4e3df",
-                "zeroline": False,
-            },
-            "plot_bgcolor": "white",
-            "paper_bgcolor": "white",
-            "margin": {"l": 50, "r": 20, "t": 50, "b": 50},
-            "height": 460,
-            "width": 520,
-            "legend": {
-                "orientation": "h",
-                "yanchor": "bottom",
-                "y": 1.02,
-                "x": 0,
-            },
-        },
-    }
 
 
 def fit_from_responsibilities(
@@ -1429,6 +927,8 @@ def rebuild_uq_by_topic(
     topic_prefix: str = "T",
 ) -> dict[str, dict[str, Any]]:
     """Build ``{Tj: local_uq_plotly_spec(...)}`` for every component."""
+    from referia.util.plotly_figures import local_uq_plotly_spec
+
     R = np.asarray(responsibilities, float)
     keys = topic_keys(R.shape[1], prefix=topic_prefix)
     out: dict[str, dict[str, Any]] = {}
@@ -1462,26 +962,8 @@ def _topic_index(keys: Sequence[str], focus_topic: Any) -> int:
     return 0
 
 
-# ---------------------------------------------------------------------------
-# Subject-grain PopulateButton chain (propose → confirm | undo)
-#
-# Two ownership lanes — do not cross them in YAML ``compute.field`` lists:
-#
-#   Controls (user-owned; never written by these functions)
-#     sigma2, sigma2_mode, em_accept, em_preview, label_prompt, label_model
-#     → passed as *inputs* (row_args) only
-#
-#   Catalogue geometry (owned by propose → confirm|undo)
-#     responsibilities, topic_keys, topic_labels, focus_topic,
-#     uq_spec, uq_by_topic, pending_proposal, split_undo
-#
-# Call graph:
-#   Propose  reads controls + embeddings → writes catalogue + pending + undo snap
-#   Confirm  reads pending              → writes uq_spec/uq_by_topic; clears pending/undo
-#   Undo     reads undo snap (+ live σ²)→ writes catalogue; clears pending/undo
-#   Name     reads label_* + soft mass  → writes topic_labels[focus] only
-#            (live LLM call is in Compute when label_model != stub)
-# ---------------------------------------------------------------------------
+# Propose / confirm / undo: controls (σ², em_*) are inputs only; catalogue
+# fields (responsibilities, topic_keys, uq_*, pending_*, split_undo) are writes.
 
 
 def _phrase_list(phrases: Any, n: int) -> list[str]:
@@ -1590,6 +1072,7 @@ def subject_grain_propose_split(
     focus_new = child_keys[0]
     proposed = None
     if parent_cf is not None and child_cfs:
+        from referia.util.plotly_figures import proposed_split_plotly_spec
         proposed = proposed_split_plotly_spec(
             X,
             parent_mass=out["parent_mass"],
@@ -1711,101 +1194,3 @@ def subject_grain_undo_split(
         None,
         None,
     )
-
-
-def subject_grain_prepare_label(
-    phrases: Any,
-    responsibilities: Any,
-    focus_topic: Any = "T0",
-    label_prompt: Any = None,
-    *,
-    n_exemplars: int = 8,
-) -> tuple[str, list[str], str]:
-    """Build the filled naming prompt for the focus topic.
-
-    Returns ``(user_prompt, exemplars, focus_key)``. Does not call an LLM.
-    """
-    R = np.asarray(responsibilities, dtype=float)
-    if R.ndim != 2:
-        raise ValueError(f"responsibilities must be 2-D, got shape {R.shape}")
-    phrase_list = _phrase_list(phrases, R.shape[0])
-    keys = topic_keys(R.shape[1])
-    if focus_topic is None or focus_topic == "":
-        focus = keys[0] if keys else "T0"
-    else:
-        focus = str(focus_topic)
-    j = _topic_index(keys, focus)
-    focus = keys[j] if keys else focus
-    units = example_phrases_for_soft_topics(
-        phrase_list, R, n_top=int(n_exemplars), n_sample=0, seed=0
-    )
-    exemplars = list(units[j].get("examples") or []) if j < len(units) else []
-    if not exemplars:
-        # Soft mass too thin — fall back to highest-mass phrases anyway.
-        order = np.argsort(-R[:, j], kind="mergesort")[: int(n_exemplars)]
-        exemplars = [phrase_list[i] for i in order if R[i, j] > 0]
-    tmpl = str(label_prompt or DEFAULT_TOPIC_LABEL_PROMPT)
-    if "<<PHRASES>>" not in tmpl:
-        raise ValueError("label_prompt must contain the <<PHRASES>> placeholder")
-    bullet = "\n".join(f"- {p}" for p in exemplars) or "- (no exemplars)"
-    return tmpl.replace("<<PHRASES>>", bullet), exemplars, focus
-
-
-def subject_grain_stub_label(exemplars: Sequence[str], focus_key: str = "T0") -> str:
-    """Offline label: first few content words of the top exemplar."""
-    for text in exemplars:
-        words = [w for w in re.split(r"\W+", str(text)) if w]
-        if words:
-            return " ".join(words[:6])[:80]
-    return f"{focus_key} (unnamed)"
-
-
-def subject_grain_parse_label_reply(raw: Any, exemplars: Sequence[str] | None = None) -> str:
-    """Parse an LLM naming reply into a short label string."""
-    text = (raw if isinstance(raw, str) else str(raw or "")).strip()
-    if not text:
-        return subject_grain_stub_label(exemplars or [], "topic")
-    data: Any = None
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        # Models sometimes wrap JSON in fences or prose.
-        m = re.search(r"\{.*\}", text, flags=re.DOTALL)
-        if m:
-            try:
-                data = json.loads(m.group(0))
-            except json.JSONDecodeError:
-                data = None
-    label = None
-    if isinstance(data, dict):
-        label = data.get("label")
-        if label is None:
-            for key in ("title", "name", "thema", "heading"):
-                if key in data:
-                    label = data[key]
-                    break
-    if label is None:
-        # Bare string reply — take first line.
-        label = text.splitlines()[0].strip().strip('"').strip("'")
-    label = re.sub(r"\s+", " ", str(label)).strip()
-    if not label or label in {"?", "untitled", "unnamed"}:
-        return subject_grain_stub_label(exemplars or [], "topic")
-    return label[:80]
-
-
-def subject_grain_apply_focus_label(
-    topic_labels: Any,
-    focus_key: str,
-    label: str,
-) -> dict:
-    """Return a copy of ``topic_labels`` with ``focus_key`` set (catalogue write)."""
-    out: dict = {}
-    if isinstance(topic_labels, dict):
-        out = {str(k): str(v) for k, v in topic_labels.items()}
-    elif topic_labels is not None:
-        try:
-            out = {str(k): str(v) for k, v in dict(topic_labels).items()}
-        except (TypeError, ValueError):
-            out = {}
-    out[str(focus_key)] = str(label)[:80]
-    return out

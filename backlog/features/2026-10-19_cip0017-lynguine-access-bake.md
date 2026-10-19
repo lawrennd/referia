@@ -6,12 +6,12 @@ priority: "Medium"
 created: "2026-10-19"
 last_updated: "2026-10-19"
 category: "features"
-related_cips: ["0017"]
+related_cips: ["0012"]
 owner: "lawrennd"
 dependencies: []
 tags:
 - backlog
-- cip0017
+- cip0012
 - lynguine
 - access
 - subject_grain_uq
@@ -71,10 +71,9 @@ notebook 03 Layer B.
 
 ## Related
 
-- CIP: 0017
+- CIP: 0012
 - PR: #35
 - Example: `examples/subject_grain_uq/`
-- Multilogue: `notebooks/03_cluster.ipynb` Access / Assess entry
 
 ## Progress Updates
 
@@ -82,5 +81,4 @@ notebook 03 Layer B.
 
 Task created from PR #35 discussion: `scores.yml` already gitignored and
 recreated by bake; `records.yml` is also generated but still committed.
-User asked whether a lynguine flow should produce records — backlog this
-follow-on rather than blocking the soft-MPPCA interactive demo.
+Retargeted to CIP-0012 (packaging / Access → Assess separation).

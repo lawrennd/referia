@@ -1,13 +1,10 @@
-# CIP-0017 / CIP-0011 — Bishop–Tipping local U_q Assess demo (multilogue 03 interactive).
-# One corpus record: Focus topic swaps the local plane via figure_source;
-# Propose split → view updates → Confirm seals / Undo rejects.
+# Soft MPPCA Assess: focus swaps the local U_q plane; Propose → Confirm / Undo.
 referia_config_version: 2
 title: "Subject grain — local U_q (Assess)"
 description: >
-  Multilogue notebook 03 interactive Assess loop, hosted in referia:
-  pick a focus topic to swap the Bishop–Tipping local U_q plane, click a
-  phrase, propose a soft split (view updates immediately), then Confirm to
-  seal or Undo to reject. EM / label prompt live in collapsible review sections.
+  Explore soft topic geometry on a Bishop–Tipping local U_q plane. Propose a
+  split of the focus topic, confirm to seal or undo to restore. EM parameters
+  and the topic-naming prompt live in collapsible review sections.
 date: 2026-10-19
 
 display:
@@ -200,8 +197,16 @@ review:
       - type: Textarea
         field: label_prompt
         args:
-          description: Label prompt
+          description: Label prompt (must include <<PHRASES>>)
           rows: 6
+          default: |
+            Summarise this soft topic for a human analyst.
+            Return JSON with keys label and description.
+            label: ONE short English title (at most six words) — translate if the
+            phrases are not in English; not an id, hash, list, sentiment tag, or '?'.
+            description: ONE English sentence explaining what the phrases have in common.
+            Phrases:
+            <<PHRASES>>
       - type: Dropdown
         field: label_model
         args:

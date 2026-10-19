@@ -29,11 +29,28 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from referia.assess.compute.mppca import (  # noqa: E402
-    DEFAULT_TOPIC_LABEL_PROMPT,
     mppca_fit,
     rebuild_uq_by_topic,
     topic_keys,
 )
+
+
+def _label_prompt_from_referia_yml() -> str:
+    """Read the default naming prompt from ``_referia.yml`` (single source)."""
+    cfg = yaml.safe_load((HERE / "_referia.yml").read_text(encoding="utf-8"))
+    for block in cfg.get("review") or []:
+        entries = block.get("entries") if isinstance(block, dict) else None
+        for entry in entries or ([block] if isinstance(block, dict) else []):
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("field") != "label_prompt":
+                continue
+            default = (entry.get("args") or {}).get("default")
+            if default and "<<PHRASES>>" in str(default):
+                return str(default).strip() + "\n"
+    raise RuntimeError(
+        "label_prompt default with <<PHRASES>> not found in _referia.yml"
+    )
 
 INFO = HERE / "info"
 CACHE = INFO / ".cache" / "cimt"
@@ -293,7 +310,7 @@ def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -
         "sigma2_mode": "fixed",
         "em_accept": 40,
         "em_preview": 5,
-        "label_prompt": DEFAULT_TOPIC_LABEL_PROMPT,
+        "label_prompt": _label_prompt_from_referia_yml(),
         "label_model": label_model,
         "pending_proposal": None,
         "split_undo": None,

@@ -23,13 +23,15 @@ from ...util.system import most_recent_screen_shot
 from ...util.plot import bar_plot, histogram
 from ...util.files import file_from_re, files_from_re
 from .mppca import (
-    subject_grain_apply_focus_label,
     subject_grain_confirm_split,
+    subject_grain_propose_split,
+    subject_grain_undo_split,
+)
+from .topic_naming import (
+    subject_grain_apply_focus_label,
     subject_grain_parse_label_reply,
     subject_grain_prepare_label,
-    subject_grain_propose_split,
     subject_grain_stub_label,
-    subject_grain_undo_split,
 )
 
 # LLM integration (optional - graceful fallback if not installed)
@@ -583,8 +585,8 @@ class Compute(lynguine.assess.compute.Compute):
                     "seed": 0,
                 },
                 "docstr": (
-                    "CIP-0017 Propose split: write catalogue geometry + "
-                    "pending/undo; read σ²/em_accept as controls (never write)."
+                    "Propose a soft topic split: update catalogue geometry and "
+                    "pending/undo; read σ² / em_accept as controls (never write)."
                 ),
             },
             {
@@ -592,8 +594,8 @@ class Compute(lynguine.assess.compute.Compute):
                 "function": subject_grain_confirm_split,
                 "default_args": {},
                 "docstr": (
-                    "CIP-0017 Confirm: overlay → per-topic planes; clear "
-                    "pending/undo. Does not touch EM controls."
+                    "Confirm a pending split: swap overlay for per-topic "
+                    "planes; clear pending/undo. Does not touch EM controls."
                 ),
             },
             {
@@ -601,8 +603,8 @@ class Compute(lynguine.assess.compute.Compute):
                 "function": subject_grain_undo_split,
                 "default_args": {},
                 "docstr": (
-                    "CIP-0017 Undo: restore catalogue from split_undo; redraw "
-                    "at live σ²; never write controls."
+                    "Undo a pending split: restore catalogue from split_undo; "
+                    "redraw at live σ²; never write EM / label controls."
                 ),
             },
             {
@@ -613,9 +615,9 @@ class Compute(lynguine.assess.compute.Compute):
                     "temperature": 0.2,
                 },
                 "docstr": (
-                    "CIP-0017 Name focus topic: reads label_prompt/label_model "
-                    "controls; writes topic_labels only. Uses referia LLM "
-                    "(.env OPENAI_API_KEY) when label_model != stub."
+                    "Name the focus topic: reads label_prompt / label_model; "
+                    "writes topic_labels only. Uses the configured LLM when "
+                    "label_model is not stub."
                 ),
             },
         ] + (self._llm_functions_list() if LLM_AVAILABLE else [])

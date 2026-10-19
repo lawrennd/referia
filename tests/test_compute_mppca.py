@@ -1,4 +1,4 @@
-"""Tests for soft MPPCA topic fit (referia.assess.compute.mppca; CIP-0017 / vongole)."""
+"""Tests for soft MPPCA topic fit and related Assess helpers."""
 
 import numpy as np
 import pytest
@@ -7,21 +7,31 @@ from referia.assess.compute.mppca import (
     DEFAULT_TOPIC_SIGMA2,
     DEFAULT_TOPIC_SIGMA2_GRID,
     fit_weighted_ppca,
-    local_uq_plotly_spec,
     mppca_fit,
     profile_topic_sigma2,
     propose_split,
-    proposed_split_plotly_spec,
     rebuild_uq_by_topic,
     responsibilities_to_labels,
-    subject_grain_apply_focus_label,
     subject_grain_confirm_split,
-    subject_grain_parse_label_reply,
-    subject_grain_prepare_label,
     subject_grain_propose_split,
-    subject_grain_stub_label,
     subject_grain_undo_split,
     topic_keys,
+)
+from referia.assess.compute.topic_naming import (
+    subject_grain_apply_focus_label,
+    subject_grain_parse_label_reply,
+    subject_grain_prepare_label,
+    subject_grain_stub_label,
+)
+from referia.util.plotly_figures import (
+    local_uq_plotly_spec,
+    proposed_split_plotly_spec,
+)
+
+_TEST_LABEL_PROMPT = (
+    "Summarise this soft topic.\n"
+    "Return JSON with keys label and description.\n"
+    "Phrases:\n<<PHRASES>>"
 )
 
 
@@ -417,7 +427,11 @@ def test_prepare_label_fills_phrases_placeholder():
         dtype=float,
     )
     prompt, exemplars, focus = subject_grain_prepare_label(
-        phrases, R, focus_topic="T0", n_exemplars=2
+        phrases,
+        R,
+        focus_topic="T0",
+        label_prompt=_TEST_LABEL_PROMPT,
+        n_exemplars=2,
     )
     assert focus == "T0"
     assert "<<PHRASES>>" not in prompt
@@ -460,7 +474,7 @@ def test_name_focus_topic_stub_via_compute(monkeypatch):
         responsibilities=R,
         focus_topic="T0",
         topic_labels={"T0": "old", "T1": "other"},
-        label_prompt=None,
+        label_prompt=_TEST_LABEL_PROMPT,
         label_model="stub",
     )
     assert out["T0"] != "old"
@@ -493,6 +507,7 @@ def test_name_focus_topic_uses_llm_when_model_set(monkeypatch):
         responsibilities=[[0.9, 0.1], [0.8, 0.2]],
         focus_topic="T0",
         topic_labels={"T0": "old"},
+        label_prompt=_TEST_LABEL_PROMPT,
         label_model="gpt-4o-mini",
     )
     assert out["T0"] == "Municipal cycling"
