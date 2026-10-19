@@ -29,6 +29,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from referia.assess.compute.mppca import (  # noqa: E402
+    format_topic_tree_markdown,
     mppca_fit,
     rebuild_uq_by_topic,
     topic_keys,
@@ -292,16 +293,45 @@ def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -
         }
     ]
     topic_labels = {key: f"Topic {i}" for i, key in enumerate(keys)}
+    topic_parent = {key: None for key in keys}
     # Prefer live naming when the bake already saw OPENAI_API_KEY (.env).
     label_model = (
         "gpt-4.1-mini" if os.getenv("OPENAI_API_KEY") else "stub"
     )
+    label_prompt = _label_prompt_from_referia_yml()
+    # Title the k=1 seed from cluster content before the analyst opens the UI.
+    if label_model != "stub":
+        from referia.assess import compute as compute_mod
+
+        comp = compute_mod.Compute({"llm": {}})
+        topic_labels, topic_parent, topic_tree = (
+            comp._subject_grain_ensure_seed_names(
+                phrases=phrases,
+                responsibilities=R.tolist(),
+                focus_topic=focus0,
+                topic_labels=topic_labels,
+                topic_parent=topic_parent,
+                topic_keys=keys,
+                label_prompt=label_prompt,
+                label_model=label_model,
+            )
+        )
+    else:
+        topic_tree = format_topic_tree_markdown(
+            keys,
+            topic_labels,
+            topic_parent,
+            focus0,
+            responsibilities=R,
+        )
     score = {
         "Name": "corpus",
         "focus_topic": focus0,
         "selected_phrase": None,
         "topic_keys": keys,
         "topic_labels": topic_labels,
+        "topic_parent": topic_parent,
+        "topic_tree": topic_tree,
         "responsibilities": R.tolist(),
         "uq_by_topic": uq_by_topic,
         "uq_spec": uq_by_topic[focus0],
@@ -309,7 +339,7 @@ def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -
         "sigma2_mode": "fixed",
         "em_accept": 40,
         "em_preview": 5,
-        "label_prompt": _label_prompt_from_referia_yml(),
+        "label_prompt": label_prompt,
         "label_model": label_model,
         "pending_proposal": None,
         "split_undo": None,
@@ -338,6 +368,12 @@ def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -
     score_lines.append("  topic_labels:\n")
     for key, lab in topic_labels.items():
         score_lines.append(f"    {key}: {lab!r}\n".replace("'", '"'))
+    score_lines.append("  topic_parent:\n")
+    for key in keys:
+        score_lines.append(f"    {key}:\n")
+    score_lines.append("  topic_tree: |\n")
+    for line in str(score["topic_tree"]).splitlines() or ["_No topics yet._"]:
+        score_lines.append(f"    {line}\n")
     score_lines.append(f"  sigma2: {sigma2}\n")
     score_lines.append("  sigma2_mode: fixed\n")
     score_lines.append("  em_accept: 40\n")

@@ -212,6 +212,29 @@ class TestDropdown:
         html = render_widget(_w("Select", "grade", args={"options": ["X"]}), "X")
         assert "<select" in html
 
+    def test_options_labels_field_replaces_keys(self):
+        html = render_widget(
+            _w(
+                "Dropdown",
+                "focus_topic",
+                args={
+                    "options_field": "topic_keys",
+                    "options_labels_field": "topic_labels",
+                    "options": ["T0"],
+                },
+            ),
+            "T0",
+            data={
+                "topic_keys": ["T0", "T1"],
+                "topic_labels": {"T0": "Root theme", "T1": "Child theme"},
+            },
+        )
+        assert 'value="T0"' in html
+        assert ">Root theme<" in html
+        assert ">Child theme<" in html
+        assert ">T0<" not in html
+        assert ">T1<" not in html
+
 
 # ---------------------------------------------------------------------------
 # SelectMultiple

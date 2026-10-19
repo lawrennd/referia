@@ -712,6 +712,39 @@ class TestPopulateStatusHtml:
         assert "Split rejected" in html
         assert "sealed" not in html
 
+    def test_name_while_pending_does_not_say_proposed(self):
+        from referia.web.routes import _populate_status_html
+
+        reviewer = MagicMock()
+        reviewer.get_value.side_effect = lambda c: {
+            "pending_proposal": {
+                "kind": "split",
+                "parent": "T1",
+                "children": ["T1", "T2"],
+                "k_before": 4,
+                "k_after": 5,
+                "focus": "T1",
+            },
+            "topic_labels": {
+                "T1": "Child A",
+                "T2": "Child B",
+            },
+        }.get(c)
+        html = _populate_status_html(
+            reviewer,
+            [
+                "topic_labels",
+                "topic_parent",
+                "topic_tree",
+                "uq_spec",
+                "uq_by_topic",
+                "pending_proposal",
+            ],
+        )
+        assert "Named pending children" in html
+        assert "Child A" in html
+        assert "Split proposed" not in html
+
 
 class TestPostPopulate:
     def test_returns_200(self, populate_client):

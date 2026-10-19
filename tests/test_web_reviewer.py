@@ -586,6 +586,58 @@ class TestGetWidgetSpecs:
         reviewer._register_review_computes()
         assert data._precompute == specs
 
+    def test_run_review_precompute_forces_compute_pre(self, tmp_path, monkeypatch):
+        """Boot must run precompute even when from_flow already selected the index.
+
+        CustomDataFrame.set_index skips compute_pre when the index is unchanged,
+        which left seed Topic 0 untitled on first open (subject_grain_uq).
+        """
+        import os
+
+        review_dir = tmp_path / "review"
+        review_dir.mkdir()
+        serve_cwd = tmp_path / "serve"
+        serve_cwd.mkdir()
+        monkeypatch.chdir(serve_cwd)
+
+        called = {"n": 0, "cwd": None}
+
+        def _compute_pre():
+            called["n"] += 1
+            called["cwd"] = os.getcwd()
+
+        reviewer, data, _ = _build_reviewer(
+            review=[
+                {
+                    "type": "precompute",
+                    "specifications": [
+                        {
+                            "field": "topic_labels",
+                            "function": "subject_grain_ensure_seed_names",
+                            "refresh": True,
+                        }
+                    ],
+                }
+            ]
+        )
+        reviewer._directory = str(review_dir.resolve())
+        data._precompute = [
+            {
+                "field": "topic_labels",
+                "function": "subject_grain_ensure_seed_names",
+                "refresh": True,
+            }
+        ]
+        data.compute_pre = _compute_pre
+        reviewer._run_review_precompute()
+        assert called["n"] == 1
+        assert Path(called["cwd"]).resolve() == review_dir.resolve()
+        assert Path(os.getcwd()).resolve() == serve_cwd.resolve()
+
+        data._precompute = []
+        reviewer._run_review_precompute()
+        assert called["n"] == 1  # no specs → no second call
+
     def test_set_index_chdirs_to_review_directory(self, tmp_path, monkeypatch):
         """compute_pre must see config-relative paths (serve cwd ≠ review dir)."""
         import os

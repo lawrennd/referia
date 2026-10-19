@@ -19,6 +19,7 @@ from referia.assess.compute.mppca import (
 )
 from referia.assess.compute.topic_naming import (
     subject_grain_apply_focus_label,
+    subject_grain_keys_needing_names,
     subject_grain_parse_label_reply,
     subject_grain_prepare_label,
     subject_grain_stub_label,
@@ -296,6 +297,7 @@ def test_propose_split_grows_k_and_rebuilds_planes():
         sigma2=0.05,
         em_accept=15,
         topic_labels={"T0": "Parent", "T1": "Other"},
+        topic_parent={"T0": None, "T1": None},
         seed=3,
     )
     (
@@ -305,6 +307,8 @@ def test_propose_split_grows_k_and_rebuilds_planes():
         R_list,
         focus,
         labels,
+        parent_map,
+        tree,
         pending,
         undo,
     ) = packed
@@ -328,10 +332,17 @@ def test_propose_split_grows_k_and_rebuilds_planes():
     assert uq_by_topic[focus] is uq_spec or uq_by_topic[focus] == uq_spec
     assert len(R_list) == len(X)
     assert "«Parent»" in labels[focus] or focus in labels
+    # Genealogy: children point at parent label; remapped siblings keep None.
+    assert parent_map["T0"] == "Parent" and parent_map["T1"] == "Parent"
+    assert parent_map.get("T2") is None
+    assert "Other" in tree and "← focus" in tree
     assert pending["kind"] == "split" and pending["accepted"] is False
     assert pending["k_before"] == 2 and pending["k_after"] == 3
     assert isinstance(pending.get("planes_after_accept"), dict)
+    assert isinstance(pending.get("history_entry"), dict)
+    assert pending["history_entry"]["parent"] == "T0"
     assert isinstance(undo, dict) and undo["topic_keys"] == ["T0", "T1"]
+    assert undo.get("topic_parent") == {"T0": None, "T1": None}
     assert "sigma2" not in undo  # controls must not live in the undo snap
     sealed_spec, sealed_map, cleared_pending, cleared_undo = (
         subject_grain_confirm_split(pending)
@@ -349,9 +360,38 @@ def test_propose_split_grows_k_and_rebuilds_planes():
         undo, embeddings=X.tolist(), phrases=phrases, sigma2=0.12
     )
     assert restored[2] == ["T0", "T1"]
-    assert restored[6] is None and restored[7] is None
-    # Undo returns 8 catalogue fields — never a sigma2 write slot.
-    assert len(restored) == 8
+    assert restored[6] == {"T0": None, "T1": None}
+    assert isinstance(restored[7], str) and "T0" in restored[7]
+    assert restored[8] is None and restored[9] is None
+    # Undo returns 10 catalogue fields — never a sigma2 write slot.
+    assert len(restored) == 10
+
+
+def test_format_topic_tree_markdown_nests_children():
+    from referia.assess.compute.mppca import format_topic_tree_markdown
+
+    R = [
+        [0.9, 0.05, 0.05],
+        [0.1, 0.8, 0.1],
+        [0.1, 0.1, 0.8],
+        [0.4, 0.4, 0.2],
+    ]
+    md = format_topic_tree_markdown(
+        ["T0", "T1", "T2"],
+        {"T0": "Root", "T1": "Child A", "T2": "Child B"},
+        {"T0": None, "T1": "Root", "T2": "Root"},
+        focus_topic="T1",
+        responsibilities=R,
+        mass_threshold=0.05,
+    )
+    assert "<table>" in md and "<th>Soft n</th>" in md
+    # Soft n: T0=4 (all rows > 0.05 on col0); T1=3; T2=3 (0.05 not > τ)
+    assert "Root" in md and 'title="T0"' in md
+    assert "(<code>T0</code>)" not in md
+    assert "**Root**" in md and "(`T0`)" not in md
+    assert "<td style=\"text-align:right\">4</td>" in md
+    assert "  - **Child A**" in md and "← focus" in md
+    assert "  - **Child B**" in md
 
 
 def test_undo_split_does_not_return_sigma2_and_redraws_at_live_sigma2():
@@ -368,7 +408,7 @@ def test_undo_split_does_not_return_sigma2_and_redraws_at_live_sigma2():
         em_accept=12,
         seed=5,
     )
-    undo = packed[7]
+    undo = packed[9]
     live_sigma2 = 0.25
     restored = subject_grain_undo_split(
         undo,
@@ -376,11 +416,24 @@ def test_undo_split_does_not_return_sigma2_and_redraws_at_live_sigma2():
         phrases=phrases,
         sigma2=live_sigma2,
     )
-    uq_spec, uq_by_topic, keys, R, focus, labels, pend, snap = restored
+    (
+        uq_spec,
+        uq_by_topic,
+        keys,
+        R,
+        focus,
+        labels,
+        parent_map,
+        tree,
+        pend,
+        snap,
+    ) = restored
     assert pend is None and snap is None
     assert keys == ["T0", "T1"]
     assert len(R) == len(X)
     assert focus in keys
+    assert set(parent_map) == set(keys)
+    assert isinstance(tree, str)
     assert uq_spec is not None and focus in uq_by_topic
     # No sigma2 in the return tuple (would have been index 6 under old API).
     assert not isinstance(pend, float)
@@ -410,6 +463,77 @@ def test_proposed_split_plotly_spec_parent_and_children():
     lines = [t for t in spec["data"] if t.get("mode") == "lines"]
     assert any("parent" in str(t.get("name", "")).lower() for t in lines)
     assert sum(1 for t in lines if t.get("line", {}).get("dash") == "dash") == 2
+
+
+def test_name_relabels_pending_plotly_overlay(monkeypatch):
+    """Name must rewrite baked (unnamed…) labels on the pending plot overlay."""
+    from referia.assess import compute as compute_mod
+    from referia.util.plotly_figures import relabel_proposed_split_plotly_spec
+
+    X, _ = _planted_subspace_mixture(n_per=20, d=12, seed=11)
+    fit = mppca_fit(X, k=1, sigma2=0.05, seed=11, max_iter=30)
+    out = propose_split(X, fit, 0, n_children=2, seed=11, max_iter=20)
+    unnamed = ["«Topic 0» → (unnamed 0)", "«Topic 0» → (unnamed 1)"]
+    spec = proposed_split_plotly_spec(
+        X,
+        parent_mass=out["parent_mass"],
+        parent_component_fit=out["parent_component_fit"],
+        child_component_fits=out["local_fit"]["component_fits"],
+        child_labels=unnamed,
+        parent_label="Topic 0",
+        sigma2=float(out["fit"]["sigma2"]),
+    )
+    assert spec is not None
+    assert any("(unnamed" in str(t.get("name", "")) for t in spec["data"])
+
+    replies = [
+        '{"label": "Cycle lanes", "description": "Infra."}',
+        '{"label": "Bike parking", "description": "Secure."}',
+    ]
+
+    class _Mgr:
+        def call(self, **kwargs):
+            return replies.pop(0)
+
+    monkeypatch.setattr(compute_mod, "LLM_AVAILABLE", True)
+    monkeypatch.setattr(compute_mod, "get_llm_manager", lambda _cfg=None: _Mgr())
+
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    labels, parent, tree, uq, uq_map, pending = (
+        comp._subject_grain_name_focus_topic(
+            phrases=[f"p{i}" for i in range(len(X))],
+            responsibilities=out["fit"]["responsibilities"],
+            focus_topic="T0",
+            topic_labels={"T0": unnamed[0], "T1": unnamed[1]},
+            topic_parent={"T0": "Topic 0", "T1": "Topic 0"},
+            topic_keys=["T0", "T1"],
+            label_prompt=_TEST_LABEL_PROMPT,
+            label_model="gpt-4o-mini",
+            pending_proposal={
+                "kind": "split",
+                "parent": "T0",
+                "parent_label": "Topic 0",
+                "children": ["T0", "T1"],
+                "focus": "T0",
+            },
+            uq_spec=spec,
+            uq_by_topic={"T0": spec, "T1": spec},
+        )
+    )
+    assert labels["T0"] == "Cycle lanes"
+    assert labels["T1"] == "Bike parking"
+    assert isinstance(uq, dict)
+    names = [str(t.get("name", "")) for t in uq["data"]]
+    assert any("Cycle lanes" in n for n in names)
+    assert any("Bike parking" in n for n in names)
+    assert not any("(unnamed" in n for n in names)
+    assert uq_map["T0"] is uq and uq_map["T1"] is uq
+    # Direct helper also rewrites title.
+    relabelled = relabel_proposed_split_plotly_spec(
+        spec, child_labels=["A", "B"], parent_label="Root"
+    )
+    title = relabelled["layout"]["title"]["text"]
+    assert "Root" in title and "(unnamed" not in title
 
 
 def test_prepare_label_fills_phrases_placeholder():
@@ -451,8 +575,16 @@ def test_parse_label_reply_json_and_stub_fallback():
         ["Secure bike parking at stations encourages commuting."]
     )
     assert "Secure" in stub or "bike" in stub.lower()
-    applied = subject_grain_apply_focus_label({"T0": "old"}, "T0", "Cycle parking")
-    assert applied == {"T0": "Cycle parking"}
+    labels, parent, tree = subject_grain_apply_focus_label(
+        {"T0": "old", "T1": "kid"},
+        "T0",
+        "Cycle parking",
+        topic_parent={"T0": None, "T1": "old"},
+        topic_keys=["T0", "T1"],
+    )
+    assert labels == {"T0": "Cycle parking", "T1": "kid"}
+    assert parent["T1"] == "Cycle parking"
+    assert "Cycle parking" in tree and "kid" in tree
 
 
 def test_name_focus_topic_stub_via_compute(monkeypatch):
@@ -469,17 +601,23 @@ def test_name_focus_topic_stub_via_compute(monkeypatch):
         "Secure bike parking at stations encourages commuting.",
     ]
     R = [[0.9, 0.1], [0.8, 0.2]]
-    out = comp._subject_grain_name_focus_topic(
-        phrases=phrases,
-        responsibilities=R,
-        focus_topic="T0",
-        topic_labels={"T0": "old", "T1": "other"},
-        label_prompt=_TEST_LABEL_PROMPT,
-        label_model="stub",
+    labels, parent, tree, uq, uq_map, pending = (
+        comp._subject_grain_name_focus_topic(
+            phrases=phrases,
+            responsibilities=R,
+            focus_topic="T0",
+            topic_labels={"T0": "old", "T1": "other"},
+            topic_parent={"T0": None, "T1": None},
+            topic_keys=["T0", "T1"],
+            label_prompt=_TEST_LABEL_PROMPT,
+            label_model="stub",
+        )
     )
-    assert out["T0"] != "old"
-    assert out["T1"] == "other"
-    assert "label_model" not in out
+    assert labels["T0"] != "old"
+    assert labels["T1"] == "other"
+    assert set(parent) == {"T0", "T1"}
+    assert isinstance(tree, str) and "T0" in tree
+    assert uq is None and uq_map is None and pending is None
 
 
 def test_name_focus_topic_uses_llm_when_model_set(monkeypatch):
@@ -502,12 +640,387 @@ def test_name_focus_topic_uses_llm_when_model_set(monkeypatch):
         "Safe cycle lanes near schools reduce conflict with cars.",
         "Secure bike parking at stations encourages commuting.",
     ]
-    out = comp._subject_grain_name_focus_topic(
+    labels, parent, tree, *_ = comp._subject_grain_name_focus_topic(
         phrases=phrases,
         responsibilities=[[0.9, 0.1], [0.8, 0.2]],
         focus_topic="T0",
         topic_labels={"T0": "old"},
+        topic_parent={"T0": None},
+        topic_keys=["T0"],
         label_prompt=_TEST_LABEL_PROMPT,
         label_model="gpt-4o-mini",
     )
-    assert out["T0"] == "Municipal cycling"
+    assert labels["T0"] == "Municipal cycling"
+    assert "Municipal cycling" in tree
+
+
+def test_keys_needing_names_includes_unnamed_placeholders():
+    keys = subject_grain_keys_needing_names(
+        {
+            "T0": "Parent",
+            "T1": "«Parent» → (unnamed 0)",
+            "T2": "«Parent» → (unnamed 1)",
+            "T3": "Already named",
+        },
+        "T1",
+        ["T0", "T1", "T2", "T3"],
+    )
+    assert keys == ["T1", "T2"]
+
+
+def test_keys_needing_names_includes_topic_n_seeds():
+    keys = subject_grain_keys_needing_names(
+        {"T0": "Topic 0", "T1": "Already named"},
+        "T1",
+        ["T0", "T1"],
+    )
+    # Named focus is skipped; only the provisional seed is queued.
+    assert keys == ["T0"]
+
+
+def test_clip_label_keeps_unnamed_suffix():
+    from referia.util.plotly_figures import _clip_label
+
+    a = _clip_label("«Urban Infrastructure and Safety» → (unnamed 0)", 28)
+    b = _clip_label("«Urban Infrastructure and Safety» → (unnamed 1)", 28)
+    assert a != b
+    assert a.endswith("(unnamed 0)")
+    assert b.endswith("(unnamed 1)")
+
+
+def test_short_parent_for_placeholder_does_not_nest():
+    from referia.assess.compute.topic_naming import _short_parent_for_placeholder
+
+    assert _short_parent_for_placeholder("Topic 0", "T0") == "Topic 0"
+    assert (
+        _short_parent_for_placeholder("«Topic 0» → (unnamed 0)", "T0")
+        == "Topic 0"
+    )
+    assert (
+        _short_parent_for_placeholder(
+            "««Topic 0» → (unnamed 0)» → (unnamed 1)", "T1"
+        )
+        == "Topic 0"
+    )
+    assert (
+        _short_parent_for_placeholder("Urban bike lanes", "T0")
+        == "Urban bike lanes"
+    )
+
+
+def test_propose_does_not_nest_provisional_parent():
+    """Splitting an already-provisional child must not nest «…» → (unnamed)."""
+    X, _ = _planted_subspace_mixture(n_per=20, d=12, seed=17)
+    fit = mppca_fit(X, k=1, sigma2=0.05, seed=17, max_iter=30)
+    phrases = [f"p{i}" for i in range(len(X))]
+    packed = subject_grain_propose_split(
+        X.tolist(),
+        fit["responsibilities"].tolist(),
+        phrases=phrases,
+        focus_topic="T0",
+        sigma2=0.05,
+        em_accept=15,
+        topic_labels={"T0": "«Topic 0» → (unnamed 0)"},
+        topic_parent={"T0": None},
+        seed=17,
+    )
+    labels = packed[5]
+    pending = packed[8]
+    uq_spec = packed[0]
+    for lab in labels.values():
+        assert "««" not in str(lab)
+        # Exactly one arrow-unnamed suffix per child placeholder.
+        assert str(lab).count("(unnamed") <= 1
+    assert pending["parent_label"] == "Topic 0"
+    title = (uq_spec.get("layout") or {}).get("title") or {}
+    title_text = title.get("text", "") if isinstance(title, dict) else str(title)
+    assert "«Topic 0»" in title_text
+    assert "««" not in title_text
+
+
+def test_propose_via_compute_names_children_when_not_stub(monkeypatch):
+    """Propose with a live label_model must not leave (unnamed) children."""
+    from referia.assess import compute as compute_mod
+
+    replies = [
+        '{"label": "Cycle lanes", "description": "Infra."}',
+        '{"label": "Bike parking", "description": "Secure."}',
+    ]
+
+    class _Mgr:
+        def call(self, **kwargs):
+            return replies.pop(0)
+
+    monkeypatch.setattr(compute_mod, "LLM_AVAILABLE", True)
+    monkeypatch.setattr(compute_mod, "get_llm_manager", lambda _cfg=None: _Mgr())
+
+    X, _ = _planted_subspace_mixture(n_per=20, d=12, seed=21)
+    fit = mppca_fit(X, k=1, sigma2=0.05, seed=21, max_iter=30)
+    phrases = [f"p{i}" for i in range(len(X))]
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    packed = comp._subject_grain_propose_split(
+        X.tolist(),
+        fit["responsibilities"].tolist(),
+        phrases=phrases,
+        focus_topic="T0",
+        sigma2=0.05,
+        em_accept=15,
+        topic_labels={"T0": "Topic 0"},
+        topic_parent={"T0": None},
+        seed=21,
+        label_model="gpt-4o-mini",
+        label_prompt=_TEST_LABEL_PROMPT,
+    )
+    labels = packed[5]
+    uq_spec = packed[0]
+    assert labels["T0"] == "Cycle lanes"
+    assert labels["T1"] == "Bike parking"
+    assert not any("(unnamed" in str(v) for v in labels.values())
+    title = (uq_spec.get("layout") or {}).get("title") or {}
+    title_text = title.get("text", "") if isinstance(title, dict) else str(title)
+    assert "(unnamed" not in title_text
+    names = [str(t.get("name", "")) for t in uq_spec["data"]]
+    assert not any("(unnamed" in n for n in names)
+
+
+def test_propose_via_compute_stub_keeps_unnamed():
+    """stub label_model keeps Propose placeholders (offline / bake)."""
+    from referia.assess import compute as compute_mod
+
+    X, _ = _planted_subspace_mixture(n_per=16, d=12, seed=23)
+    fit = mppca_fit(X, k=1, sigma2=0.05, seed=23, max_iter=25)
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    packed = comp._subject_grain_propose_split(
+        X.tolist(),
+        fit["responsibilities"].tolist(),
+        phrases=[f"p{i}" for i in range(len(X))],
+        focus_topic="T0",
+        sigma2=0.05,
+        em_accept=12,
+        topic_labels={"T0": "Topic 0"},
+        topic_parent={"T0": None},
+        seed=23,
+        label_model="stub",
+    )
+    labels = packed[5]
+    assert any("(unnamed" in str(v) for v in labels.values())
+
+
+def test_name_sanitizes_nested_overlay_parent(monkeypatch):
+    """Name must strip nested provisional parents from the plot title."""
+    from referia.assess import compute as compute_mod
+
+    X, _ = _planted_subspace_mixture(n_per=20, d=12, seed=19)
+    fit = mppca_fit(X, k=1, sigma2=0.05, seed=19, max_iter=30)
+    out = propose_split(X, fit, 0, n_children=2, seed=19, max_iter=20)
+    nested_parent = "«Topic 0» → (unnamed 0)"
+    children = [
+        f"«{nested_parent}» → (unnamed 0)",
+        f"«{nested_parent}» → (unnamed 1)",
+    ]
+    spec = proposed_split_plotly_spec(
+        X,
+        parent_mass=out["parent_mass"],
+        parent_component_fit=out["parent_component_fit"],
+        child_component_fits=out["local_fit"]["component_fits"],
+        child_labels=children,
+        parent_label=nested_parent,
+        sigma2=float(out["fit"]["sigma2"]),
+    )
+    replies = [
+        '{"label": "Cycle lanes", "description": "Infra."}',
+        '{"label": "Bike parking", "description": "Secure."}',
+    ]
+
+    class _Mgr:
+        def call(self, **kwargs):
+            return replies.pop(0)
+
+    monkeypatch.setattr(compute_mod, "LLM_AVAILABLE", True)
+    monkeypatch.setattr(compute_mod, "get_llm_manager", lambda _cfg=None: _Mgr())
+
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    *_, uq, uq_map, pending = comp._subject_grain_name_focus_topic(
+        phrases=[f"p{i}" for i in range(len(X))],
+        responsibilities=out["fit"]["responsibilities"],
+        focus_topic="T0",
+        topic_labels={"T0": children[0], "T1": children[1]},
+        topic_parent={"T0": None, "T1": None},
+        topic_keys=["T0", "T1"],
+        label_prompt=_TEST_LABEL_PROMPT,
+        label_model="gpt-4o-mini",
+        pending_proposal={
+            "kind": "split",
+            "parent": "T0",
+            "parent_label": nested_parent,
+            "children": ["T0", "T1"],
+            "focus": "T0",
+        },
+        uq_spec=spec,
+        uq_by_topic={"T0": spec, "T1": spec},
+    )
+    title = uq["layout"]["title"]["text"]
+    assert "(unnamed" not in title
+    assert "««" not in title
+    assert pending["parent_label"] == "Topic 0"
+    names = [str(t.get("name", "")) for t in uq["data"]]
+    assert not any("(unnamed" in n for n in names)
+    assert uq_map["T0"] is uq
+
+
+def test_name_focus_also_names_unnamed_siblings(monkeypatch):
+    """Propose leaves (unnamed) children; Name should fill them in one pass."""
+    from referia.assess import compute as compute_mod
+
+    replies_list = [
+        '{"label": "Child A", "description": "First."}',
+        '{"label": "Child B", "description": "Second."}',
+    ]
+
+    class _Mgr:
+        def call(self, **kwargs):
+            assert "gpt" in kwargs["model"]
+            return replies_list.pop(0)
+    monkeypatch.setattr(compute_mod, "LLM_AVAILABLE", True)
+    monkeypatch.setattr(compute_mod, "get_llm_manager", lambda _cfg=None: _Mgr())
+
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    phrases = [
+        "Safe cycle lanes near schools reduce conflict with cars.",
+        "Secure bike parking at stations encourages commuting.",
+        "Narrow paths leave cargo bikes nowhere to pass.",
+    ]
+    R = [[0.1, 0.8, 0.1], [0.1, 0.1, 0.8], [0.1, 0.7, 0.2]]
+    labels, parent, tree, *_ = comp._subject_grain_name_focus_topic(
+        phrases=phrases,
+        responsibilities=R,
+        focus_topic="T1",
+        topic_labels={
+            "T0": "Parent",
+            "T1": "«Parent» → (unnamed 0)",
+            "T2": "«Parent» → (unnamed 1)",
+        },
+        topic_parent={"T0": None, "T1": "Parent", "T2": "Parent"},
+        topic_keys=["T0", "T1", "T2"],
+        label_prompt=_TEST_LABEL_PROMPT,
+        label_model="gpt-4o-mini",
+    )
+    assert labels["T0"] == "Parent"
+    assert labels["T1"] == "Child A"
+    assert labels["T2"] == "Child B"
+    assert "(unnamed" not in tree
+    assert "(orphaned)" not in tree
+    assert parent["T1"] == "Parent"
+
+
+def test_name_clears_seed_ghost_parent(monkeypatch):
+    """After splitting Topic 0, Name must not leave ← Topic 0 in the tree."""
+    from referia.assess import compute as compute_mod
+
+    class _Mgr:
+        def call(self, **kwargs):
+            return '{"label": "Bike lanes", "description": "Infra."}'
+
+    monkeypatch.setattr(compute_mod, "LLM_AVAILABLE", True)
+    monkeypatch.setattr(compute_mod, "get_llm_manager", lambda _cfg=None: _Mgr())
+
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    labels, parent, tree, *_ = comp._subject_grain_name_focus_topic(
+        phrases=["Safe cycle lanes near schools."],
+        responsibilities=[[0.6, 0.4]],
+        focus_topic="T0",
+        topic_labels={
+            "T0": "«Topic 0» → (unnamed 0)",
+            "T1": "«Topic 0» → (unnamed 1)",
+        },
+        topic_parent={"T0": "Topic 0", "T1": "Topic 0"},
+        topic_keys=["T0", "T1"],
+        label_prompt=_TEST_LABEL_PROMPT,
+        label_model="gpt-4o-mini",
+    )
+    assert "Topic 0" not in (parent.get("T0"), parent.get("T1"))
+    assert parent["T0"] is None and parent["T1"] is None
+    assert "Bike lanes" in labels["T0"] or labels["T0"] == "Bike lanes"
+    assert "(orphaned)" not in tree
+    assert "← Topic 0" not in tree
+
+
+def test_ensure_seed_names_titles_provisional_topic_zero(monkeypatch):
+    """On open, provisional Topic 0 is named from cluster phrases."""
+    from referia.assess import compute as compute_mod
+
+    calls = []
+
+    class _Mgr:
+        def call(self, **kwargs):
+            calls.append(kwargs)
+            return '{"label": "Cycling safety", "description": "Infra."}'
+
+    monkeypatch.setattr(compute_mod, "LLM_AVAILABLE", True)
+    monkeypatch.setattr(compute_mod, "get_llm_manager", lambda _cfg=None: _Mgr())
+
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    labels, parent, tree = comp._subject_grain_ensure_seed_names(
+        phrases=[
+            "Safe cycle lanes near schools reduce conflict with cars.",
+            "Secure bike parking at stations encourages commuting.",
+        ],
+        responsibilities=[[1.0], [1.0]],
+        focus_topic="T0",
+        topic_labels={"T0": "Topic 0"},
+        topic_parent={"T0": None},
+        topic_keys=["T0"],
+        label_prompt=_TEST_LABEL_PROMPT,
+        label_model="gpt-4.1-mini",
+    )
+    assert len(calls) == 1
+    assert labels["T0"] == "Cycling safety"
+    assert "Topic 0" not in tree
+    assert parent["T0"] is None
+
+
+def test_ensure_seed_names_skips_when_already_titled(monkeypatch):
+    """Already-named seed must not call the LLM again on open."""
+    from referia.assess import compute as compute_mod
+
+    class _Mgr:
+        def call(self, **kwargs):
+            raise AssertionError("LLM must not run for an already-named seed")
+
+    monkeypatch.setattr(compute_mod, "LLM_AVAILABLE", True)
+    monkeypatch.setattr(compute_mod, "get_llm_manager", lambda _cfg=None: _Mgr())
+
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    labels, parent, tree = comp._subject_grain_ensure_seed_names(
+        phrases=["Safe cycle lanes near schools."],
+        responsibilities=[[1.0]],
+        focus_topic="T0",
+        topic_labels={"T0": "Cycling safety"},
+        topic_parent={"T0": None},
+        topic_keys=["T0"],
+        label_prompt=_TEST_LABEL_PROMPT,
+        label_model="gpt-4.1-mini",
+    )
+    assert labels["T0"] == "Cycling safety"
+    assert "Cycling safety" in tree
+    assert parent["T0"] is None
+
+
+def test_ensure_seed_names_stub_leaves_topic_zero():
+    """stub model keeps Topic 0 — no offline hallucinated title."""
+    from referia.assess import compute as compute_mod
+
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    labels, parent, tree = comp._subject_grain_ensure_seed_names(
+        phrases=["Safe cycle lanes near schools."],
+        responsibilities=[[1.0]],
+        focus_topic="T0",
+        topic_labels={"T0": "Topic 0"},
+        topic_parent={"T0": None},
+        topic_keys=["T0"],
+        label_prompt=_TEST_LABEL_PROMPT,
+        label_model="stub",
+    )
+    assert labels["T0"] == "Topic 0"
+    assert parent["T0"] is None
+    assert "Topic 0" in tree

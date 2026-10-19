@@ -20,6 +20,7 @@ from referia.assess.compute.mppca import (
 __all__ = [
     "local_uq_plotly_spec",
     "proposed_split_plotly_spec",
+    "relabel_proposed_split_plotly_spec",
 ]
 
 
@@ -248,10 +249,104 @@ def _ppca_cov(component_fit: dict, sigma2: float) -> np.ndarray:
 
 
 def _clip_label(text: str, n: int = 28) -> str:
+    """Truncate display labels for Plotly legends / titles.
+
+    When the string ends with a Propose placeholder
+    (``→ (unnamed N)``), keep that suffix so siblings with a long shared
+    parent prefix stay distinguishable after clipping.
+    """
+    import re
+
     s = " ".join(str(text).split())
     if len(s) <= n:
         return s
+    m = re.search(r"(→\s*\(unnamed\s+\d+\))\s*$", s, flags=re.IGNORECASE)
+    if m:
+        suffix = m.group(1)
+        keep = n - len(suffix) - 1  # room for ellipsis
+        if keep >= 6:
+            return s[:keep].rstrip() + "…" + suffix
     return s[: max(1, n - 1)] + "…"
+
+
+def relabel_proposed_split_plotly_spec(
+    spec: Any,
+    *,
+    child_labels: Sequence[str],
+    parent_label: str | None = None,
+) -> Any:
+    """Return a deep copy of a proposed-split figure with display names updated.
+
+    Trace layout matches :func:`proposed_split_plotly_spec`: phrases, parent
+    solid ellipse, parent μ, then per child dashed ellipse + μ text marker.
+    Used after LLM naming so the pending overlay stops showing
+    ``(unnamed…)`` placeholders without rebuilding geometry.
+    """
+    import copy
+    import re
+
+    if not isinstance(spec, dict) or not child_labels:
+        return spec
+    out = copy.deepcopy(spec)
+    parent_name = parent_label or "parent"
+    layout = out.get("layout")
+    if isinstance(layout, dict):
+        title = layout.get("title")
+        old_text = ""
+        if isinstance(title, dict):
+            old_text = str(title.get("text") or "")
+        elif isinstance(title, str):
+            old_text = title
+        q_m = re.search(r"\(q=\d+\)", old_text)
+        q_bit = f" {q_m.group(0)}" if q_m else ""
+        new_text = (
+            f"Proposed split of «{_clip_label(parent_name, 40)}» "
+            f"— parent U_q{q_bit}"
+        )
+        if isinstance(title, dict):
+            titled = dict(title)
+            titled["text"] = new_text
+            layout["title"] = titled
+        else:
+            layout["title"] = {
+                "text": new_text,
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            }
+
+    data = out.get("data")
+    if not isinstance(data, list):
+        return out
+
+    child_i = 0
+    for tr in data:
+        if not isinstance(tr, dict):
+            continue
+        name = str(tr.get("name") or "")
+        mode = str(tr.get("mode") or "")
+        line = tr.get("line") if isinstance(tr.get("line"), dict) else {}
+        dash = line.get("dash")
+
+        if name.startswith("parent «"):
+            tr["name"] = f"parent «{_clip_label(parent_name, 20)}»"
+            continue
+        if name == "parent μ" or name == "phrases":
+            continue
+        if dash == "dash" and mode == "lines":
+            if child_i < len(child_labels):
+                short = _clip_label(str(child_labels[child_i]), 28)
+                tr["name"] = short
+            child_i += 1
+            continue
+        if mode == "markers+text" and name.endswith(" μ"):
+            idx = child_i - 1
+            if 0 <= idx < len(child_labels):
+                short = _clip_label(str(child_labels[idx]), 28)
+                tr["name"] = f"{short} μ"
+                tr["text"] = [short]
+            continue
+    return out
 
 
 def proposed_split_plotly_spec(

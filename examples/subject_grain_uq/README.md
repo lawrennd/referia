@@ -11,11 +11,13 @@ splitting a focus topic when the grain looks mixed, then confirm or undo.
    (`info/scores.yml`).
 3. In the viewer: change **Focus topic** (owns the local plane), click a
    phrase to pin it in review, **Propose split**, then **Confirm** or **Undo**.
-4. In review: adjust EM controls (σ², EM accept) and optionally **Name focus
-   topic** with a prompt you edit in the config.
+4. In review: adjust EM controls (σ², EM accept) and the label model / prompt.
+   With a non-`stub` model, **Propose split** names the new children in the
+   same click. The k=1 seed is titled on open (and at bake when an API key
+   is present). Use **Name topics** only to re-name.
 
 Assess state is question-agnostic geometry (soft mass and planes). Naming is
-optional labelling on top of that geometry.
+labelling on top of that geometry (auto on Propose when the model is live).
 
 ## Layout
 
@@ -47,7 +49,22 @@ when no key is present.
 | Field | Role |
 |-------|------|
 | `sigma2`, `em_accept`, `em_preview`, `label_prompt`, `label_model` | Controls — Propose / Name read them; Confirm / Undo never rewrite them |
-| `responsibilities`, `uq_by_topic`, `uq_spec`, `topic_keys`, `topic_labels`, `pending_proposal`, `split_undo` | Catalogue / UI state written by split and naming actions |
+| `responsibilities`, `uq_by_topic`, `uq_spec`, `topic_keys`, `topic_labels`, `topic_parent`, `topic_tree`, `pending_proposal`, `split_undo` | Catalogue / UI state written by split and naming actions |
+
+`topic_parent` is the living genealogy map (topic key → parent label), remapped on Propose and restored on Undo — the same role as multilogue’s `parent_of`, held as referia catalogue state rather than an append-only list. `topic_tree` is a derived Markdown view: a soft-association table (phrases with `R > τ`, plus soft mass `Σ R`) and the genealogy tree; rewritten whenever topology, labels, or responsibilities change.
 
 The default topic-naming prompt (must keep `<<PHRASES>>`) is set on the
 `label_prompt` field in `_referia.yml`.
+
+**Seed naming on open.** A review `precompute` runs
+`subject_grain_ensure_seed_names` when the row loads: if labels are still
+provisional (`Topic 0`, …) and `label_model` is not `stub`, the LLM titles
+them from cluster phrases before you start. Already-named labels are left
+alone (no re-LLM). Bake does the same when `OPENAI_API_KEY` is set.
+
+**Propose names children when `label_model` is not `stub`** (needs
+`OPENAI_API_KEY`). Offline / `stub` keeps temporary
+`«Parent» → (unnamed t)` placeholders. **Name topics (focus + provisional)**
+re-titles on demand. After a soft split the parent topic is replaced by its
+children — seed parents like `Topic 0` are cleared from `topic_parent` so the
+UI does not keep showing a ghost `← Topic 0`.

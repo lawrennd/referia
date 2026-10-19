@@ -26,6 +26,8 @@ output:
     - selected_phrase
     - topic_keys
     - topic_labels
+    - topic_parent
+    - topic_tree
     - responsibilities
     - uq_by_topic
     - uq_spec
@@ -50,7 +52,7 @@ viewer:
       plane.
 
       <p><b>Topics:</b>
-      {% for key in topic_keys %}{{ key }} — {{ topic_labels[key] | default: key }}{% unless forloop.last %}; {% endunless %}{% endfor %}
+      {% for key in topic_keys %}{{ topic_labels[key] | default: key }}{% assign p = topic_parent[key] %}{% if p %}{% assign live_p = false %}{% for k2 in topic_keys %}{% if topic_labels[k2] == p %}{% assign live_p = true %}{% endif %}{% endfor %}{% if live_p %} ← {{ p }}{% endif %}{% endif %}{% unless forloop.last %}; {% endunless %}{% endfor %}
       </p>
 
       {% if pending_proposal and pending_proposal.kind == "split" %}
@@ -63,6 +65,7 @@ viewer:
     args:
       description: Focus topic
       options_field: topic_keys
+      options_labels_field: topic_labels
       options: ["T0"]
   - type: PlotlyFigure
     field: uq_spec
@@ -94,6 +97,7 @@ viewer:
       description: Propose split
       target: uq_spec
       compute:
+        function: subject_grain_propose_split
         field:
           - uq_spec
           - uq_by_topic
@@ -101,9 +105,10 @@ viewer:
           - responsibilities
           - focus_topic
           - topic_labels
+          - topic_parent
+          - topic_tree
           - pending_proposal
           - split_undo
-        function: subject_grain_propose_split
         refresh: true
         row_args:
           embeddings: embeddings
@@ -113,6 +118,11 @@ viewer:
           sigma2: sigma2
           em_accept: em_accept
           topic_labels: topic_labels
+          topic_parent: topic_parent
+          # Non-stub → Propose names children in the same click (no separate
+          # Name step required). stub keeps «Parent» → (unnamed t).
+          label_model: label_model
+          label_prompt: label_prompt
   - type: PopulateButton
     field: _confirm_split
     visible_if: pending_proposal
@@ -120,12 +130,12 @@ viewer:
       description: Confirm split
       target: uq_spec
       compute:
+        function: subject_grain_confirm_split
         field:
           - uq_spec
           - uq_by_topic
           - pending_proposal
           - split_undo
-        function: subject_grain_confirm_split
         refresh: true
         row_args:
           pending_proposal: pending_proposal
@@ -143,6 +153,8 @@ viewer:
           - responsibilities
           - focus_topic
           - topic_labels
+          - topic_parent
+          - topic_tree
           - pending_proposal
           - split_undo
         function: subject_grain_undo_split
@@ -154,10 +166,32 @@ viewer:
           sigma2: sigma2
 
 review:
-  - type: Text
+  # Name provisional seed labels (Topic 0 / T0) from cluster phrases on open
+  # when label_model is not stub. Idempotent once titled — no re-LLM.
+  - type: precompute
+    specifications:
+      - function: subject_grain_ensure_seed_names
+        field:
+          - topic_labels
+          - topic_parent
+          - topic_tree
+        refresh: true
+        row_args:
+          phrases: phrases
+          responsibilities: responsibilities
+          focus_topic: focus_topic
+          topic_labels: topic_labels
+          topic_parent: topic_parent
+          topic_keys: topic_keys
+          label_prompt: label_prompt
+          label_model: label_model
+  # Read-only pin from plot click (source=viewer OOB-refreshes this field).
+  - type: Markdown
     field: selected_phrase
-    args:
-      description: Selected phrase
+    liquid: |
+      **Selected phrase**
+
+      {{ selected_phrase }}
   - type: Section
     title: EM parameters
     entries:
@@ -178,7 +212,7 @@ review:
         args:
           description: EM accept
           min: 1
-          max: 500
+          max: 50
       - type: BoundedIntText
         field: em_preview
         args:
@@ -204,27 +238,44 @@ review:
       - type: Dropdown
         field: label_model
         args:
-          description: Label model
-          options: ["stub", "gpt-4.1-mini", "gpt-4o-mini"]
-      # Reads label_* controls; writes topic_labels only (not the controls).
+          description: Label model (stub = offline; Propose never calls an LLM)
+          options: ["gpt-4.1-mini", "gpt-4o-mini", "stub"]
+      # Re-name / name seed Topic N without splitting. Propose already names
+      # children when label_model is not stub.
       - type: PopulateButton
         field: _name_focus_topic
         args:
-          description: Name focus topic
+          description: Name topics (focus + provisional)
           target: topic_labels
           compute:
-            field: topic_labels
             function: subject_grain_name_focus_topic
+            field:
+              - topic_labels
+              - topic_parent
+              - topic_tree
+              - uq_spec
+              - uq_by_topic
+              - pending_proposal
             refresh: true
             row_args:
               phrases: phrases
               responsibilities: responsibilities
               focus_topic: focus_topic
               topic_labels: topic_labels
+              topic_parent: topic_parent
+              topic_keys: topic_keys
               label_prompt: label_prompt
               label_model: label_model
+              pending_proposal: pending_proposal
+              uq_spec: uq_spec
+              uq_by_topic: uq_by_topic
+  - type: Markdown
+    field: topic_tree
+    liquid: |
+      **Topics**
+
+      {{ topic_tree }}
   - type: Textarea
     field: notes
     args:
       description: Assess notes
-  - type: SaveButton

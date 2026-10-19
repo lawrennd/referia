@@ -325,10 +325,17 @@ def _render_dropdown(spec: dict, value: Any, data: dict | None = None) -> str:
             options = [str(o) for o in raw]
         elif isinstance(raw, dict):
             options = [str(k) for k in raw.keys()]
+    # Optional display labels keyed by option value (e.g. topic_labels → T0)
+    labels_map: dict[str, str] = {}
+    labels_field = args.get("options_labels_field")
+    if labels_field and isinstance(data, dict):
+        raw_labels = data.get(labels_field)
+        if isinstance(raw_labels, dict):
+            labels_map = {str(k): str(v) for k, v in raw_labels.items() if v not in (None, "")}
     label = _label_html(args.get("description", ""))
     opts_html = "".join(
         f'<option value="{_escape(o)}"{"  selected" if str(o) == str(value) else ""}>'
-        f"{_escape(o)}</option>"
+        f"{_escape(labels_map.get(str(o), str(o)))}</option>"
         for o in options
     )
     return (
@@ -756,8 +763,14 @@ def render_viewer(
         )
     if view_type in {"Markdown", "HTMLMath"}:
         rendered = _ensure_links_new_tab(markdown2html(content) if content else "")
-        return f'<div class="viewer viewer-markdown">{rendered}</div>'
-    return f'<div class="viewer viewer-html">{_ensure_links_new_tab(content)}</div>'
+        return (
+            f'<div class="viewer viewer-markdown" '
+            f'id="viewer-markdown-{int(viewer_index)}">{rendered}</div>'
+        )
+    return (
+        f'<div class="viewer viewer-html" id="viewer-html-{int(viewer_index)}">'
+        f"{_ensure_links_new_tab(content)}</div>"
+    )
 
 
 def _render_plotly_viewer(

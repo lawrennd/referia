@@ -574,12 +574,25 @@ def _make_viewer_oob(viewer_html: str) -> str:
         return f"<div{attrs} hx-swap-oob=\"true\">"
 
     updated, n = re.subn(
-        r"<div(\s+[^>]*\bviewer-(?:plotly|image|chrome)\b[^>]*)>",
+        r"<div(\s+[^>]*\bviewer-(?:plotly|image|chrome|markdown|html)\b[^>]*)>",
         _inject,
         viewer_html,
         count=1,
     )
     return updated if n else viewer_html
+
+
+# Catalogue / intro liquid that must re-render when topic naming or splits land.
+_LIQUID_VIEWER_WATCH = frozenset(
+    {
+        "topic_labels",
+        "topic_keys",
+        "topic_parent",
+        "topic_tree",
+        "pending_proposal",
+        "focus_topic",
+    }
+)
 
 
 def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
@@ -588,12 +601,15 @@ def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
     PlotlyFigure updates swap only the JSON ``plotly-spec`` script so the
     live graph is restyled in place (avoids a full remount / size flash).
     Viewer-chrome widgets replace their container when field/options change.
+    Liquid intro blocks re-render when topic catalogue columns change so
+    named labels replace raw ``T0`` keys without a full page reload.
     """
     from referia.assess.viewer_bindings import (
         apply_highlight,
         apply_plotly_size,
         figure_source_binding,
         highlight_binding,
+        is_liquid_viewer,
         is_viewer_chrome_type,
         parse_figure_spec,
         plotly_size_options,
@@ -608,9 +624,15 @@ def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
             continue
         if is_viewer_chrome_type(spec):
             field = spec.get("field")
-            opts_field = (spec.get("args") or {}).get("options_field")
-            if column not in (field, opts_field):
+            args = spec.get("args") or {}
+            opts_field = args.get("options_field")
+            labels_field = args.get("options_labels_field")
+            if column not in (field, opts_field, labels_field):
                 continue
+            html = reviewer.render_viewer_html(spec, viewer_index=i)
+            parts.append(_make_viewer_oob(html))
+            continue
+        if is_liquid_viewer(spec) and column in _LIQUID_VIEWER_WATCH:
             html = reviewer.render_viewer_html(spec, viewer_index=i)
             parts.append(_make_viewer_oob(html))
             continue
@@ -1726,12 +1748,13 @@ def _build_populate_compute_spec(btn_spec: dict, field: str) -> dict | None:
 
 
 def _specs_with_options_field(reviewer, column: str) -> list[dict]:
-    """Widget specs (review + viewer) whose ``args.options_field`` is *column*."""
+    """Widget specs whose options or option-labels come from *column*."""
     out: list[dict] = []
     for spec in reviewer.get_widget_specs():
         if not isinstance(spec, dict):
             continue
-        if (spec.get("args") or {}).get("options_field") == column:
+        args = spec.get("args") or {}
+        if args.get("options_field") == column or args.get("options_labels_field") == column:
             out.append(spec)
     return out
 
@@ -1749,6 +1772,36 @@ def _populate_status_html(reviewer, updated_cols: list[str]) -> str:
         k1 = pending.get("k_after")
         focus = pending.get("focus") or "?"
         parent = pending.get("parent") or "?"
+        # Propose always rewrites topic_keys; Name-only relabels while pending.
+        # Propose+name (non-stub) also rewrites topic_labels in the same click.
+        try:
+            labels = reviewer.get_value("topic_labels") or {}
+        except Exception:
+            labels = {}
+        children = list(pending.get("children") or [])
+        named = [
+            str(labels.get(str(c), c)) if isinstance(labels, dict) else str(c)
+            for c in children
+        ]
+        from referia.assess.compute.topic_naming import _is_provisional_label
+
+        all_named = bool(named) and not any(
+            _is_provisional_label(lab, children[i] if i < len(children) else None)
+            for i, lab in enumerate(named)
+        )
+        if all_named and "topic_labels" in updated_cols:
+            preview = ", ".join(_esc(x) for x in named[:4])
+            if len(named) > 4:
+                preview += ", …"
+            verb = (
+                "Split proposed and named"
+                if "topic_keys" in updated_cols
+                else "Named pending children"
+            )
+            return (
+                f'<span class="status-ok">&#10003; {verb}: '
+                f"{preview}. Confirm to seal or Undo to reject.</span>"
+            )
         return (
             f'<span class="status-ok">&#10003; Split proposed: '
             f"{_esc(str(parent))} → k={_esc(str(k0))}→{_esc(str(k1))}, "

@@ -29,6 +29,7 @@ from .mppca import (
 )
 from .topic_naming import (
     subject_grain_apply_focus_label,
+    subject_grain_keys_needing_names,
     subject_grain_parse_label_reply,
     subject_grain_prepare_label,
     subject_grain_stub_label,
@@ -577,16 +578,21 @@ class Compute(lynguine.assess.compute.Compute):
             },
             {
                 "name": "subject_grain_propose_split",
-                "function": subject_grain_propose_split,
+                "function": self._subject_grain_propose_split,
                 "default_args": {
                     "n_children": 2,
                     "mass_threshold": 0.05,
                     "em_accept": 40,
                     "seed": 0,
+                    "label_model": "stub",
                 },
                 "docstr": (
-                    "Propose a soft topic split: update catalogue geometry and "
-                    "pending/undo; read σ² / em_accept as controls (never write)."
+                    "Propose a soft topic split: update catalogue geometry "
+                    "(topic_parent genealogy + derived topic_tree) and "
+                    "pending/undo; read σ² / em_accept as controls "
+                    "(never write). When label_model is not stub, also "
+                    "names provisional children via the configured LLM so "
+                    "the UI does not leave «Parent» → (unnamed t)."
                 ),
             },
             {
@@ -595,7 +601,8 @@ class Compute(lynguine.assess.compute.Compute):
                 "default_args": {},
                 "docstr": (
                     "Confirm a pending split: swap overlay for per-topic "
-                    "planes; clear pending/undo. Does not touch EM controls."
+                    "planes; clear pending/undo. Genealogy already lives in "
+                    "topic_parent from Propose. Does not touch EM controls."
                 ),
             },
             {
@@ -603,8 +610,9 @@ class Compute(lynguine.assess.compute.Compute):
                 "function": subject_grain_undo_split,
                 "default_args": {},
                 "docstr": (
-                    "Undo a pending split: restore catalogue from split_undo; "
-                    "redraw at live σ²; never write EM / label controls."
+                    "Undo a pending split: restore catalogue (including "
+                    "topic_parent) from split_undo; redraw at live σ²; "
+                    "never write EM / label controls."
                 ),
             },
             {
@@ -615,30 +623,213 @@ class Compute(lynguine.assess.compute.Compute):
                     "temperature": 0.2,
                 },
                 "docstr": (
-                    "Name the focus topic: reads label_prompt / label_model; "
-                    "writes topic_labels only. Uses the configured LLM when "
-                    "label_model is not stub."
+                    "Name the focus topic and any provisional labels "
+                    "(Topic N seeds, '(unnamed…)' Propose placeholders): "
+                    "reads label_prompt / label_model; writes topic_labels, "
+                    "remaps topic_parent, clears seed ghost parents, "
+                    "refreshes topic_tree, and relabels a pending split "
+                    "plotly overlay (uq_spec / uq_by_topic). Uses the "
+                    "configured LLM when label_model is not stub. Also "
+                    "invoked automatically from Propose when label_model "
+                    "is not stub."
+                ),
+            },
+            {
+                "name": "subject_grain_ensure_seed_names",
+                "function": self._subject_grain_ensure_seed_names,
+                "default_args": {
+                    "n_exemplars": 8,
+                    "temperature": 0.2,
+                },
+                "docstr": (
+                    "On load: if any topic_labels are still provisional "
+                    "(Topic N / (unnamed…)) and label_model is not stub, "
+                    "name them via the LLM. Idempotent when already named "
+                    "(no LLM call). Intended as review precompute so the "
+                    "k=1 seed is titled before the analyst starts."
                 ),
             },
         ] + (self._llm_functions_list() if LLM_AVAILABLE else [])
 
-    def _subject_grain_name_focus_topic(
+    def _subject_grain_propose_split(
+        self,
+        embeddings,
+        responsibilities,
+        phrases=None,
+        focus_topic="T0",
+        sigma2: float = 0.05,
+        em_accept: int = 40,
+        mass_threshold: float = 0.05,
+        n_children: int = 2,
+        topic_labels=None,
+        topic_parent=None,
+        seed: int = 0,
+        label_model: str = "stub",
+        label_prompt=None,
+        n_exemplars: int = 8,
+        temperature: float = 0.2,
+        **_kwargs,
+    ):
+        """Propose a soft split, then name provisional children when not stub.
+
+        Geometry / pending / undo come from
+        :func:`subject_grain_propose_split`. Offline ``label_model=stub``
+        keeps ``«Parent» → (unnamed t)`` placeholders; any other model
+        runs :meth:`_subject_grain_name_focus_topic` so Focus / Topics /
+        the Plotly overlay show real titles immediately after Propose.
+        """
+        packed = subject_grain_propose_split(
+            embeddings,
+            responsibilities,
+            phrases=phrases,
+            focus_topic=focus_topic,
+            sigma2=sigma2,
+            em_accept=em_accept,
+            mass_threshold=mass_threshold,
+            n_children=n_children,
+            topic_labels=topic_labels,
+            topic_parent=topic_parent,
+            seed=seed,
+        )
+        (
+            uq_spec,
+            uq_by_topic,
+            keys,
+            R_list,
+            focus,
+            labels,
+            parent,
+            tree,
+            pending,
+            undo,
+        ) = packed
+        model = str(label_model or "stub").strip().lower()
+        if model in ("", "stub", "none", "off"):
+            log.info(
+                "subject_grain_propose_split: geometry only "
+                f"(label_model={label_model!r}); children stay provisional"
+            )
+            return packed
+
+        log.info(
+            "subject_grain_propose_split: naming provisional children "
+            f"with model={label_model!r}"
+        )
+        labels, parent, tree, uq_spec, uq_by_topic, pending = (
+            self._subject_grain_name_focus_topic(
+                phrases=phrases,
+                responsibilities=R_list,
+                focus_topic=focus,
+                topic_labels=labels,
+                topic_parent=parent,
+                topic_keys=keys,
+                label_prompt=label_prompt,
+                label_model=label_model,
+                pending_proposal=pending,
+                uq_spec=uq_spec,
+                uq_by_topic=uq_by_topic,
+                n_exemplars=n_exemplars,
+                temperature=temperature,
+            )
+        )
+        return (
+            uq_spec,
+            uq_by_topic,
+            keys,
+            R_list,
+            focus,
+            labels,
+            parent,
+            tree,
+            pending,
+            undo,
+        )
+
+    def _subject_grain_ensure_seed_names(
         self,
         phrases,
         responsibilities,
         focus_topic="T0",
         topic_labels=None,
+        topic_parent=None,
+        topic_keys=None,
         label_prompt=None,
         label_model="stub",
         n_exemplars: int = 8,
         temperature: float = 0.2,
         **_kwargs,
     ):
-        """Name the focus topic via stub or live LLM (``.env`` keys).
+        """Name provisional seed labels on open; no-op when already titled.
 
-        Catalogue write: ``topic_labels`` only. Controls ``label_prompt`` /
-        ``label_model`` are inputs and are never returned.
+        Unlike an explicit Name click, this never re-LLMs a topic that already
+        has a human title. Returns ``(topic_labels, topic_parent, topic_tree)``.
         """
+        from referia.assess.compute.mppca import format_topic_tree_markdown
+        from referia.assess.compute.topic_naming import _is_provisional_label
+
+        labels = dict(topic_labels) if isinstance(topic_labels, dict) else {}
+        keys = [str(k) for k in (topic_keys or list(labels.keys()))]
+        if not keys and labels:
+            keys = [str(k) for k in labels.keys()]
+        provisional = [
+            key
+            for key in keys
+            if _is_provisional_label(labels.get(key, key), key)
+        ]
+        model = str(label_model or "stub").strip().lower()
+        if not provisional or model in ("", "stub", "none", "off"):
+            focus = str(focus_topic) if str(focus_topic) in keys else (
+                keys[0] if keys else "T0"
+            )
+            parent = (
+                {str(k): (None if v in (None, "", "null") else str(v))
+                 for k, v in topic_parent.items()}
+                if isinstance(topic_parent, dict)
+                else {key: None for key in keys}
+            )
+            tree = format_topic_tree_markdown(
+                keys,
+                labels,
+                parent,
+                focus,
+                responsibilities=responsibilities,
+            )
+            log.info(
+                "subject_grain_ensure_seed_names: skip LLM "
+                f"(provisional={provisional!r} model={label_model!r})"
+            )
+            return labels, parent, tree
+
+        log.info(
+            "subject_grain_ensure_seed_names: naming "
+            f"{provisional} with model={label_model!r}"
+        )
+        labels_out, parent_out, tree, *_ = self._subject_grain_name_focus_topic(
+            phrases=phrases,
+            responsibilities=responsibilities,
+            focus_topic=focus_topic,
+            topic_labels=labels,
+            topic_parent=topic_parent,
+            topic_keys=keys,
+            label_prompt=label_prompt,
+            label_model=label_model,
+            n_exemplars=n_exemplars,
+            temperature=temperature,
+        )
+        return labels_out, parent_out, tree
+
+    def _subject_grain_name_one_topic(
+        self,
+        phrases,
+        responsibilities,
+        focus_topic,
+        label_prompt,
+        label_model,
+        *,
+        n_exemplars: int = 8,
+        temperature: float = 0.2,
+    ) -> tuple[str, str]:
+        """Return ``(topic_key, label)`` for one topic via stub or live LLM."""
         prompt, exemplars, focus = subject_grain_prepare_label(
             phrases,
             responsibilities,
@@ -652,7 +843,6 @@ class Compute(lynguine.assess.compute.Compute):
             and LLM_AVAILABLE
             and get_llm_manager is not None
         )
-        label = None
         if use_live:
             try:
                 llm_config = (
@@ -670,16 +860,167 @@ class Compute(lynguine.assess.compute.Compute):
                         "Reply with JSON only: {\"label\": \"...\", \"description\": \"...\"}."
                     ),
                 )
-                label = subject_grain_parse_label_reply(reply, exemplars)
-            except Exception as exc:  # noqa: BLE001 — fall back to stub
+                return focus, subject_grain_parse_label_reply(reply, exemplars)
+            except Exception as exc:  # noqa: BLE001 — surface failure to UI
                 log.warning(
-                    f"subject_grain_name_focus_topic: LLM failed ({exc}); "
-                    "using stub label"
+                    f"subject_grain_name_focus_topic: LLM failed for {focus} ({exc})"
                 )
-                label = None
-        if not label:
-            label = subject_grain_stub_label(exemplars, focus)
-        return subject_grain_apply_focus_label(topic_labels, focus, label)
+                raise ComputeError(
+                    f"LLM naming failed for {focus} (model={model}): {exc}"
+                ) from exc
+        return focus, subject_grain_stub_label(exemplars, focus)
+
+    def _subject_grain_name_focus_topic(
+        self,
+        phrases,
+        responsibilities,
+        focus_topic="T0",
+        topic_labels=None,
+        topic_parent=None,
+        topic_keys=None,
+        label_prompt=None,
+        label_model="stub",
+        pending_proposal=None,
+        uq_spec=None,
+        uq_by_topic=None,
+        n_exemplars: int = 8,
+        temperature: float = 0.2,
+        **_kwargs,
+    ):
+        """Name focus + unnamed Propose children via stub or live LLM.
+
+        Catalogue writes: ``topic_labels``, remapped ``topic_parent``, and
+        derived ``topic_tree``. When a pending split overlay is present,
+        also rewrites ``uq_spec`` / ``uq_by_topic`` / ``pending_proposal``
+        display names so Plotly stops showing ``(unnamed…)``. Controls
+        ``label_prompt`` / ``label_model`` are inputs and are never
+        returned. Propose does not call an LLM — it only leaves
+        ``(unnamed…)`` placeholders; this action fills them.
+        """
+        keys_to_name = subject_grain_keys_needing_names(
+            topic_labels, focus_topic, topic_keys
+        )
+        log.info(
+            f"subject_grain_name_focus_topic: focus={focus_topic} "
+            f"model={label_model} keys_to_name={keys_to_name}"
+        )
+        labels = topic_labels
+        parent = topic_parent
+        tree = None
+        for key in keys_to_name:
+            named_key, label = self._subject_grain_name_one_topic(
+                phrases,
+                responsibilities,
+                key,
+                label_prompt,
+                label_model,
+                n_exemplars=n_exemplars,
+                temperature=temperature,
+            )
+            log.info(
+                f"subject_grain_name_focus_topic: named {named_key} → {label!r}"
+            )
+            labels, parent, tree = subject_grain_apply_focus_label(
+                labels,
+                named_key,
+                label,
+                topic_parent=parent,
+                topic_keys=topic_keys,
+                responsibilities=responsibilities,
+            )
+        if tree is None:
+            # Nothing to name — still refresh derived view.
+            labels, parent, tree = subject_grain_apply_focus_label(
+                topic_labels,
+                focus_topic,
+                (
+                    (topic_labels or {}).get(str(focus_topic), str(focus_topic))
+                    if isinstance(topic_labels, dict)
+                    else str(focus_topic)
+                ),
+                topic_parent=topic_parent,
+                topic_keys=topic_keys,
+                responsibilities=responsibilities,
+            )
+
+        uq_out = uq_spec
+        uq_map = uq_by_topic
+        pending_out = pending_proposal
+        if isinstance(pending_proposal, dict) and pending_proposal:
+            children = list(pending_proposal.get("children") or [])
+            if children and isinstance(labels, dict):
+                from referia.util.plotly_figures import (
+                    relabel_proposed_split_plotly_spec,
+                )
+
+                child_display = [
+                    str(labels.get(str(ck), ck)) for ck in children
+                ]
+                # Soft split replaces the parent topic with children, so
+                # pending.parent often collides with a child key. Prefer a
+                # live named parent when the key is still distinct; otherwise
+                # keep the sealed Propose parent_label. Always sanitize so a
+                # nested provisional never remains in the overlay title.
+                from referia.assess.compute.topic_naming import (
+                    _is_provisional_label,
+                    _short_parent_for_placeholder,
+                )
+
+                parent_display = (
+                    pending_proposal.get("parent_label") or "parent"
+                )
+                parent_key = pending_proposal.get("parent")
+                children_set = {str(c) for c in children}
+                if (
+                    parent_key is not None
+                    and str(parent_key) not in children_set
+                    and isinstance(labels, dict)
+                    and str(parent_key) in labels
+                ):
+                    parent_display = labels[str(parent_key)]
+                parent_display = _short_parent_for_placeholder(
+                    parent_display, parent_key
+                )
+                if _is_provisional_label(parent_display, parent_key):
+                    # Seed parent after soft split — title uses short form;
+                    # children carry the LLM names.
+                    log.info(
+                        "subject_grain_name_focus_topic: sanitized "
+                        f"provisional overlay parent → {parent_display!r}"
+                    )
+
+                base_spec = uq_spec
+                if not isinstance(base_spec, dict) and isinstance(
+                    uq_by_topic, dict
+                ):
+                    focus = pending_proposal.get("focus") or children[0]
+                    base_spec = uq_by_topic.get(str(focus)) or uq_by_topic.get(
+                        children[0]
+                    )
+                if isinstance(base_spec, dict):
+                    uq_out = relabel_proposed_split_plotly_spec(
+                        base_spec,
+                        child_labels=child_display,
+                        parent_label=str(parent_display),
+                    )
+                    log.info(
+                        "subject_grain_name_focus_topic: relabelled pending "
+                        f"overlay children={child_display} "
+                        f"parent={parent_display!r}"
+                    )
+                    if isinstance(uq_by_topic, dict):
+                        uq_map = dict(uq_by_topic)
+                        for ck in children:
+                            uq_map[str(ck)] = uq_out
+                    pending_out = dict(pending_proposal)
+                    pending_out["parent_label"] = str(parent_display)
+                    he = pending_out.get("history_entry")
+                    if isinstance(he, dict):
+                        he = dict(he)
+                        he["parent_label"] = str(parent_display)
+                        pending_out["history_entry"] = he
+
+        return labels, parent, tree, uq_out, uq_map, pending_out
     
     def _llm_functions_list(self) -> list[dict]:
         """

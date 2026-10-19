@@ -9,6 +9,7 @@ live elsewhere (``referia.util.plotly_figures``, review config /
 from __future__ import annotations
 
 import hashlib
+import html
 from typing import Any, Optional, Sequence
 
 import numpy as np
@@ -26,6 +27,7 @@ __all__ = [
     "subject_grain_propose_split",
     "subject_grain_confirm_split",
     "subject_grain_undo_split",
+    "format_topic_tree_markdown",
     "topic_fit_diagnostics",
     "profile_topic_sigma2",
     "responsibilities_to_labels",
@@ -963,7 +965,9 @@ def _topic_index(keys: Sequence[str], focus_topic: Any) -> int:
 
 
 # Propose / confirm / undo: controls (σ², em_*) are inputs only; catalogue
-# fields (responsibilities, topic_keys, uq_*, pending_*, split_undo) are writes.
+# fields (responsibilities, topic_keys, topic_parent, uq_*, pending_*,
+# split_undo) are writes.  ``topic_parent`` is the living genealogy map
+# (multilogue ``parent_of``) — not an ephemeral return scrap.
 
 
 def _phrase_list(phrases: Any, n: int) -> list[str]:
@@ -977,6 +981,180 @@ def _phrase_list(phrases: Any, n: int) -> list[str]:
     return out
 
 
+def _topic_parent_map(raw: Any, keys: Sequence[str]) -> dict[str, str | None]:
+    """Normalise living genealogy: topic key → parent label (or None for roots)."""
+    out: dict[str, str | None] = {}
+    if isinstance(raw, dict):
+        for k, v in raw.items():
+            if v in (None, "", "null"):
+                out[str(k)] = None
+            else:
+                out[str(k)] = str(v)
+    for key in keys:
+        out.setdefault(str(key), None)
+    return out
+
+
+def _remap_topic_parent(
+    old_map: dict[str, str | None],
+    keys_old: Sequence[str],
+    keys_new: Sequence[str],
+    focus_idx: int,
+    child_keys: Sequence[str],
+    parent_label: str,
+) -> dict[str, str | None]:
+    """Remap ``topic_parent`` after a split (same index shift as multilogue)."""
+    n_ch = len(child_keys)
+    new_map: dict[str, str | None] = {}
+    for old_i, old_key in enumerate(keys_old):
+        if old_i == focus_idx:
+            continue
+        if old_i < focus_idx:
+            new_key = keys_new[old_i]
+        else:
+            new_key = keys_new[old_i + n_ch - 1]
+        new_map[str(new_key)] = old_map.get(str(old_key))
+    for ck in child_keys:
+        new_map[str(ck)] = parent_label
+    return new_map
+
+
+def _soft_association_counts(
+    responsibilities: Any,
+    n_topics: int,
+    mass_threshold: float = 0.05,
+) -> tuple[list[int], list[float]]:
+    """Per-topic soft counts: ``(R > τ).sum(axis=0)`` and ``R.sum(axis=0)``."""
+    R = np.asarray(responsibilities, dtype=float)
+    if R.ndim != 2 or R.shape[1] != n_topics:
+        return [0] * n_topics, [0.0] * n_topics
+    tau = float(mass_threshold)
+    n_soft = (R > tau).sum(axis=0).astype(int).tolist()
+    mass = R.sum(axis=0).astype(float).tolist()
+    return n_soft, mass
+
+
+def format_topic_tree_markdown(
+    topic_keys: Any = None,
+    topic_labels: Any = None,
+    topic_parent: Any = None,
+    focus_topic: Any = None,
+    responsibilities: Any = None,
+    mass_threshold: float = 0.05,
+) -> str:
+    """Render genealogy tree plus a soft-association table.
+
+    Pure view of catalogue state — does not mutate inputs.  Children are
+    matched by parent *label* (``topic_parent`` values) with a key fallback.
+
+    Soft-associated count for topic *j* is the number of phrases with
+    ``R[i, j] > mass_threshold``; soft mass is ``Σ_i R[i, j]``.
+
+    The soft-association block is an HTML ``<table>`` so it renders under
+    lynguine ``markdown2html`` without requiring the Markdown tables
+    extension (pipe tables otherwise collapse to a literal paragraph).
+    """
+    keys = [str(k) for k in (topic_keys or [])]
+    if not keys:
+        return "_No topics yet._"
+    labels: dict[str, str] = {}
+    if isinstance(topic_labels, dict):
+        labels = {str(k): str(v) for k, v in topic_labels.items()}
+    parent = _topic_parent_map(topic_parent, keys)
+    focus = str(focus_topic) if focus_topic not in (None, "") else None
+    n_soft, soft_mass = _soft_association_counts(
+        responsibilities, len(keys), mass_threshold=mass_threshold
+    )
+
+    # parent_label_or_key → child keys (stable key order)
+    children: dict[str, list[str]] = {}
+    roots: list[str] = []
+    for key in keys:
+        p = parent.get(key)
+        if p in (None, ""):
+            roots.append(key)
+            continue
+        children.setdefault(str(p), []).append(key)
+
+    def _label(key: str) -> str:
+        return labels.get(key) or key
+
+    def _child_keys(key: str) -> list[str]:
+        lab = _label(key)
+        seen: list[str] = []
+        for token in (lab, key):
+            for ck in children.get(token, []):
+                if ck not in seen:
+                    seen.append(ck)
+        return seen
+
+    # HTML table: survives markdown→HTML without the ``tables`` extension.
+    rows = [
+        "<table>",
+        "<thead><tr><th>Topic</th><th>Soft n</th><th>Mass</th></tr></thead>",
+        "<tbody>",
+    ]
+    for i, key in enumerate(keys):
+        mark = " ← focus" if focus and key == focus else ""
+        # Show the human label; keep the catalogue key as a title for hover.
+        topic_cell = (
+            f'<span title="{html.escape(key)}">'
+            f"{html.escape(_label(key))}</span>{html.escape(mark)}"
+        )
+        rows.append(
+            "<tr>"
+            f"<td>{topic_cell}</td>"
+            f'<td style="text-align:right">{n_soft[i]}</td>'
+            f'<td style="text-align:right">{soft_mass[i]:.1f}</td>'
+            "</tr>"
+        )
+    rows.extend(["</tbody>", "</table>"])
+    table = rows
+
+    tree_lines: list[str] = []
+    claimed: set[str] = set()
+
+    def _walk(key: str, depth: int, stack: set[str]) -> None:
+        if key in stack or key in claimed:
+            return
+        stack.add(key)
+        claimed.add(key)
+        mark = " ← focus" if focus and key == focus else ""
+        indent = "  " * depth
+        tree_lines.append(f"{indent}- **{_label(key)}**{mark}")
+        for ck in _child_keys(key):
+            _walk(ck, depth + 1, stack)
+        stack.discard(key)
+
+    for r in roots:
+        _walk(r, 0, set())
+    # Children whose parent label is no longer a live topic (parent was
+    # replaced by the split): group under a virtual ancestry header.
+    orphan_groups: dict[str, list[str]] = {}
+    for key in keys:
+        if key in claimed:
+            continue
+        p = parent.get(key)
+        orphan_groups.setdefault("" if p in (None, "") else str(p), []).append(key)
+    for p, child_list in orphan_groups.items():
+        if p:
+            tree_lines.append(f"- _{p}_")
+            for key in child_list:
+                mark = " ← focus" if focus and key == focus else ""
+                tree_lines.append(f"  - **{_label(key)}**{mark}")
+                claimed.add(key)
+        else:
+            for key in child_list:
+                mark = " ← focus" if focus and key == focus else ""
+                tree_lines.append(f"- **{_label(key)}**{mark}")
+                claimed.add(key)
+
+    parts = ["\n".join(table)]
+    if tree_lines:
+        parts.append("\n".join(tree_lines))
+    return "\n\n".join(parts)
+
+
 def subject_grain_propose_split(
     embeddings: Any,
     responsibilities: Any,
@@ -987,18 +1165,21 @@ def subject_grain_propose_split(
     mass_threshold: float = 0.05,
     n_children: int = 2,
     topic_labels: Any = None,
+    topic_parent: Any = None,
     seed: int = 0,
 ) -> tuple:
     """Propose a soft split: apply geometry + overlay; leave Confirm/Undo open.
 
     Reads ``sigma2`` / ``em_accept`` as EM *controls* (does not write them).
-    Writes catalogue geometry plus ``pending_proposal`` and ``split_undo``.
+    Writes catalogue geometry (including ``topic_parent`` genealogy and a
+    derived ``topic_tree`` Markdown view) plus ``pending_proposal`` /
+    ``split_undo``.
 
     Returns
     -------
     tuple
         ``(uq_spec, uq_by_topic, topic_keys, responsibilities, focus_topic,
-        topic_labels, pending_proposal, split_undo)``.
+        topic_labels, topic_parent, topic_tree, pending_proposal, split_undo)``.
     """
     X = np.asarray(embeddings, dtype=float)
     R = np.asarray(responsibilities, dtype=float)
@@ -1010,6 +1191,7 @@ def subject_grain_propose_split(
     labels_in: dict[str, str] = {}
     if isinstance(topic_labels, dict):
         labels_in = {str(k): str(v) for k, v in topic_labels.items()}
+    parent_in = _topic_parent_map(topic_parent, keys)
 
     # Snapshot catalogue only (no controls) so Undo cannot clobber σ² etc.
     cfs = [fit_weighted_ppca(X, R[:, j], s2) for j in range(R.shape[1])]
@@ -1024,6 +1206,7 @@ def subject_grain_propose_split(
         "responsibilities": R.tolist(),
         "focus_topic": focus_before,
         "topic_labels": dict(labels_in),
+        "topic_parent": dict(parent_in),
         "uq_spec": uq_before.get(focus_before),
         "uq_by_topic": uq_before,
     }
@@ -1052,12 +1235,39 @@ def subject_grain_propose_split(
                 old_key, f"Topic {old_i}"
             )
     parent_label = labels_in.get(parent_key, parent_key)
+    # Soft split replaces the parent topic with its children, so the parent
+    # label is no longer a live topic. Drop provisional seeds (``Topic N``)
+    # immediately; keep named parents for a virtual tree header.
+    from referia.assess.compute.topic_naming import (
+        _is_provisional_label,
+        _prune_ghost_parents,
+        _short_parent_for_placeholder,
+    )
+
+    # Never nest «…» → (unnamed N) into another Propose placeholder.
+    parent_display = _short_parent_for_placeholder(parent_label, parent_key)
     child_keys = [keys_new[int(c)] for c in out["dirty"]]
     child_labels = []
     for t, child_id in enumerate(out["dirty"]):
-        lab = f"«{parent_label}» → (unnamed {t})"
+        lab = f"«{parent_display}» → (unnamed {t})"
         labels_out[keys_new[child_id]] = lab
         child_labels.append(lab)
+    # Genealogy keeps the full named parent when available; provisional
+    # parents are cleared below rather than stored as nested placeholders.
+    parent_for_tree = (
+        parent_label
+        if not _is_provisional_label(parent_label, parent_key)
+        else parent_display
+    )
+    parent_out = _remap_topic_parent(
+        parent_in, keys, keys_new, focus_idx, child_keys, parent_for_tree
+    )
+
+    if _is_provisional_label(parent_label, parent_key):
+        for ck in child_keys:
+            parent_out[str(ck)] = None
+    else:
+        parent_out = _prune_ghost_parents(parent_out, labels_out)
 
     # Per-topic planes for Confirm; overlay shown while pending.
     planes_after_accept = rebuild_uq_by_topic(
@@ -1081,7 +1291,7 @@ def subject_grain_propose_split(
             responsibilities=R_new,
             phrases=phrase_list,
             child_labels=child_labels,
-            parent_label=parent_label,
+            parent_label=parent_display,
             sigma2=s2,
         )
     if proposed is None:
@@ -1092,17 +1302,41 @@ def subject_grain_propose_split(
     uq_by_topic = dict(planes_after_accept)
     for ck in child_keys:
         uq_by_topic[ck] = proposed
+    # Seal metadata for Confirm; genealogy already applied in topic_parent.
+    he = out.get("history_entry") if isinstance(out.get("history_entry"), dict) else {}
     pending_proposal = {
         "kind": "split",
         "accepted": False,
         "parent": parent_key,
-        "parent_label": parent_label,
+        "parent_label": parent_display,
         "children": child_keys,
         "k_before": len(keys),
         "k_after": len(keys_new),
         "focus": focus_new,
         "planes_after_accept": planes_after_accept,
+        "history_entry": {
+            "action": "split",
+            "parent": parent_key,
+            "parent_label": parent_display,
+            "children": list(child_keys),
+            "k_before": len(keys),
+            "k_after": len(keys_new),
+            **{k: he[k] for k in (
+                "n_children",
+                "child_order_by_mass",
+                "local_seed",
+                "child_mass_min_frac",
+            ) if k in he},
+        },
     }
+    tree = format_topic_tree_markdown(
+        keys_new,
+        labels_out,
+        parent_out,
+        focus_new,
+        responsibilities=R_new,
+        mass_threshold=float(mass_threshold),
+    )
     return (
         proposed,
         uq_by_topic,
@@ -1110,6 +1344,8 @@ def subject_grain_propose_split(
         R_new.tolist(),
         focus_new,
         labels_out,
+        parent_out,
+        tree,
         pending_proposal,
         split_undo,
     )
@@ -1147,15 +1383,17 @@ def subject_grain_undo_split(
 ) -> tuple:
     """Reject a proposed split: restore catalogue geometry; clear pending/undo.
 
-    Restores responsibilities / keys / labels / focus from ``split_undo``.
-    Redraws planes with the *live* ``sigma2`` control when embeddings are
-    supplied — never writes ``sigma2`` itself.
+    Restores responsibilities / keys / labels / focus / ``topic_parent`` from
+    ``split_undo``.  Redraws planes with the *live* ``sigma2`` control when
+    embeddings are supplied — never writes ``sigma2`` itself.  Regenerates
+    the derived ``topic_tree`` view.
 
     Returns
     -------
     tuple
         ``(uq_spec, uq_by_topic, topic_keys, responsibilities, focus_topic,
-        topic_labels, pending_proposal, split_undo)`` — last two cleared.
+        topic_labels, topic_parent, topic_tree, pending_proposal, split_undo)``
+        — last two cleared.
     """
     if not isinstance(split_undo, dict) or not split_undo:
         raise ValueError("No split_undo snapshot — nothing to reject.")
@@ -1163,6 +1401,7 @@ def subject_grain_undo_split(
     R = split_undo.get("responsibilities")
     focus = split_undo.get("focus_topic") or (keys[0] if keys else "T0")
     labels = split_undo.get("topic_labels") or {}
+    parent_map = _topic_parent_map(split_undo.get("topic_parent"), keys)
 
     uq_by_topic = split_undo.get("uq_by_topic") or {}
     uq_spec = split_undo.get("uq_spec")
@@ -1184,6 +1423,9 @@ def subject_grain_undo_split(
             pass
     if uq_spec is None and isinstance(uq_by_topic, dict) and uq_by_topic:
         uq_spec = uq_by_topic.get(focus) or next(iter(uq_by_topic.values()), {})
+    tree = format_topic_tree_markdown(
+        keys, labels, parent_map, focus, responsibilities=R
+    )
     return (
         uq_spec,
         uq_by_topic,
@@ -1191,6 +1433,8 @@ def subject_grain_undo_split(
         R,
         focus,
         labels,
+        parent_map,
+        tree,
         None,
         None,
     )

@@ -19,7 +19,139 @@ __all__ = [
     "subject_grain_stub_label",
     "subject_grain_parse_label_reply",
     "subject_grain_apply_focus_label",
+    "subject_grain_keys_needing_names",
+    "_is_provisional_label",
+    "_short_parent_for_placeholder",
+    "_prune_ghost_parents",
 ]
+
+
+def _is_provisional_label(label: Any, key: Any = None) -> bool:
+    """True for seed / Propose placeholders that still need a human title.
+
+    Covers ``Topic N`` bake seeds, bare catalogue keys (``T0``), empty
+    strings, and Propose placeholders like ``«Parent» → (unnamed 0)``.
+    """
+    text = str(label or "").strip()
+    if not text:
+        return True
+    lower = text.lower()
+    if "(unnamed" in lower:
+        return True
+    if re.fullmatch(r"Topic\s+\d+", text, flags=re.IGNORECASE):
+        return True
+    if key is not None and text == str(key):
+        return True
+    if re.fullmatch(r"T\d+", text):
+        return True
+    return False
+
+
+def _short_parent_for_placeholder(
+    parent_label: Any,
+    parent_key: Any = None,
+) -> str:
+    """Parent fragment for Propose placeholders and overlay titles.
+
+    Never nests an existing ``«…» → (unnamed N)`` into another placeholder.
+    Named parents pass through unchanged; provisional labels peel to an
+    innermost ``Topic N`` seed when present, else the catalogue key.
+    """
+    text = str(parent_label or "").strip()
+    if text and not _is_provisional_label(text, parent_key):
+        return text
+    seed = re.search(r"Topic\s+\d+", text, flags=re.IGNORECASE)
+    if seed:
+        # Normalise spacing / capitalisation for stable UI strings.
+        num = re.search(r"\d+", seed.group(0))
+        return f"Topic {num.group(0)}" if num else seed.group(0)
+    if parent_key is not None and str(parent_key).strip():
+        return str(parent_key)
+    return "parent"
+
+
+# Back-compat alias used in older tests / call sites.
+def _is_unnamed_label(label: Any) -> bool:
+    return _is_provisional_label(label)
+
+
+def subject_grain_keys_needing_names(
+    topic_labels: Any,
+    focus_topic: Any,
+    topic_keys: Any = None,
+) -> list[str]:
+    """Keys to name on a Name click: focus first, then other provisional topics.
+
+    Propose leaves children as ``«Parent» → (unnamed t)`` without calling an
+    LLM. Bake seeds use ``Topic N``. One Name action covers the focus and
+    every remaining provisional label so the analyst need not re-focus each
+    child (or the initial seed) and click again.
+    """
+    labels: dict[str, str] = {}
+    if isinstance(topic_labels, dict):
+        labels = {str(k): str(v) for k, v in topic_labels.items()}
+    keys = [str(k) for k in (topic_keys or list(labels.keys()))]
+    if not keys and labels:
+        keys = list(labels.keys())
+    focus = (
+        str(focus_topic)
+        if focus_topic not in (None, "")
+        else (keys[0] if keys else "T0")
+    )
+    provisionals = [
+        key
+        for key in keys
+        if _is_provisional_label(labels.get(key, key), key)
+    ]
+    if not provisionals:
+        # Nothing provisional — still name the focus on an explicit click.
+        if focus in keys:
+            return [focus]
+        return keys[:1] if keys else []
+    ordered: list[str] = []
+    # Focus first only when it still needs a title (do not re-LLM named topics
+    # just because they are selected while siblings are provisional).
+    if focus in provisionals:
+        ordered.append(focus)
+    for key in provisionals:
+        if key not in ordered:
+            ordered.append(key)
+    return ordered
+
+
+def _prune_ghost_parents(
+    topic_parent: Any,
+    topic_labels: Any,
+) -> dict[str, str | None]:
+    """Drop parent pointers whose label is no longer a live topic.
+
+    After a soft split the parent *topic* is replaced by its children, but
+    ``topic_parent`` still stores the old label (often the seed ``Topic 0``).
+    Keeping that ghost makes the UI look like naming failed (``← Topic 0`` /
+    ``(orphaned)``). Clear pointers that match no live label; ancestry for
+    named parents that were split away is rendered as a virtual tree header.
+    """
+    labels: dict[str, str] = {}
+    if isinstance(topic_labels, dict):
+        labels = {str(k): str(v) for k, v in topic_labels.items()}
+    live = {str(v) for v in labels.values() if v not in (None, "")}
+    live |= set(labels.keys())
+    out: dict[str, str | None] = {}
+    if isinstance(topic_parent, dict):
+        for k, v in topic_parent.items():
+            if v in (None, "", "null"):
+                out[str(k)] = None
+            elif str(v) in live:
+                out[str(k)] = str(v)
+            elif _is_provisional_label(v):
+                # Seed / unnamed ghost — drop so Name leaves a clean tree.
+                out[str(k)] = None
+            else:
+                # Named parent that was split away — keep for virtual header.
+                out[str(k)] = str(v)
+    for key in labels:
+        out.setdefault(str(key), None)
+    return out
 
 
 def _topic_index(keys: Sequence[str], focus_topic: Any) -> int:
@@ -132,8 +264,20 @@ def subject_grain_apply_focus_label(
     topic_labels: Any,
     focus_key: str,
     label: str,
-) -> dict:
-    """Return a copy of ``topic_labels`` with ``focus_key`` set (catalogue write)."""
+    topic_parent: Any = None,
+    topic_keys: Any = None,
+    responsibilities: Any = None,
+    mass_threshold: float = 0.05,
+) -> tuple:
+    """Apply a new focus label and keep genealogy pointers consistent.
+
+    Returns ``(topic_labels, topic_parent, topic_tree)``.  Children that
+    pointed at the old label are remapped to the new one; ``topic_tree`` is
+    the derived Markdown view (same formatter as Propose / Undo), including
+    the soft-association table when ``responsibilities`` are supplied.
+    """
+    from referia.assess.compute.mppca import format_topic_tree_markdown
+
     out: dict = {}
     if isinstance(topic_labels, dict):
         out = {str(k): str(v) for k, v in topic_labels.items()}
@@ -142,5 +286,29 @@ def subject_grain_apply_focus_label(
             out = {str(k): str(v) for k, v in dict(topic_labels).items()}
         except (TypeError, ValueError):
             out = {}
-    out[str(focus_key)] = str(label)[:80]
-    return out
+    focus = str(focus_key)
+    old_label = out.get(focus, focus)
+    new_label = str(label)[:80]
+    out[focus] = new_label
+
+    keys = [str(k) for k in (topic_keys or list(out.keys()))]
+    parent: dict[str, str | None] = {}
+    if isinstance(topic_parent, dict):
+        for k, v in topic_parent.items():
+            parent[str(k)] = None if v in (None, "", "null") else str(v)
+    for key in keys:
+        parent.setdefault(key, None)
+    if old_label != new_label:
+        for key, p in list(parent.items()):
+            if p == old_label:
+                parent[key] = new_label
+    parent = _prune_ghost_parents(parent, out)
+    tree = format_topic_tree_markdown(
+        keys,
+        out,
+        parent,
+        focus,
+        responsibilities=responsibilities,
+        mass_threshold=float(mass_threshold),
+    )
+    return (out, parent, tree)
