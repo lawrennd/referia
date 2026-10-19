@@ -1747,12 +1747,18 @@ def interactive(function, **kwargs):
     ipyw.interactive(function, **newargs)
 
 
-class PlotlyFigureViewer(ReferiaStatefulWidget):
-    """Interactive Plotly figure in the Jupyter viewer pane (CIP-0011)."""
+class PlotlyFigureViewer(ReferiaWidget):
+    """Interactive Plotly figure in the Jupyter viewer pane (CIP-0011).
+
+    Uses ``ReferiaWidget`` (not stateful) because the shell is a ``VBox``
+    with no ``value`` trait; selection sync goes through review fields.
+    """
 
     def __init__(self, **args):
         self._viewer_spec = dict(args.pop("viewer_spec", {}) or {})
         self._figure_widget = None
+        self._field_name = args.pop("field_name", None)
+        args.pop("column_name", None)
         for key in ("on", "highlight", "field", "type", "description"):
             args.pop(key, None)
         args.setdefault("function", ipyw.VBox)
@@ -1764,10 +1770,6 @@ class PlotlyFigureViewer(ReferiaStatefulWidget):
     @classmethod
     def _default_widget(cls):
         return ipyw.VBox
-
-    def _widget_events(self):
-        # VBox has no ``value`` trait; clicks are bound on the FigureWidget.
-        pass
 
     @property
     def name(self):
@@ -1863,12 +1865,23 @@ class PlotlyFigureViewer(ReferiaStatefulWidget):
     def to_markdown(self):
         return ""
 
+    def get_value(self):
+        return None
 
-class StaticImageViewer(ReferiaStatefulWidget):
+    def set_value(self, value):
+        pass
+
+    def has_trait(self, name):
+        return False
+
+
+class StaticImageViewer(ReferiaWidget):
     """Static image entry in the Jupyter viewer pane (CIP-0011)."""
 
     def __init__(self, **args):
         self._viewer_spec = dict(args.pop("viewer_spec", {}) or {})
+        self._field_name = args.pop("field_name", None)
+        args.pop("column_name", None)
         for key in ("on", "highlight", "field", "type", "description"):
             args.pop(key, None)
         args.setdefault("function", ipyw.HTML)
@@ -1915,6 +1928,21 @@ class StaticImageViewer(ReferiaStatefulWidget):
 
     def to_markdown(self):
         return ""
+
+    def get_value(self):
+        try:
+            return self.widget.value
+        except Exception:
+            return None
+
+    def set_value(self, value):
+        try:
+            self.widget.value = value
+        except Exception:
+            pass
+
+    def has_trait(self, name):
+        return False
 
     
 populate_widgets(list_stateful_widgets)

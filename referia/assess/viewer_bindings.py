@@ -141,13 +141,13 @@ def parse_figure_spec(raw: Any) -> dict[str, Any] | None:
             raw = json.loads(text)
         except json.JSONDecodeError:
             return None
-    if not isinstance(raw, MutableMapping) and not isinstance(raw, Mapping):
+    # Bare trace list stored in the field.
+    if isinstance(raw, Sequence) and not isinstance(raw, (str, bytes, Mapping)):
+        return {"data": list(raw), "layout": {}}
+    if not isinstance(raw, Mapping):
         return None
     fig = dict(raw)
     if "data" not in fig and "layout" not in fig:
-        # Allow bare trace list stored in the field.
-        if isinstance(raw, Sequence) and not isinstance(raw, (str, bytes, Mapping)):
-            return {"data": list(raw), "layout": {}}
         return None
     fig.setdefault("data", [])
     fig.setdefault("layout", {})

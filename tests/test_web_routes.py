@@ -326,6 +326,78 @@ class TestPostField:
         assert 'hx-swap-oob="true"' in response.text
         assert "Create Email" not in response.text
 
+    def test_viewer_source_oob_refreshes_trigger_column(self, client, mock_reviewer):
+        """CIP-0011: plot writes must OOB-refresh the review widget for that field."""
+        mock_reviewer.affected_widgets.return_value = set()
+        mock_reviewer.get_value.return_value = "topic-1"
+        response = client.post(
+            "/field/Comment",
+            data={"Comment": "from-plot", "source": "viewer"},
+        )
+        assert response.status_code == 200
+        assert 'id="widget-Comment"' in response.text
+        assert 'hx-swap-oob="true"' in response.text
+
+    def test_field_update_oob_refreshes_highlight_viewers(self, client, mock_reviewer):
+        mock_reviewer.affected_widgets.return_value = set()
+        mock_reviewer.get_viewer_specs.return_value = [
+            {
+                "type": "PlotlyFigure",
+                "field": "fig",
+                "highlight": {"from_field": "Comment"},
+            }
+        ]
+        mock_reviewer.render_viewer_html.return_value = (
+            '<div class="viewer viewer-plotly" id="viewer-plotly-0"></div>'
+        )
+        response = client.post("/field/Comment", data={"Comment": "t1"})
+        assert response.status_code == 200
+        assert "viewer-plotly-0" in response.text
+        assert 'hx-swap-oob="true"' in response.text
+        mock_reviewer.render_viewer_html.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# CIP-0011 viewer OOB helpers
+# ---------------------------------------------------------------------------
+
+
+class TestViewerOobHelpers:
+    def test_make_viewer_oob_marks_plotly_and_image(self):
+        from referia.web.routes import _make_viewer_oob
+
+        plotly = '<div class="viewer viewer-plotly" id="viewer-plotly-0"></div>'
+        assert 'hx-swap-oob="true"' in _make_viewer_oob(plotly)
+        image = '<div class="viewer viewer-image" id="viewer-image-1"></div>'
+        assert 'hx-swap-oob="true"' in _make_viewer_oob(image)
+        other = '<div class="viewer viewer-markdown">x</div>'
+        assert _make_viewer_oob(other) == other
+
+    def test_viewer_highlight_oobs_filters_by_field(self):
+        from referia.web.routes import _viewer_highlight_oobs
+
+        reviewer = MagicMock()
+        reviewer.get_viewer_specs.return_value = [
+            {"type": "Markdown", "liquid": "x"},
+            {
+                "type": "PlotlyFigure",
+                "field": "fig",
+                "highlight": {"from_field": "selected_topic"},
+            },
+            {
+                "type": "PlotlyFigure",
+                "field": "other",
+                "highlight": {"from_field": "other_field"},
+            },
+        ]
+        reviewer.render_viewer_html.return_value = (
+            '<div class="viewer viewer-plotly" id="viewer-plotly-1"></div>'
+        )
+        parts = _viewer_highlight_oobs(reviewer, "selected_topic")
+        assert len(parts) == 1
+        assert 'hx-swap-oob="true"' in parts[0]
+        reviewer.render_viewer_html.assert_called_once()
+
 
 # ---------------------------------------------------------------------------
 # _find_spec / document-actions OOB helpers
