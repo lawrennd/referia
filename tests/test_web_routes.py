@@ -378,8 +378,13 @@ class TestViewerOobHelpers:
         assert 'hx-swap-oob="true"' in _make_viewer_oob(filled)
         image = '<div class="viewer viewer-image" id="viewer-image-1"></div>'
         assert 'hx-swap-oob="true"' in _make_viewer_oob(image)
-        other = '<div class="viewer viewer-markdown">x</div>'
-        assert _make_viewer_oob(other) == other
+        # Liquid catalogue / intro viewers also OOB-refresh after naming.
+        markdown = '<div class="viewer viewer-markdown">x</div>'
+        assert 'hx-swap-oob="true"' in _make_viewer_oob(markdown)
+        html = '<div class="viewer viewer-html">y</div>'
+        assert 'hx-swap-oob="true"' in _make_viewer_oob(html)
+        untouched = '<div class="viewer viewer-other">z</div>'
+        assert _make_viewer_oob(untouched) == untouched
 
     def test_viewer_highlight_oobs_filters_by_field(self):
         from referia.web.routes import _viewer_highlight_oobs

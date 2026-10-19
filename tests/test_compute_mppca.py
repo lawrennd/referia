@@ -587,6 +587,59 @@ def test_parse_label_reply_json_and_stub_fallback():
     assert "Cycle parking" in tree and "kid" in tree
 
 
+def test_parse_label_reply_alternate_keys_and_plaintext():
+    """Accept title/name keys, embedded JSON, and first-line plaintext."""
+    assert (
+        subject_grain_parse_label_reply(
+            'Here: {"title": "Station parking", "description": "x"}',
+            ["Secure bike parking"],
+        )
+        == "Station parking"
+    )
+    assert (
+        subject_grain_parse_label_reply(
+            '{"name": "School lanes"}',
+            ["Safe cycle lanes"],
+        )
+        == "School lanes"
+    )
+    assert (
+        subject_grain_parse_label_reply(
+            "Plain topic title\nmore prose",
+            ["Secure bike parking"],
+        )
+        == "Plain topic title"
+    )
+    # Empty / unusable → stub from exemplars
+    stubbed = subject_grain_parse_label_reply("", ["Secure bike parking at stations"])
+    assert stubbed
+    assert stubbed != ""
+
+
+def test_provisional_label_edge_cases():
+    from referia.assess.compute.topic_naming import (
+        _is_provisional_label,
+        _short_parent_for_placeholder,
+    )
+
+    assert _is_provisional_label("", "T0") is True
+    assert _is_provisional_label("T0", "T0") is True  # bare catalogue key
+    assert _is_provisional_label("T3") is True
+    assert _is_provisional_label("Named topic", "T0") is False
+    assert _short_parent_for_placeholder("", None) == "parent"
+    assert _short_parent_for_placeholder("«?» → (unnamed 0)", None) == "parent"
+
+
+def test_clip_label_falls_back_when_suffix_too_long():
+    """If (unnamed N) alone nearly fills the budget, clip the whole string."""
+    from referia.util.plotly_figures import _clip_label
+
+    long = "«Very Long Parent Name That Will Not Fit» → (unnamed 0)"
+    out = _clip_label(long, n=12)
+    assert out.endswith("…")
+    assert len(out) <= 12
+
+
 def test_name_focus_topic_stub_via_compute(monkeypatch):
     """Populate path: stub model must not require an API key."""
     from referia.assess import compute as compute_mod
@@ -1024,3 +1077,28 @@ def test_ensure_seed_names_stub_leaves_topic_zero():
     assert labels["T0"] == "Topic 0"
     assert parent["T0"] is None
     assert "Topic 0" in tree
+
+
+def test_name_one_topic_surfaces_llm_failure(monkeypatch):
+    """LLM exceptions become ComputeError so the populate button can show them."""
+    from referia.assess import compute as compute_mod
+    from referia.exceptions import ComputeError
+
+    class _Mgr:
+        def call(self, **kwargs):
+            raise RuntimeError("api down")
+
+    monkeypatch.setattr(compute_mod, "LLM_AVAILABLE", True)
+    monkeypatch.setattr(compute_mod, "get_llm_manager", lambda _cfg=None: _Mgr())
+
+    comp = compute_mod.Compute(type("Iface", (dict,), {})(llm={}))
+    with pytest.raises(ComputeError, match="LLM naming failed for T0"):
+        comp._subject_grain_name_one_topic(
+            phrases=["Safe cycle lanes near schools."],
+            responsibilities=[[1.0]],
+            focus_topic="T0",
+            label_prompt=_TEST_LABEL_PROMPT,
+            label_model="gpt-4.1-mini",
+            n_exemplars=1,
+            temperature=0.0,
+        )
