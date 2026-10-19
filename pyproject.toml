@@ -98,6 +98,7 @@ script = "path/to/script"
 
 
 [tool.pytest.ini_options]
+testpaths = ["tests", "referia/tests"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
