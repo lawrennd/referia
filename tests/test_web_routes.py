@@ -379,6 +379,7 @@ class TestViewerOobHelpers:
         reviewer = MagicMock()
         reviewer.get_viewer_specs.return_value = [
             {"type": "Markdown", "liquid": "x"},
+            "skip-non-dict",
             {
                 "type": "PlotlyFigure",
                 "field": "fig",
@@ -397,6 +398,19 @@ class TestViewerOobHelpers:
         assert len(parts) == 1
         assert 'hx-swap-oob="true"' in parts[0]
         reviewer.render_viewer_html.assert_called_once()
+
+    def test_viewer_source_without_trigger_spec_skips_widget_oob(
+        self, client, mock_reviewer
+    ):
+        """source=viewer with no matching review widget still returns OK."""
+        mock_reviewer.affected_widgets.return_value = set()
+        mock_reviewer.get_widget_specs.return_value = []
+        mock_reviewer.get_viewer_specs.return_value = []
+        response = client.post(
+            "/field/Orphan",
+            data={"Orphan": "x", "source": "viewer"},
+        )
+        assert response.status_code == 200
 
 
 # ---------------------------------------------------------------------------

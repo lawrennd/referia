@@ -1792,7 +1792,7 @@ class PlotlyFigureViewer(ReferiaWidget):
                 parent.set_column(str(field))
                 raw = parent.get_value()
             except Exception as exc:
-                log.debug("PlotlyFigureViewer field read failed: %s", exc)
+                log.debug(f"PlotlyFigureViewer field read failed: {exc}")
         figure = parse_figure_spec(raw) or {
             "data": [],
             "layout": {"title": {"text": "No figure data"}},
@@ -1848,17 +1848,17 @@ class PlotlyFigureViewer(ReferiaWidget):
                     parent.set_column(col)
                     parent.set_value(value)
                 except Exception as exc:
-                    log.error("Plotly click set_value(%s) failed: %s", col, exc)
+                    log.error(f"Plotly click set_value({col}) failed: {exc}")
             try:
                 parent._widgets.refresh()
             except Exception as exc:
-                log.debug("Post-click refresh failed: %s", exc)
+                log.debug(f"Post-click refresh failed: {exc}")
 
         for trace in fw.data:
             try:
                 trace.on_click(_on_click)
             except Exception as exc:
-                log.debug("Could not bind plotly on_click: %s", exc)
+                log.debug(f"Could not bind plotly on_click: {exc}")
 
         self.widget.children = [fw]
 
@@ -1909,7 +1909,7 @@ class StaticImageViewer(ReferiaWidget):
                 val = parent.get_value()
                 src = "" if val is None else str(val)
             except Exception as exc:
-                log.debug("StaticImageViewer field read failed: %s", exc)
+                log.debug(f"StaticImageViewer field read failed: {exc}")
         elif parent is not None and any(
             k in spec for k in ("liquid", "display", "join", "tally")
         ):
@@ -1918,7 +1918,7 @@ class StaticImageViewer(ReferiaWidget):
                     {k: spec[k] for k in ("liquid", "display", "join", "tally") if k in spec}
                 ) or ""
             except Exception as exc:
-                log.debug("StaticImageViewer liquid failed: %s", exc)
+                log.debug(f"StaticImageViewer liquid failed: {exc}")
         esc = str(src).replace('"', "&quot;")
         self.widget.value = (
             f'<img src="{esc}" alt="viewer image" style="max-width:100%;" />'

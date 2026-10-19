@@ -1680,3 +1680,14 @@ class TestInteractiveViewerHtml:
             {"type": "StaticImage", "liquid": "{{ photo }}"}, viewer_index=0
         )
         assert "viewer-image" in html or "No image" in html
+
+    def test_static_image_field_error_is_soft(self):
+        reviewer, _, _ = _build_reviewer(
+            index_vals=["a"],
+            viewer=[{"type": "StaticImage", "field": "photo"}],
+        )
+        reviewer.get_value = MagicMock(side_effect=RuntimeError("boom"))
+        html = reviewer.render_viewer_html(
+            {"type": "StaticImage", "field": "photo"}, viewer_index=0
+        )
+        assert "viewer-image" in html or "No image" in html
