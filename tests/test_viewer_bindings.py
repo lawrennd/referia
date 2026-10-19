@@ -5,15 +5,19 @@ from referia.assess.viewer_bindings import (
     apply_plotly_size,
     click_point_actions,
     field_updates_from_click,
+    figure_source_binding,
     highlight_binding,
     is_interactive_viewer_type,
     is_liquid_viewer,
+    is_viewer_chrome_type,
     normalize_viewer_entry,
     parse_figure_spec,
     plotly_size_options,
+    resolve_figure_payload,
     resolve_path,
     viewer_entry_type,
     viewers_highlighting_field,
+    viewers_watching_field,
 )
 
 
@@ -170,6 +174,39 @@ def test_highlight_binding_and_viewers_highlighting_field():
     assert len(matched) == 1
     assert viewers_highlighting_field(None, "x") == []
     assert viewers_highlighting_field([], "x") == []
+
+
+def test_figure_source_binding_and_resolve():
+    spec = {
+        "type": "PlotlyFigure",
+        "field": "uq_spec",
+        "figure_source": {
+            "map_field": "uq_by_topic",
+            "key_field": "focus_topic",
+        },
+    }
+    assert figure_source_binding(spec) == {
+        "map_field": "uq_by_topic",
+        "key_field": "focus_topic",
+    }
+    assert figure_source_binding({}) is None
+    store = {
+        "focus_topic": "T1",
+        "uq_by_topic": {
+            "T0": {"data": [{"name": "t0"}], "layout": {}},
+            "T1": {"data": [{"name": "t1"}], "layout": {}},
+        },
+        "uq_spec": {"data": [{"name": "fallback"}], "layout": {}},
+    }
+    raw = resolve_figure_payload(store.__getitem__, spec)
+    assert raw["data"][0]["name"] == "t1"
+    store["focus_topic"] = "missing"
+    raw2 = resolve_figure_payload(store.__getitem__, spec)
+    assert raw2["data"][0]["name"] in {"t0", "t1"}
+    watching = viewers_watching_field([spec], "focus_topic")
+    assert len(watching) == 1
+    assert is_viewer_chrome_type({"type": "Dropdown", "field": "focus_topic"})
+    assert is_interactive_viewer_type({"type": "PopulateButton"})
 
 
 def test_parse_figure_spec_variants():

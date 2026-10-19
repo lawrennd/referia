@@ -10,7 +10,27 @@ from __future__ import annotations
 import json
 from typing import Any, Mapping, MutableMapping, Sequence
 
-INTERACTIVE_VIEWER_TYPES = frozenset({"PlotlyFigure", "StaticImage"})
+# Figure / image panes (CIP-0011) plus review-style chrome allowed on the
+# viewer side (focus selector, Propose split, etc.).
+VIEWER_CHROME_TYPES = frozenset(
+    {
+        "Dropdown",
+        "Select",
+        "PopulateButton",
+        "Textarea",
+        "Text",
+        "TextBox",
+        "IntText",
+        "BoundedIntText",
+        "FloatText",
+        "BoundedFloatText",
+        "Checkbox",
+        "RadioButtons",
+        "Label",
+        "HTML",
+    }
+)
+INTERACTIVE_VIEWER_TYPES = frozenset({"PlotlyFigure", "StaticImage"}) | VIEWER_CHROME_TYPES
 DEFAULT_VIEWER_TYPE = "Markdown"
 
 
@@ -45,8 +65,13 @@ def viewer_entry_type(spec: Mapping[str, Any] | None) -> str:
 
 
 def is_interactive_viewer_type(spec: Mapping[str, Any] | None) -> bool:
-    """True when *spec* is a typed interactive/static figure entry."""
+    """True when *spec* is a typed interactive figure or viewer-chrome widget."""
     return viewer_entry_type(spec) in INTERACTIVE_VIEWER_TYPES
+
+
+def is_viewer_chrome_type(spec: Mapping[str, Any] | None) -> bool:
+    """True when *spec* is a review-style widget hosted in the viewer pane."""
+    return viewer_entry_type(spec) in VIEWER_CHROME_TYPES
 
 
 def is_liquid_viewer(spec: Mapping[str, Any] | None) -> bool:
@@ -96,6 +121,64 @@ def highlight_binding(spec: Mapping[str, Any] | None) -> dict[str, str] | None:
         return None
     mode = hl.get("mode") or "default"
     return {"from_field": str(from_field), "mode": str(mode)}
+
+
+def figure_source_binding(spec: Mapping[str, Any] | None) -> dict[str, str] | None:
+    """Return ``{"map_field": ..., "key_field": ...}`` for focus-driven plane swap.
+
+    YAML::
+
+        figure_source:
+          map_field: uq_by_topic   # dict[topic_key → Plotly figure]
+          key_field: focus_topic   # which key to show
+
+    When set, the base figure is ``data[map_field][data[key_field]]`` instead
+    of a single static ``field:`` value.  ``field:`` remains a writable cache
+    (e.g. after Propose split) and a fallback when the map/key is missing.
+    """
+    spec = normalize_viewer_entry(spec)
+    src = spec.get("figure_source")
+    if not isinstance(src, Mapping):
+        return None
+    map_field = src.get("map_field")
+    key_field = src.get("key_field")
+    if not map_field or not key_field:
+        return None
+    return {"map_field": str(map_field), "key_field": str(key_field)}
+
+
+def resolve_figure_payload(
+    get_value,
+    spec: Mapping[str, Any] | None,
+) -> Any:
+    """Load raw figure JSON from ``figure_source`` or fallback ``field``.
+
+    *get_value* is typically ``reviewer.get_value``.  Missing map keys fall
+    back to ``spec["field"]``.
+    """
+    spec = normalize_viewer_entry(spec)
+    src = figure_source_binding(spec)
+    if src is not None:
+        try:
+            mapping = get_value(src["map_field"])
+        except Exception:
+            mapping = None
+        try:
+            key = get_value(src["key_field"])
+        except Exception:
+            key = None
+        if isinstance(mapping, Mapping) and key is not None and key in mapping:
+            return mapping[key]
+        # Soft fallback: first entry in the map
+        if isinstance(mapping, Mapping) and mapping:
+            return next(iter(mapping.values()))
+    field = spec.get("field")
+    if field:
+        try:
+            return get_value(str(field))
+        except Exception:
+            return None
+    return None
 
 
 PLOTLY_SIZE_MODES = frozenset({"figure", "container"})
@@ -318,4 +401,40 @@ def viewers_highlighting_field(
         hl = highlight_binding(spec)
         if hl and hl["from_field"] == column:
             out.append(dict(spec))
+    return out
+
+
+def viewers_watching_field(
+    specs: Sequence[Mapping[str, Any]] | None,
+    column: str,
+) -> list[dict[str, Any]]:
+    """Return Plotly viewers that should restyle when *column* changes.
+
+    Watches ``highlight.from_field`` and ``figure_source.key_field`` /
+    ``figure_source.map_field``.
+    """
+    if not specs:
+        return []
+    out: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    for spec in specs:
+        if viewer_entry_type(spec) != "PlotlyFigure":
+            continue
+        watch = False
+        hl = highlight_binding(spec)
+        if hl and hl["from_field"] == column:
+            watch = True
+        src = figure_source_binding(spec)
+        if src and column in (src["key_field"], src["map_field"]):
+            watch = True
+        field = spec.get("field")
+        if field and str(field) == column:
+            watch = True
+        if not watch:
+            continue
+        sid = id(spec)
+        if sid in seen:
+            continue
+        seen.add(sid)
+        out.append(dict(spec))
     return out

@@ -378,8 +378,13 @@ class TestViewerOobHelpers:
         assert 'hx-swap-oob="true"' in _make_viewer_oob(filled)
         image = '<div class="viewer viewer-image" id="viewer-image-1"></div>'
         assert 'hx-swap-oob="true"' in _make_viewer_oob(image)
-        other = '<div class="viewer viewer-markdown">x</div>'
-        assert _make_viewer_oob(other) == other
+        # Liquid catalogue / intro viewers also OOB-refresh after naming.
+        markdown = '<div class="viewer viewer-markdown">x</div>'
+        assert 'hx-swap-oob="true"' in _make_viewer_oob(markdown)
+        html = '<div class="viewer viewer-html">y</div>'
+        assert 'hx-swap-oob="true"' in _make_viewer_oob(html)
+        untouched = '<div class="viewer viewer-other">z</div>'
+        assert _make_viewer_oob(untouched) == untouched
 
     def test_viewer_highlight_oobs_filters_by_field(self):
         from referia.web.routes import _viewer_highlight_oobs
@@ -670,17 +675,93 @@ def populate_client():
             yield c, reviewer
 
 
+class TestPopulateStatusHtml:
+    """Confirm vs Undo must not share the same status heuristic."""
+
+    def test_confirm_clears_pending_reports_sealed(self):
+        from referia.web.routes import _populate_status_html
+
+        reviewer = MagicMock()
+        reviewer.get_value.side_effect = lambda c: {
+            "pending_proposal": None,
+            "topic_keys": ["T0", "T1"],
+        }.get(c)
+        html = _populate_status_html(
+            reviewer,
+            ["pending_proposal", "uq_spec", "uq_by_topic", "split_undo"],
+        )
+        assert "Split sealed" in html
+        assert "rejected" not in html
+
+    def test_undo_restores_catalogue_reports_rejected(self):
+        from referia.web.routes import _populate_status_html
+
+        reviewer = MagicMock()
+        reviewer.get_value.side_effect = lambda c: {
+            "pending_proposal": None,
+            "topic_keys": ["T0"],
+        }.get(c)
+        html = _populate_status_html(
+            reviewer,
+            [
+                "pending_proposal",
+                "uq_spec",
+                "uq_by_topic",
+                "topic_keys",
+                "responsibilities",
+                "focus_topic",
+                "topic_labels",
+                "split_undo",
+            ],
+        )
+        assert "Split rejected" in html
+        assert "sealed" not in html
+
+    def test_name_while_pending_does_not_say_proposed(self):
+        from referia.web.routes import _populate_status_html
+
+        reviewer = MagicMock()
+        reviewer.get_value.side_effect = lambda c: {
+            "pending_proposal": {
+                "kind": "split",
+                "parent": "T1",
+                "children": ["T1", "T2"],
+                "k_before": 4,
+                "k_after": 5,
+                "focus": "T1",
+            },
+            "topic_labels": {
+                "T1": "Child A",
+                "T2": "Child B",
+            },
+        }.get(c)
+        html = _populate_status_html(
+            reviewer,
+            [
+                "topic_labels",
+                "topic_parent",
+                "topic_tree",
+                "uq_spec",
+                "uq_by_topic",
+                "pending_proposal",
+            ],
+        )
+        assert "Named pending children" in html
+        assert "Child A" in html
+        assert "Split proposed" not in html
+
+
 class TestPostPopulate:
     def test_returns_200(self, populate_client):
-        # The URL uses the target field name (args.target), not the button's own field.
+        # URL uses the button's own field id; compute still writes args.target.
         client, _ = populate_client
-        response = client.post("/populate/Summary")
+        response = client.post("/populate/SummaryBtn")
         assert response.status_code == 200
 
     def test_calls_run_populate_with_compute_interface(self, populate_client):
         """Route must call reviewer.run_populate with {"compute": ...}."""
         client, reviewer = populate_client
-        client.post("/populate/Summary")
+        client.post("/populate/SummaryBtn")
         reviewer.run_populate.assert_called_once()
         call_arg = reviewer.run_populate.call_args[0][0]
         assert "compute" in call_arg
@@ -688,11 +769,69 @@ class TestPostPopulate:
     def test_oob_response_targets_the_target_field_not_the_button(self, populate_client):
         """OOB swap must refresh the target Textarea, not re-render the PopulateButton."""
         client, _ = populate_client
-        response = client.post("/populate/Summary")
+        response = client.post("/populate/SummaryBtn")
         # The target widget (Summary textarea) should appear in the OOB response
         assert 'id="widget-Summary"' in response.text
         # The button container should NOT appear (it's a different widget)
         assert 'id="widget-SummaryBtn"' not in response.text
+        assert 'id="btn-widget-SummaryBtn"' not in response.text
+
+    def test_populate_oob_refreshes_visible_if_populate_buttons(self, populate_client):
+        """Confirm/Undo gated on pending_proposal must OOB-refresh after Propose."""
+        client, reviewer = populate_client
+        reviewer.get_widget_specs.return_value = [
+            {"type": "PlotlyFigure", "field": "uq_spec", "args": {}},
+            {
+                "type": "PopulateButton",
+                "field": "_propose_split",
+                "args": {
+                    "description": "Propose split",
+                    "target": "uq_spec",
+                    "compute": {
+                        "field": ["uq_spec", "pending_proposal"],
+                        "function": "subject_grain_propose_split",
+                    },
+                },
+            },
+            {
+                "type": "PopulateButton",
+                "field": "_confirm_split",
+                "visible_if": "pending_proposal",
+                "args": {
+                    "description": "Confirm split",
+                    "target": "uq_spec",
+                    "compute": {
+                        "field": ["pending_proposal"],
+                        "function": "subject_grain_confirm_split",
+                    },
+                },
+            },
+        ]
+        reviewer.get_review_specs.return_value = reviewer.get_widget_specs.return_value
+        pending = {"kind": "split", "parent": "T0"}
+        row = {"pending_proposal": pending, "uq_spec": {}}
+        reviewer.get_row_data.return_value = row
+        reviewer.get_value.side_effect = lambda c: row.get(c)
+        reviewer.affected_widgets.side_effect = (
+            lambda c: {"_confirm_split"} if c == "pending_proposal" else set()
+        )
+
+        response = client.post("/populate/_propose_split")
+        assert response.status_code == 200
+        assert "Confirm split" in response.text
+        # Leading underscore stripped in DOM id; Confirm must be visible.
+        confirm_start = response.text.index('id="btn-widget-confirm_split"')
+        open_div = response.text.rfind("<div", 0, confirm_start)
+        open_tag_end = response.text.index(">", open_div)
+        opening = response.text[open_div:open_tag_end]
+        assert "display:none" not in opening
+
+    def test_legacy_target_url_still_resolves(self, populate_client):
+        """POST /populate/{target} still finds the button when no id collision."""
+        client, reviewer = populate_client
+        response = client.post("/populate/Summary")
+        assert response.status_code == 200
+        reviewer.run_populate.assert_called_once()
 
     def test_unknown_populate_field_returns_200(self, populate_client):
         """An unknown field must not crash the server."""

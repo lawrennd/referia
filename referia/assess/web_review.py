@@ -209,9 +209,11 @@ class WebReviewer:
 
         indices = list(self._data.index)
         if indices:
-            # set_index triggers compute_pre; keep cwd on the review dir so
-            # relative roots (e.g. extract_form_fields root: ../files) resolve.
+            # set_index triggers compute_pre only when the index *changes*.
+            # from_flow often already selects the first row, so the first
+            # set_index is a no-op for precompute — run it explicitly below.
             self.set_index(indices[0])
+            self._run_review_precompute()
             self._run_interface_compute()
 
         # Session filter/sort state for display.layout: inline_list (CIP-0010).
@@ -785,6 +787,9 @@ class WebReviewer:
             self.set_index(current_index)
         elif indices:
             self.set_index(indices[0])
+        # Same as __init__: from_flow may already hold this index so set_index
+        # skips compute_pre — force review precomputes after reload.
+        self._run_review_precompute()
         self._run_interface_compute()
 
     # ------------------------------------------------------------------
@@ -980,13 +985,16 @@ class WebReviewer:
     def _render_interactive_viewer_html(
         self, viewer_spec: dict, *, viewer_index: int = 0
     ) -> str:
-        """Render PlotlyFigure / StaticImage from field (or liquid URL) data."""
+        """Render PlotlyFigure / StaticImage / viewer-chrome widgets."""
         from referia.assess.viewer_bindings import (
             highlight_binding,
+            is_viewer_chrome_type,
             parse_figure_spec,
+            resolve_figure_payload,
             viewer_entry_type,
         )
         from referia.web.render import render_viewer as _render_viewer_html
+        from referia.web.render import render_widget as _render_widget_html
 
         vtype = viewer_entry_type(viewer_spec)
         field = viewer_spec.get("field")
@@ -998,13 +1006,41 @@ class WebReviewer:
             except Exception:
                 highlight_value = None
 
-        if vtype == "PlotlyFigure":
-            raw = None
-            if field:
+        if is_viewer_chrome_type(viewer_spec):
+            data: dict = {}
+            try:
+                data = dict(self.get_row_data() or {})
+            except Exception:
+                data = {}
+            for col in list(data.keys()):
                 try:
-                    raw = self.get_value(str(field))
-                except Exception as exc:
-                    log.debug("PlotlyFigure field %r: %s", field, exc)
+                    data[col] = self.get_value(col)
+                except Exception:
+                    pass
+            if field and field not in data:
+                try:
+                    data[str(field)] = self.get_value(str(field))
+                except Exception:
+                    data[str(field)] = None
+            chrome_args = viewer_spec.get("args") or {}
+            for dep in (
+                chrome_args.get("options_field"),
+                chrome_args.get("options_labels_field"),
+            ):
+                if dep and dep not in data:
+                    try:
+                        data[str(dep)] = self.get_value(str(dep))
+                    except Exception:
+                        data[str(dep)] = None
+            val = data.get(field) if field else None
+            inner = _render_widget_html(viewer_spec, val, data)
+            return (
+                f'<div class="viewer viewer-chrome" '
+                f'id="viewer-chrome-{viewer_index}">{inner}</div>'
+            )
+
+        if vtype == "PlotlyFigure":
+            raw = resolve_figure_payload(self.get_value, viewer_spec)
             figure = parse_figure_spec(raw)
             return _render_viewer_html(
                 viewer_spec,
@@ -1110,6 +1146,26 @@ class WebReviewer:
             # Prefer __setitem__ (cache path). referia.add_column requires
             # series/scores and fails when only input/output are present.
             self._data[col] = None
+
+    def _run_review_precompute(self) -> None:
+        """Run ``review: type: precompute`` with cwd on the review directory.
+
+        ``CustomDataFrame.set_index`` only calls ``compute_pre`` when the
+        active index changes. After ``from_flow`` the first row is often
+        already selected, so boot / reload would otherwise skip seed naming
+        and soft-fill. Idempotent precomputes (e.g. ensure_seed_names) make
+        a second run cheap when ``set_index`` already ran them.
+        """
+        import os
+
+        if not getattr(self._data, "_precompute", None):
+            return
+        _orig = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            self._data.compute_pre()
+        finally:
+            os.chdir(_orig)
 
     def _run_interface_compute(self) -> None:
         """Run top-level ``compute:`` for the current index (cwd = review dir)."""

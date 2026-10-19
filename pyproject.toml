@@ -37,6 +37,7 @@ python = ">=3.11,<4.0"
 XlsxWriter = "*"
 pandas = "*"
 numpy = ">=1.0.0,<2.0.0" # to deal with this https://github.com/explosion/thinc/issues/939
+scikit-learn = ">=1.3"
 jupyter = "*"
 matplotlib = "*"
 unidecode = "*"

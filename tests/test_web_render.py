@@ -212,6 +212,29 @@ class TestDropdown:
         html = render_widget(_w("Select", "grade", args={"options": ["X"]}), "X")
         assert "<select" in html
 
+    def test_options_labels_field_replaces_keys(self):
+        html = render_widget(
+            _w(
+                "Dropdown",
+                "focus_topic",
+                args={
+                    "options_field": "topic_keys",
+                    "options_labels_field": "topic_labels",
+                    "options": ["T0"],
+                },
+            ),
+            "T0",
+            data={
+                "topic_keys": ["T0", "T1"],
+                "topic_labels": {"T0": "Root theme", "T1": "Child theme"},
+            },
+        )
+        assert 'value="T0"' in html
+        assert ">Root theme<" in html
+        assert ">Child theme<" in html
+        assert ">T0<" not in html
+        assert ">T1<" not in html
+
 
 # ---------------------------------------------------------------------------
 # SelectMultiple
@@ -400,15 +423,52 @@ class TestButtons:
         assert 'hx-indicator="#widget-summary"' in html
 
     def test_populate_button_indicator_uses_args_target_when_present(self):
-        """Complex format: args.target is the populate target; URL and indicator use it."""
+        """Complex format: button field is the route key; args.target is the indicator."""
         html = render_widget({
             "type": "PopulateButton",
             "field": "populate_btn",
             "args": {"target": "notes"},
         })
-        # URL and indicator must both use the args.target, not the button's own field.
-        assert 'hx-post="/populate/notes"' in html
+        # Unique button field → URL + container id; write target → spinner.
+        assert 'hx-post="/populate/populate_btn"' in html
         assert 'hx-indicator="#widget-notes"' in html
+        assert 'id="btn-widget-populate_btn"' in html
+        assert 'id="btn-widget-notes"' not in html
+
+    def test_populate_buttons_sharing_target_have_distinct_ids(self):
+        """Multiple buttons with the same args.target must not share a DOM id."""
+        from referia.web.render import render_widget as rw
+
+        propose = rw({
+            "type": "PopulateButton",
+            "field": "_propose_split",
+            "args": {"target": "uq_spec", "description": "Propose"},
+        })
+        confirm = rw(
+            {
+                "type": "PopulateButton",
+                "field": "_confirm_split",
+                "visible_if": "pending_proposal",
+                "args": {"target": "uq_spec", "description": "Confirm"},
+            },
+            None,
+            {"pending_proposal": None},
+        )
+        # Leading underscores are stripped by _widget_dom_id (CSS-safe rewrite).
+        assert 'id="btn-widget-propose_split"' in propose
+        assert 'id="btn-widget-confirm_split"' in confirm
+        assert 'style="display:none"' in confirm
+        shown = rw(
+            {
+                "type": "PopulateButton",
+                "field": "_confirm_split",
+                "visible_if": "pending_proposal",
+                "args": {"target": "uq_spec", "description": "Confirm"},
+            },
+            None,
+            {"pending_proposal": {"kind": "split"}},
+        )
+        assert 'style="display:none"' not in shown
 
     def test_populate_button_no_field_uses_args_target_for_url(self):
         """Introduction-style format: no top-level field, target from args.target."""
@@ -501,6 +561,21 @@ class TestVisibleIf:
         """visible_if dict may use equals (affected_widgets) as well as value."""
         spec = _w("Text", "detail", visible_if={"field": "Status", "equals": "yes"})
         assert 'display:none' in render_widget(spec, "", data={"Status": "no"})
+
+    def test_dict_not_hides_when_field_truthy(self):
+        """visible_if {field, not: true} hides when the field is set (Propose vs pending)."""
+        spec = _w(
+            "PopulateButton",
+            "_propose_split",
+            visible_if={"field": "pending_proposal", "not": True},
+            args={"target": "uq_spec", "description": "Propose"},
+        )
+        hidden = render_widget(
+            spec, None, {"pending_proposal": {"kind": "split"}}
+        )
+        shown = render_widget(spec, None, {"pending_proposal": None})
+        assert 'display:none' in hidden
+        assert 'display:none' not in shown
         assert 'display:none' not in render_widget(spec, "", data={"Status": "yes"})
 
     def test_dict_without_expected_uses_checkbox_truthiness(self):
