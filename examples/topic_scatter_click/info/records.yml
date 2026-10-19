@@ -1,0 +1,89 @@
+# Synthetic soft-topic geometry for CIP-0011 interactive viewer demo.
+# Figure JSON is pre-baked (no multilogue / MPPCA compute required).
+# Mutable review fields live in scores.yml (output) — input columns are immutable.
+
+- Name: synthetic-corpus
+  Title: Synthetic topic scatter
+  topic_scatter_spec:
+    data:
+      - type: scatter
+        mode: markers
+        name: phrases
+        x: [0.1, 0.35, 0.55, 1.1, 1.3, 1.45, 2.0, 2.15]
+        y: [0.9, 1.05, 0.8, 0.2, 0.35, 0.15, 1.2, 1.05]
+        text:
+          - "alpha ridge"
+          - "alpha basin"
+          - "alpha spur"
+          - "beta ridge"
+          - "beta basin"
+          - "beta spur"
+          - "gamma ridge"
+          - "gamma basin"
+        customdata:
+          - topic: A
+            phrase: alpha ridge
+            responsibilities: {A: 0.85, B: 0.10, C: 0.05}
+          - topic: A
+            phrase: alpha basin
+            responsibilities: {A: 0.70, B: 0.20, C: 0.10}
+          - topic: A
+            phrase: alpha spur
+            responsibilities: {A: 0.55, B: 0.35, C: 0.10}
+          - topic: B
+            phrase: beta ridge
+            responsibilities: {A: 0.15, B: 0.75, C: 0.10}
+          - topic: B
+            phrase: beta basin
+            responsibilities: {A: 0.10, B: 0.80, C: 0.10}
+          - topic: B
+            phrase: beta spur
+            responsibilities: {A: 0.20, B: 0.60, C: 0.20}
+          - topic: C
+            phrase: gamma ridge
+            responsibilities: {A: 0.05, B: 0.15, C: 0.80}
+          - topic: C
+            phrase: gamma basin
+            responsibilities: {A: 0.10, B: 0.20, C: 0.70}
+        marker:
+          size: 14
+    layout:
+      title:
+        text: Synthetic soft topics (click a point)
+      xaxis:
+        title: embedding dim 1
+      yaxis:
+        title: embedding dim 2
+      margin:
+        t: 48
+        r: 16
+        b: 48
+        l: 48
+      height: 420
+
+- Name: second-view
+  Title: Alternate seed selection
+  topic_scatter_spec:
+    data:
+      - type: scatter
+        mode: markers
+        name: phrases
+        x: [0.0, 0.5, 1.0]
+        y: [0.0, 0.5, 1.0]
+        text: ["seed A", "seed B", "seed C"]
+        customdata:
+          - topic: A
+            phrase: seed A
+            responsibilities: {A: 0.9, B: 0.05, C: 0.05}
+          - topic: B
+            phrase: seed B
+            responsibilities: {A: 0.1, B: 0.8, C: 0.1}
+          - topic: C
+            phrase: seed C
+            responsibilities: {A: 0.05, B: 0.15, C: 0.8}
+        marker:
+          size: 16
+    layout:
+      title:
+        text: Three seeds (click ↔ dropdown)
+      height: 360

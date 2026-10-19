@@ -111,11 +111,10 @@ def create_app(
             try:
                 from referia.assess.web_review import WebReviewer
                 app.state.reviewer = WebReviewer(user_file, resolved_dir)
+                n = len(app.state.reviewer.index_list())
                 log.info(
-                    "WebReviewer initialised: %d records loaded from %r/%r",
-                    len(app.state.reviewer.index_list()),
-                    resolved_dir,
-                    user_file,
+                    f"WebReviewer initialised: {n} records loaded from "
+                    f"{resolved_dir!r}/{user_file!r}"
                 )
             except Exception as exc:
                 log.warning(

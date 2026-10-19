@@ -153,7 +153,11 @@
       });
 
       /* Interactive Plotly viewers (CIP-0011): render specs and POST click
-         bindings to /field/{col} with source=viewer so review widgets refresh. */
+         bindings to /field/{col} with source=viewer so review widgets refresh.
+
+         Click → field write can OOB-replace this container (highlight restyle).
+         Attach plotly_click only after Plotly.react resolves, and serialize
+         multi-field posts so overlapping OOB swaps do not drop the handler. */
       (function () {
         function parseJsonScript(root, cls) {
           var el = root.querySelector("script." + cls);
@@ -174,26 +178,104 @@
         }
 
         function postField(column, value) {
-          if (!column || typeof htmx === "undefined") return;
-          var vals = {};
-          vals[column] = value == null ? "" : value;
-          vals.source = "viewer";
-          htmx.ajax("POST", "/field/" + encodeURIComponent(column), {
-            values: vals,
-            target: "#status-bar",
-            swap: "innerHTML"
+          return new Promise(function (resolve) {
+            if (!column || typeof htmx === "undefined") {
+              resolve();
+              return;
+            }
+            var vals = {};
+            vals[column] = value == null ? "" : value;
+            vals.source = "viewer";
+            var settled = false;
+            function done() {
+              if (settled) return;
+              settled = true;
+              document.removeEventListener("htmx:afterSettle", onSettle);
+              resolve();
+            }
+            function onSettle() { done(); }
+            document.addEventListener("htmx:afterSettle", onSettle);
+            /* Fallback if afterSettle never fires (network / HTMX error). */
+            setTimeout(done, 4000);
+            htmx.ajax("POST", "/field/" + encodeURIComponent(column), {
+              values: vals,
+              target: "#status-bar",
+              swap: "innerHTML"
+            });
           });
         }
 
-        function bindPlot(container) {
-          if (!container || container.dataset.plotlyBound === "1") return;
+        function postFieldsSequential(updates) {
+          var chain = Promise.resolve();
+          updates.forEach(function (pair) {
+            chain = chain.then(function () {
+              return postField(pair.column, pair.value);
+            });
+          });
+          return chain;
+        }
+
+        function watchPlotSize(container, target) {
+          /* Opt-in via size.observe in _referia.yml (default true). Plotly
+             responsive:true tracks window resize; the splitter only changes
+             column width, so we call Plots.resize when the pane box changes. */
+          if (container.getAttribute("data-size-observe") === "0") return;
+          if (typeof ResizeObserver === "undefined") return;
+          if (container._plotlyRo) return;
+          var scheduled = null;
+          var ro = new ResizeObserver(function () {
+            if (scheduled !== null) cancelAnimationFrame(scheduled);
+            scheduled = requestAnimationFrame(function () {
+              scheduled = null;
+              if (!target.isConnected || typeof Plotly === "undefined") return;
+              try { Plotly.Plots.resize(target); } catch (err) {}
+            });
+          });
+          /* Observe the column too — --viewer-pct changes its width. */
+          var pane = container.closest(".viewer-col");
+          if (pane) ro.observe(pane);
+          ro.observe(container);
+          container._plotlyRo = ro;
+        }
+
+        function resizeAllPlots() {
           if (typeof Plotly === "undefined") return;
-          var target = container.querySelector(".plotly-target");
-          var fig = parseJsonScript(container, "plotly-spec");
-          var bindings = parseJsonScript(container, "plotly-bindings") || [];
-          if (!target || !fig) return;
-          container.dataset.plotlyBound = "1";
-          Plotly.react(target, fig.data || [], fig.layout || {}, {responsive: true});
+          document.querySelectorAll(".viewer-plotly .plotly-target").forEach(
+            function (t) {
+              try { Plotly.Plots.resize(t); } catch (err) {}
+            }
+          );
+        }
+        window.referiaResizePlotly = resizeAllPlots;
+
+        function schedulePlotResize(target) {
+          /* After CSS / splitter layout settles (width × aspect-ratio). */
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+              if (!target || !target.isConnected || typeof Plotly === "undefined") {
+                return;
+              }
+              try { Plotly.Plots.resize(target); } catch (err) {}
+            });
+          });
+        }
+
+        function layoutForReact(container, fig) {
+          /* container mode: keep autosize and never pin width/height — those
+             freeze Plots.resize / splitter updates. figure mode: honor JSON. */
+          var layout = Object.assign({}, (fig && fig.layout) || {});
+          if (container.getAttribute("data-size-mode") === "container") {
+            delete layout.width;
+            delete layout.height;
+            layout.autosize = true;
+          }
+          return layout;
+        }
+
+        function attachClickHandler(container, target, bindings) {
+          if (typeof target.removeAllListeners === "function") {
+            target.removeAllListeners("plotly_click");
+          }
           target.on("plotly_click", function (ev) {
             if (!ev || !ev.points || !ev.points.length) return;
             var pt = ev.points[0];
@@ -204,16 +286,86 @@
               x: pt.x,
               y: pt.y
             };
+            var updates = [];
             for (var i = 0; i < bindings.length; i++) {
               var action = bindings[i];
               if (!action || !action.set_field) continue;
               var val = resolvePath(payload, action.from);
               if (val === undefined) continue;
               if (typeof val === "object") {
-                try { val = JSON.stringify(val); } catch (e) { val = String(val); }
+                try { val = JSON.stringify(val); }
+                catch (e) { val = String(val); }
               }
-              postField(action.set_field, val);
+              updates.push({column: action.set_field, value: val});
             }
+            var hl = container.getAttribute("data-highlight-field");
+            if (hl) {
+              updates.sort(function (a, b) {
+                if (a.column === hl) return 1;
+                if (b.column === hl) return -1;
+                return 0;
+              });
+            }
+            postFieldsSequential(updates);
+          });
+        }
+
+        function reactPlot(container, target, fig, bindings, opts) {
+          opts = opts || {};
+          var bindGen = String(Date.now()) + "-" + Math.random();
+          container.dataset.plotlyBindGen = bindGen;
+          var layout = layoutForReact(container, fig);
+          return Plotly.react(
+            target,
+            (fig && fig.data) || [],
+            layout,
+            {responsive: true}
+          ).then(function () {
+            if (
+              !container.isConnected ||
+              container.dataset.plotlyBindGen !== bindGen
+            ) {
+              return;
+            }
+            try { Plotly.Plots.resize(target); } catch (err) {}
+            schedulePlotResize(target);
+            if (opts.watch) watchPlotSize(container, target);
+            if (opts.bindClick) attachClickHandler(container, target, bindings || []);
+          });
+        }
+
+        function refreshPlot(container) {
+          /* Spec script OOB-updated; restyle in place without remounting. */
+          if (!container || typeof Plotly === "undefined") return;
+          var target = container.querySelector(".plotly-target");
+          var fig = parseJsonScript(container, "plotly-spec");
+          if (!target || !fig) return;
+          reactPlot(container, target, fig, null, {watch: false, bindClick: false});
+        }
+
+        function maybeRefreshFromSpec(container) {
+          if (!container || container.dataset.plotlyBound !== "1") return;
+          var specEl = container.querySelector("script.plotly-spec");
+          if (!specEl) return;
+          var sig = specEl.textContent || "";
+          if (container.dataset.plotlySpecSig === sig) return;
+          container.dataset.plotlySpecSig = sig;
+          refreshPlot(container);
+        }
+
+        function bindPlot(container) {
+          if (!container || container.dataset.plotlyBound === "1") return;
+          if (typeof Plotly === "undefined") return;
+          var target = container.querySelector(".plotly-target");
+          var fig = parseJsonScript(container, "plotly-spec");
+          var bindings = parseJsonScript(container, "plotly-bindings") || [];
+          if (!target || !fig) return;
+          container.dataset.plotlyBound = "1";
+          var specEl = container.querySelector("script.plotly-spec");
+          if (specEl) container.dataset.plotlySpecSig = specEl.textContent || "";
+          reactPlot(container, target, fig, bindings, {
+            watch: true,
+            bindClick: true
           });
         }
 
@@ -235,6 +387,8 @@
           var el = (evt.detail && evt.detail.elt) ? evt.detail.elt : document;
           initPlots(el);
           initPlots(document);
+          /* Highlight path OOBs only the plotly-spec script — refresh if changed. */
+          document.querySelectorAll(".viewer-plotly").forEach(maybeRefreshFromSpec);
         });
       })();
 
@@ -250,10 +404,22 @@
           return Math.min(MAX, Math.max(MIN, pct));
         }
 
+        var splitResizeRaf = null;
+        function resizePlotsSoon() {
+          if (splitResizeRaf !== null) return;
+          splitResizeRaf = requestAnimationFrame(function () {
+            splitResizeRaf = null;
+            if (typeof window.referiaResizePlotly === "function") {
+              window.referiaResizePlotly();
+            }
+          });
+        }
+
         function applySplit(twoCol) {
           if (!twoCol) return;
           var stored = parseFloat(localStorage.getItem(KEY) || "50");
           twoCol.style.setProperty("--viewer-pct", clampPct(stored) + "%");
+          resizePlotsSoon();
         }
 
         function bindSplitter(twoCol) {
@@ -273,6 +439,7 @@
               var pct = clampPct(((ev.clientX - rect.left) / rect.width) * 100);
               twoCol.style.setProperty("--viewer-pct", pct + "%");
               try { localStorage.setItem(KEY, String(pct)); } catch (err) {}
+              resizePlotsSoon();
             }
 
             function onUp(ev) {
@@ -281,6 +448,7 @@
               handle.removeEventListener("pointermove", onMove);
               handle.removeEventListener("pointerup", onUp);
               handle.removeEventListener("pointercancel", onUp);
+              resizePlotsSoon();
             }
 
             handle.addEventListener("pointermove", onMove);

@@ -2,12 +2,15 @@
 
 from referia.assess.viewer_bindings import (
     apply_highlight,
+    apply_plotly_size,
     click_point_actions,
     field_updates_from_click,
     highlight_binding,
     is_interactive_viewer_type,
     is_liquid_viewer,
+    normalize_viewer_entry,
     parse_figure_spec,
+    plotly_size_options,
     resolve_path,
     viewer_entry_type,
     viewers_highlighting_field,
@@ -61,6 +64,49 @@ def test_click_point_actions_skips_invalid():
     assert click_point_actions(
         {"on": {"click_point": [{"set_field": "x", "from": ""}]}}
     ) == []
+
+
+def test_normalize_viewer_entry_yaml_on_boolean_key():
+    """PyYAML 1.1 turns bare ``on:`` into boolean ``True`` keys."""
+    raw = {
+        "type": "PlotlyFigure",
+        True: {
+            "click_point": [{"set_field": "t", "from": "customdata.topic"}],
+        },
+        "highlight": {"from_field": "t"},
+    }
+    fixed = normalize_viewer_entry(raw)
+    assert "on" in fixed and True not in fixed
+    assert click_point_actions(raw) == [
+        {"set_field": "t", "from": "customdata.topic"}
+    ]
+    assert highlight_binding(raw)["from_field"] == "t"
+
+
+def test_plotly_size_options_and_apply():
+    assert plotly_size_options({}) == {
+        "mode": "figure",
+        "observe": True,
+        "aspect_ratio": None,
+    }
+    assert plotly_size_options({"size": "container"}) == {
+        "mode": "container",
+        "observe": True,
+        "aspect_ratio": "4/3",
+    }
+    assert plotly_size_options(
+        {"size": {"mode": "container", "observe": False, "aspect_ratio": "16/9"}}
+    ) == {"mode": "container", "observe": False, "aspect_ratio": "16/9"}
+    assert plotly_size_options({"size": {"fit": "figure"}})["mode"] == "figure"
+
+    fig = {"data": [], "layout": {"height": 420, "width": 800, "title": "t"}}
+    kept = apply_plotly_size(fig, mode="figure")
+    assert kept["layout"]["height"] == 420
+    filled = apply_plotly_size(fig, mode="container")
+    assert filled["layout"].get("autosize") is True
+    assert "height" not in filled["layout"]
+    assert "width" not in filled["layout"]
+    assert apply_plotly_size(None, mode="container") is None
 
 
 def test_resolve_path_mapping_sequence_and_attr():
