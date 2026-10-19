@@ -12,11 +12,14 @@ Referia hosting of the **interactive Assess** loop from multilogue notebook
 subject_grain_uq/
 ├── README.md
 ├── _referia.yml          # viewer: focus + Plotly + Propose split; review: EM + label prompt
-├── build_records.py      # fit MPPCA → uq_by_topic map
+├── build_records.py      # fit MPPCA → records.yml + scores.yml
 └── info/
-    ├── records.yml       # phrases + embeddings (input)
-    └── scores.yml        # focus / R / planes / EM / prompt (output)
+    ├── records.yml       # phrases + embeddings (input; committed seed)
+    └── scores.yml        # focus / R / planes / EM / prompt (output; gitignored)
 ```
+
+`scores.yml` is **not** committed — recreate it with `build_records.py` (and
+overwrite again via Save while reviewing).
 
 ## Run
 
@@ -25,7 +28,7 @@ From the referia repo root:
 ```bash
 poetry install --with llm          # OpenAI embeddings + naming
 # Put OPENAI_API_KEY in referia/.env (repo root) or ~/.env
-poetry run python examples/subject_grain_uq/build_records.py
+poetry run python examples/subject_grain_uq/build_records.py   # writes info/scores.yml
 poetry run referia serve --directory examples/subject_grain_uq
 ```
 
