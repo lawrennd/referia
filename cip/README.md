@@ -43,7 +43,7 @@ Each CIP can have one of the following statuses:
 - [CIP-000E](./cip000E.md): Web Layer Security Hardening for CodeQL Findings (Implemented)
 - [CIP-000F](./cip000F.md): Detect, version, and migrate referia config dialects (Closed)
 - [CIP-0010](./cip0010.md): Config-driven root as ordinary `_referia.yml` (Pattern A tall store + wide/`flattenKeys` view) + `complete` + tristate filters; retire leaf `current` later (In Progress; backlog created; lynguine 0010 Phase 3 open)
-- [CIP-0011](./cip0011.md): Interactive viewer components with shared-field bindings to review (Proposed; REQ-000F)
+- [CIP-0011](./cip0011.md): Interactive viewer components with shared-field bindings to review (In Progress; REQ-000F; backlog created)
 
 ## Creating a Good CIP
 

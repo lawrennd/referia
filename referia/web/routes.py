@@ -256,10 +256,15 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         log.error("Invalid display.layout: %s", exc)
         layout = "side_by_side"
 
+    viewer_specs = reviewer.get_viewer_specs()
     viewer_blocks = [
-        reviewer.render_viewer_html(spec)
-        for spec in reviewer.get_viewer_specs()
+        reviewer.render_viewer_html(spec, viewer_index=i)
+        for i, spec in enumerate(viewer_specs)
     ]
+    needs_plotly = any(
+        (spec.get("type") if isinstance(spec, dict) else None) == "PlotlyFigure"
+        for spec in viewer_specs
+    )
 
     row_forms: list[dict] = []
     listing_html = ""
@@ -347,6 +352,7 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         "current_index": current_index,
         "total": total,
         "position": position,
+        "needs_plotly": needs_plotly,
     }
 
 
@@ -509,6 +515,71 @@ def _make_oob(widget_html: str) -> str:
         'class="widget-container" hx-swap-oob="true"',
         1,
     )
+
+
+def _make_viewer_oob(viewer_html: str) -> str:
+    """Add ``hx-swap-oob="true"`` to an interactive viewer container."""
+    for marker in (
+        'class="viewer viewer-plotly"',
+        'class="viewer viewer-image"',
+    ):
+        if marker in viewer_html:
+            return viewer_html.replace(
+                marker, f'{marker} hx-swap-oob="true"', 1
+            )
+    return viewer_html
+
+
+def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
+    """OOB fragments for interactive viewers whose highlight watches *column*."""
+    from referia.assess.viewer_bindings import highlight_binding, is_interactive_viewer_type
+
+    parts: list[str] = []
+    for i, spec in enumerate(reviewer.get_viewer_specs()):
+        if not isinstance(spec, dict) or not is_interactive_viewer_type(spec):
+            continue
+        hl = highlight_binding(spec)
+        if not hl or hl["from_field"] != column:
+            continue
+        html = reviewer.render_viewer_html(spec, viewer_index=i)
+        parts.append(_make_viewer_oob(html))
+    return parts
+
+
+def _field_update_oob_parts(
+    reviewer,
+    column: str,
+    *,
+    data: dict,
+    record_index: Any = None,
+    source: Any = None,
+) -> list[str]:
+    """OOB widget / viewer fragments after a field write."""
+    parts: list[str] = []
+    oob_index = record_index if record_index not in (None, "") else None
+    for col in reviewer.affected_widgets(column):
+        if col == column:
+            continue
+        affected_spec = _find_spec(reviewer, col)
+        if affected_spec:
+            val = reviewer.get_value(col)
+            widget_html = render_widget(
+                affected_spec, val, data, record_index=oob_index
+            )
+            parts.append(_make_oob(widget_html))
+    if source == "viewer":
+        trigger_spec = _find_spec(reviewer, column)
+        if trigger_spec:
+            widget_html = render_widget(
+                trigger_spec,
+                reviewer.get_value(column),
+                data,
+                record_index=oob_index,
+            )
+            parts.append(_make_oob(widget_html))
+    parts.extend(_viewer_highlight_oobs(reviewer, column))
+    parts.append(_document_actions_oob(reviewer, data))
+    return parts
 
 
 def _document_actions_oob(reviewer, data: dict) -> str:
@@ -675,22 +746,18 @@ async def update_field(request: Request, column: str):
         _log_route_error("Update", exc, column=column)
         return HTMLResponse(_user_error_html("Update"))
 
-    # Build OOB refreshes for dependents (never the triggering field itself)
+    source = form.get("source")
     data = _current_data(reviewer)
     parts = [status_html]
-    oob_index = record_index if record_index not in (None, "") else None
-    for col in reviewer.affected_widgets(column):
-        if col == column:
-            continue
-        affected_spec = _find_spec(reviewer, col)
-        if affected_spec:
-            val = reviewer.get_value(col)
-            widget_html = render_widget(
-                affected_spec, val, data, record_index=oob_index
-            )
-            parts.append(_make_oob(widget_html))
-    parts.append(_document_actions_oob(reviewer, data))
-
+    parts.extend(
+        _field_update_oob_parts(
+            reviewer,
+            column,
+            data=data,
+            record_index=record_index,
+            source=source,
+        )
+    )
     return HTMLResponse("\n".join(parts))
 
 
@@ -1715,21 +1782,18 @@ async def root_update_field(request: Request, config_path: str, column: str):
         _log_route_error("Update", exc, column=column)
         return HTMLResponse(_user_error_html("Update"))
 
+    source = form.get("source")
     data = _current_data(reviewer)
     parts = [status_html]
-    oob_index = record_index if record_index not in (None, "") else None
-    for col in reviewer.affected_widgets(column):
-        if col == column:
-            continue
-        affected_spec = _find_spec(reviewer, col)
-        if affected_spec:
-            val = reviewer.get_value(col)
-            widget_html = render_widget(
-                affected_spec, val, data, record_index=oob_index
-            )
-            parts.append(_make_oob(widget_html))
-    parts.append(_document_actions_oob(reviewer, data))
-
+    parts.extend(
+        _field_update_oob_parts(
+            reviewer,
+            column,
+            data=data,
+            record_index=record_index,
+            source=source,
+        )
+    )
     return HTMLResponse("\n".join(parts))
 
 

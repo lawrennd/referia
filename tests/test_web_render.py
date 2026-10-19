@@ -573,6 +573,38 @@ class TestRenderViewer:
         assert html.count("rel=") == 1
         assert 'rel="nofollow"' in html
 
+    def test_plotly_figure_emits_container_and_bindings(self):
+        fig = {
+            "data": [{"type": "scatter", "x": [1], "y": [2], "customdata": [{"phrase": "p"}]}],
+            "layout": {},
+        }
+        spec = {
+            "type": "PlotlyFigure",
+            "field": "topic_scatter_spec",
+            "on": {
+                "click_point": [
+                    {"set_field": "selected_phrase", "from": "customdata.phrase"},
+                ]
+            },
+            "highlight": {"from_field": "selected_topic", "mode": "responsibility_ink"},
+        }
+        html = render_viewer(spec, figure=fig, viewer_index=3)
+        assert 'class="viewer viewer-plotly"' in html
+        assert 'id="viewer-plotly-3"' in html
+        assert 'data-highlight-field="selected_topic"' in html
+        assert "plotly-spec" in html
+        assert "selected_phrase" in html
+        assert "customdata.phrase" in html
+
+    def test_static_image_viewer(self):
+        html = render_viewer(
+            {"type": "StaticImage"},
+            "https://example.com/a.png",
+            viewer_index=1,
+        )
+        assert 'class="viewer viewer-image"' in html
+        assert 'src="https://example.com/a.png"' in html
+
 
 # ---------------------------------------------------------------------------
 # render_form
