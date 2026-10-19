@@ -1765,7 +1765,9 @@ def _populate_status_html(reviewer, updated_cols: list[str]) -> str:
             except Exception:
                 keys = None
             n = len(keys) if isinstance(keys, (list, tuple)) else "?"
-            if "uq_spec" in updated_cols:
+            # Undo restores catalogue columns; Confirm only swaps planes and
+            # clears pending/undo. Both update uq_spec — do not key off that.
+            if "topic_keys" in updated_cols or "responsibilities" in updated_cols:
                 return (
                     f'<span class="status-ok">&#10003; Split rejected '
                     f"— restored (k={_esc(str(n))}).</span>"

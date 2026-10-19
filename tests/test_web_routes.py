@@ -670,6 +670,49 @@ def populate_client():
             yield c, reviewer
 
 
+class TestPopulateStatusHtml:
+    """Confirm vs Undo must not share the same status heuristic."""
+
+    def test_confirm_clears_pending_reports_sealed(self):
+        from referia.web.routes import _populate_status_html
+
+        reviewer = MagicMock()
+        reviewer.get_value.side_effect = lambda c: {
+            "pending_proposal": None,
+            "topic_keys": ["T0", "T1"],
+        }.get(c)
+        html = _populate_status_html(
+            reviewer,
+            ["pending_proposal", "uq_spec", "uq_by_topic", "split_undo"],
+        )
+        assert "Split sealed" in html
+        assert "rejected" not in html
+
+    def test_undo_restores_catalogue_reports_rejected(self):
+        from referia.web.routes import _populate_status_html
+
+        reviewer = MagicMock()
+        reviewer.get_value.side_effect = lambda c: {
+            "pending_proposal": None,
+            "topic_keys": ["T0"],
+        }.get(c)
+        html = _populate_status_html(
+            reviewer,
+            [
+                "pending_proposal",
+                "uq_spec",
+                "uq_by_topic",
+                "topic_keys",
+                "responsibilities",
+                "focus_topic",
+                "topic_labels",
+                "split_undo",
+            ],
+        )
+        assert "Split rejected" in html
+        assert "sealed" not in html
+
+
 class TestPostPopulate:
     def test_returns_200(self, populate_client):
         # URL uses the button's own field id; compute still writes args.target.

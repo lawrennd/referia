@@ -299,7 +299,6 @@ def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -
     score = {
         "Name": "corpus",
         "focus_topic": focus0,
-        "selected_topic": focus0,
         "selected_phrase": None,
         "topic_keys": keys,
         "topic_labels": topic_labels,
@@ -331,7 +330,6 @@ def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -
         "# Seed output store — focus / click / Propose split write here at runtime.\n",
         f"- Name: {score['Name']}\n",
         f"  focus_topic: {score['focus_topic']}\n",
-        f"  selected_topic: {score['selected_topic']}\n",
         "  selected_phrase:\n",
         "  topic_keys:\n",
     ]

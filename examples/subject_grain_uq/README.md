@@ -9,8 +9,8 @@ splitting a focus topic when the grain looks mixed, then confirm or undo.
 1. Load a corpus of phrases and embeddings (`info/records.yml`).
 2. Fit or restore soft topic responsibilities and local \(U_q\) figure specs
    (`info/scores.yml`).
-3. In the viewer: change **Focus topic**, click phrases, **Propose split**,
-   then **Confirm** or **Undo**.
+3. In the viewer: change **Focus topic** (owns the local plane), click a
+   phrase to pin it in review, **Propose split**, then **Confirm** or **Undo**.
 4. In review: adjust EM controls (σ², EM accept) and optionally **Name focus
    topic** with a prompt you edit in the config.
 
