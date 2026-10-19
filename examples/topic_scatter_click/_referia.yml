@@ -1,0 +1,61 @@
+# CIP-0011 interactive viewer demo — synthetic topic scatter.
+# Pre-baked Plotly JSON in info/records.yml; no multilogue/MPPCA required.
+referia_config_version: 2
+title: "CIP-0011 — topic scatter click"
+description: >
+  Click a point to write selected_topic / selected_phrase into the shared
+  field store; change the topic dropdown to restyle the figure (responsibility ink).
+date: 2026-10-19
+
+display:
+  layout: side_by_side
+
+input:
+  type: yaml
+  index: Name
+  filename: records.yml
+  directory: ./info
+
+output:
+  type: yaml
+  index: Name
+  filename: scores.yml
+  directory: ./info
+  columns:
+    - selected_topic
+    - selected_phrase
+    - notes
+
+viewer:
+  - liquid: |
+      ## {{ Title }}
+
+      Click a marker on the left. Review fields on the right should update.
+      Change **Selected topic** to re-ink the figure (opacity ∝ soft mass).
+  - type: PlotlyFigure
+    field: topic_scatter_spec
+    on:
+      click_point:
+        - set_field: selected_phrase
+          from: customdata.phrase
+        - set_field: selected_topic
+          from: customdata.topic
+    highlight:
+      from_field: selected_topic
+      mode: responsibility_ink
+
+review:
+  - type: Dropdown
+    field: selected_topic
+    args:
+      description: Selected topic
+      options: ["A", "B", "C"]
+  - type: Text
+    field: selected_phrase
+    args:
+      description: Selected phrase
+  - type: Textarea
+    field: notes
+    args:
+      description: Notes
+  - type: SaveButton
