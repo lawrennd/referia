@@ -1355,20 +1355,37 @@ class Reviewer(DisplaySystem):
                 if hasattr(widget, '_visible_if_condition'):
                     condition = widget._visible_if_condition
                     
-                    # Parse condition
+                    # Parse condition (string = truthy field; dict equals/value/not)
                     if isinstance(condition, str):
                         field_name = condition
+                        invert = False
                         expected_value = True
+                        use_equals = False
                     elif isinstance(condition, dict):
                         field_name = condition.get("field")
-                        expected_value = condition.get("equals", True)
+                        invert = bool(condition.get("not"))
+                        if "equals" in condition:
+                            expected_value = condition.get("equals")
+                            use_equals = True
+                        elif "value" in condition:
+                            expected_value = condition.get("value")
+                            use_equals = True
+                        else:
+                            expected_value = True
+                            use_equals = False
                     else:
                         continue
                     
                     # Check condition against current data
                     try:
                         current_value = self._data.at[self.get_index(), field_name]
-                        is_visible = current_value == expected_value
+                        if invert:
+                            # Show when field is falsy (None / False / empty / {}).
+                            is_visible = not bool(current_value)
+                        elif use_equals:
+                            is_visible = current_value == expected_value
+                        else:
+                            is_visible = bool(current_value) == bool(expected_value)
                         
                         # Update widget visibility (access inner ipywidget if it's a FieldWidget)
                         inner_widget = getattr(widget, 'widget', widget)

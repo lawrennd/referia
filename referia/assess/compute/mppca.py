@@ -1,0 +1,1811 @@
+"""Mixture of probabilistic PCA for soft phrase→topic geometry.
+
+**Packaging (vongole-bound).** Assessment compute under
+``referia.assess.compute`` — destined for vongole (lynguine CIP-0007).
+Pure numpy / scikit-learn only: no review UI, paths, or checkpoints.
+Topic-naming helpers here are prompt/exemplar/stub/parse only — live LLM
+calls are wired in ``referia.assess.compute.Compute`` (``.env`` keys).
+Downstream Address stages (e.g. pub-dialogue) stay thin consumers.
+
+CIP-0017: k-means initialises component means; EM updates responsibilities
+under shared fixed topic noise ``sigma2`` (topic σ² fixed per run,
+independent of lens-level σ²*). Soft responsibilities are the primary
+return; harden helpers are for LLM/report boundaries only.
+
+PPCA factor truncation: eigenvalues above ``sigma2`` are retained
+(same ARD-style rule as lens PPCA in Address).
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import re
+from typing import Any, Optional, Sequence
+
+import numpy as np
+from sklearn.cluster import KMeans
+
+__all__ = [
+    "DEFAULT_TOPIC_SIGMA2",
+    "DEFAULT_TOPIC_SIGMA2_GRID",
+    "DEFAULT_TOPIC_LABEL_PROMPT",
+    "log_likelihood_ppca",
+    "fit_weighted_ppca",
+    "mppca_fit",
+    "fit_from_responsibilities",
+    "propose_split",
+    "rebuild_uq_by_topic",
+    "subject_grain_propose_split",
+    "subject_grain_confirm_split",
+    "subject_grain_undo_split",
+    "subject_grain_prepare_label",
+    "subject_grain_stub_label",
+    "subject_grain_parse_label_reply",
+    "subject_grain_apply_focus_label",
+    "topic_fit_diagnostics",
+    "profile_topic_sigma2",
+    "responsibilities_to_labels",
+    "example_phrases_for_soft_topics",
+    "mppca_topics",
+    "component_local_plane",
+    "local_uq_plotly_spec",
+    "proposed_split_plotly_spec",
+    "topic_keys",
+]
+
+# Default LLM naming prompt (Assess shell / referia Textarea). Placeholders
+# use <<PHRASES>>; callers substitute exemplars before sending to an LLM.
+DEFAULT_TOPIC_LABEL_PROMPT = (
+    "Summarise this soft topic for a human analyst. "
+    "Return JSON with keys label and description. "
+    "label: ONE short English title (at most six words) — translate if the "
+    "phrases are not in English; not an id, hash, list, sentiment tag, or '?'. "
+    "description: ONE English sentence explaining what the phrases have in common.\n"
+    "Phrases:\n<<PHRASES>>"
+)
+
+
+def log_likelihood_ppca(
+    centroids: np.ndarray, lens_fit: dict, sigma2: float
+) -> np.ndarray:
+    """Log p(point | PPCA Gaussian), up to a shared constant.
+
+    Uses Σ⁻¹ = U_q diag(1/λ_i) U_qᵀ + (1/σ²)(I − U_q U_qᵀ).
+    """
+    mu, U_q, lambdas_q, log_det = (
+        lens_fit["mu"],
+        lens_fit["U_q"],
+        lens_fit["lambdas_q"],
+        lens_fit["log_det"],
+    )
+    diff = centroids - mu
+    if U_q.size > 0:
+        v = diff @ U_q
+        projected_sq = (v ** 2 / lambdas_q[None, :]).sum(axis=1)
+        residual_sq = (diff ** 2).sum(axis=1) - (v ** 2).sum(axis=1)
+    else:
+        projected_sq = np.zeros(diff.shape[0])
+        residual_sq = (diff ** 2).sum(axis=1)
+    mahalanobis_sq = projected_sq + residual_sq / sigma2
+    return -0.5 * mahalanobis_sq - 0.5 * log_det
+
+# Fallback single-value floor if profiling is skipped. Prefer
+# :func:`profile_topic_sigma2` (CIP-0017: short profile grid, then fix).
+# Independent of lens σ²*.
+DEFAULT_TOPIC_SIGMA2: float = 0.01
+
+# Log-spaced candidate floors for one-shot topic σ² profiling.
+# Softest non-collapsing value on this grid is selected.
+DEFAULT_TOPIC_SIGMA2_GRID: tuple[float, ...] = (
+    1e-4,
+    3e-4,
+    1e-3,
+    3e-3,
+    1e-2,
+    3e-2,
+    5e-2,
+    1e-1,
+    3e-1,
+    1.0,
+)
+
+
+def _l2_normalize_rows(X: np.ndarray, eps: float = 1e-12) -> np.ndarray:
+    X = np.asarray(X, dtype=float)
+    norms = np.linalg.norm(X, axis=1, keepdims=True)
+    return X / np.clip(norms, eps, None)
+
+
+def fit_weighted_ppca(
+    X: np.ndarray,
+    weights: np.ndarray,
+    sigma2: float,
+) -> dict:
+    """PPCA Gaussian for one component under soft (or hard) weights.
+
+    Mean is the responsibility-weighted mean. Covariance uses a weighted
+    SVD of centred points (``sqrt(w_i) (x_i - μ)``); eigenvalues are
+    ``s² / Σ w``. Factors with eigenvalue > ``sigma2`` are retained.
+    """
+    X = np.asarray(X, dtype=float)
+    w = np.asarray(weights, dtype=float).ravel()
+    if X.ndim != 2:
+        raise ValueError(f"X must be 2-D, got shape {X.shape}")
+    if w.shape[0] != X.shape[0]:
+        raise ValueError("weights length must match X rows")
+    if sigma2 <= 0:
+        raise ValueError(f"sigma2 must be positive, got {sigma2}")
+
+    w_sum = float(w.sum())
+    d = X.shape[1]
+    if w_sum <= 0:
+        mu = np.zeros(d)
+        return {
+            "mu": mu,
+            "U_q": np.zeros((d, 0)),
+            "lambdas_q": np.zeros(0),
+            "log_det": d * np.log(sigma2),
+            "q": 0,
+            "weight_sum": 0.0,
+        }
+
+    mu = (w[:, None] * X).sum(axis=0) / w_sum
+    Xc = X - mu
+    # Effective sample size for truncation / empty-component guard
+    n_eff = float((w > 0).sum())
+    if n_eff < 2:
+        return {
+            "mu": mu,
+            "U_q": np.zeros((d, 0)),
+            "lambdas_q": np.zeros(0),
+            "log_det": d * np.log(sigma2),
+            "q": 0,
+            "weight_sum": w_sum,
+        }
+
+    sw = np.sqrt(np.clip(w, 0.0, None))
+    Xw = sw[:, None] * Xc
+    # High-d embeddings + tiny / imbalanced responsibilities can make the
+    # weighted matrix ill-conditioned; never let SVD kill the whole EM fit.
+    Xw = np.nan_to_num(Xw, nan=0.0, posinf=0.0, neginf=0.0)
+    try:
+        _, s, Vt = np.linalg.svd(Xw, full_matrices=False)
+    except np.linalg.LinAlgError:
+        scale = float(np.linalg.norm(Xw)) + 1e-12
+        jitter = (1e-8 * scale) * np.random.default_rng(0).standard_normal(Xw.shape)
+        try:
+            _, s, Vt = np.linalg.svd(Xw + jitter, full_matrices=False)
+        except np.linalg.LinAlgError:
+            return {
+                "mu": mu,
+                "U_q": np.zeros((d, 0)),
+                "lambdas_q": np.zeros(0),
+                "log_det": d * np.log(sigma2),
+                "q": 0,
+                "weight_sum": w_sum,
+            }
+    lambdas = (s ** 2) / w_sum
+    retain = lambdas > sigma2
+    q = int(retain.sum())
+    U_q = Vt[retain].T
+    lambdas_q = lambdas[retain]
+    log_det = float(np.sum(np.log(lambdas_q))) + (d - q) * float(np.log(sigma2))
+    return {
+        "mu": mu,
+        "U_q": U_q,
+        "lambdas_q": lambdas_q,
+        "log_det": log_det,
+        "q": q,
+        "weight_sum": w_sum,
+    }
+
+
+def _softmax_rows(log_joint: np.ndarray) -> np.ndarray:
+    shifted = log_joint - log_joint.max(axis=1, keepdims=True)
+    exp = np.exp(shifted)
+    return exp / exp.sum(axis=1, keepdims=True)
+
+
+def mppca_fit(
+    X: np.ndarray,
+    k: int,
+    *,
+    sigma2: float = DEFAULT_TOPIC_SIGMA2,
+    seed: int = 0,
+    max_iter: int = 50,
+    tol: float = 1e-5,
+    n_init: int = 10,
+    normalize_means: bool = True,
+) -> dict[str, Any]:
+    """Fit a mixture of PPCA components (k-means init, fixed shared σ²).
+
+    Parameters
+    ----------
+    X :
+        ``(n, d)`` phrase embeddings (typically already L2-normalised).
+    k :
+        Number of topic components.
+    sigma2 :
+        Shared topic noise floor (fixed for this run; CIP-0017).
+    seed :
+        K-means / reproducibility seed.
+    max_iter :
+        Maximum EM iterations after initialisation.
+    tol :
+        Stop when max absolute change in responsibilities falls below this.
+    n_init :
+        Passed to sklearn ``KMeans``.
+    normalize_means :
+        If True, L2-normalise returned ``means`` for cosine consumers
+        (raw EM means remain in each component fit's ``mu``).
+
+    Returns
+    -------
+    dict with keys
+        ``responsibilities`` : ``(n, k)`` rows sum to 1
+        ``means`` : ``(k, d)`` component means (normalised if requested)
+        ``pi`` : ``(k,)`` mixing weights
+        ``sigma2`` : topic σ² used
+        ``n_iter`` : EM iterations performed
+        ``component_fits`` : list of per-component PPCA dicts
+    """
+    X = np.asarray(X, dtype=float)
+    if X.ndim != 2:
+        raise ValueError(f"X must be 2-D, got shape {X.shape}")
+    n, d = X.shape
+    if k < 1:
+        raise ValueError(f"k must be >= 1, got {k}")
+    if n < k:
+        raise ValueError(f"need at least k={k} points, got n={n}")
+    if sigma2 <= 0:
+        raise ValueError(f"sigma2 must be positive, got {sigma2}")
+
+    # Explicit k-means++ (sklearn default) so topic EM does not silently
+    # depend on a library default change.
+    km = KMeans(
+        n_clusters=k,
+        init="k-means++",
+        random_state=seed,
+        n_init=n_init,
+    )
+    labels_init = km.fit_predict(X)
+    R = np.zeros((n, k), dtype=float)
+    R[np.arange(n), labels_init] = 1.0
+    pi = R.mean(axis=0)
+    R_init = R.copy()
+
+    component_fits: list[dict] = []
+    n_iter = 0
+    collapsed = False
+    for n_iter in range(1, max_iter + 1):
+        component_fits = [
+            fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)
+        ]
+        log_lik = np.column_stack(
+            [log_likelihood_ppca(X, fit, sigma2) for fit in component_fits]
+        )
+        # Empty components: zero prior mass → -inf joint
+        log_pi = np.log(np.clip(pi, 1e-300, None))
+        for j, fit in enumerate(component_fits):
+            if fit.get("weight_sum", 0.0) <= 0:
+                log_pi[j] = -np.inf
+        log_joint = log_lik + log_pi[None, :]
+        R_new = _softmax_rows(log_joint)
+        pi = R_new.mean(axis=0)
+        delta = float(np.max(np.abs(R_new - R)))
+        R = R_new
+        if delta < tol:
+            break
+
+    # Final M-step so returned fits match responsibilities
+    component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+    means = np.vstack([fit["mu"] for fit in component_fits])
+    if normalize_means:
+        means = _l2_normalize_rows(means)
+
+    # Guard: isotropic collapse (all q=0 + means coincide) leaves one MAP topic.
+    # Fall back to k-means init hard responsibilities + member means.
+    map_sizes = np.bincount(np.argmax(R, axis=1), minlength=k)
+    if normalize_means and k >= 2:
+        cos = means @ means.T
+        np.fill_diagonal(cos, 0.0)
+        max_mean_cos = float(cos.max()) if cos.size else 0.0
+    else:
+        max_mean_cos = 0.0
+    if int((map_sizes > 0).sum()) <= 1 or max_mean_cos > 0.999:
+        collapsed = True
+        R = R_init
+        pi = R.mean(axis=0)
+        component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+        means = np.vstack([fit["mu"] for fit in component_fits])
+        if normalize_means:
+            means = _l2_normalize_rows(means)
+
+    return {
+        "responsibilities": R,
+        "means": means,
+        "pi": pi,
+        "sigma2": float(sigma2),
+        "n_iter": int(n_iter),
+        "component_fits": component_fits,
+        "seed": int(seed),
+        "k": int(k),
+        "collapsed": collapsed,
+    }
+
+
+def topic_fit_diagnostics(fit: dict[str, Any]) -> dict[str, float | int | bool]:
+    """Summarise whether an MPPCA fit separated topics or collapsed."""
+    R = np.asarray(fit["responsibilities"], dtype=float)
+    means = np.asarray(fit["means"], dtype=float)
+    k = int(fit.get("k", R.shape[1]))
+    labels = np.argmax(R, axis=1)
+    map_sizes = np.bincount(labels, minlength=k)
+    n_map = int((map_sizes > 0).sum())
+    if means.shape[0] >= 2:
+        cos = means @ means.T
+        np.fill_diagonal(cos, 0.0)
+        max_mean_cos = float(cos.max()) if cos.size else 0.0
+    else:
+        max_mean_cos = 0.0
+    # Shannon entropy of each responsibility row
+    eps = 1e-12
+    ent = -(R * np.log(R + eps)).sum(axis=1)
+    q_vals = [int(f.get("q", 0)) for f in fit.get("component_fits", [])]
+    # k=1: a single MAP topic is the intended Assess entry, not collapse.
+    collapsed = bool(fit.get("collapsed", False)) or (
+        (k >= 2 and n_map <= 1) or max_mean_cos > 0.999
+    )
+    return {
+        "n_map": n_map,
+        "max_mean_cos": max_mean_cos,
+        "mean_max_resp": float(R.max(axis=1).mean()),
+        "mean_entropy": float(ent.mean()),
+        "mean_q": float(np.mean(q_vals)) if q_vals else 0.0,
+        "collapsed": collapsed,
+        "sigma2": float(fit["sigma2"]),
+    }
+
+
+def profile_topic_sigma2(
+    X: np.ndarray,
+    k: int,
+    *,
+    grid: Optional[Sequence[float]] = None,
+    seed: int = 0,
+    max_iter: int = 50,
+    tol: float = 1e-5,
+    n_init: int = 10,
+    normalize_means: bool = True,
+    min_map_fraction: float = 0.5,
+) -> dict[str, Any]:
+    r"""Sweep topic σ² and pick the softest floor that does not collapse.
+
+    CIP-0017: topic σ² is profiled once per analysis config, then held fixed
+    (independent of lens σ²*). Among grid values whose fit keeps enough MAP
+    topics and separated means, choose the **largest** σ² (softest / fewest
+    factors) — that is the collapse-avoiding analogue of the lens σ²* band.
+
+    Returns
+    -------
+    dict with ``sigma2``, ``fit`` (full :func:`mppca_fit` at the choice),
+    ``curve`` (list of diagnostics per grid point), ``selection``.
+    """
+    grid_vals = list(grid) if grid is not None else list(DEFAULT_TOPIC_SIGMA2_GRID)
+    if not grid_vals:
+        raise ValueError("topic σ² grid must be non-empty")
+    k = int(k)
+    # k=1 (CIP-000A Assess entry): no multi-topic collapse signal — use the
+    # package default floor (softest-on-grid would pick ~1.0 and wipe MAP grain).
+    if k == 1:
+        s2 = float(DEFAULT_TOPIC_SIGMA2)
+        fit = mppca_fit(
+            X,
+            1,
+            sigma2=s2,
+            seed=seed,
+            max_iter=max_iter,
+            tol=tol,
+            n_init=n_init,
+            normalize_means=normalize_means,
+        )
+        diag = topic_fit_diagnostics(fit)
+        return {
+            "sigma2": s2,
+            "fit": fit,
+            "curve": [diag],
+            "selection": "k1_default_floor",
+            "min_map": 1,
+        }
+
+    min_map = max(2, int(np.ceil(min_map_fraction * k)))
+
+    curve: list[dict[str, float | int | bool]] = []
+    fits: dict[float, dict[str, Any]] = {}
+    for s2 in sorted(float(s) for s in grid_vals):
+        fit = mppca_fit(
+            X,
+            k,
+            sigma2=s2,
+            seed=seed,
+            max_iter=max_iter,
+            tol=tol,
+            n_init=n_init,
+            normalize_means=normalize_means,
+        )
+        diag = topic_fit_diagnostics(fit)
+        curve.append(diag)
+        fits[s2] = fit
+
+    viable = [
+        d
+        for d in curve
+        if (not d["collapsed"])
+        and int(d["n_map"]) >= min_map
+        and float(d["max_mean_cos"]) <= 0.99
+    ]
+    if viable:
+        # Softest non-collapsing: largest σ²
+        best = max(viable, key=lambda d: float(d["sigma2"]))
+        selection = "softest_noncollapse"
+    else:
+        # Least-bad: most MAP topics, then lowest mean cosine
+        best = max(
+            curve,
+            key=lambda d: (int(d["n_map"]), -float(d["max_mean_cos"])),
+        )
+        selection = "fallback_least_collapsed"
+
+    s2_star = float(best["sigma2"])
+    return {
+        "sigma2": s2_star,
+        "fit": fits[s2_star],
+        "curve": curve,
+        "selection": selection,
+        "min_map": min_map,
+    }
+
+
+def responsibilities_to_labels(
+    responsibilities: np.ndarray,
+    *,
+    empty_label: int = -1,
+) -> np.ndarray:
+    """MAP (hard) topic labels from soft responsibilities.
+
+    **Late view only** — for LLM labelling / lens-partition prompts and
+    human tables. Soft responsibilities remain the primary stored state
+    (CIP-0017).
+
+    Rows that are all-zero or non-finite receive ``empty_label`` (default
+    ``-1``) instead of a spurious argmax onto topic 0.
+    """
+    R = np.asarray(responsibilities, dtype=float)
+    if R.ndim != 2:
+        raise ValueError(f"responsibilities must be 2-D, got shape {R.shape}")
+    finite = np.isfinite(R)
+    R = np.where(finite, R, 0.0)
+    row_mass = R.sum(axis=1)
+    labels = np.argmax(R, axis=1).astype(int)
+    labels[row_mass <= 0] = empty_label
+    return labels
+
+
+def example_phrases_for_soft_topics(
+    phrases,
+    responsibilities: np.ndarray,
+    *,
+    n_top: int = 12,
+    n_sample: int = 6,
+    min_responsibility: float | None = None,
+    seed: int = 0,
+) -> list[dict]:
+    """Membership-threshold exemplars per topic for LLM / report harden views.
+
+    A phrase is eligible for topic ``c`` only when its soft responsibility
+    ``R[i, c]`` clears ``min_responsibility``. When that argument is ``None``
+    (default), the threshold is ``1/k`` — at least uniform mass under ``k``
+    topics. Pass an absolute float to override.
+
+    Among eligible phrases, take the highest-mass ones up to ``n_top`` (a
+    *cap*, not a fixed count), then optionally sample up to ``n_sample`` more
+    from the remainder (deterministic under ``seed``).
+
+    Topics with no eligible phrases — including near-empty components —
+    return an empty example list rather than padding with low-mass text.
+
+    This is a **harden view** for labelling boundaries — not a change to
+    the soft topic geometry.
+    """
+    phrases = list(phrases)
+    R = np.asarray(responsibilities, dtype=float)
+    if R.ndim != 2:
+        raise ValueError(f"responsibilities must be 2-D, got shape {R.shape}")
+    if len(phrases) != R.shape[0]:
+        raise ValueError(
+            f"phrases length {len(phrases)} != responsibilities rows {R.shape[0]}"
+        )
+    n, k = R.shape
+    if k <= 0:
+        return []
+    if min_responsibility is None:
+        thr = 1.0 / float(k)
+    else:
+        thr = float(min_responsibility)
+        if thr < 0 or thr > 1:
+            raise ValueError(
+                f"min_responsibility must be in [0, 1], got {min_responsibility!r}"
+            )
+    rng = np.random.default_rng(seed)
+    units: list[dict] = []
+    for c in range(k):
+        mass = R[:, c]
+        if float(mass.sum()) <= 0:
+            units.append({"cluster": c, "examples": [], "key": f"{c}|empty"})
+            continue
+        eligible = np.flatnonzero(mass >= thr)
+        if eligible.size == 0:
+            units.append({"cluster": int(c), "examples": [], "key": f"{c}|below_thr"})
+            continue
+        # Highest responsibility first among phrases that clear the threshold
+        order = eligible[np.argsort(-mass[eligible], kind="mergesort")]
+        take_top = min(int(n_top), order.size)
+        top_idx = order[:take_top]
+        examples = [phrases[i] for i in top_idx]
+        rest_idx = order[take_top:]
+        if n_sample > 0 and rest_idx.size > 0:
+            take = min(int(n_sample), rest_idx.size)
+            chosen = rng.choice(rest_idx, size=take, replace=False)
+            chosen = chosen[np.argsort(-mass[chosen], kind="mergesort")]
+            examples.extend(phrases[i] for i in chosen)
+        digest = hashlib.sha256(
+            "|".join(str(p) for p in examples).encode("utf-8")
+        ).hexdigest()
+        key = f"{c}|" + digest[:10]
+        units.append({"cluster": int(c), "examples": examples, "key": key})
+    return units
+
+
+def mppca_topics(
+    X: np.ndarray,
+    k: int,
+    seed: int,
+    *,
+    sigma2: Optional[float] = None,
+    profile: bool = True,
+) -> dict[str, Any]:
+    """Fit soft MPPCA topics; return responsibilities, means, and MAP labels.
+
+    By default (``profile=True``, ``sigma2=None``) runs
+    :func:`profile_topic_sigma2` once and uses the softest non-collapsing
+    floor. Pass an explicit ``sigma2`` to skip profiling.
+    """
+    if sigma2 is not None:
+        fit = mppca_fit(X, k, sigma2=float(sigma2), seed=seed, n_init=10)
+        profile_meta: dict[str, Any] = {"selection": "fixed", "curve": []}
+    elif profile:
+        prof = profile_topic_sigma2(X, k, seed=seed, n_init=10)
+        fit = prof["fit"]
+        profile_meta = {
+            "selection": prof["selection"],
+            "curve": prof["curve"],
+            "min_map": prof["min_map"],
+        }
+    else:
+        fit = mppca_fit(X, k, sigma2=DEFAULT_TOPIC_SIGMA2, seed=seed, n_init=10)
+        profile_meta = {"selection": "default_constant", "curve": []}
+    R = np.asarray(fit["responsibilities"], dtype=float)
+    means = np.asarray(fit["means"], dtype=float)
+    labels = responsibilities_to_labels(R)
+    return {
+        "responsibilities": R,
+        "means": means,
+        "labels": labels,
+        "sigma2": float(fit["sigma2"]),
+        "pi": np.asarray(fit["pi"], dtype=float),
+        "collapsed": bool(fit.get("collapsed", False)),
+        "sigma2_selection": profile_meta,
+        "component_fits": fit.get("component_fits", []),
+        "fit": fit,
+    }
+
+
+def topic_keys(k: int, *, prefix: str = "T") -> list[str]:
+    """Stable string keys for soft topics (``T0``, ``T1``, …)."""
+    return [f"{prefix}{i}" for i in range(int(k))]
+
+
+def component_local_plane(
+    X: np.ndarray,
+    weights: np.ndarray,
+    component_fit: dict | None,
+    *,
+    q_viz: int = 2,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, int] | None:
+    """Return ``(mu, U, scales, q_model)`` for a Bishop–Tipping local plane.
+
+    ``U`` is ``(d, q_viz)`` orthonormal. ``scales`` are semi-axis lengths in
+    that plane (``sqrt(lambda)`` along each column of ``U``). Prefer the
+    fitted component's ``U_q``; pad with weighted SVD if model ``q < q_viz``.
+    """
+    X = np.asarray(X, float)
+    w = np.asarray(weights, float).ravel()
+    if X.ndim != 2 or w.shape[0] != X.shape[0] or float(w.sum()) <= 0:
+        return None
+    mu = None
+    U_model = None
+    lam_model = None
+    q_model = 0
+    if component_fit is not None:
+        mu = np.asarray(component_fit.get("mu"), float).ravel()
+        U_model = np.asarray(component_fit.get("U_q"), float)
+        lam_model = np.asarray(component_fit.get("lambdas_q"), float).ravel()
+        q_model = int(
+            component_fit.get(
+                "q", U_model.shape[1] if U_model.ndim == 2 else 0
+            )
+        )
+        if mu.shape[0] != X.shape[1]:
+            mu = None
+            U_model = None
+            lam_model = None
+            q_model = 0
+    if mu is None:
+        mu = (w[:, None] * X).sum(axis=0) / float(w.sum())
+    Xc = X - mu
+    need = int(q_viz)
+    cols: list[np.ndarray] = []
+    lams: list[float] = []
+    if U_model is not None and U_model.ndim == 2 and U_model.shape[0] == X.shape[1]:
+        for j in range(min(U_model.shape[1], need)):
+            cols.append(U_model[:, j])
+            if lam_model is not None and j < len(lam_model):
+                lams.append(float(max(lam_model[j], 0.0)))
+            else:
+                lams.append(0.0)
+    if len(cols) < need:
+        sw = np.sqrt(np.clip(w, 0.0, None))
+        Xw = sw[:, None] * Xc
+        _, s, Vt = np.linalg.svd(Xw, full_matrices=False)
+        w_sum = float(w.sum())
+        eig = (s ** 2) / w_sum if w_sum > 0 else s ** 2
+        for i, row in enumerate(Vt):
+            if len(cols) >= need:
+                break
+            v = row.astype(float)
+            if any(abs(float(np.dot(v, c))) > 0.99 for c in cols):
+                continue
+            cols.append(v)
+            lams.append(float(max(eig[i], 0.0)) if i < len(eig) else 0.0)
+    if not cols:
+        return None
+    while len(cols) < need:
+        cols.append(np.zeros(X.shape[1]))
+        lams.append(0.0)
+    U = np.column_stack(cols[:need])
+    Q, _ = np.linalg.qr(U)
+    sw = np.sqrt(np.clip(w, 0.0, None))
+    Xw = sw[:, None] * Xc
+    scales = np.zeros(need, dtype=float)
+    w_sum = float(w.sum())
+    for j in range(need):
+        proj = Xw @ Q[:, j]
+        var = float((proj ** 2).sum() / w_sum) if w_sum > 0 else 0.0
+        if j < len(lams) and lams[j] > 0 and U_model is not None and j < U_model.shape[1]:
+            if abs(float(np.dot(Q[:, j], U_model[:, j]))) > 0.9:
+                var = max(var, lams[j])
+        scales[j] = float(np.sqrt(max(var, 0.0)))
+    return mu, Q[:, :need], scales, q_model
+
+
+def _ellipse_polyline(
+    center: np.ndarray,
+    cov2: np.ndarray,
+    *,
+    n: int = 64,
+) -> tuple[list[float], list[float]] | None:
+    """Sample a 1-SD ellipse in the plane as closed polylines (JSON-safe)."""
+    c = np.asarray(center, float).ravel()[:2]
+    C = np.asarray(cov2, float)
+    if c.size < 2 or C.shape != (2, 2) or not np.isfinite(C).all():
+        return None
+    try:
+        vals, vecs = np.linalg.eigh(C)
+    except np.linalg.LinAlgError:
+        return None
+    vals = np.clip(vals, 0.0, None)
+    if float(vals.sum()) <= 0:
+        return None
+    t = np.linspace(0.0, 2.0 * np.pi, n, endpoint=True)
+    circle = np.column_stack([np.cos(t), np.sin(t)])
+    pts = circle @ (vecs * np.sqrt(vals)[None, :]).T + c
+    return pts[:, 0].tolist(), pts[:, 1].tolist()
+
+
+_UQ_PALETTE = ("#2a78d6", "#eb6834", "#3d9b8f", "#8b5cf6", "#c45c26", "#5a6a7a")
+
+
+def local_uq_plotly_spec(
+    embeddings: np.ndarray,
+    responsibilities: np.ndarray,
+    *,
+    focus: int,
+    component_fits: Sequence[dict] | None = None,
+    phrases: Sequence[Any] | None = None,
+    sigma2: float | None = None,
+    title: str | None = None,
+    topic_prefix: str = "T",
+    hover_max_chars: int = 72,
+) -> dict[str, Any] | None:
+    """Bishop–Tipping local ``U_q`` panel as Plotly.js figure JSON.
+
+    Every phrase is projected onto the focus component's local plane. Markers
+    are uniform solid dark — this panel *is* the component view, so soft mass
+    is not used for colour or size (chrome must not apply ``responsibility_ink``
+    on top). ``customdata`` still carries phrase / topic / responsibilities for
+    click bindings.
+
+    Returns ``None`` when the plane cannot be formed.
+    """
+    X = np.asarray(embeddings, float)
+    R = np.asarray(responsibilities, float)
+    focus = int(focus)
+    if X.ndim != 2 or len(X) < 2 or R.ndim != 2 or R.shape[0] != len(X):
+        return None
+    if focus < 0 or focus >= R.shape[1]:
+        return None
+    if not np.isfinite(X).all() or not np.isfinite(R).all():
+        return None
+
+    cf = None
+    if component_fits is not None and 0 <= focus < len(component_fits):
+        cf = component_fits[focus]
+    plane = component_local_plane(X, R[:, focus], cf, q_viz=2)
+    if plane is None:
+        return None
+    mu, U, scales, q_model = plane
+    xy = (X - mu) @ U
+    if not np.isfinite(xy).all():
+        return None
+
+    k = R.shape[1]
+    keys = topic_keys(k, prefix=topic_prefix)
+    labels = responsibilities_to_labels(R)
+    mass = np.clip(R[:, focus], 0.0, 1.0)
+    phrase_list: list[str] = []
+    if phrases is None:
+        phrase_list = [f"phrase {i}" for i in range(len(X))]
+    else:
+        phrase_list = [str(p) for p in phrases]
+        if len(phrase_list) != len(X):
+            phrase_list = (phrase_list + ["—"] * len(X))[: len(X)]
+
+    order = np.arange(len(X), dtype=int)
+    hover_short: list[str] = []
+    customdata: list[dict[str, Any]] = []
+    for i in order:
+        text = " ".join(phrase_list[i].split()) or "—"
+        short = text if len(text) <= hover_max_chars else text[: hover_max_chars - 1] + "…"
+        hover_short.append(short)
+        lab = int(labels[i])
+        topic = keys[lab] if 0 <= lab < k else keys[0]
+        customdata.append(
+            {
+                "topic": topic,
+                "phrase": text,
+                "responsibilities": {
+                    keys[j]: float(R[i, j]) for j in range(k)
+                },
+            }
+        )
+
+    if title is None:
+        title = f"Topic {keys[focus]} — local U_q (model q={q_model})"
+
+    s0 = float(scales[0]) if len(scales) > 0 else 0.0
+    s1 = float(scales[1]) if len(scales) > 1 else 0.0
+    if sigma2 is not None and float(sigma2) > 0:
+        s0 = float(np.sqrt(s0 ** 2 + float(sigma2)))
+        s1 = float(np.sqrt(s1 ** 2 + float(sigma2)))
+
+    colour = _UQ_PALETTE[focus % len(_UQ_PALETTE)]
+    traces: list[dict[str, Any]] = [
+        {
+            "type": "scatter",
+            "mode": "markers",
+            "name": "phrases",
+            "x": xy[order, 0].tolist(),
+            "y": xy[order, 1].tolist(),
+            "text": hover_short,
+            "customdata": customdata,
+            "hovertemplate": "%{text}<extra></extra>",
+            "marker": {
+                "size": 5,
+                "color": "#0b0b0b",
+                "opacity": 1.0,
+                "line": {"width": 0},
+            },
+            "showlegend": False,
+        }
+    ]
+    poly = _ellipse_polyline(
+        np.zeros(2),
+        np.diag([max(s0, 1e-9) ** 2, max(s1, 1e-9) ** 2]),
+    )
+    if poly is not None and (s0 > 0 or s1 > 0):
+        xs, ys = poly
+        traces.append(
+            {
+                "type": "scatter",
+                "mode": "lines",
+                "name": "1-SD local U_q",
+                "x": xs,
+                "y": ys,
+                "line": {"color": colour, "width": 1.5},
+                "hoverinfo": "skip",
+                "showlegend": True,
+            }
+        )
+    traces.append(
+        {
+            "type": "scatter",
+            "mode": "markers",
+            "name": "μ",
+            "x": [0.0],
+            "y": [0.0],
+            "marker": {
+                "symbol": "x",
+                "size": 14,
+                "color": colour,
+                "line": {"width": 1.2, "color": "#0b0b0b"},
+            },
+            "hoverinfo": "skip",
+            "showlegend": False,
+        }
+    )
+
+    w = mass
+    wsum = float(w.sum()) or 1.0
+    mid = (xy * w[:, None]).sum(axis=0) / wsum
+    spread = np.sqrt((((xy - mid) ** 2) * w[:, None]).sum(axis=0) / wsum)
+    half = float(max(1.5 * float(np.max(spread)), 0.5))
+
+    return {
+        "data": traces,
+        "layout": {
+            "title": {
+                "text": title,
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "xaxis": {
+                "title": "local PC1 (U_q)",
+                "range": [float(mid[0] - half), float(mid[0] + half)],
+                "scaleanchor": "y",
+                "scaleratio": 1,
+                "gridcolor": "#e4e3df",
+                "zeroline": False,
+            },
+            "yaxis": {
+                "title": "local PC2 (U_q)",
+                "range": [float(mid[1] - half), float(mid[1] + half)],
+                "gridcolor": "#e4e3df",
+                "zeroline": False,
+            },
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 50, "r": 20, "t": 50, "b": 50},
+            "height": 460,
+            "width": 520,
+            "legend": {
+                "orientation": "h",
+                "yanchor": "bottom",
+                "y": 1.02,
+                "x": 0,
+            },
+        },
+    }
+
+
+def _ppca_cov(component_fit: dict, sigma2: float) -> np.ndarray:
+    """Ambient covariance for a PPCA component: ``U diag(λ) Uᵀ + σ² I``."""
+    mu = np.asarray(component_fit["mu"], float).ravel()
+    d = int(mu.shape[0])
+    Cov = np.eye(d) * float(max(sigma2, 0.0))
+    U = np.asarray(component_fit.get("U_q"), float)
+    lam = np.asarray(component_fit.get("lambdas_q"), float).ravel()
+    if U.ndim == 2 and U.shape[0] == d and U.size and lam.size:
+        q = min(U.shape[1], len(lam))
+        if q > 0:
+            Cov = Cov + (U[:, :q] * lam[:q]) @ U[:, :q].T
+    return Cov
+
+
+def _clip_label(text: str, n: int = 28) -> str:
+    s = " ".join(str(text).split())
+    if len(s) <= n:
+        return s
+    return s[: max(1, n - 1)] + "…"
+
+
+def proposed_split_plotly_spec(
+    embeddings: np.ndarray,
+    *,
+    parent_mass: np.ndarray,
+    parent_component_fit: dict,
+    child_component_fits: Sequence[dict],
+    responsibilities: np.ndarray | None = None,
+    phrases: Sequence[Any] | None = None,
+    child_labels: Sequence[str] | None = None,
+    parent_label: str | None = None,
+    sigma2: float = 0.0,
+    title: str | None = None,
+    hover_max_chars: int = 72,
+) -> dict[str, Any] | None:
+    """Proposed split overlay: parent ellipse + child ellipses in parent ``U_q``.
+
+    Points are uniform solid dark — the proposal is about the child ellipses,
+    not responsibility ink. Solid muted 1-SD ellipse is the combined parent;
+    dashed coloured ellipses are the proposed children (local cov projected
+    into the parent plane).
+    """
+    X = np.asarray(embeddings, float)
+    mass = np.asarray(parent_mass, float).ravel()
+    if X.ndim != 2 or len(X) < 2 or mass.shape[0] != len(X):
+        return None
+    if not child_component_fits:
+        return None
+    if not np.isfinite(X).all() or not np.isfinite(mass).all():
+        return None
+
+    plane = component_local_plane(X, mass, parent_component_fit, q_viz=2)
+    if plane is None:
+        return None
+    mu, U, _scales, q_model = plane
+    xy = (X - mu) @ U
+    if not np.isfinite(xy).all():
+        return None
+
+    parent_name = parent_label or "parent"
+    if title is None:
+        title = (
+            f"Proposed split of «{_clip_label(parent_name, 40)}» "
+            f"— parent U_q (q={q_model})"
+        )
+
+    phrase_list: list[str]
+    if phrases is None:
+        phrase_list = [f"phrase {i}" for i in range(len(X))]
+    else:
+        phrase_list = [str(p) for p in phrases]
+        if len(phrase_list) != len(X):
+            phrase_list = (phrase_list + ["—"] * len(X))[: len(X)]
+
+    R = None
+    if responsibilities is not None:
+        R = np.asarray(responsibilities, float)
+        if R.ndim != 2 or R.shape[0] != len(X):
+            R = None
+    keys = topic_keys(R.shape[1]) if R is not None else []
+    labels = responsibilities_to_labels(R) if R is not None else None
+
+    # Stable draw order; colour/size do not encode responsibilities.
+    order = np.arange(len(X), dtype=int)
+    hover_short: list[str] = []
+    customdata: list[dict[str, Any]] = []
+    for i in order:
+        text = " ".join(phrase_list[i].split()) or "—"
+        short = text if len(text) <= hover_max_chars else text[: hover_max_chars - 1] + "…"
+        hover_short.append(short)
+        if R is not None and labels is not None:
+            lab = int(labels[i])
+            topic = keys[lab] if 0 <= lab < len(keys) else (keys[0] if keys else "T0")
+            customdata.append(
+                {
+                    "topic": topic,
+                    "phrase": text,
+                    "responsibilities": {
+                        keys[j]: float(R[i, j]) for j in range(len(keys))
+                    },
+                }
+            )
+        else:
+            customdata.append({"topic": "", "phrase": text, "responsibilities": {}})
+
+    traces: list[dict[str, Any]] = [
+        {
+            "type": "scatter",
+            "mode": "markers",
+            "name": "phrases",
+            "x": xy[order, 0].tolist(),
+            "y": xy[order, 1].tolist(),
+            "text": hover_short,
+            "customdata": customdata,
+            "hovertemplate": "%{text}<extra></extra>",
+            "marker": {
+                "size": 5,
+                "color": "#0b0b0b",
+                "opacity": 1.0,
+                "line": {"width": 0},
+            },
+            "showlegend": False,
+        }
+    ]
+
+    # Combined parent (solid) at the origin of the parent plane.
+    Cov_p = _ppca_cov(parent_component_fit, float(sigma2))
+    C2_p = U.T @ Cov_p @ U
+    parent_poly = _ellipse_polyline(np.zeros(2), C2_p)
+    if parent_poly is not None:
+        xs, ys = parent_poly
+        traces.append(
+            {
+                "type": "scatter",
+                "mode": "lines",
+                "name": f"parent «{_clip_label(parent_name, 20)}»",
+                "x": xs,
+                "y": ys,
+                "line": {"color": "#8a8680", "width": 2.0, "dash": "solid"},
+                "hoverinfo": "skip",
+                "showlegend": True,
+            }
+        )
+    traces.append(
+        {
+            "type": "scatter",
+            "mode": "markers",
+            "name": "parent μ",
+            "x": [0.0],
+            "y": [0.0],
+            "marker": {
+                "symbol": "x",
+                "size": 12,
+                "color": "#8a8680",
+                "line": {"width": 1.2, "color": "#0b0b0b"},
+            },
+            "hoverinfo": "skip",
+            "showlegend": False,
+        }
+    )
+
+    anchors: list[np.ndarray] = [np.zeros(2)]
+    for j, cf in enumerate(child_component_fits):
+        colour = _UQ_PALETTE[j % len(_UQ_PALETTE)]
+        mu_c = np.asarray(cf["mu"], float).ravel()
+        center = (mu_c - mu) @ U
+        Cov = _ppca_cov(cf, float(sigma2))
+        C2 = U.T @ Cov @ U
+        name = None
+        if child_labels is not None and j < len(child_labels):
+            name = str(child_labels[j])
+        if not name:
+            name = f"child {j}"
+        short = _clip_label(name, 28)
+        poly = _ellipse_polyline(center, C2)
+        if poly is not None:
+            xs, ys = poly
+            traces.append(
+                {
+                    "type": "scatter",
+                    "mode": "lines",
+                    "name": short,
+                    "x": xs,
+                    "y": ys,
+                    "line": {"color": colour, "width": 1.8, "dash": "dash"},
+                    "hoverinfo": "skip",
+                    "showlegend": True,
+                }
+            )
+        traces.append(
+            {
+                "type": "scatter",
+                "mode": "markers+text",
+                "name": f"{short} μ",
+                "x": [float(center[0])],
+                "y": [float(center[1])],
+                "text": [short],
+                "textposition": "top right",
+                "textfont": {"size": 10, "color": colour},
+                "marker": {
+                    "symbol": "x",
+                    "size": 14,
+                    "color": colour,
+                    "line": {"width": 1.2, "color": "#0b0b0b"},
+                },
+                "hoverinfo": "skip",
+                "showlegend": False,
+            }
+        )
+        if np.isfinite(center).all():
+            anchors.append(np.asarray(center, float).ravel()[:2])
+
+    w = np.clip(mass, 0.0, None)
+    wsum = float(w.sum()) or 1.0
+    mid = (xy * w[:, None]).sum(axis=0) / wsum
+    spread = np.sqrt((((xy - mid) ** 2) * w[:, None]).sum(axis=0) / wsum)
+    half = float(max(1.5 * float(np.max(spread)), 0.5))
+    for a in anchors:
+        half = max(half, float(np.max(np.abs(a - mid))) + 0.3)
+
+    return {
+        "data": traces,
+        "layout": {
+            "title": {
+                "text": title,
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "xaxis": {
+                "title": "parent local PC1 (U_q)",
+                "range": [float(mid[0] - half), float(mid[0] + half)],
+                "scaleanchor": "y",
+                "scaleratio": 1,
+                "gridcolor": "#e4e3df",
+                "zeroline": False,
+            },
+            "yaxis": {
+                "title": "parent local PC2 (U_q)",
+                "range": [float(mid[1] - half), float(mid[1] + half)],
+                "gridcolor": "#e4e3df",
+                "zeroline": False,
+            },
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 50, "r": 20, "t": 50, "b": 50},
+            "height": 460,
+            "width": 520,
+            "legend": {
+                "orientation": "h",
+                "yanchor": "bottom",
+                "y": 1.02,
+                "x": 0,
+            },
+        },
+    }
+
+
+def fit_from_responsibilities(
+    X: np.ndarray,
+    R: np.ndarray,
+    sigma2: float,
+    *,
+    seed: int = 0,
+    max_iter: int = 30,
+    tol: float = 1e-5,
+    normalize_means: bool = True,
+) -> dict[str, Any]:
+    """Run EM M-/E-steps starting from given responsibilities (fixed σ²)."""
+    X = np.asarray(X, dtype=float)
+    R = np.asarray(R, dtype=float)
+    n, k = R.shape
+    pi = R.mean(axis=0)
+    n_iter = 0
+    max_iter = max(0, int(max_iter))
+    if max_iter == 0:
+        component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+        means = np.vstack([fit["mu"] for fit in component_fits])
+        if normalize_means:
+            means = _l2_normalize_rows(means)
+        return {
+            "responsibilities": R,
+            "means": means,
+            "pi": pi,
+            "sigma2": float(sigma2),
+            "n_iter": 0,
+            "component_fits": component_fits,
+            "seed": int(seed),
+            "k": int(k),
+            "collapsed": bool(topic_fit_diagnostics(
+                {
+                    "responsibilities": R,
+                    "means": means,
+                    "sigma2": sigma2,
+                    "k": k,
+                    "component_fits": component_fits,
+                }
+            )["collapsed"]),
+        }
+    for n_iter in range(1, max_iter + 1):
+        component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+        log_lik = np.column_stack(
+            [log_likelihood_ppca(X, fit, sigma2) for fit in component_fits]
+        )
+        log_pi = np.log(np.clip(pi, 1e-300, None))
+        for j, fit in enumerate(component_fits):
+            if fit.get("weight_sum", 0.0) <= 0:
+                log_pi[j] = -np.inf
+        R_new = _softmax_rows(log_lik + log_pi[None, :])
+        pi = R_new.mean(axis=0)
+        delta = float(np.max(np.abs(R_new - R)))
+        R = R_new
+        if delta < tol:
+            break
+    component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+    means = np.vstack([fit["mu"] for fit in component_fits])
+    if normalize_means:
+        means = _l2_normalize_rows(means)
+    return {
+        "responsibilities": R,
+        "means": means,
+        "pi": pi,
+        "sigma2": float(sigma2),
+        "n_iter": int(n_iter),
+        "component_fits": component_fits,
+        "seed": int(seed),
+        "k": int(k),
+        "collapsed": bool(topic_fit_diagnostics(
+            {
+                "responsibilities": R,
+                "means": means,
+                "sigma2": sigma2,
+                "k": k,
+                "component_fits": component_fits,
+            }
+        )["collapsed"]),
+    }
+
+
+def _child_mass_balance(child_cols: np.ndarray) -> tuple[float, int]:
+    """Return ``(min_fraction, n_map)`` for soft child columns (higher is better)."""
+    cols = np.asarray(child_cols, dtype=float)
+    sums = cols.sum(axis=0)
+    total = float(sums.sum())
+    if total <= 0 or cols.shape[1] < 1:
+        return 0.0, 0
+    min_frac = float(sums.min() / total)
+    n_map = int((np.bincount(cols.argmax(axis=1), minlength=cols.shape[1]) > 0).sum())
+    return min_frac, n_map
+
+
+def propose_split(
+    X: np.ndarray,
+    fit: dict[str, Any],
+    topic_id: int,
+    *,
+    n_children: int = 2,
+    seed: int = 0,
+    mass_threshold: float = 0.05,
+    max_iter: int = 40,
+    n_restarts: int = 8,
+) -> dict[str, Any]:
+    """Split one topic via a local mixture of PPCA on its soft mass.
+
+    Child responsibilities are parent mass × local posterior. Does not call
+    an LLM; children are returned as ``dirty`` indices for naming.
+
+    A single k-means seed often collapses the local 2-fit on tightly clustered
+    embeddings (one child keeps almost all mass). We try ``n_restarts`` seeds
+    and keep the soft split with the best balance. Post-split EM reassignment
+    is skipped (``fit_from_responsibilities(..., max_iter=0)``) so a later
+    M-step cannot wipe MAP membership off the minority child.
+    """
+    if n_children < 2:
+        raise ValueError(f"n_children must be >= 2, got {n_children}")
+    R = np.asarray(fit["responsibilities"], dtype=float)
+    X = np.asarray(X, dtype=float)
+    i = int(topic_id)
+    k = R.shape[1]
+    if i < 0 or i >= k:
+        raise ValueError(f"topic_id {i} out of range for k={k}")
+    mass = R[:, i]
+    mask = mass >= float(mass_threshold)
+    if int(mask.sum()) < n_children:
+        order = np.argsort(-mass)
+        take = max(n_children, min(len(order), max(n_children * 5, n_children)))
+        mask = np.zeros(len(mass), dtype=bool)
+        mask[order[:take]] = True
+    X_sub = X[mask]
+    if X_sub.shape[0] < n_children:
+        raise ValueError(
+            f"not enough mass on topic {i} to split into {n_children} "
+            f"(got {X_sub.shape[0]} points)"
+        )
+    sigma2 = float(fit["sigma2"])
+    parent_cf = None
+    cfs = fit.get("component_fits") or []
+    if 0 <= i < len(cfs):
+        parent_cf = dict(cfs[i])
+
+    n_restarts = max(1, int(n_restarts))
+    best: dict[str, Any] | None = None
+    best_key: tuple[int, float] = (-1, -1.0)
+    for r_i in range(n_restarts):
+        trial_seed = int(seed) + r_i
+        local_trial = mppca_fit(
+            X_sub,
+            n_children,
+            sigma2=sigma2,
+            seed=trial_seed,
+            max_iter=max_iter,
+        )
+        log_lik = np.column_stack(
+            [
+                log_likelihood_ppca(X, cf, sigma2)
+                for cf in local_trial["component_fits"]
+            ]
+        )
+        log_pi = np.log(np.clip(local_trial["pi"], 1e-300, None))
+        r_local = _softmax_rows(log_lik + log_pi[None, :])
+        child_trial = mass[:, None] * r_local
+        min_frac, n_map = _child_mass_balance(child_trial)
+        key = (n_map, min_frac)
+        if key > best_key:
+            best_key = key
+            best = {
+                "local": local_trial,
+                "child_cols": child_trial,
+                "seed": trial_seed,
+            }
+            # Ideal 2-way split is near 0.5; stop early if clearly balanced.
+            if n_map >= n_children and min_frac >= 0.35:
+                break
+    assert best is not None
+    local = dict(best["local"])
+    child_cols = np.asarray(best["child_cols"], dtype=float)
+    chosen_seed = int(best["seed"])
+
+    child_order = np.argsort(-child_cols.sum(axis=0))
+    child_cols = child_cols[:, child_order]
+    local["component_fits"] = [
+        local["component_fits"][int(j)] for j in child_order
+    ]
+    local["pi"] = np.asarray(local["pi"], float)[child_order]
+    if "means" in local:
+        local["means"] = np.asarray(local["means"], float)[child_order]
+    parts = []
+    if i > 0:
+        parts.append(R[:, :i])
+    parts.append(child_cols)
+    if i + 1 < k:
+        parts.append(R[:, i + 1 :])
+    R_new = np.hstack(parts)
+    R_new = R_new / np.clip(R_new.sum(axis=1, keepdims=True), 1e-12, None)
+    # Lock soft child mass: refine planes only. Full EM often collapses MAP
+    # onto one child even when soft mass is balanced (CIMT / k=1 entry).
+    new_fit = fit_from_responsibilities(
+        X, R_new, sigma2, seed=chosen_seed, max_iter=0
+    )
+    R_f = np.asarray(new_fit["responsibilities"], float)
+    child_slice = R_f[:, i : i + n_children]
+    post_order = np.argsort(-child_slice.sum(axis=0))
+    if not np.array_equal(post_order, np.arange(n_children)):
+        R_f[:, i : i + n_children] = child_slice[:, post_order]
+        new_fit["responsibilities"] = R_f
+        cfs2 = list(new_fit.get("component_fits") or [])
+        if len(cfs2) >= i + n_children:
+            block = [cfs2[i + int(j)] for j in post_order]
+            for t, cf in enumerate(block):
+                cfs2[i + t] = cf
+            new_fit["component_fits"] = cfs2
+        if "means" in new_fit and new_fit["means"] is not None:
+            means = np.asarray(new_fit["means"], float)
+            means[i : i + n_children] = means[i : i + n_children][post_order]
+            new_fit["means"] = means
+        if "pi" in new_fit and new_fit["pi"] is not None:
+            pi = np.asarray(new_fit["pi"], float)
+            pi[i : i + n_children] = pi[i : i + n_children][post_order]
+            new_fit["pi"] = pi
+        child_cols = child_cols[:, post_order]
+        local["component_fits"] = [
+            local["component_fits"][int(j)] for j in post_order
+        ]
+        local["pi"] = np.asarray(local["pi"], float)[post_order]
+        child_order = child_order[post_order]
+    child_ids = list(range(i, i + n_children))
+    history_entry = {
+        "action": "split",
+        "topic": i,
+        "children": child_ids,
+        "n_children": n_children,
+        "child_order_by_mass": [int(j) for j in child_order],
+        "kl": 0.0,
+        "had_parent_fit": parent_cf is not None,
+        "local_seed": chosen_seed,
+        "child_mass_min_frac": float(best_key[1]),
+    }
+    return {
+        "fit": new_fit,
+        "dirty": child_ids,
+        "history_entry": history_entry,
+        "local_fit": local,
+        "parent_id": i,
+        "parent_mass": mass.copy(),
+        "parent_component_fit": parent_cf,
+        "child_responsibilities": child_cols,
+        "kl": 0.0,
+    }
+
+
+def rebuild_uq_by_topic(
+    embeddings: np.ndarray,
+    responsibilities: np.ndarray,
+    *,
+    phrases: Sequence[Any] | None = None,
+    sigma2: float | None = None,
+    component_fits: Sequence[dict] | None = None,
+    topic_prefix: str = "T",
+) -> dict[str, dict[str, Any]]:
+    """Build ``{Tj: local_uq_plotly_spec(...)}`` for every component."""
+    R = np.asarray(responsibilities, float)
+    keys = topic_keys(R.shape[1], prefix=topic_prefix)
+    out: dict[str, dict[str, Any]] = {}
+    for j, key in enumerate(keys):
+        spec = local_uq_plotly_spec(
+            embeddings,
+            R,
+            focus=j,
+            component_fits=component_fits,
+            phrases=phrases,
+            sigma2=sigma2,
+            title=f"Focus {key} — local U_q (Bishop–Tipping)",
+            topic_prefix=topic_prefix,
+        )
+        if spec is not None:
+            out[key] = spec
+    return out
+
+
+def _topic_index(keys: Sequence[str], focus_topic: Any) -> int:
+    key = str(focus_topic) if focus_topic is not None else ""
+    if key in keys:
+        return list(keys).index(key)
+    # Accept bare integers / "0"
+    try:
+        idx = int(key.replace("T", ""))
+        if 0 <= idx < len(keys):
+            return idx
+    except ValueError:
+        pass
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Subject-grain PopulateButton chain (propose → confirm | undo)
+#
+# Two ownership lanes — do not cross them in YAML ``compute.field`` lists:
+#
+#   Controls (user-owned; never written by these functions)
+#     sigma2, sigma2_mode, em_accept, em_preview, label_prompt, label_model
+#     → passed as *inputs* (row_args) only
+#
+#   Catalogue geometry (owned by propose → confirm|undo)
+#     responsibilities, topic_keys, topic_labels, focus_topic,
+#     uq_spec, uq_by_topic, pending_proposal, split_undo
+#
+# Call graph:
+#   Propose  reads controls + embeddings → writes catalogue + pending + undo snap
+#   Confirm  reads pending              → writes uq_spec/uq_by_topic; clears pending/undo
+#   Undo     reads undo snap (+ live σ²)→ writes catalogue; clears pending/undo
+#   Name     reads label_* + soft mass  → writes topic_labels[focus] only
+#            (live LLM call is in Compute when label_model != stub)
+# ---------------------------------------------------------------------------
+
+
+def _phrase_list(phrases: Any, n: int) -> list[str]:
+    if phrases is None:
+        return [f"phrase {i}" for i in range(n)]
+    if isinstance(phrases, str):
+        return [phrases]
+    out = [str(p) for p in phrases]
+    if len(out) != n:
+        return (out + ["—"] * n)[:n]
+    return out
+
+
+def subject_grain_propose_split(
+    embeddings: Any,
+    responsibilities: Any,
+    phrases: Any = None,
+    focus_topic: Any = "T0",
+    sigma2: float = 0.05,
+    em_accept: int = 40,
+    mass_threshold: float = 0.05,
+    n_children: int = 2,
+    topic_labels: Any = None,
+    seed: int = 0,
+) -> tuple:
+    """Propose a soft split: apply geometry + overlay; leave Confirm/Undo open.
+
+    Reads ``sigma2`` / ``em_accept`` as EM *controls* (does not write them).
+    Writes catalogue geometry plus ``pending_proposal`` and ``split_undo``.
+
+    Returns
+    -------
+    tuple
+        ``(uq_spec, uq_by_topic, topic_keys, responsibilities, focus_topic,
+        topic_labels, pending_proposal, split_undo)``.
+    """
+    X = np.asarray(embeddings, dtype=float)
+    R = np.asarray(responsibilities, dtype=float)
+    s2 = float(sigma2)
+    phrase_list = _phrase_list(phrases, len(X))
+    keys = topic_keys(R.shape[1])
+    focus_idx = _topic_index(keys, focus_topic)
+    parent_key = keys[focus_idx]
+    labels_in: dict[str, str] = {}
+    if isinstance(topic_labels, dict):
+        labels_in = {str(k): str(v) for k, v in topic_labels.items()}
+
+    # Snapshot catalogue only (no controls) so Undo cannot clobber σ² etc.
+    cfs = [fit_weighted_ppca(X, R[:, j], s2) for j in range(R.shape[1])]
+    uq_before = rebuild_uq_by_topic(
+        X, R, phrases=phrase_list, sigma2=s2, component_fits=cfs
+    )
+    focus_before = parent_key if parent_key in uq_before else next(
+        iter(uq_before), parent_key
+    )
+    split_undo = {
+        "topic_keys": list(keys),
+        "responsibilities": R.tolist(),
+        "focus_topic": focus_before,
+        "topic_labels": dict(labels_in),
+        "uq_spec": uq_before.get(focus_before),
+        "uq_by_topic": uq_before,
+    }
+
+    out = propose_split(
+        X,
+        {"responsibilities": R, "sigma2": s2, "component_fits": cfs},
+        focus_idx,
+        n_children=int(n_children),
+        seed=int(seed),
+        mass_threshold=float(mass_threshold),
+        max_iter=max(1, int(em_accept)),
+    )
+    new_fit = out["fit"]
+    R_new = np.asarray(new_fit["responsibilities"], float)
+    keys_new = topic_keys(R_new.shape[1])
+    n_ch = int(n_children)
+    labels_out: dict[str, str] = {}
+    for old_i, old_key in enumerate(keys):
+        if old_i < focus_idx:
+            labels_out[keys_new[old_i]] = labels_in.get(
+                old_key, f"Topic {old_i}"
+            )
+        elif old_i > focus_idx:
+            labels_out[keys_new[old_i + n_ch - 1]] = labels_in.get(
+                old_key, f"Topic {old_i}"
+            )
+    parent_label = labels_in.get(parent_key, parent_key)
+    child_keys = [keys_new[int(c)] for c in out["dirty"]]
+    child_labels = []
+    for t, child_id in enumerate(out["dirty"]):
+        lab = f"«{parent_label}» → (unnamed {t})"
+        labels_out[keys_new[child_id]] = lab
+        child_labels.append(lab)
+
+    # Per-topic planes for Confirm; overlay shown while pending.
+    planes_after_accept = rebuild_uq_by_topic(
+        X,
+        R_new,
+        phrases=phrase_list,
+        sigma2=s2,
+        component_fits=new_fit.get("component_fits"),
+    )
+    parent_cf = out.get("parent_component_fit")
+    child_cfs = list((out.get("local_fit") or {}).get("component_fits") or [])
+    focus_new = child_keys[0]
+    proposed = None
+    if parent_cf is not None and child_cfs:
+        proposed = proposed_split_plotly_spec(
+            X,
+            parent_mass=out["parent_mass"],
+            parent_component_fit=parent_cf,
+            child_component_fits=child_cfs,
+            responsibilities=R_new,
+            phrases=phrase_list,
+            child_labels=child_labels,
+            parent_label=parent_label,
+            sigma2=s2,
+        )
+    if proposed is None:
+        proposed = planes_after_accept.get(focus_new) or next(
+            iter(planes_after_accept.values()), {}
+        )
+    # figure_source(key=child) must show overlay while pending.
+    uq_by_topic = dict(planes_after_accept)
+    for ck in child_keys:
+        uq_by_topic[ck] = proposed
+    pending_proposal = {
+        "kind": "split",
+        "accepted": False,
+        "parent": parent_key,
+        "parent_label": parent_label,
+        "children": child_keys,
+        "k_before": len(keys),
+        "k_after": len(keys_new),
+        "focus": focus_new,
+        "planes_after_accept": planes_after_accept,
+    }
+    return (
+        proposed,
+        uq_by_topic,
+        keys_new,
+        R_new.tolist(),
+        focus_new,
+        labels_out,
+        pending_proposal,
+        split_undo,
+    )
+
+
+def subject_grain_confirm_split(
+    pending_proposal: Any = None,
+) -> tuple:
+    """Seal a proposed split: overlay → per-topic planes; clear pending/undo.
+
+    Does not touch EM controls.
+
+    Returns
+    -------
+    tuple
+        ``(uq_spec, uq_by_topic, pending_proposal, split_undo)``.
+    """
+    if not isinstance(pending_proposal, dict) or not pending_proposal:
+        return (None, None, None, None)
+    planes = pending_proposal.get("planes_after_accept")
+    focus = pending_proposal.get("focus")
+    if not isinstance(planes, dict) or not planes:
+        return (None, None, None, None)
+    uq_spec = planes.get(focus) if focus is not None else None
+    if uq_spec is None:
+        uq_spec = next(iter(planes.values()), {})
+    return (uq_spec, planes, None, None)
+
+
+def subject_grain_undo_split(
+    split_undo: Any = None,
+    embeddings: Any = None,
+    phrases: Any = None,
+    sigma2: Any = None,
+) -> tuple:
+    """Reject a proposed split: restore catalogue geometry; clear pending/undo.
+
+    Restores responsibilities / keys / labels / focus from ``split_undo``.
+    Redraws planes with the *live* ``sigma2`` control when embeddings are
+    supplied — never writes ``sigma2`` itself.
+
+    Returns
+    -------
+    tuple
+        ``(uq_spec, uq_by_topic, topic_keys, responsibilities, focus_topic,
+        topic_labels, pending_proposal, split_undo)`` — last two cleared.
+    """
+    if not isinstance(split_undo, dict) or not split_undo:
+        raise ValueError("No split_undo snapshot — nothing to reject.")
+    keys = list(split_undo.get("topic_keys") or [])
+    R = split_undo.get("responsibilities")
+    focus = split_undo.get("focus_topic") or (keys[0] if keys else "T0")
+    labels = split_undo.get("topic_labels") or {}
+
+    uq_by_topic = split_undo.get("uq_by_topic") or {}
+    uq_spec = split_undo.get("uq_spec")
+    # Prefer a fresh redraw at the live control σ² when we have embeddings.
+    if embeddings is not None and R is not None and sigma2 is not None:
+        try:
+            X = np.asarray(embeddings, dtype=float)
+            R_arr = np.asarray(R, dtype=float)
+            s2 = float(sigma2)
+            if X.ndim == 2 and R_arr.ndim == 2 and R_arr.shape[0] == len(X):
+                phrase_list = _phrase_list(phrases, len(X))
+                uq_by_topic = rebuild_uq_by_topic(
+                    X, R_arr, phrases=phrase_list, sigma2=s2
+                )
+                uq_spec = uq_by_topic.get(focus) or next(
+                    iter(uq_by_topic.values()), {}
+                )
+        except (TypeError, ValueError):
+            pass
+    if uq_spec is None and isinstance(uq_by_topic, dict) and uq_by_topic:
+        uq_spec = uq_by_topic.get(focus) or next(iter(uq_by_topic.values()), {})
+    return (
+        uq_spec,
+        uq_by_topic,
+        keys,
+        R,
+        focus,
+        labels,
+        None,
+        None,
+    )
+
+
+def subject_grain_prepare_label(
+    phrases: Any,
+    responsibilities: Any,
+    focus_topic: Any = "T0",
+    label_prompt: Any = None,
+    *,
+    n_exemplars: int = 8,
+) -> tuple[str, list[str], str]:
+    """Build the filled naming prompt for the focus topic.
+
+    Returns ``(user_prompt, exemplars, focus_key)``. Does not call an LLM.
+    """
+    R = np.asarray(responsibilities, dtype=float)
+    if R.ndim != 2:
+        raise ValueError(f"responsibilities must be 2-D, got shape {R.shape}")
+    phrase_list = _phrase_list(phrases, R.shape[0])
+    keys = topic_keys(R.shape[1])
+    if focus_topic is None or focus_topic == "":
+        focus = keys[0] if keys else "T0"
+    else:
+        focus = str(focus_topic)
+    j = _topic_index(keys, focus)
+    focus = keys[j] if keys else focus
+    units = example_phrases_for_soft_topics(
+        phrase_list, R, n_top=int(n_exemplars), n_sample=0, seed=0
+    )
+    exemplars = list(units[j].get("examples") or []) if j < len(units) else []
+    if not exemplars:
+        # Soft mass too thin — fall back to highest-mass phrases anyway.
+        order = np.argsort(-R[:, j], kind="mergesort")[: int(n_exemplars)]
+        exemplars = [phrase_list[i] for i in order if R[i, j] > 0]
+    tmpl = str(label_prompt or DEFAULT_TOPIC_LABEL_PROMPT)
+    if "<<PHRASES>>" not in tmpl:
+        raise ValueError("label_prompt must contain the <<PHRASES>> placeholder")
+    bullet = "\n".join(f"- {p}" for p in exemplars) or "- (no exemplars)"
+    return tmpl.replace("<<PHRASES>>", bullet), exemplars, focus
+
+
+def subject_grain_stub_label(exemplars: Sequence[str], focus_key: str = "T0") -> str:
+    """Offline label: first few content words of the top exemplar."""
+    for text in exemplars:
+        words = [w for w in re.split(r"\W+", str(text)) if w]
+        if words:
+            return " ".join(words[:6])[:80]
+    return f"{focus_key} (unnamed)"
+
+
+def subject_grain_parse_label_reply(raw: Any, exemplars: Sequence[str] | None = None) -> str:
+    """Parse an LLM naming reply into a short label string."""
+    text = (raw if isinstance(raw, str) else str(raw or "")).strip()
+    if not text:
+        return subject_grain_stub_label(exemplars or [], "topic")
+    data: Any = None
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        # Models sometimes wrap JSON in fences or prose.
+        m = re.search(r"\{.*\}", text, flags=re.DOTALL)
+        if m:
+            try:
+                data = json.loads(m.group(0))
+            except json.JSONDecodeError:
+                data = None
+    label = None
+    if isinstance(data, dict):
+        label = data.get("label")
+        if label is None:
+            for key in ("title", "name", "thema", "heading"):
+                if key in data:
+                    label = data[key]
+                    break
+    if label is None:
+        # Bare string reply — take first line.
+        label = text.splitlines()[0].strip().strip('"').strip("'")
+    label = re.sub(r"\s+", " ", str(label)).strip()
+    if not label or label in {"?", "untitled", "unnamed"}:
+        return subject_grain_stub_label(exemplars or [], "topic")
+    return label[:80]
+
+
+def subject_grain_apply_focus_label(
+    topic_labels: Any,
+    focus_key: str,
+    label: str,
+) -> dict:
+    """Return a copy of ``topic_labels`` with ``focus_key`` set (catalogue write)."""
+    out: dict = {}
+    if isinstance(topic_labels, dict):
+        out = {str(k): str(v) for k, v in topic_labels.items()}
+    elif topic_labels is not None:
+        try:
+            out = {str(k): str(v) for k, v in dict(topic_labels).items()}
+        except (TypeError, ValueError):
+            out = {}
+    out[str(focus_key)] = str(label)[:80]
+    return out

@@ -335,12 +335,17 @@
         }
 
         function refreshPlot(container) {
-          /* Spec script OOB-updated; restyle in place without remounting. */
+          /* Spec script OOB-updated; restyle in place without remounting.
+             Re-bind click handlers so Propose-split plane swaps stay interactive. */
           if (!container || typeof Plotly === "undefined") return;
           var target = container.querySelector(".plotly-target");
           var fig = parseJsonScript(container, "plotly-spec");
+          var bindings = parseJsonScript(container, "plotly-bindings") || [];
           if (!target || !fig) return;
-          reactPlot(container, target, fig, null, {watch: false, bindClick: false});
+          reactPlot(container, target, fig, bindings, {
+            watch: false,
+            bindClick: true
+          });
         }
 
         function maybeRefreshFromSpec(container) {

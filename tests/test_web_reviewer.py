@@ -891,6 +891,35 @@ class TestAffectedWidgets:
         reviewer, _, _ = _build_reviewer(review=specs)
         assert reviewer.affected_widgets("text") == set()
 
+    def test_visible_if_populate_button_is_affected(self):
+        """Confirm/Undo/Propose gated on pending_proposal must refresh when it changes."""
+        specs = [
+            {
+                "type": "PopulateButton",
+                "field": "_confirm_split",
+                "visible_if": "pending_proposal",
+                "args": {"target": "uq_spec"},
+            },
+            {
+                "type": "PopulateButton",
+                "field": "_undo_split",
+                "visible_if": "pending_proposal",
+                "args": {"target": "uq_spec"},
+            },
+            {
+                "type": "PopulateButton",
+                "field": "_propose_split",
+                "visible_if": {"field": "pending_proposal", "not": True},
+                "args": {"target": "uq_spec"},
+            },
+        ]
+        reviewer, _, _ = _build_reviewer(review=specs)
+        assert reviewer.affected_widgets("pending_proposal") == {
+            "_confirm_split",
+            "_undo_split",
+            "_propose_split",
+        }
+
 
 # ---------------------------------------------------------------------------
 # Tests: combinator update on set_value

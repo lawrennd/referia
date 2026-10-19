@@ -1,0 +1,231 @@
+# CIP-0017 / CIP-0011 — Bishop–Tipping local U_q Assess demo (multilogue 03 interactive).
+# One corpus record: Focus topic swaps the local plane via figure_source;
+# Propose split → view updates → Confirm seals / Undo rejects.
+referia_config_version: 2
+title: "Subject grain — local U_q (Assess)"
+description: >
+  Multilogue notebook 03 interactive Assess loop, hosted in referia:
+  pick a focus topic to swap the Bishop–Tipping local U_q plane, click a
+  phrase, propose a soft split (view updates immediately), then Confirm to
+  seal or Undo to reject. EM / label prompt live in collapsible review sections.
+date: 2026-10-19
+
+display:
+  layout: side_by_side
+
+input:
+  type: yaml
+  index: Name
+  filename: records.yml
+  directory: ./info
+
+output:
+  type: yaml
+  index: Name
+  filename: scores.yml
+  directory: ./info
+  columns:
+    - focus_topic
+    - selected_topic
+    - selected_phrase
+    - topic_keys
+    - topic_labels
+    - responsibilities
+    - uq_by_topic
+    - uq_spec
+    - sigma2
+    - sigma2_mode
+    - em_accept
+    - em_preview
+    - label_prompt
+    - label_model
+    - pending_proposal
+    - split_undo
+    - notes
+
+viewer:
+  - liquid: |
+      ## {{ Title }}
+
+      Soft MPPCA on **{{ source | default: "corpus" }}**. Assess entry is
+      **k=1** (one component); all phrases sit on that plane. **Propose split**
+      grows the catalogue from the focus soft mass; **Confirm** seals or
+      **Undo** restores. After splits, **Focus topic** swaps the local $U_q$
+      plane.
+
+      <p><b>Topics:</b>
+      {% for key in topic_keys %}{{ key }} — {{ topic_labels[key] | default: key }}{% unless forloop.last %}; {% endunless %}{% endfor %}
+      </p>
+
+      {% if pending_proposal and pending_proposal.kind == "split" %}
+      <p class="status-ok"><b>Pending split:</b>
+      {{ pending_proposal.parent }} → k={{ pending_proposal.k_before }}→{{ pending_proposal.k_after }},
+      focus={{ pending_proposal.focus }}. Confirm or Undo.</p>
+      {% endif %}
+  - type: Dropdown
+    field: focus_topic
+    args:
+      description: Focus topic
+      options_field: topic_keys
+      options: ["T0"]
+  - type: PlotlyFigure
+    field: uq_spec
+    figure_source:
+      map_field: uq_by_topic
+      key_field: focus_topic
+    # Quote "on" — YAML 1.1 treats bare on:/off: as booleans.
+    "on":
+      click_point:
+        - set_field: selected_phrase
+          from: customdata.phrase
+        - set_field: selected_topic
+          from: customdata.topic
+    # No highlight ink: this panel is already one topic's local U_q plane.
+    # responsibility_ink was greying soft-mass points on T1 (and similar).
+    size:
+      mode: container
+      observe: true
+      aspect_ratio: 4/3
+  # Catalogue writes only — never sigma2 / em_* / label_* (those are controls).
+  - type: PopulateButton
+    field: _propose_split
+    # Hide while a split is pending (Confirm / Undo own that state).
+    visible_if:
+      field: pending_proposal
+      not: true
+    args:
+      description: Propose split
+      target: uq_spec
+      compute:
+        field:
+          - uq_spec
+          - uq_by_topic
+          - topic_keys
+          - responsibilities
+          - focus_topic
+          - topic_labels
+          - pending_proposal
+          - split_undo
+        function: subject_grain_propose_split
+        refresh: true
+        row_args:
+          embeddings: embeddings
+          responsibilities: responsibilities
+          phrases: phrases
+          focus_topic: focus_topic
+          sigma2: sigma2
+          em_accept: em_accept
+          topic_labels: topic_labels
+  - type: PopulateButton
+    field: _confirm_split
+    visible_if: pending_proposal
+    args:
+      description: Confirm split
+      target: uq_spec
+      compute:
+        field:
+          - uq_spec
+          - uq_by_topic
+          - pending_proposal
+          - split_undo
+        function: subject_grain_confirm_split
+        refresh: true
+        row_args:
+          pending_proposal: pending_proposal
+  - type: PopulateButton
+    field: _undo_split
+    visible_if: pending_proposal
+    args:
+      description: Undo split
+      target: uq_spec
+      compute:
+        field:
+          - uq_spec
+          - uq_by_topic
+          - topic_keys
+          - responsibilities
+          - focus_topic
+          - topic_labels
+          - pending_proposal
+          - split_undo
+        function: subject_grain_undo_split
+        refresh: true
+        row_args:
+          split_undo: split_undo
+          embeddings: embeddings
+          phrases: phrases
+          sigma2: sigma2
+
+review:
+  - type: Dropdown
+    field: selected_topic
+    args:
+      description: Selected topic
+      options_field: topic_keys
+      options: ["T0"]
+  - type: Text
+    field: selected_phrase
+    args:
+      description: Selected phrase
+  - type: Section
+    title: EM parameters
+    entries:
+      - type: Dropdown
+        field: sigma2_mode
+        args:
+          description: σ² mode
+          options: ["fixed", "profile"]
+      - type: BoundedFloatText
+        field: sigma2
+        args:
+          description: σ²
+          min: 0.0001
+          max: 2.0
+          step: 0.01
+      - type: BoundedIntText
+        field: em_accept
+        args:
+          description: EM accept
+          min: 1
+          max: 500
+      - type: BoundedIntText
+        field: em_preview
+        args:
+          description: EM preview
+          min: 0
+          max: 50
+  - type: Section
+    title: LLM topic naming
+    entries:
+      - type: Textarea
+        field: label_prompt
+        args:
+          description: Label prompt
+          rows: 6
+      - type: Dropdown
+        field: label_model
+        args:
+          description: Label model
+          options: ["stub", "gpt-4.1-mini", "gpt-4o-mini"]
+      # Reads label_* controls; writes topic_labels only (not the controls).
+      - type: PopulateButton
+        field: _name_focus_topic
+        args:
+          description: Name focus topic
+          target: topic_labels
+          compute:
+            field: topic_labels
+            function: subject_grain_name_focus_topic
+            refresh: true
+            row_args:
+              phrases: phrases
+              responsibilities: responsibilities
+              focus_topic: focus_topic
+              topic_labels: topic_labels
+              label_prompt: label_prompt
+              label_model: label_model
+  - type: Textarea
+    field: notes
+    args:
+      description: Assess notes
+  - type: SaveButton

@@ -202,29 +202,71 @@ def _find_spec(reviewer, column: str) -> dict | None:
 
 
 def _populate_button_target(spec: dict) -> str:
-    """Return the effective target field for a PopulateButton spec.
+    """Return the effective write-target field for a PopulateButton spec.
 
     Handles both formats:
     * Simple: top-level ``field`` key.
     * Complex: ``args.target`` or ``args.compute.field``.
 
-    ``args.target`` / ``args.compute.field`` take priority because the
-    top-level ``field`` may be a button identifier, not the populate target.
+    ``args.target`` takes priority because the top-level ``field`` may be a
+    button identifier.  When ``compute.field`` is a list, never return the
+    list — fall back to the button id / first column.
     """
     args = spec.get("args", {})
-    return (
-        args.get("target")
-        or args.get("compute", {}).get("field")
-        or spec.get("field")
-        or ""
-    )
+    target = args.get("target")
+    if target:
+        return str(target)
+    compute_field = args.get("compute", {}).get("field")
+    if isinstance(compute_field, list):
+        return str(spec.get("field") or (compute_field[0] if compute_field else ""))
+    if compute_field:
+        return str(compute_field)
+    return str(spec.get("field") or "")
+
+
+def _populate_button_route_key(spec: dict) -> str:
+    """Match POST /populate/{key} to a button (prefer unique button ``field``)."""
+    own = spec.get("field")
+    if own:
+        return str(own)
+    return _populate_button_target(spec)
 
 
 def _find_populate_spec(reviewer, field: str) -> dict | None:
-    """Return the PopulateButton spec whose effective target field matches *field*."""
+    """Return the PopulateButton for *field* (button id or write target).
+
+    Prefer an exact match on the button's own ``field`` so Propose / Undo can
+    share a multi-output write target.  Fall back to write-target match for
+    simple YAML where ``field`` is the populate column.
+    """
+    key = str(field)
+    by_id = None
+    by_target = None
     for spec in reviewer.get_widget_specs():
-        if spec.get("type") == "PopulateButton" and _populate_button_target(spec) == field:
-            return spec
+        if spec.get("type") != "PopulateButton":
+            continue
+        if _populate_button_route_key(spec) == key:
+            by_id = spec
+            break
+        if by_target is None and _populate_button_target(spec) == key:
+            by_target = spec
+    return by_id or by_target
+
+
+def _find_oob_spec(reviewer, column: str) -> dict | None:
+    """Return a renderable widget or PopulateButton whose ``field`` is *column*.
+
+    Used for ``visible_if`` OOB refreshes: Confirm/Undo buttons are keyed by
+    their own field (``_confirm_split``), not by ``args.target``.
+    """
+    spec = _find_spec(reviewer, column)
+    if spec is not None:
+        return spec
+    for btn in reviewer.get_widget_specs():
+        if btn.get("type") != "PopulateButton":
+            continue
+        if btn.get("field") == column:
+            return btn
     return None
 
 
@@ -520,8 +562,8 @@ def _make_oob(widget_html: str) -> str:
 def _make_viewer_oob(viewer_html: str) -> str:
     """Add ``hx-swap-oob="true"`` to an interactive viewer container.
 
-    Matches ``viewer-plotly`` / ``viewer-image`` even when extra classes
-    (e.g. ``viewer-plotly--fill``) are present.
+    Matches ``viewer-plotly`` / ``viewer-image`` / ``viewer-chrome`` even when
+    extra classes (e.g. ``viewer-plotly--fill``) are present.
     """
     import re
 
@@ -532,7 +574,7 @@ def _make_viewer_oob(viewer_html: str) -> str:
         return f"<div{attrs} hx-swap-oob=\"true\">"
 
     updated, n = re.subn(
-        r"<div(\s+[^>]*\bviewer-(?:plotly|image)\b[^>]*)>",
+        r"<div(\s+[^>]*\bviewer-(?:plotly|image|chrome)\b[^>]*)>",
         _inject,
         viewer_html,
         count=1,
@@ -541,53 +583,64 @@ def _make_viewer_oob(viewer_html: str) -> str:
 
 
 def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
-    """OOB fragments for interactive viewers whose highlight watches *column*.
+    """OOB fragments for viewers watching *column* (highlight or figure_source).
 
     PlotlyFigure updates swap only the JSON ``plotly-spec`` script so the
     live graph is restyled in place (avoids a full remount / size flash).
-    StaticImage still replaces the whole viewer container.
+    Viewer-chrome widgets replace their container when field/options change.
     """
     from referia.assess.viewer_bindings import (
         apply_highlight,
         apply_plotly_size,
+        figure_source_binding,
         highlight_binding,
-        is_interactive_viewer_type,
+        is_viewer_chrome_type,
         parse_figure_spec,
         plotly_size_options,
+        resolve_figure_payload,
         viewer_entry_type,
     )
     from referia.web.render import render_plotly_spec_oob
 
     parts: list[str] = []
     for i, spec in enumerate(reviewer.get_viewer_specs()):
-        if not isinstance(spec, dict) or not is_interactive_viewer_type(spec):
+        if not isinstance(spec, dict):
             continue
-        hl = highlight_binding(spec)
-        if not hl or hl["from_field"] != column:
-            continue
-        if viewer_entry_type(spec) == "PlotlyFigure":
-            raw = None
+        if is_viewer_chrome_type(spec):
             field = spec.get("field")
-            if field:
-                try:
-                    raw = reviewer.get_value(str(field))
-                except Exception:
-                    raw = None
-            try:
-                selected = reviewer.get_value(hl["from_field"])
-            except Exception:
-                selected = None
-            fig = apply_highlight(
-                parse_figure_spec(raw),
-                selected=selected,
-                mode=hl.get("mode", "default"),
-            )
-            size_opts = plotly_size_options(spec)
-            fig = apply_plotly_size(fig, mode=size_opts.get("mode", "figure"))
-            parts.append(render_plotly_spec_oob(i, fig))
+            opts_field = (spec.get("args") or {}).get("options_field")
+            if column not in (field, opts_field):
+                continue
+            html = reviewer.render_viewer_html(spec, viewer_index=i)
+            parts.append(_make_viewer_oob(html))
             continue
-        html = reviewer.render_viewer_html(spec, viewer_index=i)
-        parts.append(_make_viewer_oob(html))
+        if viewer_entry_type(spec) != "PlotlyFigure":
+            continue
+        watch = False
+        hl = highlight_binding(spec)
+        if hl and hl["from_field"] == column:
+            watch = True
+        src = figure_source_binding(spec)
+        if src and column in (src["key_field"], src["map_field"]):
+            watch = True
+        field = spec.get("field")
+        if field and str(field) == column:
+            watch = True
+        if not watch:
+            continue
+        raw = resolve_figure_payload(reviewer.get_value, spec)
+        try:
+            selected = reviewer.get_value(hl["from_field"]) if hl else None
+        except Exception:
+            selected = None
+        fig = apply_highlight(
+            parse_figure_spec(raw),
+            selected=selected,
+            mode=(hl or {}).get("mode", "default"),
+        )
+        size_opts = plotly_size_options(spec)
+        fig = apply_plotly_size(fig, mode=size_opts.get("mode", "figure"))
+        parts.append(render_plotly_spec_oob(i, fig))
     return parts
 
 
@@ -605,9 +658,12 @@ def _field_update_oob_parts(
     for col in reviewer.affected_widgets(column):
         if col == column:
             continue
-        affected_spec = _find_spec(reviewer, col)
+        affected_spec = _find_oob_spec(reviewer, col)
         if affected_spec:
-            val = reviewer.get_value(col)
+            try:
+                val = reviewer.get_value(col)
+            except Exception:
+                val = None
             widget_html = render_widget(
                 affected_spec, val, data, record_index=oob_index
             )
@@ -1669,6 +1725,58 @@ def _build_populate_compute_spec(btn_spec: dict, field: str) -> dict | None:
     return compute_spec
 
 
+def _specs_with_options_field(reviewer, column: str) -> list[dict]:
+    """Widget specs (review + viewer) whose ``args.options_field`` is *column*."""
+    out: list[dict] = []
+    for spec in reviewer.get_widget_specs():
+        if not isinstance(spec, dict):
+            continue
+        if (spec.get("args") or {}).get("options_field") == column:
+            out.append(spec)
+    return out
+
+
+def _populate_status_html(reviewer, updated_cols: list[str]) -> str:
+    """Human-readable status after a multi-output populate (e.g. Propose split)."""
+    pending = None
+    if "pending_proposal" in updated_cols:
+        try:
+            pending = reviewer.get_value("pending_proposal")
+        except Exception:
+            pending = None
+    if isinstance(pending, dict) and pending.get("kind") == "split":
+        k0 = pending.get("k_before")
+        k1 = pending.get("k_after")
+        focus = pending.get("focus") or "?"
+        parent = pending.get("parent") or "?"
+        return (
+            f'<span class="status-ok">&#10003; Split proposed: '
+            f"{_esc(str(parent))} → k={_esc(str(k0))}→{_esc(str(k1))}, "
+            f"focus={_esc(str(focus))}. Confirm to seal or Undo to reject.</span>"
+        )
+    if "pending_proposal" in updated_cols:
+        try:
+            still = reviewer.get_value("pending_proposal")
+        except Exception:
+            still = "x"
+        if still in (None, "", {}):
+            try:
+                keys = reviewer.get_value("topic_keys")
+            except Exception:
+                keys = None
+            n = len(keys) if isinstance(keys, (list, tuple)) else "?"
+            if "uq_spec" in updated_cols:
+                return (
+                    f'<span class="status-ok">&#10003; Split rejected '
+                    f"— restored (k={_esc(str(n))}).</span>"
+                )
+            return (
+                f'<span class="status-ok">&#10003; Split sealed '
+                f"(k={_esc(str(n))}).</span>"
+            )
+    return '<span class="status-ok">&#10003; Populated</span>'
+
+
 def _run_populate_and_respond(reviewer, field: str, btn_spec: dict) -> HTMLResponse:
     """Shared populate logic for both single-config and root-mode routes."""
     compute_spec = _build_populate_compute_spec(btn_spec, field)
@@ -1679,6 +1787,11 @@ def _run_populate_and_respond(reviewer, field: str, btn_spec: dict) -> HTMLRespo
         )
 
     target = btn_spec.get("args", {}).get("target", field)
+    compute_fields = compute_spec.get("field", target)
+    if isinstance(compute_fields, list):
+        updated_cols = [str(c) for c in compute_fields if c and c != "_"]
+    else:
+        updated_cols = [str(compute_fields)] if compute_fields else [str(target)]
 
     try:
         reviewer.run_populate({"compute": compute_spec})
@@ -1686,14 +1799,68 @@ def _run_populate_and_respond(reviewer, field: str, btn_spec: dict) -> HTMLRespo
         _log_route_error("Populate", exc, field=field)
         return HTMLResponse(_user_error_html("Populate"))
 
-    target_spec = _find_spec(reviewer, target)
-    if target_spec is None:
-        return HTMLResponse('<span class="status-ok">&#10003; Populated</span>')
-
-    val = reviewer.get_value(target)
     data = _current_data(reviewer)
-    widget_html = render_widget(target_spec, val, data)
-    return HTMLResponse('<span class="status-ok">&#10003; Populated</span>\n' + _make_oob(widget_html))
+    # Refresh current values into *data* so options_field dropdowns see new keys.
+    for col in updated_cols:
+        try:
+            data[col] = reviewer.get_value(col)
+        except Exception:
+            pass
+
+    parts = [_populate_status_html(reviewer, updated_cols)]
+    # Dedupe OOB fragments by DOM id so multiple updated_cols watching the
+    # same Plotly pane / chrome dropdown do not fight HTMX.
+    oob_by_id: dict[str, str] = {}
+
+    def _stash(fragment: str) -> None:
+        import re
+
+        m = re.search(r'\bid="([^"]+)"', fragment)
+        key = m.group(1) if m else fragment[:80]
+        oob_by_id[key] = fragment
+
+    refreshed_fields: set[str] = set()
+    for col in updated_cols:
+        if col in refreshed_fields:
+            continue
+        refreshed_fields.add(col)
+        target_spec = _find_spec(reviewer, col)
+        if target_spec is not None:
+            widget_html = render_widget(
+                target_spec, reviewer.get_value(col), data
+            )
+            _stash(_make_oob(widget_html))
+        for opt_spec in _specs_with_options_field(reviewer, col):
+            # Review dropdowns whose options come from this column.
+            from referia.assess.viewer_bindings import is_viewer_chrome_type
+
+            if is_viewer_chrome_type(opt_spec):
+                continue  # handled via viewer OOB below
+            f = opt_spec.get("field")
+            if not f:
+                continue
+            widget_html = render_widget(
+                opt_spec, reviewer.get_value(f), data
+            )
+            _stash(_make_oob(widget_html))
+        for frag in _viewer_highlight_oobs(reviewer, col):
+            _stash(frag)
+        # visible_if dependents (e.g. Confirm/Undo gated on pending_proposal)
+        for dep in reviewer.affected_widgets(col):
+            if dep in refreshed_fields:
+                continue
+            dep_spec = _find_oob_spec(reviewer, dep)
+            if dep_spec is None:
+                continue
+            refreshed_fields.add(dep)
+            try:
+                dep_val = reviewer.get_value(dep)
+            except Exception:
+                dep_val = None
+            _stash(_make_oob(render_widget(dep_spec, dep_val, data)))
+
+    parts.extend(oob_by_id.values())
+    return HTMLResponse("\n".join(parts))
 
 
 def _prefix_href(href: str | None, path_prefix: str = "") -> str | None:

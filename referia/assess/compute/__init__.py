@@ -6,9 +6,9 @@ import liquid as lq
 from lynguine.config.context import Context
 from lynguine.log import Logger
 
-from ..config.interface import Interface
+from ...config.interface import Interface
 
-from ..util.misc import add_one_to_max, return_shortest, return_longest, identity
+from ...util.misc import add_one_to_max, return_shortest, return_longest, identity
 
 from lynguine.util.misc import get_url_file, remove_nan
 from lynguine.assess.data import CustomDataFrame
@@ -18,21 +18,30 @@ from lynguine.util.dataframe import addmonth, fillna, addyear, ascending, augmen
 
 from lynguine.util.text import render_liquid
 
-from ..util.text import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, pdf_extract_text
-from ..util.system import most_recent_screen_shot
-from ..util.plot import bar_plot, histogram
-from ..util.files import file_from_re, files_from_re
+from ...util.text import word_count, text_summarizer, paragraph_split, list_lengths, named_entities, sentence_split, comment_list, pdf_extract_comments, pdf_extract_text
+from ...util.system import most_recent_screen_shot
+from ...util.plot import bar_plot, histogram
+from ...util.files import file_from_re, files_from_re
+from .mppca import (
+    subject_grain_apply_focus_label,
+    subject_grain_confirm_split,
+    subject_grain_parse_label_reply,
+    subject_grain_prepare_label,
+    subject_grain_propose_split,
+    subject_grain_stub_label,
+    subject_grain_undo_split,
+)
 
 # LLM integration (optional - graceful fallback if not installed)
 try:
-    from ..util.llm import get_llm_manager, LLMError
+    from ...util.llm import get_llm_manager, LLMError
     LLM_AVAILABLE = True
 except ImportError:
     LLM_AVAILABLE = False
     get_llm_manager = None
     LLMError = Exception
 
-from ..exceptions import ComputeError
+from ...exceptions import ComputeError
 
 
 cntxt = Context(name="referia")
@@ -564,7 +573,111 @@ class Compute(lynguine.assess.compute.Compute):
                 },
                 "docstr" : "Delete missing entries from dictionary"
             },
+            {
+                "name": "subject_grain_propose_split",
+                "function": subject_grain_propose_split,
+                "default_args": {
+                    "n_children": 2,
+                    "mass_threshold": 0.05,
+                    "em_accept": 40,
+                    "seed": 0,
+                },
+                "docstr": (
+                    "CIP-0017 Propose split: write catalogue geometry + "
+                    "pending/undo; read σ²/em_accept as controls (never write)."
+                ),
+            },
+            {
+                "name": "subject_grain_confirm_split",
+                "function": subject_grain_confirm_split,
+                "default_args": {},
+                "docstr": (
+                    "CIP-0017 Confirm: overlay → per-topic planes; clear "
+                    "pending/undo. Does not touch EM controls."
+                ),
+            },
+            {
+                "name": "subject_grain_undo_split",
+                "function": subject_grain_undo_split,
+                "default_args": {},
+                "docstr": (
+                    "CIP-0017 Undo: restore catalogue from split_undo; redraw "
+                    "at live σ²; never write controls."
+                ),
+            },
+            {
+                "name": "subject_grain_name_focus_topic",
+                "function": self._subject_grain_name_focus_topic,
+                "default_args": {
+                    "n_exemplars": 8,
+                    "temperature": 0.2,
+                },
+                "docstr": (
+                    "CIP-0017 Name focus topic: reads label_prompt/label_model "
+                    "controls; writes topic_labels only. Uses referia LLM "
+                    "(.env OPENAI_API_KEY) when label_model != stub."
+                ),
+            },
         ] + (self._llm_functions_list() if LLM_AVAILABLE else [])
+
+    def _subject_grain_name_focus_topic(
+        self,
+        phrases,
+        responsibilities,
+        focus_topic="T0",
+        topic_labels=None,
+        label_prompt=None,
+        label_model="stub",
+        n_exemplars: int = 8,
+        temperature: float = 0.2,
+        **_kwargs,
+    ):
+        """Name the focus topic via stub or live LLM (``.env`` keys).
+
+        Catalogue write: ``topic_labels`` only. Controls ``label_prompt`` /
+        ``label_model`` are inputs and are never returned.
+        """
+        prompt, exemplars, focus = subject_grain_prepare_label(
+            phrases,
+            responsibilities,
+            focus_topic=focus_topic,
+            label_prompt=label_prompt,
+            n_exemplars=n_exemplars,
+        )
+        model = str(label_model or "stub").strip()
+        use_live = (
+            model.lower() not in {"", "stub", "none", "offline", "fake"}
+            and LLM_AVAILABLE
+            and get_llm_manager is not None
+        )
+        label = None
+        if use_live:
+            try:
+                llm_config = (
+                    getattr(self, "interface", {}).get("llm", {})
+                    if hasattr(self, "interface")
+                    else {}
+                )
+                manager = get_llm_manager(llm_config)
+                reply = manager.call(
+                    prompt=prompt,
+                    model=model,
+                    temperature=float(temperature),
+                    system_prompt=(
+                        "You name soft consultation topics for human analysts. "
+                        "Reply with JSON only: {\"label\": \"...\", \"description\": \"...\"}."
+                    ),
+                )
+                label = subject_grain_parse_label_reply(reply, exemplars)
+            except Exception as exc:  # noqa: BLE001 — fall back to stub
+                log.warning(
+                    f"subject_grain_name_focus_topic: LLM failed ({exc}); "
+                    "using stub label"
+                )
+                label = None
+        if not label:
+            label = subject_grain_stub_label(exemplars, focus)
+        return subject_grain_apply_focus_label(topic_labels, focus, label)
     
     def _llm_functions_list(self) -> list[dict]:
         """

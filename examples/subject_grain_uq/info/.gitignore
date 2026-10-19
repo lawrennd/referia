@@ -1,0 +1,4 @@
+# Keep committed seed scores.yml; ignore local Save backups if added later
+*.bak
+# CIMT downloads from build_records.py
+.cache/

@@ -672,15 +672,15 @@ def populate_client():
 
 class TestPostPopulate:
     def test_returns_200(self, populate_client):
-        # The URL uses the target field name (args.target), not the button's own field.
+        # URL uses the button's own field id; compute still writes args.target.
         client, _ = populate_client
-        response = client.post("/populate/Summary")
+        response = client.post("/populate/SummaryBtn")
         assert response.status_code == 200
 
     def test_calls_run_populate_with_compute_interface(self, populate_client):
         """Route must call reviewer.run_populate with {"compute": ...}."""
         client, reviewer = populate_client
-        client.post("/populate/Summary")
+        client.post("/populate/SummaryBtn")
         reviewer.run_populate.assert_called_once()
         call_arg = reviewer.run_populate.call_args[0][0]
         assert "compute" in call_arg
@@ -688,11 +688,69 @@ class TestPostPopulate:
     def test_oob_response_targets_the_target_field_not_the_button(self, populate_client):
         """OOB swap must refresh the target Textarea, not re-render the PopulateButton."""
         client, _ = populate_client
-        response = client.post("/populate/Summary")
+        response = client.post("/populate/SummaryBtn")
         # The target widget (Summary textarea) should appear in the OOB response
         assert 'id="widget-Summary"' in response.text
         # The button container should NOT appear (it's a different widget)
         assert 'id="widget-SummaryBtn"' not in response.text
+        assert 'id="btn-widget-SummaryBtn"' not in response.text
+
+    def test_populate_oob_refreshes_visible_if_populate_buttons(self, populate_client):
+        """Confirm/Undo gated on pending_proposal must OOB-refresh after Propose."""
+        client, reviewer = populate_client
+        reviewer.get_widget_specs.return_value = [
+            {"type": "PlotlyFigure", "field": "uq_spec", "args": {}},
+            {
+                "type": "PopulateButton",
+                "field": "_propose_split",
+                "args": {
+                    "description": "Propose split",
+                    "target": "uq_spec",
+                    "compute": {
+                        "field": ["uq_spec", "pending_proposal"],
+                        "function": "subject_grain_propose_split",
+                    },
+                },
+            },
+            {
+                "type": "PopulateButton",
+                "field": "_confirm_split",
+                "visible_if": "pending_proposal",
+                "args": {
+                    "description": "Confirm split",
+                    "target": "uq_spec",
+                    "compute": {
+                        "field": ["pending_proposal"],
+                        "function": "subject_grain_confirm_split",
+                    },
+                },
+            },
+        ]
+        reviewer.get_review_specs.return_value = reviewer.get_widget_specs.return_value
+        pending = {"kind": "split", "parent": "T0"}
+        row = {"pending_proposal": pending, "uq_spec": {}}
+        reviewer.get_row_data.return_value = row
+        reviewer.get_value.side_effect = lambda c: row.get(c)
+        reviewer.affected_widgets.side_effect = (
+            lambda c: {"_confirm_split"} if c == "pending_proposal" else set()
+        )
+
+        response = client.post("/populate/_propose_split")
+        assert response.status_code == 200
+        assert "Confirm split" in response.text
+        # Leading underscore stripped in DOM id; Confirm must be visible.
+        confirm_start = response.text.index('id="btn-widget-confirm_split"')
+        open_div = response.text.rfind("<div", 0, confirm_start)
+        open_tag_end = response.text.index(">", open_div)
+        opening = response.text[open_div:open_tag_end]
+        assert "display:none" not in opening
+
+    def test_legacy_target_url_still_resolves(self, populate_client):
+        """POST /populate/{target} still finds the button when no id collision."""
+        client, reviewer = populate_client
+        response = client.post("/populate/Summary")
+        assert response.status_code == 200
+        reviewer.run_populate.assert_called_once()
 
     def test_unknown_populate_field_returns_200(self, populate_client):
         """An unknown field must not crash the server."""

@@ -156,6 +156,11 @@ def _visibility_style(spec: dict, data: dict) -> str:
     String conditions (``visible_if: "Interview"``) use checkbox truthiness so
     ``False`` / ``\"False\"`` / ``0`` hide the widget — plain ``bool()`` would
     treat the string ``\"False\"`` as visible.
+
+    Dict form supports ``equals`` / ``value`` comparisons, or ``not: true`` to
+    invert checkbox truthiness (show when the field is empty / unset)::
+
+        visible_if: {field: pending_proposal, not: true}
     """
     condition = spec.get("visible_if")
     if condition is None:
@@ -164,14 +169,18 @@ def _visibility_style(spec: dict, data: dict) -> str:
         hidden = not _checkbox_checked(data.get(condition))
     elif isinstance(condition, dict):
         field_name = condition.get("field", "")
-        expected = condition.get("value")
-        if expected is None and "equals" in condition:
-            expected = condition.get("equals")
         current = data.get(field_name)
-        if expected is None:
-            hidden = not _checkbox_checked(current)
+        if condition.get("not"):
+            # Invert: visible when the field is falsy (no pending proposal, etc.).
+            hidden = _checkbox_checked(current)
         else:
-            hidden = str(current) != str(expected)
+            expected = condition.get("value")
+            if expected is None and "equals" in condition:
+                expected = condition.get("equals")
+            if expected is None:
+                hidden = not _checkbox_checked(current)
+            else:
+                hidden = str(current) != str(expected)
     else:
         hidden = False
     return ' style="display:none"' if hidden else ""
@@ -186,10 +195,10 @@ def _label_html(description: str) -> str:
 def _wrap_widget(inner: str, spec: dict, data: dict) -> str:
     """Wrap rendered HTML in a container div with id and visibility.
 
-    PopulateButtons use ``_populate_button_target()`` to resolve the target
-    field from either format (top-level ``field`` or ``args.target``/
-    ``args.compute.field``), and get a ``btn-widget-{field}`` id to avoid
-    duplicate-id collisions with their target widget.
+    PopulateButtons use ``_populate_button_route_key()`` for the container id
+    (``btn-widget-{route_key}``) so multiple buttons that share ``args.target``
+    keep distinct DOM ids for HTMX OOB visibility swaps.  The write target is
+    still used only for ``hx-indicator`` on the button itself.
     """
     widget_type = spec.get("type", "")
     record_index = _record_index_ctx.get()
@@ -197,7 +206,7 @@ def _wrap_widget(inner: str, spec: dict, data: dict) -> str:
         f"-{_widget_dom_id(str(record_index))}" if record_index is not None else ""
     )
     if widget_type == "PopulateButton":
-        col = _populate_button_target(spec)
+        col = _populate_button_route_key(spec)
         css_id = f' id="btn-widget-{_widget_dom_id(col)}{index_suffix}"' if col else ""
     else:
         col = spec.get("field", "")
@@ -304,10 +313,18 @@ def _render_float_text(spec: dict, value: Any) -> str:
     )
 
 
-def _render_dropdown(spec: dict, value: Any) -> str:
+def _render_dropdown(spec: dict, value: Any, data: dict | None = None) -> str:
     column = spec.get("field", "")
     args = spec.get("args", {})
-    options = args.get("options", [])
+    options = list(args.get("options") or [])
+    # Dynamic options from another field (e.g. topic_keys after Propose split)
+    opts_field = args.get("options_field")
+    if opts_field and isinstance(data, dict):
+        raw = data.get(opts_field)
+        if isinstance(raw, (list, tuple)):
+            options = [str(o) for o in raw]
+        elif isinstance(raw, dict):
+            options = [str(k) for k in raw.keys()]
     label = _label_html(args.get("description", ""))
     opts_html = "".join(
         f'<option value="{_escape(o)}"{"  selected" if str(o) == str(value) else ""}>'
@@ -564,21 +581,39 @@ def _populate_button_target(spec: dict) -> str:
 
     ``args.target`` / ``args.compute.field`` take priority when present because
     the top-level ``field`` may be a button identifier, not the populate target.
+    When ``compute.field`` is a list (multi-output), prefer ``args.target`` or
+    the button's own ``field`` id — never return the list.
     """
     args = spec.get("args", {})
-    return (
-        args.get("target")
-        or args.get("compute", {}).get("field")
-        or spec.get("field")
-        or ""
-    )
+    target = args.get("target")
+    if target:
+        return str(target)
+    compute_field = args.get("compute", {}).get("field")
+    if isinstance(compute_field, list):
+        return str(spec.get("field") or (compute_field[0] if compute_field else ""))
+    if compute_field:
+        return str(compute_field)
+    return str(spec.get("field") or "")
+
+
+def _populate_button_route_key(spec: dict) -> str:
+    """URL segment for POST /populate/{key}.
+
+    Prefer the button's own ``field`` when it differs from the write target so
+    multiple PopulateButtons can share a multi-output target (Propose / Undo).
+    """
+    own = spec.get("field")
+    if own:
+        return str(own)
+    return _populate_button_target(spec)
 
 
 def _render_populate_button(spec: dict, value: Any) -> str:
     args = spec.get("args", {})
     label = args.get("description", "Populate")
+    route_key = _populate_button_route_key(spec)
     target = _populate_button_target(spec)
-    col_url = _url_path_segment(target)
+    col_url = _url_path_segment(route_key)
     indicator = f"widget-{_widget_dom_id(target)}"
     return (
         f'<button class="widget-button populate-button" '
@@ -594,7 +629,9 @@ def _render_populate_button(spec: dict, value: Any) -> str:
 # ---------------------------------------------------------------------------
 
 # Renderers in this set receive (spec, value, data) instead of (spec, value).
-_DATA_AWARE_RENDERERS: frozenset[str] = frozenset({"Criterion", "Markdown"})
+_DATA_AWARE_RENDERERS: frozenset[str] = frozenset(
+    {"Criterion", "Markdown", "Dropdown", "Select"}
+)
 
 _RENDERERS: dict[str, Any] = {
     "Textarea": _render_textarea,

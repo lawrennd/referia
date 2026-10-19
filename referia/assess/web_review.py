@@ -980,13 +980,16 @@ class WebReviewer:
     def _render_interactive_viewer_html(
         self, viewer_spec: dict, *, viewer_index: int = 0
     ) -> str:
-        """Render PlotlyFigure / StaticImage from field (or liquid URL) data."""
+        """Render PlotlyFigure / StaticImage / viewer-chrome widgets."""
         from referia.assess.viewer_bindings import (
             highlight_binding,
+            is_viewer_chrome_type,
             parse_figure_spec,
+            resolve_figure_payload,
             viewer_entry_type,
         )
         from referia.web.render import render_viewer as _render_viewer_html
+        from referia.web.render import render_widget as _render_widget_html
 
         vtype = viewer_entry_type(viewer_spec)
         field = viewer_spec.get("field")
@@ -998,13 +1001,37 @@ class WebReviewer:
             except Exception:
                 highlight_value = None
 
-        if vtype == "PlotlyFigure":
-            raw = None
-            if field:
+        if is_viewer_chrome_type(viewer_spec):
+            data: dict = {}
+            try:
+                data = dict(self.get_row_data() or {})
+            except Exception:
+                data = {}
+            for col in list(data.keys()):
                 try:
-                    raw = self.get_value(str(field))
-                except Exception as exc:
-                    log.debug("PlotlyFigure field %r: %s", field, exc)
+                    data[col] = self.get_value(col)
+                except Exception:
+                    pass
+            if field and field not in data:
+                try:
+                    data[str(field)] = self.get_value(str(field))
+                except Exception:
+                    data[str(field)] = None
+            opts_field = (viewer_spec.get("args") or {}).get("options_field")
+            if opts_field and opts_field not in data:
+                try:
+                    data[str(opts_field)] = self.get_value(str(opts_field))
+                except Exception:
+                    data[str(opts_field)] = None
+            val = data.get(field) if field else None
+            inner = _render_widget_html(viewer_spec, val, data)
+            return (
+                f'<div class="viewer viewer-chrome" '
+                f'id="viewer-chrome-{viewer_index}">{inner}</div>'
+            )
+
+        if vtype == "PlotlyFigure":
+            raw = resolve_figure_payload(self.get_value, viewer_spec)
             figure = parse_figure_spec(raw)
             return _render_viewer_html(
                 viewer_spec,
