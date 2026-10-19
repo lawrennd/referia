@@ -840,9 +840,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.config.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">Context</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">Logger</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..config.interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interface</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...config.interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interface</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..util.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_one_to_max</span><span class="p">,</span> <span class="n">return_shortest</span><span class="p">,</span> <span class="n">return_longest</span><span class="p">,</span> <span class="n">identity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...util.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">add_one_to_max</span><span class="p">,</span> <span class="n">return_shortest</span><span class="p">,</span> <span class="n">return_longest</span><span class="p">,</span> <span class="n">identity</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.util.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_url_file</span><span class="p">,</span> <span class="n">remove_nan</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
@@ -852,21 +852,33 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.util.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">render_liquid</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..util.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">word_count</span><span class="p">,</span> <span class="n">text_summarizer</span><span class="p">,</span> <span class="n">paragraph_split</span><span class="p">,</span> <span class="n">list_lengths</span><span class="p">,</span> <span class="n">named_entities</span><span class="p">,</span> <span class="n">sentence_split</span><span class="p">,</span> <span class="n">comment_list</span><span class="p">,</span> <span class="n">pdf_extract_comments</span><span class="p">,</span> <span class="n">pdf_extract_text</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">..util.system</span><span class="w"> </span><span class="kn">import</span> <span class="n">most_recent_screen_shot</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">..util.plot</span><span class="w"> </span><span class="kn">import</span> <span class="n">bar_plot</span><span class="p">,</span> <span class="n">histogram</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">..util.files</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_from_re</span><span class="p">,</span> <span class="n">files_from_re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...util.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">word_count</span><span class="p">,</span> <span class="n">text_summarizer</span><span class="p">,</span> <span class="n">paragraph_split</span><span class="p">,</span> <span class="n">list_lengths</span><span class="p">,</span> <span class="n">named_entities</span><span class="p">,</span> <span class="n">sentence_split</span><span class="p">,</span> <span class="n">comment_list</span><span class="p">,</span> <span class="n">pdf_extract_comments</span><span class="p">,</span> <span class="n">pdf_extract_text</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...util.system</span><span class="w"> </span><span class="kn">import</span> <span class="n">most_recent_screen_shot</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...util.plot</span><span class="w"> </span><span class="kn">import</span> <span class="n">bar_plot</span><span class="p">,</span> <span class="n">histogram</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...util.files</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_from_re</span><span class="p">,</span> <span class="n">files_from_re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.mppca</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">subject_grain_confirm_split</span><span class="p">,</span>
+    <span class="n">subject_grain_propose_split</span><span class="p">,</span>
+    <span class="n">subject_grain_undo_split</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.topic_naming</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">subject_grain_apply_focus_label</span><span class="p">,</span>
+    <span class="n">subject_grain_keys_needing_names</span><span class="p">,</span>
+    <span class="n">subject_grain_parse_label_reply</span><span class="p">,</span>
+    <span class="n">subject_grain_prepare_label</span><span class="p">,</span>
+    <span class="n">subject_grain_stub_label</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="c1"># LLM integration (optional - graceful fallback if not installed)</span>
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">..util.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_llm_manager</span><span class="p">,</span> <span class="n">LLMError</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">...util.llm</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_llm_manager</span><span class="p">,</span> <span class="n">LLMError</span>
     <span class="n">LLM_AVAILABLE</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="n">LLM_AVAILABLE</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">get_llm_manager</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">LLMError</span> <span class="o">=</span> <span class="ne">Exception</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ComputeError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ComputeError</span>
 
 
 <span class="n">cntxt</span> <span class="o">=</span> <span class="n">Context</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;referia&quot;</span><span class="p">)</span>
@@ -1415,7 +1427,451 @@
                 <span class="p">},</span>
                 <span class="s2">&quot;docstr&quot;</span> <span class="p">:</span> <span class="s2">&quot;Delete missing entries from dictionary&quot;</span>
             <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;subject_grain_propose_split&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject_grain_propose_split</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;n_children&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="s2">&quot;mass_threshold&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+                    <span class="s2">&quot;em_accept&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;label_model&quot;</span><span class="p">:</span> <span class="s2">&quot;stub&quot;</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Propose a soft topic split: update catalogue geometry &quot;</span>
+                    <span class="s2">&quot;(topic_parent genealogy + derived topic_tree) and &quot;</span>
+                    <span class="s2">&quot;pending/undo; read σ² / em_accept as controls &quot;</span>
+                    <span class="s2">&quot;(never write). When label_model is not stub, also &quot;</span>
+                    <span class="s2">&quot;names provisional children via the configured LLM so &quot;</span>
+                    <span class="s2">&quot;the UI does not leave «Parent» → (unnamed t).&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;subject_grain_confirm_split&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">subject_grain_confirm_split</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Confirm a pending split: swap overlay for per-topic &quot;</span>
+                    <span class="s2">&quot;planes; clear pending/undo. Genealogy already lives in &quot;</span>
+                    <span class="s2">&quot;topic_parent from Propose. Does not touch EM controls.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;subject_grain_undo_split&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">subject_grain_undo_split</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Undo a pending split: restore catalogue (including &quot;</span>
+                    <span class="s2">&quot;topic_parent) from split_undo; redraw at live σ²; &quot;</span>
+                    <span class="s2">&quot;never write EM / label controls.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;subject_grain_name_focus_topic&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject_grain_name_focus_topic</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;n_exemplars&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+                    <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Name the focus topic and any provisional labels &quot;</span>
+                    <span class="s2">&quot;(Topic N seeds, &#39;(unnamed…)&#39; Propose placeholders): &quot;</span>
+                    <span class="s2">&quot;reads label_prompt / label_model; writes topic_labels, &quot;</span>
+                    <span class="s2">&quot;remaps topic_parent, clears seed ghost parents, &quot;</span>
+                    <span class="s2">&quot;refreshes topic_tree, and relabels a pending split &quot;</span>
+                    <span class="s2">&quot;plotly overlay (uq_spec / uq_by_topic). Uses the &quot;</span>
+                    <span class="s2">&quot;configured LLM when label_model is not stub. Also &quot;</span>
+                    <span class="s2">&quot;invoked automatically from Propose when label_model &quot;</span>
+                    <span class="s2">&quot;is not stub.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;subject_grain_ensure_seed_names&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject_grain_ensure_seed_names</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;n_exemplars&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+                    <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;On load: if any topic_labels are still provisional &quot;</span>
+                    <span class="s2">&quot;(Topic N / (unnamed…)) and label_model is not stub, &quot;</span>
+                    <span class="s2">&quot;name them via the LLM. Idempotent when already named &quot;</span>
+                    <span class="s2">&quot;(no LLM call). Intended as review precompute so the &quot;</span>
+                    <span class="s2">&quot;k=1 seed is titled before the analyst starts.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
         <span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_llm_functions_list</span><span class="p">()</span> <span class="k">if</span> <span class="n">LLM_AVAILABLE</span> <span class="k">else</span> <span class="p">[])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_subject_grain_propose_split</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">embeddings</span><span class="p">,</span>
+        <span class="n">responsibilities</span><span class="p">,</span>
+        <span class="n">phrases</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">focus_topic</span><span class="o">=</span><span class="s2">&quot;T0&quot;</span><span class="p">,</span>
+        <span class="n">sigma2</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">em_accept</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">40</span><span class="p">,</span>
+        <span class="n">mass_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">n_children</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">topic_labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">topic_parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">label_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;stub&quot;</span><span class="p">,</span>
+        <span class="n">label_prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">n_exemplars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">_kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Propose a soft split, then name provisional children when not stub.</span>
+
+<span class="sd">        Geometry / pending / undo come from</span>
+<span class="sd">        :func:`subject_grain_propose_split`. Offline ``label_model=stub``</span>
+<span class="sd">        keeps ``«Parent» → (unnamed t)`` placeholders; any other model</span>
+<span class="sd">        runs :meth:`_subject_grain_name_focus_topic` so Focus / Topics /</span>
+<span class="sd">        the Plotly overlay show real titles immediately after Propose.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">packed</span> <span class="o">=</span> <span class="n">subject_grain_propose_split</span><span class="p">(</span>
+            <span class="n">embeddings</span><span class="p">,</span>
+            <span class="n">responsibilities</span><span class="p">,</span>
+            <span class="n">phrases</span><span class="o">=</span><span class="n">phrases</span><span class="p">,</span>
+            <span class="n">focus_topic</span><span class="o">=</span><span class="n">focus_topic</span><span class="p">,</span>
+            <span class="n">sigma2</span><span class="o">=</span><span class="n">sigma2</span><span class="p">,</span>
+            <span class="n">em_accept</span><span class="o">=</span><span class="n">em_accept</span><span class="p">,</span>
+            <span class="n">mass_threshold</span><span class="o">=</span><span class="n">mass_threshold</span><span class="p">,</span>
+            <span class="n">n_children</span><span class="o">=</span><span class="n">n_children</span><span class="p">,</span>
+            <span class="n">topic_labels</span><span class="o">=</span><span class="n">topic_labels</span><span class="p">,</span>
+            <span class="n">topic_parent</span><span class="o">=</span><span class="n">topic_parent</span><span class="p">,</span>
+            <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="p">(</span>
+            <span class="n">uq_spec</span><span class="p">,</span>
+            <span class="n">uq_by_topic</span><span class="p">,</span>
+            <span class="n">keys</span><span class="p">,</span>
+            <span class="n">R_list</span><span class="p">,</span>
+            <span class="n">focus</span><span class="p">,</span>
+            <span class="n">labels</span><span class="p">,</span>
+            <span class="n">parent</span><span class="p">,</span>
+            <span class="n">tree</span><span class="p">,</span>
+            <span class="n">pending</span><span class="p">,</span>
+            <span class="n">undo</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="n">packed</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">label_model</span> <span class="ow">or</span> <span class="s2">&quot;stub&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">model</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;stub&quot;</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;off&quot;</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;subject_grain_propose_split: geometry only &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;(label_model=</span><span class="si">{</span><span class="n">label_model</span><span class="si">!r}</span><span class="s2">); children stay provisional&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">packed</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;subject_grain_propose_split: naming provisional children &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;with model=</span><span class="si">{</span><span class="n">label_model</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">labels</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">tree</span><span class="p">,</span> <span class="n">uq_spec</span><span class="p">,</span> <span class="n">uq_by_topic</span><span class="p">,</span> <span class="n">pending</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_subject_grain_name_focus_topic</span><span class="p">(</span>
+                <span class="n">phrases</span><span class="o">=</span><span class="n">phrases</span><span class="p">,</span>
+                <span class="n">responsibilities</span><span class="o">=</span><span class="n">R_list</span><span class="p">,</span>
+                <span class="n">focus_topic</span><span class="o">=</span><span class="n">focus</span><span class="p">,</span>
+                <span class="n">topic_labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+                <span class="n">topic_parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span>
+                <span class="n">topic_keys</span><span class="o">=</span><span class="n">keys</span><span class="p">,</span>
+                <span class="n">label_prompt</span><span class="o">=</span><span class="n">label_prompt</span><span class="p">,</span>
+                <span class="n">label_model</span><span class="o">=</span><span class="n">label_model</span><span class="p">,</span>
+                <span class="n">pending_proposal</span><span class="o">=</span><span class="n">pending</span><span class="p">,</span>
+                <span class="n">uq_spec</span><span class="o">=</span><span class="n">uq_spec</span><span class="p">,</span>
+                <span class="n">uq_by_topic</span><span class="o">=</span><span class="n">uq_by_topic</span><span class="p">,</span>
+                <span class="n">n_exemplars</span><span class="o">=</span><span class="n">n_exemplars</span><span class="p">,</span>
+                <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">uq_spec</span><span class="p">,</span>
+            <span class="n">uq_by_topic</span><span class="p">,</span>
+            <span class="n">keys</span><span class="p">,</span>
+            <span class="n">R_list</span><span class="p">,</span>
+            <span class="n">focus</span><span class="p">,</span>
+            <span class="n">labels</span><span class="p">,</span>
+            <span class="n">parent</span><span class="p">,</span>
+            <span class="n">tree</span><span class="p">,</span>
+            <span class="n">pending</span><span class="p">,</span>
+            <span class="n">undo</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_subject_grain_ensure_seed_names</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">phrases</span><span class="p">,</span>
+        <span class="n">responsibilities</span><span class="p">,</span>
+        <span class="n">focus_topic</span><span class="o">=</span><span class="s2">&quot;T0&quot;</span><span class="p">,</span>
+        <span class="n">topic_labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">topic_parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">topic_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">label_prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">label_model</span><span class="o">=</span><span class="s2">&quot;stub&quot;</span><span class="p">,</span>
+        <span class="n">n_exemplars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">_kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Name provisional seed labels on open; no-op when already titled.</span>
+
+<span class="sd">        Unlike an explicit Name click, this never re-LLMs a topic that already</span>
+<span class="sd">        has a human title. Returns ``(topic_labels, topic_parent, topic_tree)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">referia.assess.compute.mppca</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_topic_tree_markdown</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">referia.assess.compute.topic_naming</span><span class="w"> </span><span class="kn">import</span> <span class="n">_is_provisional_label</span>
+
+        <span class="n">labels</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">topic_labels</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">topic_labels</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="n">topic_keys</span> <span class="ow">or</span> <span class="nb">list</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">keys</span><span class="p">()))]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">keys</span> <span class="ow">and</span> <span class="n">labels</span><span class="p">:</span>
+            <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">labels</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+        <span class="n">provisional</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">key</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span>
+            <span class="k">if</span> <span class="n">_is_provisional_label</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">key</span><span class="p">),</span> <span class="n">key</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">label_model</span> <span class="ow">or</span> <span class="s2">&quot;stub&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">provisional</span> <span class="ow">or</span> <span class="n">model</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;stub&quot;</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;off&quot;</span><span class="p">):</span>
+            <span class="n">focus</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">focus_topic</span><span class="p">)</span> <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">focus_topic</span><span class="p">)</span> <span class="ow">in</span> <span class="n">keys</span> <span class="k">else</span> <span class="p">(</span>
+                <span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">keys</span> <span class="k">else</span> <span class="s2">&quot;T0&quot;</span>
+            <span class="p">)</span>
+            <span class="n">parent</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">):</span> <span class="p">(</span><span class="kc">None</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;null&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+                 <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">topic_parent</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">topic_parent</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+                <span class="k">else</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">}</span>
+            <span class="p">)</span>
+            <span class="n">tree</span> <span class="o">=</span> <span class="n">format_topic_tree_markdown</span><span class="p">(</span>
+                <span class="n">keys</span><span class="p">,</span>
+                <span class="n">labels</span><span class="p">,</span>
+                <span class="n">parent</span><span class="p">,</span>
+                <span class="n">focus</span><span class="p">,</span>
+                <span class="n">responsibilities</span><span class="o">=</span><span class="n">responsibilities</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;subject_grain_ensure_seed_names: skip LLM &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;(provisional=</span><span class="si">{</span><span class="n">provisional</span><span class="si">!r}</span><span class="s2"> model=</span><span class="si">{</span><span class="n">label_model</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">labels</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">tree</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;subject_grain_ensure_seed_names: naming &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">provisional</span><span class="si">}</span><span class="s2"> with model=</span><span class="si">{</span><span class="n">label_model</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">labels_out</span><span class="p">,</span> <span class="n">parent_out</span><span class="p">,</span> <span class="n">tree</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject_grain_name_focus_topic</span><span class="p">(</span>
+            <span class="n">phrases</span><span class="o">=</span><span class="n">phrases</span><span class="p">,</span>
+            <span class="n">responsibilities</span><span class="o">=</span><span class="n">responsibilities</span><span class="p">,</span>
+            <span class="n">focus_topic</span><span class="o">=</span><span class="n">focus_topic</span><span class="p">,</span>
+            <span class="n">topic_labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+            <span class="n">topic_parent</span><span class="o">=</span><span class="n">topic_parent</span><span class="p">,</span>
+            <span class="n">topic_keys</span><span class="o">=</span><span class="n">keys</span><span class="p">,</span>
+            <span class="n">label_prompt</span><span class="o">=</span><span class="n">label_prompt</span><span class="p">,</span>
+            <span class="n">label_model</span><span class="o">=</span><span class="n">label_model</span><span class="p">,</span>
+            <span class="n">n_exemplars</span><span class="o">=</span><span class="n">n_exemplars</span><span class="p">,</span>
+            <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">labels_out</span><span class="p">,</span> <span class="n">parent_out</span><span class="p">,</span> <span class="n">tree</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_subject_grain_name_one_topic</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">phrases</span><span class="p">,</span>
+        <span class="n">responsibilities</span><span class="p">,</span>
+        <span class="n">focus_topic</span><span class="p">,</span>
+        <span class="n">label_prompt</span><span class="p">,</span>
+        <span class="n">label_model</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">n_exemplars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return ``(topic_key, label)`` for one topic via stub or live LLM.&quot;&quot;&quot;</span>
+        <span class="n">prompt</span><span class="p">,</span> <span class="n">exemplars</span><span class="p">,</span> <span class="n">focus</span> <span class="o">=</span> <span class="n">subject_grain_prepare_label</span><span class="p">(</span>
+            <span class="n">phrases</span><span class="p">,</span>
+            <span class="n">responsibilities</span><span class="p">,</span>
+            <span class="n">focus_topic</span><span class="o">=</span><span class="n">focus_topic</span><span class="p">,</span>
+            <span class="n">label_prompt</span><span class="o">=</span><span class="n">label_prompt</span><span class="p">,</span>
+            <span class="n">n_exemplars</span><span class="o">=</span><span class="n">n_exemplars</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">label_model</span> <span class="ow">or</span> <span class="s2">&quot;stub&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">use_live</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;stub&quot;</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;offline&quot;</span><span class="p">,</span> <span class="s2">&quot;fake&quot;</span><span class="p">}</span>
+            <span class="ow">and</span> <span class="n">LLM_AVAILABLE</span>
+            <span class="ow">and</span> <span class="n">get_llm_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_live</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">llm_config</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;interface&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;llm&quot;</span><span class="p">,</span> <span class="p">{})</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;interface&quot;</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="p">{}</span>
+                <span class="p">)</span>
+                <span class="n">manager</span> <span class="o">=</span> <span class="n">get_llm_manager</span><span class="p">(</span><span class="n">llm_config</span><span class="p">)</span>
+                <span class="n">reply</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">call</span><span class="p">(</span>
+                    <span class="n">prompt</span><span class="o">=</span><span class="n">prompt</span><span class="p">,</span>
+                    <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                    <span class="n">temperature</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">temperature</span><span class="p">),</span>
+                    <span class="n">system_prompt</span><span class="o">=</span><span class="p">(</span>
+                        <span class="s2">&quot;You name soft consultation topics for human analysts. &quot;</span>
+                        <span class="s2">&quot;Reply with JSON only: {</span><span class="se">\&quot;</span><span class="s2">label</span><span class="se">\&quot;</span><span class="s2">: </span><span class="se">\&quot;</span><span class="s2">...</span><span class="se">\&quot;</span><span class="s2">, </span><span class="se">\&quot;</span><span class="s2">description</span><span class="se">\&quot;</span><span class="s2">: </span><span class="se">\&quot;</span><span class="s2">...</span><span class="se">\&quot;</span><span class="s2">}.&quot;</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="n">focus</span><span class="p">,</span> <span class="n">subject_grain_parse_label_reply</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="n">exemplars</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 — surface failure to UI</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;subject_grain_name_focus_topic: LLM failed for </span><span class="si">{</span><span class="n">focus</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">)&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="n">ComputeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;LLM naming failed for </span><span class="si">{</span><span class="n">focus</span><span class="si">}</span><span class="s2"> (model=</span><span class="si">{</span><span class="n">model</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+        <span class="k">return</span> <span class="n">focus</span><span class="p">,</span> <span class="n">subject_grain_stub_label</span><span class="p">(</span><span class="n">exemplars</span><span class="p">,</span> <span class="n">focus</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_subject_grain_name_focus_topic</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">phrases</span><span class="p">,</span>
+        <span class="n">responsibilities</span><span class="p">,</span>
+        <span class="n">focus_topic</span><span class="o">=</span><span class="s2">&quot;T0&quot;</span><span class="p">,</span>
+        <span class="n">topic_labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">topic_parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">topic_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">label_prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">label_model</span><span class="o">=</span><span class="s2">&quot;stub&quot;</span><span class="p">,</span>
+        <span class="n">pending_proposal</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">uq_spec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">uq_by_topic</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">n_exemplars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">_kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Name focus + unnamed Propose children via stub or live LLM.</span>
+
+<span class="sd">        Catalogue writes: ``topic_labels``, remapped ``topic_parent``, and</span>
+<span class="sd">        derived ``topic_tree``. When a pending split overlay is present,</span>
+<span class="sd">        also rewrites ``uq_spec`` / ``uq_by_topic`` / ``pending_proposal``</span>
+<span class="sd">        display names so Plotly stops showing ``(unnamed…)``. Controls</span>
+<span class="sd">        ``label_prompt`` / ``label_model`` are inputs and are never</span>
+<span class="sd">        returned. Propose does not call an LLM — it only leaves</span>
+<span class="sd">        ``(unnamed…)`` placeholders; this action fills them.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">keys_to_name</span> <span class="o">=</span> <span class="n">subject_grain_keys_needing_names</span><span class="p">(</span>
+            <span class="n">topic_labels</span><span class="p">,</span> <span class="n">focus_topic</span><span class="p">,</span> <span class="n">topic_keys</span>
+        <span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;subject_grain_name_focus_topic: focus=</span><span class="si">{</span><span class="n">focus_topic</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;model=</span><span class="si">{</span><span class="n">label_model</span><span class="si">}</span><span class="s2"> keys_to_name=</span><span class="si">{</span><span class="n">keys_to_name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">topic_labels</span>
+        <span class="n">parent</span> <span class="o">=</span> <span class="n">topic_parent</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys_to_name</span><span class="p">:</span>
+            <span class="n">named_key</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subject_grain_name_one_topic</span><span class="p">(</span>
+                <span class="n">phrases</span><span class="p">,</span>
+                <span class="n">responsibilities</span><span class="p">,</span>
+                <span class="n">key</span><span class="p">,</span>
+                <span class="n">label_prompt</span><span class="p">,</span>
+                <span class="n">label_model</span><span class="p">,</span>
+                <span class="n">n_exemplars</span><span class="o">=</span><span class="n">n_exemplars</span><span class="p">,</span>
+                <span class="n">temperature</span><span class="o">=</span><span class="n">temperature</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;subject_grain_name_focus_topic: named </span><span class="si">{</span><span class="n">named_key</span><span class="si">}</span><span class="s2"> → </span><span class="si">{</span><span class="n">label</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">labels</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">tree</span> <span class="o">=</span> <span class="n">subject_grain_apply_focus_label</span><span class="p">(</span>
+                <span class="n">labels</span><span class="p">,</span>
+                <span class="n">named_key</span><span class="p">,</span>
+                <span class="n">label</span><span class="p">,</span>
+                <span class="n">topic_parent</span><span class="o">=</span><span class="n">parent</span><span class="p">,</span>
+                <span class="n">topic_keys</span><span class="o">=</span><span class="n">topic_keys</span><span class="p">,</span>
+                <span class="n">responsibilities</span><span class="o">=</span><span class="n">responsibilities</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">tree</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Nothing to name — still refresh derived view.</span>
+            <span class="n">labels</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">tree</span> <span class="o">=</span> <span class="n">subject_grain_apply_focus_label</span><span class="p">(</span>
+                <span class="n">topic_labels</span><span class="p">,</span>
+                <span class="n">focus_topic</span><span class="p">,</span>
+                <span class="p">(</span>
+                    <span class="p">(</span><span class="n">topic_labels</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">focus_topic</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">focus_topic</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">topic_labels</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+                    <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">focus_topic</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">topic_parent</span><span class="o">=</span><span class="n">topic_parent</span><span class="p">,</span>
+                <span class="n">topic_keys</span><span class="o">=</span><span class="n">topic_keys</span><span class="p">,</span>
+                <span class="n">responsibilities</span><span class="o">=</span><span class="n">responsibilities</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">uq_out</span> <span class="o">=</span> <span class="n">uq_spec</span>
+        <span class="n">uq_map</span> <span class="o">=</span> <span class="n">uq_by_topic</span>
+        <span class="n">pending_out</span> <span class="o">=</span> <span class="n">pending_proposal</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pending_proposal</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">pending_proposal</span><span class="p">:</span>
+            <span class="n">children</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pending_proposal</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;children&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="n">children</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="kn">from</span><span class="w"> </span><span class="nn">referia.util.plotly_figures</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+                    <span class="n">relabel_proposed_split_plotly_spec</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">child_display</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">ck</span><span class="p">),</span> <span class="n">ck</span><span class="p">))</span> <span class="k">for</span> <span class="n">ck</span> <span class="ow">in</span> <span class="n">children</span>
+                <span class="p">]</span>
+                <span class="c1"># Soft split replaces the parent topic with children, so</span>
+                <span class="c1"># pending.parent often collides with a child key. Prefer a</span>
+                <span class="c1"># live named parent when the key is still distinct; otherwise</span>
+                <span class="c1"># keep the sealed Propose parent_label. Always sanitize so a</span>
+                <span class="c1"># nested provisional never remains in the overlay title.</span>
+                <span class="kn">from</span><span class="w"> </span><span class="nn">referia.assess.compute.topic_naming</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+                    <span class="n">_is_provisional_label</span><span class="p">,</span>
+                    <span class="n">_short_parent_for_placeholder</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">parent_display</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">pending_proposal</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parent_label&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;parent&quot;</span>
+                <span class="p">)</span>
+                <span class="n">parent_key</span> <span class="o">=</span> <span class="n">pending_proposal</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parent&quot;</span><span class="p">)</span>
+                <span class="n">children_set</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">children</span><span class="p">}</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="n">parent_key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                    <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">parent_key</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">children_set</span>
+                    <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+                    <span class="ow">and</span> <span class="nb">str</span><span class="p">(</span><span class="n">parent_key</span><span class="p">)</span> <span class="ow">in</span> <span class="n">labels</span>
+                <span class="p">):</span>
+                    <span class="n">parent_display</span> <span class="o">=</span> <span class="n">labels</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">parent_key</span><span class="p">)]</span>
+                <span class="n">parent_display</span> <span class="o">=</span> <span class="n">_short_parent_for_placeholder</span><span class="p">(</span>
+                    <span class="n">parent_display</span><span class="p">,</span> <span class="n">parent_key</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">_is_provisional_label</span><span class="p">(</span><span class="n">parent_display</span><span class="p">,</span> <span class="n">parent_key</span><span class="p">):</span>
+                    <span class="c1"># Seed parent after soft split — title uses short form;</span>
+                    <span class="c1"># children carry the LLM names.</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                        <span class="s2">&quot;subject_grain_name_focus_topic: sanitized &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;provisional overlay parent → </span><span class="si">{</span><span class="n">parent_display</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+
+                <span class="n">base_spec</span> <span class="o">=</span> <span class="n">uq_spec</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">base_spec</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span>
+                    <span class="n">uq_by_topic</span><span class="p">,</span> <span class="nb">dict</span>
+                <span class="p">):</span>
+                    <span class="n">focus</span> <span class="o">=</span> <span class="n">pending_proposal</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;focus&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">base_spec</span> <span class="o">=</span> <span class="n">uq_by_topic</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">focus</span><span class="p">))</span> <span class="ow">or</span> <span class="n">uq_by_topic</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                        <span class="n">children</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">base_spec</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                    <span class="n">uq_out</span> <span class="o">=</span> <span class="n">relabel_proposed_split_plotly_spec</span><span class="p">(</span>
+                        <span class="n">base_spec</span><span class="p">,</span>
+                        <span class="n">child_labels</span><span class="o">=</span><span class="n">child_display</span><span class="p">,</span>
+                        <span class="n">parent_label</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">parent_display</span><span class="p">),</span>
+                    <span class="p">)</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                        <span class="s2">&quot;subject_grain_name_focus_topic: relabelled pending &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;overlay children=</span><span class="si">{</span><span class="n">child_display</span><span class="si">}</span><span class="s2"> &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;parent=</span><span class="si">{</span><span class="n">parent_display</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">uq_by_topic</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                        <span class="n">uq_map</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">uq_by_topic</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">ck</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
+                            <span class="n">uq_map</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">ck</span><span class="p">)]</span> <span class="o">=</span> <span class="n">uq_out</span>
+                    <span class="n">pending_out</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">pending_proposal</span><span class="p">)</span>
+                    <span class="n">pending_out</span><span class="p">[</span><span class="s2">&quot;parent_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">parent_display</span><span class="p">)</span>
+                    <span class="n">he</span> <span class="o">=</span> <span class="n">pending_out</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;history_entry&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">he</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                        <span class="n">he</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">he</span><span class="p">)</span>
+                        <span class="n">he</span><span class="p">[</span><span class="s2">&quot;parent_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">parent_display</span><span class="p">)</span>
+                        <span class="n">pending_out</span><span class="p">[</span><span class="s2">&quot;history_entry&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">he</span>
+
+        <span class="k">return</span> <span class="n">labels</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">tree</span><span class="p">,</span> <span class="n">uq_out</span><span class="p">,</span> <span class="n">uq_map</span><span class="p">,</span> <span class="n">pending_out</span>
     
     <span class="k">def</span><span class="w"> </span><span class="nf">_llm_functions_list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>

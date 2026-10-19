@@ -1855,6 +1855,42 @@
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_pandas</span><span class="p">(</span><span class="n">df</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
 
 
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_index_column_name</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;index&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the column name to use when materialising the index for write.</span>
+
+<span class="sd">        ``save_flows`` / ``to_flow`` concat a Series of index values onto the</span>
+<span class="sd">        frame before ``write_csv(..., index=False)``. If that Series has</span>
+<span class="sd">        ``name=None`` (because ``df.index.name`` is unset), pandas labels the</span>
+<span class="sd">        column ``0``. Reload then fails when the config expects e.g.</span>
+<span class="sd">        ``index: Name``. Prefer ``df.index.name``, then ``details[&#39;index&#39;]``</span>
+<span class="sd">        (str or ``{&#39;name&#39;: ...}``), then ``default``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="n">details</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="s2">&quot;get&quot;</span><span class="p">):</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">idx</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">idx</span>
+        <span class="k">return</span> <span class="n">name</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">default</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_dataframe_for_output_write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build a write frame with a named index column (never pandas ``0``).&quot;&quot;&quot;</span>
+        <span class="n">index_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_index_column_name</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">index_name</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">index_name</span><span class="p">),</span>
+                <span class="n">df</span><span class="p">,</span>
+            <span class="p">],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">to_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">interface</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Writes the output data to the flows specified in the interface.</span>
@@ -1869,9 +1905,7 @@
                 <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">typ</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="k">try</span><span class="p">:</span>
-                        <span class="n">write_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
-                            <span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
-                        <span class="p">)</span>
+                        <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataframe_for_output_write</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
                         
                         <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write_data</span><span class="p">(</span><span class="n">write_df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
                         <span class="n">data_written</span> <span class="o">=</span> <span class="kc">True</span>
@@ -1986,6 +2020,14 @@
                                         <span class="sa">f</span><span class="s2">&quot;Unrecognised key type </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">. Valid data types are </span><span class="se">\&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">valid_data_types</span><span class="p">)</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span>
                                     <span class="p">)</span>
                             <span class="n">newdf</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">cdf</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+                            <span class="c1"># Creating from cdf.index can leave index.name None</span>
+                            <span class="c1"># (e.g. empty RangeIndex); name it from the flow</span>
+                            <span class="c1"># config so save_flows does not write column &quot;0&quot;.</span>
+                            <span class="k">if</span> <span class="n">newdf</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">&quot;index&quot;</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
+                                <span class="n">idx</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">]</span>
+                                <span class="n">newdf</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="p">(</span>
+                                    <span class="n">idx</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="n">idx</span>
+                                <span class="p">)</span>
                             
                     <span class="k">else</span><span class="p">:</span>
                         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -2163,9 +2205,8 @@
         <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
                 <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span>
-                <span class="n">write_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
-                    <span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> <span class="n">df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
-                <span class="p">)</span>
+                <span class="n">details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span> <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataframe_for_output_write</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
                 <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving data for flow type &#39;</span><span class="si">{</span><span class="n">typ</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
                 <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write_data</span><span class="p">(</span><span class="n">write_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">[</span><span class="n">typ</span><span class="p">])</span>
     
