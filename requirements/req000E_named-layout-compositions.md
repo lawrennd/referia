@@ -4,7 +4,7 @@ title: "Authors choose among named layout compositions, not fine-grained placeme
 status: "Proposed"
 priority: "High"
 created: "2026-10-11"
-last_updated: "2026-10-11"
+last_updated: "2026-10-19"
 related_tenets:
 - template-driven-composition
 - user-oriented-convenience
@@ -55,9 +55,13 @@ Complements REQ-000D (when to hide nav chrome for singletons). CIP-0010: `displa
 Analogy for authors and docs: **document class, not desktop publishing**.
 
 Long-term Jupyter-as-display retirement remains a separate product question; it does not block list-layout behaviour on notebooks while Jupyter display exists.
+
+**Interactive viewer (REQ-000F / CIP-0011):** interactive figures are **content** under `viewer:`, not a new named layout. Composition outcomes in this requirement stay unchanged for that work; do not treat plot chrome as a reason to invent `visualiser_review`-style layouts in v1.
+
 ## References
 
 - Tenet: [template-driven-composition](../tenets/referia/template-driven-composition.md)
 - Tenet: [user-oriented-convenience](../tenets/referia/user-oriented-convenience.md)
 - CIP-0010 (config-driven root / overview presentation)
 - CIP-000B (web display system)
+- REQ-000F / CIP-0011 (interactive viewer components; composition unchanged)
