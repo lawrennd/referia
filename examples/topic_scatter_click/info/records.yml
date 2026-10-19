@@ -1,11 +1,9 @@
 # Synthetic soft-topic geometry for CIP-0011 interactive viewer demo.
 # Figure JSON is pre-baked (no multilogue / MPPCA compute required).
+# Mutable review fields live in scores.yml (output) — input columns are immutable.
 
 - Name: synthetic-corpus
   Title: Synthetic topic scatter
-  selected_topic: B
-  selected_phrase: ""
-  notes: ""
   topic_scatter_spec:
     data:
       - type: scatter
@@ -65,9 +63,6 @@
 
 - Name: second-view
   Title: Alternate seed selection
-  selected_topic: A
-  selected_phrase: ""
-  notes: "Second row — switch records to confirm index refresh."
   topic_scatter_spec:
     data:
       - type: scatter

@@ -347,14 +347,17 @@ class TestPostField:
                 "highlight": {"from_field": "Comment"},
             }
         ]
-        mock_reviewer.render_viewer_html.return_value = (
-            '<div class="viewer viewer-plotly" id="viewer-plotly-0"></div>'
+        mock_reviewer.get_value.side_effect = lambda col: (
+            {"data": [{"type": "scatter", "x": [1], "y": [2]}], "layout": {}}
+            if col == "fig"
+            else "t1"
         )
         response = client.post("/field/Comment", data={"Comment": "t1"})
         assert response.status_code == 200
-        assert "viewer-plotly-0" in response.text
+        assert 'id="plotly-spec-0"' in response.text
         assert 'hx-swap-oob="true"' in response.text
-        mock_reviewer.render_viewer_html.assert_called()
+        assert "plotly-spec" in response.text
+        mock_reviewer.render_viewer_html.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +371,11 @@ class TestViewerOobHelpers:
 
         plotly = '<div class="viewer viewer-plotly" id="viewer-plotly-0"></div>'
         assert 'hx-swap-oob="true"' in _make_viewer_oob(plotly)
+        filled = (
+            '<div class="viewer viewer-plotly viewer-plotly--fill" '
+            'id="viewer-plotly-0"></div>'
+        )
+        assert 'hx-swap-oob="true"' in _make_viewer_oob(filled)
         image = '<div class="viewer viewer-image" id="viewer-image-1"></div>'
         assert 'hx-swap-oob="true"' in _make_viewer_oob(image)
         other = '<div class="viewer viewer-markdown">x</div>'
@@ -391,13 +399,16 @@ class TestViewerOobHelpers:
                 "highlight": {"from_field": "other_field"},
             },
         ]
-        reviewer.render_viewer_html.return_value = (
-            '<div class="viewer viewer-plotly" id="viewer-plotly-1"></div>'
+        reviewer.get_value.side_effect = lambda col: (
+            {"data": [], "layout": {"height": 100}}
+            if col == "fig"
+            else "B"
         )
         parts = _viewer_highlight_oobs(reviewer, "selected_topic")
         assert len(parts) == 1
+        assert 'id="plotly-spec-2"' in parts[0]
         assert 'hx-swap-oob="true"' in parts[0]
-        reviewer.render_viewer_html.assert_called_once()
+        reviewer.render_viewer_html.assert_not_called()
 
     def test_viewer_source_without_trigger_spec_skips_widget_oob(
         self, client, mock_reviewer

@@ -518,21 +518,45 @@ def _make_oob(widget_html: str) -> str:
 
 
 def _make_viewer_oob(viewer_html: str) -> str:
-    """Add ``hx-swap-oob="true"`` to an interactive viewer container."""
-    for marker in (
-        'class="viewer viewer-plotly"',
-        'class="viewer viewer-image"',
-    ):
-        if marker in viewer_html:
-            return viewer_html.replace(
-                marker, f'{marker} hx-swap-oob="true"', 1
-            )
-    return viewer_html
+    """Add ``hx-swap-oob="true"`` to an interactive viewer container.
+
+    Matches ``viewer-plotly`` / ``viewer-image`` even when extra classes
+    (e.g. ``viewer-plotly--fill``) are present.
+    """
+    import re
+
+    def _inject(match: re.Match[str]) -> str:
+        attrs = match.group(1)
+        if "hx-swap-oob=" in attrs:
+            return match.group(0)
+        return f"<div{attrs} hx-swap-oob=\"true\">"
+
+    updated, n = re.subn(
+        r"<div(\s+[^>]*\bviewer-(?:plotly|image)\b[^>]*)>",
+        _inject,
+        viewer_html,
+        count=1,
+    )
+    return updated if n else viewer_html
 
 
 def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
-    """OOB fragments for interactive viewers whose highlight watches *column*."""
-    from referia.assess.viewer_bindings import highlight_binding, is_interactive_viewer_type
+    """OOB fragments for interactive viewers whose highlight watches *column*.
+
+    PlotlyFigure updates swap only the JSON ``plotly-spec`` script so the
+    live graph is restyled in place (avoids a full remount / size flash).
+    StaticImage still replaces the whole viewer container.
+    """
+    from referia.assess.viewer_bindings import (
+        apply_highlight,
+        apply_plotly_size,
+        highlight_binding,
+        is_interactive_viewer_type,
+        parse_figure_spec,
+        plotly_size_options,
+        viewer_entry_type,
+    )
+    from referia.web.render import render_plotly_spec_oob
 
     parts: list[str] = []
     for i, spec in enumerate(reviewer.get_viewer_specs()):
@@ -540,6 +564,27 @@ def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
             continue
         hl = highlight_binding(spec)
         if not hl or hl["from_field"] != column:
+            continue
+        if viewer_entry_type(spec) == "PlotlyFigure":
+            raw = None
+            field = spec.get("field")
+            if field:
+                try:
+                    raw = reviewer.get_value(str(field))
+                except Exception:
+                    raw = None
+            try:
+                selected = reviewer.get_value(hl["from_field"])
+            except Exception:
+                selected = None
+            fig = apply_highlight(
+                parse_figure_spec(raw),
+                selected=selected,
+                mode=hl.get("mode", "default"),
+            )
+            size_opts = plotly_size_options(spec)
+            fig = apply_plotly_size(fig, mode=size_opts.get("mode", "figure"))
+            parts.append(render_plotly_spec_oob(i, fig))
             continue
         html = reviewer.render_viewer_html(spec, viewer_index=i)
         parts.append(_make_viewer_oob(html))

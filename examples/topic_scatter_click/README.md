@@ -11,8 +11,8 @@ topic_scatter_click/
 ├── README.md
 ├── _referia.yml          # PlotlyFigure + Dropdown / Text bindings
 └── info/
-    ├── records.yml       # two rows with topic_scatter_spec
-    └── scores.yml        # created on Save (gitignored locally if you prefer)
+    ├── records.yml       # two rows with topic_scatter_spec (input / immutable)
+    └── scores.yml        # selected_* / notes (output / mutable; Save updates)
 ```
 
 ## Run
@@ -35,6 +35,12 @@ Open the printed URL (default `http://127.0.0.1:8000`).
 
 ## Notes
 
+- Review fields must live in **output** (`scores.yml`), not input — input columns are immutable.
+- Quote `"on":` under PlotlyFigure (YAML 1.1 maps bare `on:` to boolean `True`).
+- `size.mode: container` grows the viewer pane with the plot (width ×
+  `aspect_ratio`, default `4/3`) as the splitter moves;
+  `size.mode: figure` (default) keeps fixed `layout.height` / `width` from the figure JSON.
+  Set `size.observe: false` to disable pane `ResizeObserver` updates.
 - Web path uses Plotly.js from the CDN (no Python `plotly` install required).
 - Jupyter (`Reviewer` + `display()`) needs `plotly` for `FigureWidget`; without it the viewer shows an install hint.
 - A real soft-geometry workflow would replace `topic_scatter_spec` with compute / `multilogue.viz` output; referia only hosts chrome and field sync.

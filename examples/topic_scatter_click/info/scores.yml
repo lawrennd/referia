@@ -1,0 +1,9 @@
+# Seed output store — click / dropdown writes selected_* here at runtime.
+- Name: synthetic-corpus
+  selected_topic:
+  selected_phrase:
+  notes:
+- Name: second-view
+  selected_topic: C
+  selected_phrase: seed C
+  notes: Second row — switch records to confirm index refresh.

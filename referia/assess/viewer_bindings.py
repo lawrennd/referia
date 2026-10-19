@@ -14,6 +14,26 @@ INTERACTIVE_VIEWER_TYPES = frozenset({"PlotlyFigure", "StaticImage"})
 DEFAULT_VIEWER_TYPE = "Markdown"
 
 
+def normalize_viewer_entry(
+    spec: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Return a copy of *spec* with YAML 1.1 boolean-key quirks repaired.
+
+    PyYAML maps unquoted ``on:`` / ``off:`` to boolean ``True`` / ``False``
+    keys.  Interactive bindings live under the string key ``\"on\"``, so we
+    promote ``True`` → ``\"on\"`` (and ``False`` → ``\"off\"``) when the
+    string form is absent.
+    """
+    if not isinstance(spec, Mapping):
+        return {}
+    out = dict(spec)
+    if True in out and "on" not in out:
+        out["on"] = out.pop(True)
+    if False in out and "off" not in out:
+        out["off"] = out.pop(False)
+    return out
+
+
 def viewer_entry_type(spec: Mapping[str, Any] | None) -> str:
     """Return the viewer entry type (default Markdown when omitted)."""
     if not isinstance(spec, Mapping):
@@ -40,8 +60,7 @@ def click_point_actions(spec: Mapping[str, Any] | None) -> list[dict[str, Any]]:
     Each action is ``{"set_field": str, "from": str}``.  Non-dict / incomplete
     entries are skipped.
     """
-    if not isinstance(spec, Mapping):
-        return []
+    spec = normalize_viewer_entry(spec)
     on = spec.get("on")
     if not isinstance(on, Mapping):
         return []
@@ -68,8 +87,7 @@ def click_point_actions(spec: Mapping[str, Any] | None) -> list[dict[str, Any]]:
 
 def highlight_binding(spec: Mapping[str, Any] | None) -> dict[str, str] | None:
     """Return ``{"from_field": ..., "mode": ...}`` or ``None``."""
-    if not isinstance(spec, Mapping):
-        return None
+    spec = normalize_viewer_entry(spec)
     hl = spec.get("highlight")
     if not isinstance(hl, Mapping):
         return None
@@ -78,6 +96,76 @@ def highlight_binding(spec: Mapping[str, Any] | None) -> dict[str, str] | None:
         return None
     mode = hl.get("mode") or "default"
     return {"from_field": str(from_field), "mode": str(mode)}
+
+
+PLOTLY_SIZE_MODES = frozenset({"figure", "container"})
+
+
+def plotly_size_options(spec: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Return Plotly sizing options from a viewer entry ``size:`` block.
+
+    YAML::
+
+        size:
+          mode: figure      # honor layout width/height from the figure JSON
+          # mode: container  # grow with the pane; ignore fixed layout size
+          observe: true     # ResizeObserver → Plotly.Plots.resize (splitter)
+          aspect_ratio: 4/3 # optional; CSS aspect-ratio when mode=container
+
+    A bare string ``size: container`` is accepted as shorthand for
+    ``mode: container``.  Defaults: ``mode=figure``, ``observe=true`` (so
+    splitter width changes still restyle fixed-height figures).
+    """
+    spec = normalize_viewer_entry(spec)
+    mode = "figure"
+    observe = True
+    aspect_ratio: str | None = None
+    raw = spec.get("size")
+    if isinstance(raw, str):
+        token = raw.strip().lower()
+        if token in PLOTLY_SIZE_MODES:
+            mode = token
+    elif isinstance(raw, Mapping):
+        m = raw.get("mode", raw.get("fit"))
+        if m is not None and str(m).strip().lower() in PLOTLY_SIZE_MODES:
+            mode = str(m).strip().lower()
+        if "observe" in raw:
+            observe = bool(raw.get("observe"))
+        ar = raw.get("aspect_ratio", raw.get("aspect"))
+        if ar is not None and str(ar).strip() != "":
+            aspect_ratio = str(ar).strip().replace(":", "/")
+    if mode == "container" and aspect_ratio is None:
+        aspect_ratio = "4/3"
+    return {
+        "mode": mode,
+        "observe": observe,
+        "aspect_ratio": aspect_ratio,
+    }
+
+
+def apply_plotly_size(
+    figure: Mapping[str, Any] | None,
+    *,
+    mode: str = "figure",
+) -> dict[str, Any] | None:
+    """Adjust figure layout for ``size.mode``.
+
+    ``container`` sets ``autosize`` and drops fixed ``layout.height`` /
+    ``layout.width`` so the plot fills its DOM pane.  ``figure`` leaves
+    the payload unchanged.
+    """
+    parsed = parse_figure_spec(figure)
+    if parsed is None:
+        return None
+    if mode != "container":
+        return parsed
+    out = dict(parsed)
+    layout = dict(parsed.get("layout") or {})
+    layout["autosize"] = True
+    layout.pop("height", None)
+    layout.pop("width", None)
+    out["layout"] = layout
+    return out
 
 
 def resolve_path(payload: Any, path: str) -> Any:

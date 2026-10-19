@@ -34,7 +34,8 @@ viewer:
       Change **Selected topic** to re-ink the figure (opacity ∝ soft mass).
   - type: PlotlyFigure
     field: topic_scatter_spec
-    on:
+    # Quote "on" — YAML 1.1 treats bare on:/off: as booleans.
+    "on":
       click_point:
         - set_field: selected_phrase
           from: customdata.phrase
@@ -43,6 +44,10 @@ viewer:
     highlight:
       from_field: selected_topic
       mode: responsibility_ink
+    size:
+      mode: container   # grow pane with plot (ignore layout.height in figure JSON)
+      observe: true     # ResizeObserver on splitter / pane box changes
+      aspect_ratio: 4/3 # height tracks width; viewer-col expands (no max-height clip)
 
 review:
   - type: Dropdown

@@ -1,2 +1,2 @@
-# Local Save output from the demo session
-scores.yml
+# Keep committed seed scores.yml; ignore local Save backups if added later
+*.bak

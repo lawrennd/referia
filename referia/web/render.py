@@ -44,6 +44,22 @@ def _escape(value: Any) -> str:
     return _html.escape(str(value) if value is not None else "")
 
 
+def _json_script_content(payload: Any) -> str:
+    """Serialize *payload* for embedding in ``<script type=\"application/json\">``.
+
+    Do not use :func:`html.escape`: script text content does not decode
+    ``&quot;`` entities, so escaped JSON fails ``JSON.parse``.  Instead
+    Unicode-escape ``<``, ``>``, and ``&`` so the payload cannot break out
+    of the script element.
+    """
+    return (
+        json.dumps(payload, default=str)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
+
+
 _A_TAG_RE = re.compile(r"<a\b([^>]*)>", re.IGNORECASE)
 
 
@@ -683,6 +699,8 @@ def render_viewer(
 
     view_type = viewer_entry_type(view_spec)
     if view_type == "PlotlyFigure":
+        from referia.assess.viewer_bindings import plotly_size_options
+
         return _render_plotly_viewer(
             view_spec,
             figure=figure,
@@ -690,6 +708,7 @@ def render_viewer(
             viewer_index=viewer_index,
             click_actions=click_point_actions(view_spec),
             highlight=highlight_binding(view_spec),
+            size=plotly_size_options(view_spec),
         )
     if view_type == "StaticImage":
         src = _escape(content or "")
@@ -712,32 +731,63 @@ def _render_plotly_viewer(
     viewer_index: int,
     click_actions: list[dict[str, Any]],
     highlight: dict[str, str] | None,
+    size: dict[str, Any] | None = None,
 ) -> str:
     """Emit a Plotly container with JSON spec and click-binding metadata."""
-    from referia.assess.viewer_bindings import apply_highlight
+    from referia.assess.viewer_bindings import apply_highlight, apply_plotly_size
 
     mode = (highlight or {}).get("mode", "default")
     from_field = (highlight or {}).get("from_field", "")
+    size_opts = size or {"mode": "figure", "observe": True, "aspect_ratio": None}
+    size_mode = size_opts.get("mode") or "figure"
+    observe = bool(size_opts.get("observe", True))
+    aspect = size_opts.get("aspect_ratio")
     fig = apply_highlight(figure, selected=highlight_value, mode=mode) if figure else None
     if fig is None:
         fig = {"data": [], "layout": {"title": {"text": "No figure data"}}}
-    fig_json = json.dumps(fig, default=str)
-    bindings_json = json.dumps(click_actions, default=str)
+    fig = apply_plotly_size(fig, mode=size_mode) or fig
+    fig_json = _json_script_content(fig)
+    bindings_json = _json_script_content(click_actions)
     hl_attr = _escape(from_field) if from_field else ""
     mode_attr = _escape(mode)
+    size_attr = _escape(size_mode)
+    observe_attr = "1" if observe else "0"
+    fill_class = " viewer-plotly--fill" if size_mode == "container" else ""
+    aspect_style = ""
+    aspect_attr = ""
+    if size_mode == "container" and aspect:
+        aspect_safe = _escape(aspect)
+        aspect_attr = f' data-size-aspect="{aspect_safe}"'
+        aspect_style = f' style="--plotly-aspect: {aspect_safe}"'
     vid = f"viewer-plotly-{viewer_index}"
     tid = f"plotly-target-{viewer_index}"
     return (
-        f'<div class="viewer viewer-plotly" id="{vid}" '
+        f'<div class="viewer viewer-plotly{fill_class}" id="{vid}" '
         f'data-viewer-index="{viewer_index}" '
         f'data-highlight-field="{hl_attr}" '
-        f'data-highlight-mode="{mode_attr}">'
+        f'data-highlight-mode="{mode_attr}" '
+        f'data-size-mode="{size_attr}" '
+        f'data-size-observe="{observe_attr}"'
+        f"{aspect_attr}{aspect_style}>"
         f'<div class="plotly-target" id="{tid}"></div>'
-        f'<script type="application/json" class="plotly-spec">'
-        f"{_html.escape(fig_json)}</script>"
-        f'<script type="application/json" class="plotly-bindings">'
-        f"{_html.escape(bindings_json)}</script>"
+        f'<script type="application/json" class="plotly-spec" '
+        f'id="plotly-spec-{viewer_index}">'
+        f"{fig_json}</script>"
+        f'<script type="application/json" class="plotly-bindings" '
+        f'id="plotly-bindings-{viewer_index}">'
+        f"{bindings_json}</script>"
         f"</div>"
+    )
+
+
+def render_plotly_spec_oob(viewer_index: int, figure: dict | None) -> str:
+    """OOB fragment that updates only the Plotly JSON (keeps the live graph)."""
+    fig = figure or {"data": [], "layout": {}}
+    fig_json = _json_script_content(fig)
+    return (
+        f'<script type="application/json" class="plotly-spec" '
+        f'id="plotly-spec-{int(viewer_index)}" hx-swap-oob="true">'
+        f"{fig_json}</script>"
     )
 
 

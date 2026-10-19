@@ -595,6 +595,39 @@ class TestRenderViewer:
         assert "plotly-spec" in html
         assert "selected_phrase" in html
         assert "customdata.phrase" in html
+        # JSON in <script> must be parseable (not html.escaped &quot;)
+        assert "&quot;" not in html
+        assert '"data"' in html or '\\"data\\"' in html
+
+    def test_plotly_size_container_mode_attrs_and_layout(self):
+        fig = {
+            "data": [{"type": "scatter", "x": [1], "y": [2]}],
+            "layout": {"height": 420, "width": 600},
+        }
+        html = render_viewer(
+            {
+                "type": "PlotlyFigure",
+                "size": {"mode": "container", "observe": True},
+            },
+            figure=fig,
+            viewer_index=0,
+        )
+        assert 'data-size-mode="container"' in html
+        assert 'data-size-observe="1"' in html
+        assert "viewer-plotly--fill" in html
+        assert 'data-size-aspect="4/3"' in html
+        assert "--plotly-aspect: 4/3" in html
+        assert '"autosize": true' in html or '"autosize":true' in html
+        assert '"height"' not in html.split("plotly-spec")[1].split("</script>")[0]
+
+    def test_plotly_size_observe_false(self):
+        html = render_viewer(
+            {"type": "PlotlyFigure", "size": {"mode": "figure", "observe": False}},
+            figure={"data": [], "layout": {}},
+            viewer_index=0,
+        )
+        assert 'data-size-observe="0"' in html
+        assert "viewer-plotly--fill" not in html
 
     def test_static_image_viewer(self):
         html = render_viewer(

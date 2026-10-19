@@ -585,6 +585,13 @@ span.entry-title {
     overflow-y: auto;
 }
 
+/* size.mode: container — let the pane grow with the plot (width × aspect)
+   instead of clipping under the viewport max-height scrollbar. */
+.viewer-col:has(.viewer-plotly--fill) {
+    max-height: none;
+    overflow-y: visible;
+}
+
 .viewer {
     margin-bottom: 1rem;
 }
@@ -601,6 +608,27 @@ span.entry-title {
 .viewer-plotly .plotly-target {
     width: 100%;
     min-height: 280px;
+}
+
+/* size.mode: container — height follows pane width via --plotly-aspect. */
+.viewer-plotly.viewer-plotly--fill {
+    width: 100%;
+    min-height: 0;
+    height: auto;
+}
+
+.viewer-plotly.viewer-plotly--fill .plotly-target {
+    width: 100%;
+    height: auto;
+    min-height: 280px;
+    aspect-ratio: var(--plotly-aspect, 4 / 3);
+}
+
+/* Plotly injects .js-plotly-plot; fill the aspect box so autosize measures it. */
+.viewer-plotly.viewer-plotly--fill .plotly-target .js-plotly-plot,
+.viewer-plotly.viewer-plotly--fill .plotly-target .plot-container {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .viewer-image img {

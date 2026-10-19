@@ -1759,7 +1759,7 @@ class PlotlyFigureViewer(ReferiaWidget):
         self._figure_widget = None
         self._field_name = args.pop("field_name", None)
         args.pop("column_name", None)
-        for key in ("on", "highlight", "field", "type", "description"):
+        for key in ("on", "highlight", "field", "type", "description", "size"):
             args.pop(key, None)
         args.setdefault("function", ipyw.VBox)
         args.setdefault("children", [])
@@ -1778,9 +1778,11 @@ class PlotlyFigureViewer(ReferiaWidget):
     def refresh(self):
         from referia.assess.viewer_bindings import (
             apply_highlight,
+            apply_plotly_size,
             field_updates_from_click,
             highlight_binding,
             parse_figure_spec,
+            plotly_size_options,
         )
 
         parent = self._parent
@@ -1808,6 +1810,8 @@ class PlotlyFigureViewer(ReferiaWidget):
             figure = apply_highlight(
                 figure, selected=selected, mode=hl.get("mode", "default")
             ) or figure
+        size_opts = plotly_size_options(spec)
+        figure = apply_plotly_size(figure, mode=size_opts["mode"]) or figure
 
         try:
             import plotly.graph_objects as go
@@ -1882,7 +1886,7 @@ class StaticImageViewer(ReferiaWidget):
         self._viewer_spec = dict(args.pop("viewer_spec", {}) or {})
         self._field_name = args.pop("field_name", None)
         args.pop("column_name", None)
-        for key in ("on", "highlight", "field", "type", "description"):
+        for key in ("on", "highlight", "field", "type", "description", "size"):
             args.pop(key, None)
         args.setdefault("function", ipyw.HTML)
         args.setdefault("value", "")
