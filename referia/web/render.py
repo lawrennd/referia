@@ -61,6 +61,7 @@ def _json_script_content(payload: Any) -> str:
 
 
 _A_TAG_RE = re.compile(r"<a\b([^>]*)>", re.IGNORECASE)
+_HEADING_RE = re.compile(r"(<h([1-6])\b[^>]*>.*?</h\2>)", re.IGNORECASE | re.DOTALL)
 
 
 def _ensure_links_new_tab(html: str) -> str:
@@ -763,14 +764,103 @@ def render_viewer(
         )
     if view_type in {"Markdown", "HTMLMath"}:
         rendered = _ensure_links_new_tab(markdown2html(content) if content else "")
+        rendered = _collapse_matching_headings(rendered, view_spec)
         return (
             f'<div class="viewer viewer-markdown" '
             f'id="viewer-markdown-{int(viewer_index)}">{rendered}</div>'
         )
+    html = _ensure_links_new_tab(content)
+    html = _collapse_matching_headings(html, view_spec)
     return (
         f'<div class="viewer viewer-html" id="viewer-html-{int(viewer_index)}">'
-        f"{_ensure_links_new_tab(content)}</div>"
+        f"{html}</div>"
     )
+
+
+def _viewer_collapse_options(view_spec: dict | None) -> dict[str, Any] | None:
+    """Return normalised ``collapse:`` options, or ``None`` when inactive.
+
+    Expected YAML::
+
+        collapse:
+          headings: [LLM]
+          default: closed   # or open
+    """
+    if not isinstance(view_spec, dict):
+        return None
+    raw = view_spec.get("collapse")
+    if not isinstance(raw, dict):
+        return None
+    names = raw.get("headings") or raw.get("heading") or []
+    if isinstance(names, str):
+        names = [names]
+    if not isinstance(names, (list, tuple)):
+        return None
+    folded = {str(name).strip().casefold() for name in names if str(name).strip()}
+    if not folded:
+        return None
+    default = str(raw.get("default") or "closed").strip().casefold()
+    return {"headings": folded, "open": default in {"open", "opened", "true"}}
+
+
+def _heading_plain_text(heading_html: str) -> str:
+    """Strip tags from a heading element."""
+    inner = re.sub(r"^<h[1-6]\b[^>]*>", "", heading_html, flags=re.IGNORECASE)
+    inner = re.sub(r"</h[1-6]>\s*$", "", inner, flags=re.IGNORECASE)
+    return re.sub(r"<[^>]+>", "", inner)
+
+
+def _heading_matches(text: str, names: set[str]) -> bool:
+    """True when heading text equals a name, or its first word does."""
+    folded = " ".join(text.split()).casefold()
+    if not folded:
+        return False
+    if folded in names:
+        return True
+    first = folded.split(" ", 1)[0].strip(".:-")
+    return first in names
+
+
+def _collapse_matching_headings(html: str, view_spec: dict | None) -> str:
+    """Wrap configured headings and their following siblings in ``<details>``.
+
+    CIP-0014: opt-in viewer collapse. Unmatched headings stay in the open
+    flow. The original heading tag is omitted from the body so the summary
+    is the only title (same as review ``type: Section``).
+    """
+    options = _viewer_collapse_options(view_spec)
+    if not options or not html:
+        return html
+
+    matches = list(_HEADING_RE.finditer(html))
+    if not matches:
+        return html
+
+    names = options["headings"]
+    open_attr = " open" if options["open"] else ""
+    out: list[str] = [html[: matches[0].start()]]
+    counts: dict[str, int] = {}
+    for i, match in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(html)
+        heading_html = match.group(1)
+        body = html[match.end() : end]
+        text = _heading_plain_text(heading_html)
+        if not _heading_matches(text, names):
+            out.append(heading_html)
+            out.append(body)
+            continue
+        label = " ".join(text.split()) or "Section"
+        slug = re.sub(r"[^a-z0-9]+", "-", label.casefold()).strip("-") or "heading"
+        counts[slug] = counts.get(slug, 0) + 1
+        key = _escape(f"{slug}-{counts[slug]}")
+        out.append(
+            f'<details class="viewer-heading-collapse" '
+            f'data-section-key="{key}"{open_attr}>\n'
+            f"<summary>{_escape(label)}</summary>\n"
+            f"{body}"
+            f"</details>"
+        )
+    return "".join(out)
 
 
 def _render_plotly_viewer(

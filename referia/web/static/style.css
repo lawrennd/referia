@@ -717,6 +717,23 @@ span.entry-title {
     border-bottom: 1px solid var(--colour-border);
 }
 
+/* CIP-0014: collapsed headings inside a viewer markdown blob */
+.viewer-heading-collapse {
+    margin: 0.35rem 0 0.75rem;
+    border-left: 3px solid var(--colour-border);
+    padding: 0.15rem 0 0.15rem 0.7rem;
+}
+
+.viewer-heading-collapse > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--colour-muted, #555);
+}
+
+.viewer-heading-collapse[open] > summary {
+    margin-bottom: 0.35rem;
+}
+
 .pdf-frame {
     width: 100%;
     min-height: 70vh;

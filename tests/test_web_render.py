@@ -722,6 +722,72 @@ class TestRenderViewer:
         assert "viewer-plotly-0" in html
         assert "No figure data" in html or "plotly-spec" in html
 
+    def test_collapse_wraps_matching_headings_only(self):
+        md = (
+            "## Exchange 1\n\n"
+            "### User\n\n"
+            "why entropy?\n\n"
+            "### LLM\n\n"
+            "Because von Neumann said so.\n\n"
+            "### User\n\n"
+            "and then?\n"
+        )
+        html = render_viewer(
+            {"type": "Markdown", "collapse": {"headings": ["LLM"]}},
+            md,
+        )
+        assert html.count('<details class="viewer-heading-collapse"') == 1
+        assert "<summary>LLM</summary>" in html
+        assert "von Neumann" in html
+        assert "why entropy?" in html
+        # User prompts stay in the open flow, not inside the details body.
+        details_start = html.index('<details class="viewer-heading-collapse"')
+        details_end = html.index("</details>", details_start)
+        wrapped = html[details_start:details_end]
+        assert "von Neumann" in wrapped
+        assert "why entropy?" not in wrapped
+        assert "and then?" not in wrapped
+        assert "Exchange 1" in html
+        assert 'open' not in wrapped.split(">")[0]
+
+    def test_collapse_absent_leaves_headings(self):
+        html = render_viewer({"type": "Markdown"}, "### LLM\n\nsecret")
+        assert "viewer-heading-collapse" not in html
+        assert "secret" in html
+
+    def test_collapse_default_open(self):
+        html = render_viewer(
+            {
+                "type": "Markdown",
+                "collapse": {"headings": ["LLM"], "default": "open"},
+            },
+            "### LLM\n\nbody",
+        )
+        assert 'class="viewer-heading-collapse"' in html
+        assert " open" in html.split("viewer-heading-collapse")[1].split(">")[0]
+
+    def test_collapse_first_word_and_case(self):
+        html = render_viewer(
+            {"type": "Markdown", "collapse": {"headings": ["llm"]}},
+            "### LLM reply\n\nhidden\n",
+        )
+        assert "<summary>LLM reply</summary>" in html
+        assert "hidden" in html
+        assert 'data-section-key="llm-reply-1"' in html
+
+    def test_collapse_html_viewer(self):
+        html = render_viewer(
+            {"type": "HTML", "collapse": {"headings": ["LLM"]}},
+            "<h3>LLM</h3><p>reply</p><h3>User</h3><p>ask</p>",
+        )
+        assert html.count("viewer-heading-collapse") == 1
+        assert "reply" in html
+        wrapped = html[
+            html.index("viewer-heading-collapse") : html.index("</details>")
+        ]
+        assert "reply" in wrapped
+        assert "ask" not in wrapped
+
     def test_plotly_applies_highlight_opacity(self):
         fig = {
             "data": [

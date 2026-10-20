@@ -45,6 +45,7 @@ Each CIP can have one of the following statuses:
 - [CIP-0010](./cip0010.md): Config-driven root as ordinary `_referia.yml` (Pattern A tall store + wide/`flattenKeys` view) + `complete` + tristate filters; retire leaf `current` later (In Progress; backlog created; lynguine 0010 Phase 3 open)
 - [CIP-0011](./cip0011.md): Interactive viewer components with shared-field bindings to review (In Progress; REQ-000F; backlog created)
 - [CIP-0012](./cip0012.md): Separate soft MPPCA model, figures, and naming (Proposed)
+- [CIP-0014](./cip0014.md): Opt-in collapse of viewer markdown headings (Implemented)
 
 ## Creating a Good CIP
 
