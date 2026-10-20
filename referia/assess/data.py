@@ -901,9 +901,9 @@ class CustomDataFrame(data.CustomDataFrame):
 
     def drop_column(self, column_name):
         if column_name not in self.columns:
-            raise KeyError(f"No column \"{column}\" in data object.")           
+            raise KeyError(f"No column \"{column_name}\" in data object.")
         elif not self.ismutable(column_name):
-            raise KeyError(f"Attempting to drop column \"{column}\" in which is read only.")
+            raise KeyError(f"Attempting to drop column \"{column_name}\" which is read only.")
         for typ, data in self._d.items():
             if not self.isglobal(column_name):
                 if column_name in data.columns:
