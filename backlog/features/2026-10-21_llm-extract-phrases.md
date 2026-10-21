@@ -26,9 +26,10 @@ tags:
 
 Register `llm_extract_phrases` so a chunk row’s `text` becomes short concern /
 benefit / (formats) condition phrases. Prompt, sentinel, model, and kinds come
-from constants. Write the raw payload to a named cache column on the chunk row
-and phrase dicts that explode into `phrases.yml`. Do not write
-`extracted_*.json` or StageRunner jsonl as the analysis store.
+from constants. Write the raw payload to a named **cache** column
+(`extraction_payload` only; gzip YAML). Phrase dicts explode into
+`phrases.yml.gz` and are **not** persisted as a second cache list. Do not
+write `extracted_*.json` or StageRunner jsonl as the analysis store.
 
 Does not replace `llm_extract` (free-text comments).
 
