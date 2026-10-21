@@ -39,6 +39,22 @@ class TestReferiaImplicitMappingBehavior:
         assert cdf._column_name_map['job_title'] == 'jobTitle'
         # The old identity mapping should be gone
         assert 'job_title' not in cdf._name_column_map or cdf._name_column_map.get('job_title') != 'job_title'
+
+    def test_mapping_exposes_column_name_after_identity_override(self):
+        """Document Liquid can still use the CSV column after givenName: given."""
+        cdf = referia.assess.data.CustomDataFrame(
+            {"given": ["Ulas"], "email": ["ulas@cam.ac.uk"]}
+        )
+        cdf._augment_column_names(cdf)
+        cdf.update_name_column_map("givenName", "given")
+        cdf.update_name_column_map("Email", "email")
+        cdf.set_index(cdf.index[0])
+
+        form = cdf.mapping()
+        assert form.get("givenName") == "Ulas"
+        assert form.get("given") == "Ulas"
+        assert form.get("Email") == "ulas@cam.ac.uk"
+        assert form.get("email") == "ulas@cam.ac.uk"
     
     def test_default_camelcase_mapping_override(self):
         """Test that referia allows overriding default camelCase mappings for invalid column names."""

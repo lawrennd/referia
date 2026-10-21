@@ -267,6 +267,23 @@ class CustomDataFrame(data.CustomDataFrame):
         self._name_column_map[name] = column
         self._column_name_map[column] = name
 
+    def mapping(self, mapping=None, series=None):
+        """Return Liquid kwargs, keeping original column names after aliases.
+
+        ``givenName: given`` overwrites the identity entry in
+        ``_name_column_map``, so a document template ``{{ given }}`` would
+        otherwise render empty.  Expose both the mapping key and the
+        column name.  Widget field lookup still uses the strict map.
+        """
+        form = super().mapping(mapping=mapping, series=series)
+        aliases = {}
+        for name, column in self._name_column_map.items():
+            if name in form and column not in form:
+                aliases[column] = form[name]
+        if aliases:
+            form.update(aliases)
+        return form
+
     @classmethod
     def from_flow(cls, interface):
         """
