@@ -56,6 +56,8 @@ under the root directory.  Reviewers are lazily loaded and cached by
 
 ``GET /{config_path:path}``
     Full page for the named config (last in root_router to act as catch-all).
+    ``?index=<value>`` selects that record so listing titles can deep-link
+    into a mark sheet.
 
 ``GET /{config_path:path}/record``
     Panel fragment.
@@ -407,7 +409,11 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
 
 
 def _inline_list_href(reviewer, data: dict, prefix: str = "") -> str | None:
-    """Best-effort link into a discovered child review config."""
+    """Best-effort link into a discovered child review config.
+
+    ``config_url`` / ``url`` on the row win, including query strings such as
+    ``?index=<crsid>`` so a summary listing can open that student's mark sheet.
+    """
     for key in ("config_url", "configUrl", "url"):
         raw = data.get(key)
         if raw:
@@ -759,6 +765,7 @@ async def index(
     after: str | None = None,
     before: str | None = None,
     current: str | None = None,
+    index: str | None = None,
 ):
     """Render the full review page for the current record.
 
@@ -767,6 +774,9 @@ async def index(
     the CIP-000C directory listing.  Listing query params ``after``, ``before``
     and ``current`` apply only to that fallback; current-only is on by default
     (pass ``current=0`` to show all).
+
+    ``?index=`` selects a record when a review page is served (not the
+    directory listing).
     """
     if getattr(request.app.state, "root", None) is not None:
         from fastapi import HTTPException as _HTTPException
@@ -785,6 +795,7 @@ async def index(
                 )
             raise
 
+        _apply_index(reviewer, index)
         ctx = _panel_response_context(reviewer, "")
         return _templates(request).TemplateResponse(
             request,
@@ -804,6 +815,7 @@ async def index(
         )
 
     reviewer = _reviewer(request)
+    _apply_index(reviewer, index)
     ctx = _panel_response_context(reviewer)
     return _templates(request).TemplateResponse(
         request,
@@ -2338,13 +2350,18 @@ async def root_index(
     after: str | None = None,
     before: str | None = None,
     current: str | None = None,
+    index: str | None = None,
 ):
     """Render the full review page for a root-mode config path.
 
     Redirects to a trailing-slash URL when none is present so that relative
     hrefs in viewer HTML (e.g. ``../pdfpages``) resolve correctly in the
     browser.  Without the slash the browser treats the last path segment as a
-    file, stripping it before resolving ``..``-relative links.
+    file, stripping it before resolving ``..``-relative links.  Query strings
+    (including ``?index=``) are preserved on that redirect.
+
+    ``?index=<value>`` selects that record before render so a summary listing
+    can deep-link to a student's mark sheet.
 
     When the path maps to a directory without a ``_referia.yml``, a listing of
     sub-configs is shown instead.  The ``after``, ``before`` and ``current``
@@ -2355,8 +2372,12 @@ async def root_index(
 
     # Ensure trailing slash so relative URLs in viewer HTML work correctly.
     if config_path and not config_path.endswith("/"):
+        dest = request.url.path + "/"
+        query = request.url.query
+        if query:
+            dest = f"{dest}?{query}"
         return RedirectResponse(
-            url=request.url.path + "/",
+            url=dest,
             status_code=301,
         )
 
@@ -2379,6 +2400,7 @@ async def root_index(
                 )
         raise
 
+    _apply_index(reviewer, index)
     prefix = _config_path_prefix(config_path)
     ctx = _panel_response_context(reviewer, prefix)
 
