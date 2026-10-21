@@ -4,14 +4,14 @@ title: "CIP-0017: Replace build_records.py with a lynguine Access → Assess bak
 status: "Proposed"
 priority: "Medium"
 created: "2026-10-19"
-last_updated: "2026-10-19"
+last_updated: "2026-10-21"
 category: "features"
-related_cips: ["0012"]
+related_cips: ["0015"]
 owner: "lawrennd"
 dependencies: []
 tags:
 - backlog
-- cip0012
+- cip0015
 - lynguine
 - access
 - subject_grain_uq
@@ -71,9 +71,11 @@ notebook 03 Layer B.
 
 ## Related
 
-- CIP: 0012
+- CIP: 0015 (was 0012; Assess bake is extract / embed / seed fit)
+- Pack: lynguine CIP-0014
 - PR: #35
 - Example: `examples/subject_grain_uq/`
+- Draft: OneDrive `applications/2026-10-21_dialogue-analysis/`
 
 ## Progress Updates
 
@@ -82,3 +84,11 @@ notebook 03 Layer B.
 Task created from PR #35 discussion: `scores.yml` already gitignored and
 recreated by bake; `records.yml` is also generated but still committed.
 Retargeted to CIP-0012 (packaging / Access → Assess separation).
+
+### 2026-10-21
+
+Retargeted: extract / embed / `subject_grain_seed_fit` → CIP-0015;
+pack (tall table → corpus row of arrays) → lynguine CIP-0014 Access IO
+(not `pack_corpus_row` compute). CIP-0012 keeps plane-parameter storage vs
+figure rebuild. Still Proposed — do not implement until those CIPs are
+Accepted.

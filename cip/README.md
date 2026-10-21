@@ -44,8 +44,10 @@ Each CIP can have one of the following statuses:
 - [CIP-000F](./cip000F.md): Detect, version, and migrate referia config dialects (Closed)
 - [CIP-0010](./cip0010.md): Config-driven root as ordinary `_referia.yml` (Pattern A tall store + wide/`flattenKeys` view) + `complete` + tristate filters; retire leaf `current` later (In Progress; backlog created; lynguine 0010 Phase 3 open)
 - [CIP-0011](./cip0011.md): Interactive viewer components with shared-field bindings to review (In Progress; REQ-000F; backlog created)
-- [CIP-0012](./cip0012.md): Separate soft MPPCA model, figures, and naming (Proposed)
+- [CIP-0012](./cip0012.md): Separate soft MPPCA model, figures, and naming (Proposed; extract/embed/seed → CIP-0015; pack → lynguine CIP-0014)
 - [CIP-0014](./cip0014.md): Opt-in collapse of viewer markdown headings (Implemented)
+- [CIP-0015](./cip0015.md): Stateless phrase-extract, embed, and grain-seed compute (Proposed; REQ-0010)
+- [CIP-0016](./cip0016.md): Document-level EMD Address compute and Plotly visualisations (Proposed; REQ-0010; row-local after pack)
 
 ## Creating a Good CIP
 
