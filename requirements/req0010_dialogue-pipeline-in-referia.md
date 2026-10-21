@@ -61,7 +61,9 @@ The studies embed **extracted phrases**, not raw paragraphs. That grain is part 
 
 Deferred later analyses (chunk quality flags, merge, framing lenses, lens σ²-by-EMD, cross-cutting coverage, temporal / AI-distinctiveness, Part B grounds, validation sheets, multiverse) are out of scope for this requirement’s first outcome.
 
-Implements via referia CIP-0015 (extract, embed, seed fit) and CIP-0016 (row-local distance after pack; Plotly stays referia), and lynguine CIP-0014 (explode, pack, catalog; extending CIP-0013). Complements REQ-000F (interactive viewer) and REQ-0004 (declarative LLM compute).
+Implements via referia CIP-0015 (extract, embed, seed fit) and CIP-0016 (row-local distance after pack; Plotly stays referia), and lynguine CIP-0014 (explode, pack, catalog; extending CIP-0013). Complements REQ-000F (interactive viewer), REQ-0004 (declarative LLM compute), REQ-0011 (cache/store visibility), and lynguine REQ-000E (compressed YAML stores).
+
+Cache is a named store, not a checkpoint directory. Persist cache only when recompute is expensive (LLM payloads). Do not keep exploded copies of the same lists in cache. Embedding lists and packed arrays belong in **output**, typically gzip YAML (lynguine CIP-0015). The reviewer must be able to see cache path, mtime, and columns (REQ-0011) so skip-if-present compute is not silent.
 
 ## References
 
@@ -71,7 +73,7 @@ Implements via referia CIP-0015 (extract, embed, seed fit) and CIP-0016 (row-loc
 - Tenet: [explicit-implicit-separation](../tenets/referia/explicit-implicit-separation.md)
 - Tenet: [progressive-augmentation](../tenets/referia/progressive-augmentation.md)
 - Tenet: [template-driven-composition](../tenets/referia/template-driven-composition.md)
-- CIP: [CIP-0015](../cip/cip0015.md), [CIP-0016](../cip/cip0016.md)
+- CIP: [CIP-0015](../cip/cip0015.md), [CIP-0016](../cip/cip0016.md), [CIP-0017](../cip/cip0017.md)
 - Related: [REQ-0004](./req0004_declarative-llm-compute.md), [REQ-000F](./req000F_interactive-viewer-components.md), [CIP-0011](../cip/cip0011.md), [CIP-0012](../cip/cip0012.md)
 - Lynguine: [CIP-0013](https://github.com/lawrennd/lynguine/blob/main/cip/cip0013.md), [CIP-0014](https://github.com/lawrennd/lynguine/blob/main/cip/cip0014.md)
 
