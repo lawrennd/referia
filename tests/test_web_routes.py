@@ -510,6 +510,56 @@ class TestDocumentActionsOob:
         assert "Create Email" in html
         assert 'hx-swap-oob="true"' in html
 
+    def test_inline_list_oob_uses_summary_documents_only(self):
+        from referia.web.routes import _document_actions_oob
+
+        reviewer = MagicMock()
+        reviewer.get_display_layout.return_value = "inline_list"
+        reviewer.list_document_entries.side_effect = lambda section="documents": (
+            [
+                {
+                    "n": 0,
+                    "type": "email",
+                    "label": "Email feedback",
+                    "summary": False,
+                }
+            ]
+            if section == "documents"
+            else [
+                {
+                    "n": 0,
+                    "type": "xlsx",
+                    "label": "Export scores",
+                    "summary": True,
+                }
+            ]
+        )
+        html = _document_actions_oob(reviewer, {"markedFlag": "yes"})
+        assert "Export scores" in html
+        assert "Email feedback" not in html
+        assert 'hx-swap-oob="true"' in html
+
+    def test_layout_lookup_failure_keeps_record_documents(self):
+        from referia.web.routes import _document_actions_oob
+
+        reviewer = MagicMock()
+        reviewer.get_display_layout.side_effect = RuntimeError("no layout")
+        reviewer.list_document_entries.side_effect = lambda section="documents": (
+            [
+                {
+                    "n": 0,
+                    "type": "email",
+                    "label": "Email feedback",
+                    "summary": False,
+                }
+            ]
+            if section == "documents"
+            else []
+        )
+        html = _document_actions_oob(reviewer, {})
+        assert "Email feedback" in html
+        assert 'hx-swap-oob="true"' in html
+
 
 # ---------------------------------------------------------------------------
 # POST /save
@@ -969,6 +1019,24 @@ class TestPostGenerateDocument:
         reviewer.set_index.assert_called_with("bob")
         reviewer.generate_document.assert_called_once_with(0, summary=False)
 
+    def test_generate_ignores_empty_form_index(self, document_client):
+        client, reviewer = document_client
+        reviewer.set_index.reset_mock()
+        response = client.post("/generate-document/0", data={"index": ""})
+        assert response.status_code == 200
+        reviewer.set_index.assert_not_called()
+        reviewer.generate_document.assert_called_once_with(0, summary=False)
+
+    def test_generate_reports_invalid_form_index(self, document_client):
+        client, reviewer = document_client
+        reviewer.set_index.side_effect = KeyError("ghost")
+        reviewer.generate_document.reset_mock()
+        response = client.post("/generate-document/0", data={"index": "ghost"})
+        assert response.status_code == 200
+        assert "Generate document failed" in response.text
+        assert "See server log" in response.text
+        reviewer.generate_document.assert_not_called()
+
 
 class TestPostEditPdf:
     def test_returns_download_link(self, document_client):
@@ -1186,6 +1254,41 @@ class TestCurrentDataIncludesVisibleIfFields:
         nav = response.text.split('id="nav-document-actions"', 1)[-1]
         nav = nav.split("</div>", 1)[0]
         assert "Email feedback" not in nav
+
+    def test_inline_list_field_update_oob_omits_record_documents(
+        self, mock_reviewer, client
+    ):
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.list_document_entries.side_effect = (
+            lambda section="documents": (
+                [
+                    {
+                        "n": 0,
+                        "type": "email",
+                        "label": "Email feedback",
+                        "summary": False,
+                        "section": "documents",
+                    }
+                ]
+                if section == "documents"
+                else [
+                    {
+                        "n": 0,
+                        "type": "xlsx",
+                        "label": "Export scores",
+                        "summary": True,
+                        "section": "summary_documents",
+                    }
+                ]
+            )
+        )
+        mock_reviewer.get_row_data.return_value = {"noted": True}
+        mock_reviewer.affected_widgets.return_value = set()
+        response = client.post("/field/noted", data={"noted": "true"})
+        assert response.status_code == 200
+        assert "Export scores" in response.text
+        assert "Email feedback" not in response.text
+        assert 'hx-swap-oob="true"' in response.text
 
 
 # ---------------------------------------------------------------------------

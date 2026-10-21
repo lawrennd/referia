@@ -430,6 +430,47 @@ class TestRootRouterRoutes:
         assert resp.status_code == 200
         assert "Saved" in resp.text
 
+    def test_root_generate_honours_form_index(self, tmp_path):
+        reviewer = _mock_reviewer()
+        reviewer.generate_document.return_value = {
+            "type": "email",
+            "href": "/document/out.eml",
+            "status": "created",
+        }
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                reviewer.set_index.reset_mock()
+                resp = client.post(
+                    "/reviews/intro/generate-document/0",
+                    data={"index": "bob"},
+                )
+        assert resp.status_code == 200
+        reviewer.set_index.assert_called_with("bob")
+        reviewer.generate_document.assert_called_once_with(0, summary=False)
+        assert "Download" in resp.text
+
+    def test_root_generate_reports_invalid_form_index(self, tmp_path):
+        reviewer = _mock_reviewer()
+        reviewer.generate_document.return_value = {
+            "type": "email",
+            "href": "/document/out.eml",
+            "status": "created",
+        }
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                reviewer.set_index.side_effect = KeyError("ghost")
+                reviewer.generate_document.reset_mock()
+                resp = client.post(
+                    "/reviews/intro/generate-document/0",
+                    data={"index": "ghost"},
+                )
+        assert resp.status_code == 200
+        assert "Generate document failed" in resp.text
+        assert "See server log" in resp.text
+        reviewer.generate_document.assert_not_called()
+
     def test_root_missing_config_404(self, tmp_path):
         app = create_app(root=str(tmp_path))
         with TestClient(app, raise_server_exceptions=False) as client:
