@@ -429,6 +429,56 @@ class LLMManager:
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
             raise LLMProviderError(f"Failed to call {provider} model {model}: {e}")
+
+    def embed(
+        self,
+        texts: List[str] | str,
+        model: str = "text-embedding-3-large",
+        use_cache: bool = True,
+    ) -> List[List[float]]:
+        """Embed one or more texts via the OpenAI embeddings API.
+
+        Diskcache here is API-cost only (CIP-0015); analysis vectors still
+        belong in named cache/output columns.
+        """
+        if isinstance(texts, str):
+            texts = [texts]
+        if not texts:
+            return []
+
+        cache_key = None
+        if use_cache and self.cache:
+            import hashlib
+            import json
+
+            key_str = json.dumps({"model": model, "texts": texts}, sort_keys=True)
+            cache_key = "embed:" + hashlib.sha256(key_str.encode()).hexdigest()
+            cached = self.cache.get(cache_key)
+            if cached is not None:
+                logger.info(f"Embedding cache hit for model {model}")
+                return cached
+
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise LLMConfigError(
+                "openai is not installed. Install with: poetry install --with llm"
+            ) from exc
+
+        api_keys = self.config.get("api_keys", {})
+        api_key = api_keys.get("openai") or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise LLMConfigError(
+                "OpenAI API key not found. Set OPENAI_API_KEY or config api_keys."
+            )
+        client = OpenAI(api_key=api_key)
+        response = client.embeddings.create(model=model, input=texts)
+        ordered = sorted(response.data, key=lambda item: item.index)
+        vectors = [list(item.embedding) for item in ordered]
+        if use_cache and self.cache and cache_key:
+            ttl = self.config.get("cache_ttl", 3600)
+            self.cache.set(cache_key, vectors, expire=ttl)
+        return vectors
     
     def _call_with_retry(
         self, 
