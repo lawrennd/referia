@@ -962,6 +962,13 @@ class TestPostGenerateDocument:
         if doc_panel_start != -1:
             assert 'hx-post="/generate-document/0"' not in response.text[doc_panel_start:]
 
+    def test_generate_honours_form_index(self, document_client):
+        client, reviewer = document_client
+        response = client.post("/generate-document/0", data={"index": "bob"})
+        assert response.status_code == 200
+        reviewer.set_index.assert_called_with("bob")
+        reviewer.generate_document.assert_called_once_with(0, summary=False)
+
 
 class TestPostEditPdf:
     def test_returns_download_link(self, document_client):
@@ -1127,6 +1134,58 @@ class TestCurrentDataIncludesVisibleIfFields:
         assert response.status_code == 200
         assert "Create Email" in response.text
         assert 'hx-post="/generate-document/0"' in response.text
+
+    def test_inline_list_puts_record_documents_on_rows(
+        self, mock_reviewer, client
+    ):
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ["alice", "bob"]
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "noted", "args": {"description": "Noted"}},
+            {"type": "SaveButton"},
+        ]
+        current = {"idx": "alice"}
+        rows = {
+            "alice": {"title": "Alice", "markedFlag": "no"},
+            "bob": {"title": "Bob", "markedFlag": "yes"},
+        }
+
+        def _set_index(idx):
+            current["idx"] = idx
+
+        mock_reviewer.get_index.side_effect = lambda: current["idx"]
+        mock_reviewer.set_index.side_effect = _set_index
+        mock_reviewer.get_row_data.side_effect = lambda: dict(rows[current["idx"]])
+        mock_reviewer.list_document_entries.side_effect = (
+            lambda section="documents": (
+                [
+                    {
+                        "n": 0,
+                        "type": "email",
+                        "label": "Email feedback",
+                        "summary": False,
+                        "section": "documents",
+                        "visible_if": {"field": "markedFlag", "equals": True},
+                    }
+                ]
+                if section == "documents"
+                else []
+            )
+        )
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "Email feedback" in response.text
+        assert response.text.count("Email feedback") == 1
+        assert 'id="row-document-actions-bob"' in response.text
+        assert "hx-vals=" in response.text
+        # Per-record emails live on rows, not in the nav chrome.
+        nav = response.text.split('id="nav-document-actions"', 1)[-1]
+        nav = nav.split("</div>", 1)[0]
+        assert "Email feedback" not in nav
 
 
 # ---------------------------------------------------------------------------

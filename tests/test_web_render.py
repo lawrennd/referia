@@ -562,6 +562,19 @@ class TestVisibleIf:
         spec = _w("Text", "detail", visible_if={"field": "Status", "equals": "yes"})
         assert 'display:none' in render_widget(spec, "", data={"Status": "no"})
 
+    def test_dict_equals_yaml_bool_matches_yes_string(self):
+        """Unquoted YAML yes/no become bools; Liquid fields emit 'yes'/'no'."""
+        spec = _w("Text", "detail", visible_if={"field": "markedFlag", "equals": True})
+        assert "display:none" not in render_widget(
+            spec, "", data={"markedFlag": "yes"}
+        )
+        assert "display:none" in render_widget(
+            spec, "", data={"markedFlag": "no"}
+        )
+        assert "display:none" in render_widget(
+            spec, "", data={"markedFlag": "maybe"}
+        )
+
     def test_dict_not_hides_when_field_truthy(self):
         """visible_if {field, not: true} hides when the field is set (Propose vs pending)."""
         spec = _w(
@@ -1149,6 +1162,20 @@ class TestRenderDocumentActions:
         assert "Create Email" in shown
         assert 'hx-post="/generate-document/0"' in shown
 
+    def test_record_index_adds_hx_vals_and_unique_id(self):
+        from referia.web.render import render_document_actions
+
+        html = render_document_actions(
+            documents=[{"n": 0, "type": "email", "label": "Email feedback"}],
+            record_index="ua257",
+            container_id="row-document-actions-ua257",
+        )
+        assert 'id="row-document-actions-ua257"' in html
+        assert "row-document-actions" in html
+        assert "hx-vals=" in html
+        assert "ua257" in html
+        assert 'hx-post="/generate-document/0"' in html
+
     def test_visible_if_string_false_hides_button(self):
         from referia.web.render import render_document_actions
 
@@ -1382,3 +1409,38 @@ class TestInlineListing:
         )
         assert "entry-detail" not in html
         assert "Should not appear" not in html
+
+    def test_per_row_document_buttons_respect_visible_if(self):
+        from referia.web.render import render_inline_listing
+
+        docs = [
+            {
+                "n": 0,
+                "type": "email",
+                "label": "Email feedback",
+                "summary": False,
+                "visible_if": {"field": "markedFlag", "equals": True},
+            }
+        ]
+        html = render_inline_listing(
+            [
+                {
+                    "index": "ua257",
+                    "data": {"title": "Alice", "markedFlag": "yes"},
+                },
+                {
+                    "index": "jrw208",
+                    "data": {"title": "Jake", "markedFlag": "no"},
+                },
+            ],
+            [{"type": "Checkbox", "field": "noted", "args": {"description": "Noted"}}],
+            documents=docs,
+        )
+        assert "Email feedback" in html
+        assert html.count("Email feedback") == 1
+        assert 'id="row-document-actions-ua257"' in html
+        assert "hx-vals=" in html
+        assert "ua257" in html
+        assert 'hx-post="/generate-document/0"' in html
+        # Unmarked row keeps a container but skips the gated button.
+        assert "Email feedback" not in html.split("jrw208")[-1]

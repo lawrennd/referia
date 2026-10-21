@@ -561,6 +561,15 @@ span.entry-title {
     font-size: 0.85rem;
 }
 
+.entry-extras .row-document-actions {
+    margin: 0;
+}
+
+.entry-extras .document-button {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.65rem;
+}
+
 .no-rows {
     color: #666;
     font-style: italic;

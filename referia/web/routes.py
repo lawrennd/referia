@@ -351,6 +351,7 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
             review_specs,
             group_by=group_by,
             detail_field=reviewer.get_display_detail_field(),
+            documents=_list_document_entries(reviewer, "documents"),
         )
         index_selector = ""
         document_html = ""
@@ -360,6 +361,12 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
             row_data = _current_data(reviewer)
         except Exception:
             row_data = {}
+        document_actions_html = render_document_actions(
+            summary_documents=_list_document_entries(
+                reviewer, "summary_documents"
+            ),
+            data=row_data,
+        )
     else:
         row_data = _current_data(reviewer)
         form_html = render_form(reviewer.get_review_specs(), row_data)
@@ -374,12 +381,13 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
             (indices.index(current_index) + 1) if current_index in indices else "?"
         )
         total = len(indices)
-
-    document_actions_html = render_document_actions(
-        documents=_list_document_entries(reviewer, "documents"),
-        summary_documents=_list_document_entries(reviewer, "summary_documents"),
-        data=row_data,
-    )
+        document_actions_html = render_document_actions(
+            documents=_list_document_entries(reviewer, "documents"),
+            summary_documents=_list_document_entries(
+                reviewer, "summary_documents"
+            ),
+            data=row_data,
+        )
 
     return {
         "layout": layout,
@@ -706,12 +714,30 @@ def _field_update_oob_parts(
 
 
 def _document_actions_oob(reviewer, data: dict) -> str:
-    """Render nav document buttons with OOB swap for visibility updates."""
-    html = render_document_actions(
-        documents=_list_document_entries(reviewer, "documents"),
-        summary_documents=_list_document_entries(reviewer, "summary_documents"),
-        data=data,
-    )
+    """Render nav document buttons with OOB swap for visibility updates.
+
+    On ``inline_list`` layouts, per-record documents live on listing rows, so
+    the nav OOB target only carries ``summary_documents``.
+    """
+    try:
+        layout = reviewer.get_display_layout()
+    except Exception:
+        layout = "side_by_side"
+    if layout == "inline_list":
+        html = render_document_actions(
+            summary_documents=_list_document_entries(
+                reviewer, "summary_documents"
+            ),
+            data=data,
+        )
+    else:
+        html = render_document_actions(
+            documents=_list_document_entries(reviewer, "documents"),
+            summary_documents=_list_document_entries(
+                reviewer, "summary_documents"
+            ),
+            data=data,
+        )
     if not html:
         # Keep a stable target so buttons can reappear after becoming visible.
         html = '<div class="nav-document-actions" id="nav-document-actions"></div>'
@@ -1029,10 +1055,27 @@ async def reload_data(request: Request):
     return templates.TemplateResponse(request, "review_panel.html", ctx)
 
 
+def _apply_form_index(reviewer, form, *, action: str = "Generate document"):
+    """Set the reviewer index from an HTMX ``index`` form field, if present."""
+    record_index = form.get("index")
+    if record_index is None or str(record_index) == "":
+        return None
+    try:
+        reviewer.set_index(record_index)
+    except Exception as exc:
+        _log_route_error(action, exc, index=record_index)
+        return HTMLResponse(_user_error_html(action))
+    return None
+
+
 @router.post("/generate-document/{n}", response_class=HTMLResponse)
 async def generate_document(request: Request, n: int):
-    """Generate ``documents[n]`` for the current record."""
+    """Generate ``documents[n]`` for the current (or form-selected) record."""
     reviewer = _reviewer(request)
+    form = await request.form()
+    err = _apply_form_index(reviewer, form)
+    if err is not None:
+        return err
     return _run_generate_document(reviewer, n, summary=False)
 
 
@@ -2151,6 +2194,10 @@ async def root_reload(request: Request, config_path: str):
 @root_router.post("/{config_path:path}/generate-document/{n}", response_class=HTMLResponse)
 async def root_generate_document(request: Request, config_path: str, n: int):
     reviewer = _root_reviewer(request, config_path)
+    form = await request.form()
+    err = _apply_form_index(reviewer, form)
+    if err is not None:
+        return err
     return _run_generate_document(
         reviewer, n, summary=False, path_prefix=_config_path_prefix(config_path)
     )
