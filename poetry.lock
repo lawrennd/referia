@@ -2975,7 +2975,7 @@ documents = ["pymupdf (>=1.24.0)", "python-docx (>=1.1.0)"]
 type = "git"
 url = "https://github.com/lawrennd/lynguine.git"
 reference = "main"
-resolved_reference = "1b8caf8563684a5c3c4cd1325d43a82fcefc530b"
+resolved_reference = "431b6de43daa3c6e6293d27f8308d47bd551841b"
 
 [[package]]
 name = "markdown"
@@ -4205,6 +4205,77 @@ files = [
 [package.extras]
 dev = ["pre-commit", "tox"]
 testing = ["coverage", "pytest", "pytest-benchmark"]
+
+[[package]]
+name = "pot"
+version = "0.9.7.post1"
+description = "Python Optimal Transport Library"
+optional = true
+python-versions = ">=3.7"
+groups = ["main"]
+markers = "extra == \"distance\""
+files = [
+    {file = "pot-0.9.7.post1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:ae9edc5f1934b0d1b81fc0f6b14c312f7436df9500ebb0cd22c6e52ec41df624"},
+    {file = "pot-0.9.7.post1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:896cb65ffce1e7102e139cff11f0245ef93d5c6c483880b06d0ae6e30b133603"},
+    {file = "pot-0.9.7.post1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:1618fe23a2ee5a27bae2c6c048a05828934fa324774720f0ea81939abd8fc2ad"},
+    {file = "pot-0.9.7.post1-cp310-cp310-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:a361e4df248382a101c3e23a46478c6c7943a4b4008fd8922ac465ae4c029dc9"},
+    {file = "pot-0.9.7.post1-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d171797de8eb8be0342a5ba027dd71f8f44b0f2be013458bd1b501f0abc8c12f"},
+    {file = "pot-0.9.7.post1-cp310-cp310-win_amd64.whl", hash = "sha256:9b9bcb25bdecdf404020bcd68def7af5e4ad42f041161e063b365c36aecceaad"},
+    {file = "pot-0.9.7.post1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:c8ed55ed24a1219095cb13a32849132118286dc2abe2a1135ee1a350bf2efc08"},
+    {file = "pot-0.9.7.post1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:f8b239d9b96779fa5961224dded3bd50b2bddd5198210e348874b071a3a9cbf9"},
+    {file = "pot-0.9.7.post1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:d8d4f50d63b9a0794942abfb36f443680f230cf7ed39422b75574f345ab84eff"},
+    {file = "pot-0.9.7.post1-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:25987352b09ed5a78a88e477911d4fcabad0511e78285024697633cdaac8bad5"},
+    {file = "pot-0.9.7.post1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:daff93ca510e36513d2cd8757b1928643673e4aa427c661785b536b9f8484859"},
+    {file = "pot-0.9.7.post1-cp311-cp311-win_amd64.whl", hash = "sha256:a0e78ff0dfa41e3995202745476ca1f52997ed5849e3c16b83ceb99c68a54f2e"},
+    {file = "pot-0.9.7.post1-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:b549328f8f0049afd414e3aa544f20faca25edc8b386b278f06ea08dbcd96bf0"},
+    {file = "pot-0.9.7.post1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:00631ab4254a9c95ea36077219b3a1c74e05f3138ab20bdd862a4aa3e0e66dad"},
+    {file = "pot-0.9.7.post1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:a99d8fc539c9beb2da9e4026b6d832db98691d6b2c3359ddfadfdbc07d581bbb"},
+    {file = "pot-0.9.7.post1-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:052eafe9702d513053252928f546372bbd2ad832b6ed88f0c3e9ecf531d4b220"},
+    {file = "pot-0.9.7.post1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4331e7f22a85b628f5cd4078e5ddeee51471a3aaeebfe5dbbe8a0392140a275d"},
+    {file = "pot-0.9.7.post1-cp312-cp312-win_amd64.whl", hash = "sha256:a2e8b622f03ba61768dbe2e312a6acf6ec88f05515f8d0472aee7b7b99130165"},
+    {file = "pot-0.9.7.post1-cp313-cp313-macosx_10_13_universal2.whl", hash = "sha256:c7be23e9446487d43bbf46e32c84ecfa66e1bc41b864b7461a1aaf68dad4275f"},
+    {file = "pot-0.9.7.post1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:83c0da92bc4ef3ee3c7efc7fdbe8258adf43cc06314667514b18f01209204a11"},
+    {file = "pot-0.9.7.post1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:130e58407efd718858ba5e4b16a1a2f15dff57438072f57438cb42dcdc818596"},
+    {file = "pot-0.9.7.post1-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:a9612a6e9cdbecd1a29260440a370104e71a453bcde95a9f1d4f4040692969c0"},
+    {file = "pot-0.9.7.post1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3aa55921c7cec5e2691c23046e3561613b3f62f914360b718670332848c7e969"},
+    {file = "pot-0.9.7.post1-cp313-cp313-win_amd64.whl", hash = "sha256:fd931e1613470a02dcc2e7d5d12e7655b074f96acd0864bcd4f0fcb686653b7f"},
+    {file = "pot-0.9.7.post1-cp314-cp314-macosx_10_13_universal2.whl", hash = "sha256:f46a15affb9233ac97a6d9354b0359e3a1d7488c52a0cd5cfef16973d3a6b439"},
+    {file = "pot-0.9.7.post1-cp314-cp314-macosx_10_13_x86_64.whl", hash = "sha256:e490cf59febfddf3147807dd0c6033df4cf50d9d56707305d0569a2e0b7076af"},
+    {file = "pot-0.9.7.post1-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:fc15552029f2769a57064c1eb23c60322308c5dba4b75e507b82e11de856c31f"},
+    {file = "pot-0.9.7.post1-cp314-cp314-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b5b1a2c7abb3f394a4e07f0bf8b44b4f3d10412f13c614a1444a298d2de82660"},
+    {file = "pot-0.9.7.post1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:19767a51178fdc112f6fe2ac974e817d762854e2a52808accb7f516bc1eb139d"},
+    {file = "pot-0.9.7.post1-cp314-cp314-win_amd64.whl", hash = "sha256:576322307d4e66d53ec2fcf1fb1ad6f192f5fc3949e0821f28ab50fe301dd527"},
+    {file = "pot-0.9.7.post1-cp314-cp314t-macosx_10_13_universal2.whl", hash = "sha256:e98ef4f39f9d22af12759a98b354c35a4a009242971b886b933a9bf29012845f"},
+    {file = "pot-0.9.7.post1-cp314-cp314t-macosx_10_13_x86_64.whl", hash = "sha256:65413e7b67b5d22cb30f2f1f7ef4bdfa5d1a2b4bd3fdc1d456de75e857e6578e"},
+    {file = "pot-0.9.7.post1-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:db1fb86d05e771cec2a32582ace133ab91109c31715e08fa950592aa762dab8a"},
+    {file = "pot-0.9.7.post1-cp314-cp314t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:3bbe5c434b90551040c39ac11f052ab7fa15ecdd0f8df65933ffe364dcbd320e"},
+    {file = "pot-0.9.7.post1-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:1c131c77b8d00650a2055bf8ff506d3bf0b58a3c4da61bd5e938923d0f31ccf9"},
+    {file = "pot-0.9.7.post1-cp314-cp314t-win_amd64.whl", hash = "sha256:45f0e17026331ad4d415e7925164958d07f7cc37600b08f93485d5fb35f04bd0"},
+    {file = "pot-0.9.7.post1-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:147195d598727736c04bd0d0599cde42d3c917ed4336891559e7362fdc1f8f85"},
+    {file = "pot-0.9.7.post1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:0a435f00b7b1a4d5f8f133c4412f1ff08134dea52c9e514fbdcfff600d0c5247"},
+    {file = "pot-0.9.7.post1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:c42ea37501efe98cfdb15846daa66ea7bf9e7c566c19a3e510d5bef278a51aef"},
+    {file = "pot-0.9.7.post1-cp39-cp39-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f654ba45c6c96cb2d7e69ed8f6d13f8b018574e61c212b780d1e678ab48e074b"},
+    {file = "pot-0.9.7.post1-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f45e5a3a33d77058257f2a6e189d185c5904c3e8fd153ee5dc78764a2961b910"},
+    {file = "pot-0.9.7.post1-cp39-cp39-win_amd64.whl", hash = "sha256:3be8edc1fce4ee74971e042acd28ea533675ad2266425fd3b94c4b31f968561d"},
+    {file = "pot-0.9.7.post1.tar.gz", hash = "sha256:2edd70845047ac2d378487b980a2bffb5ff58e9b92b7133896ff5753f6300cec"},
+]
+
+[package.dependencies]
+numpy = ">=1.16"
+scipy = ">=1.6"
+
+[package.extras]
+all = ["autograd", "cvxopt", "geomloss", "jax", "jaxlib", "matplotlib", "pymanopt", "scikit-learn", "tensorflow", "torch", "torch_geometric"]
+backend-jax = ["jax", "jaxlib"]
+backend-tf = ["tensorflow"]
+backend-torch = ["torch"]
+cvxopt = ["cvxopt"]
+doc = ["memory_profiler", "myst-parser", "networkx", "numpydoc", "pillow", "sphinx", "sphinx-gallery", "sphinx-rtd-theme", "sphinxcontrib-jquery"]
+dr = ["autograd", "pymanopt", "scikit-learn"]
+geomloss = ["geomloss"]
+gnn = ["torch", "torch_geometric"]
+plot = ["matplotlib"]
+tests = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "preshed"
@@ -7536,7 +7607,10 @@ files = [
 [package.extras]
 cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and python_version < \"3.14\"", "cffi (>=2.0.0b0) ; platform_python_implementation != \"PyPy\" and python_version >= \"3.14\""]
 
+[extras]
+distance = ["POT"]
+
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "452de0fa8290777d2fd48647184a76662ece3711fa927f67187b62c8f233aed0"
+content-hash = "62f86f160abad4821636ee2ac03b9814d59e88815911c0ca270eb4c603b641a0"
