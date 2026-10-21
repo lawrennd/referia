@@ -278,6 +278,17 @@ class TestInlineListGroup:
         assert _inline_list_group_by({}) == "directory"
         assert _inline_list_group_by({"_group": "nope"}) == "directory"
 
+    def test_inline_list_href_keeps_index_query(self):
+        from referia.web.routes import _inline_list_href
+
+        reviewer = MagicMock()
+        href = _inline_list_href(
+            reviewer,
+            {"config_url": "/_marking/worksheet1/?index=alice"},
+            prefix="/_marking/worksheet1-summary",
+        )
+        assert href == "/_marking/worksheet1/?index=alice"
+
 
 # ---------------------------------------------------------------------------
 # Root-server path resolution helpers
@@ -399,6 +410,27 @@ class TestRootRouterRoutes:
                 resp = client.get("/reviews/intro")
         assert resp.status_code == 301
         assert resp.headers["location"].endswith("/reviews/intro/")
+
+    def test_root_index_redirect_preserves_index_query(self, tmp_path):
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro")
+        with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+            with TestClient(app, follow_redirects=False) as client:
+                resp = client.get("/reviews/intro?index=bob")
+        assert resp.status_code == 301
+        location = resp.headers["location"]
+        assert location.endswith("/reviews/intro/?index=bob") or (
+            "/reviews/intro/" in location and "index=bob" in location
+        )
+
+    def test_root_index_honours_query_index(self, tmp_path):
+        reviewer = _mock_reviewer()
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                reviewer.set_index.reset_mock()
+                resp = client.get("/reviews/intro/?index=bob")
+        assert resp.status_code == 200
+        reviewer.set_index.assert_called_with("bob")
 
     def test_root_index_trailing_slash_returns_full_page(self, tmp_path):
         app, _ = _make_root_app_with_config(tmp_path, "reviews/intro")
