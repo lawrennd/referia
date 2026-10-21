@@ -1,7 +1,7 @@
 ---
 id: "2026-10-21_distance-plotly-views"
 title: "Plotly MDS scatter, topic×document heatmap, and EMD heatmap for distance Address"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-10-21"
 last_updated: "2026-10-21"
@@ -36,13 +36,13 @@ referia when CIP-0016 maths later moves to vongole.
 
 ## Acceptance Criteria
 
-- [ ] `doc_mds_plotly_spec` — MDS coords, colour by group, `customdata.doc`
-- [ ] Click binding `on.click_point` sets `selected_doc` on output
-- [ ] `topic_document_heatmap_spec` — heatmap of P with grain `topic_labels`
-- [ ] `emd_heatmap_spec` — pairwise EMD
-- [ ] `axis_correlate_bars_spec` — Pearson of MDS axes vs topic shares
-- [ ] Spec tests: keys and customdata aligned with `doc_ids_kept`
-- [ ] Draft `04_distance` viewer binds these fields
+- [x] `doc_mds_plotly_spec` — MDS coords, colour by group, `customdata.doc`
+- [x] Click binding `on.click_point` sets `selected_doc` on output
+- [x] `topic_document_heatmap_spec` — heatmap of P with grain `topic_labels`
+- [x] `emd_heatmap_spec` — pairwise EMD
+- [x] `axis_correlate_bars_spec` — Pearson of MDS axes vs topic shares
+- [x] Spec tests: keys and customdata aligned with `doc_ids_kept`
+- [x] Draft `04_distance` viewer binds these fields
 
 ## Implementation Notes
 
@@ -62,3 +62,5 @@ Proposed only: do not implement until CIP-0016 is Accepted.
 ### 2026-10-21
 
 Task created as Proposed from CIP-0016.
+
+Builders live in `referia.util.plotly_figures`; `04_distance` binds the specs.

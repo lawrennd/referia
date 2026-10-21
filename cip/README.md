@@ -46,9 +46,9 @@ Each CIP can have one of the following statuses:
 - [CIP-0011](./cip0011.md): Interactive viewer components with shared-field bindings to review (In Progress; REQ-000F; backlog created)
 - [CIP-0012](./cip0012.md): Separate soft MPPCA model, figures, and naming (Proposed; extract/embed/seed → CIP-0015; pack → lynguine CIP-0014)
 - [CIP-0014](./cip0014.md): Opt-in collapse of viewer markdown headings (Implemented)
-- [CIP-0015](./cip0015.md): Stateless phrase-extract, embed, and grain-seed compute (Proposed; REQ-0010)
-- [CIP-0016](./cip0016.md): Document-level EMD Address compute and Plotly visualisations (Proposed; REQ-0010; row-local after pack)
-- [CIP-0017](./cip0017.md): Named-store status in the review interface (Proposed; REQ-0011)
+- [CIP-0015](./cip0015.md): Stateless phrase-extract, embed, and grain-seed compute (Implemented; REQ-0010)
+- [CIP-0016](./cip0016.md): Document-level EMD Address compute and Plotly visualisations (Implemented; REQ-0010; row-local after pack)
+- [CIP-0017](./cip0017.md): Named-store status in the review interface (Implemented; REQ-0011)
 
 ## Creating a Good CIP
 

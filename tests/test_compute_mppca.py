@@ -14,6 +14,7 @@ from referia.assess.compute.mppca import (
     responsibilities_to_labels,
     subject_grain_confirm_split,
     subject_grain_propose_split,
+    subject_grain_seed_fit,
     subject_grain_undo_split,
     topic_keys,
 )
@@ -1102,3 +1103,181 @@ def test_name_one_topic_surfaces_llm_failure(monkeypatch):
             n_exemplars=1,
             temperature=0.0,
         )
+
+
+def test_subject_grain_seed_fit_k1_rows_sum_to_one():
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(12, 6))
+    X /= np.clip(np.linalg.norm(X, axis=1, keepdims=True), 1e-12, None)
+    phrases = [f"phrase {i} about scoring" for i in range(12)]
+    packed = subject_grain_seed_fit(
+        embeddings=X.tolist(),
+        phrases=phrases,
+        sigma2=0.05,
+        sigma2_mode="fixed",
+        k=1,
+        em_accept=20,
+        force_refit=True,
+        seed=0,
+    )
+    R, uq_by_topic, uq_spec, keys, labels, parent, tree, focus = packed
+    R = np.asarray(R, float)
+    assert R.shape == (12, 1)
+    assert np.allclose(R.sum(axis=1), 1.0)
+    assert keys == ["T0"]
+    assert focus == "T0"
+    assert "T0" in labels
+    assert parent["T0"] is None
+    assert isinstance(tree, str) and tree
+    assert isinstance(uq_by_topic, dict)
+    assert isinstance(uq_spec, dict)
+
+
+def test_subject_grain_seed_fit_skips_when_already_fit():
+    existing_R = [[1.0], [1.0]]
+    packed = subject_grain_seed_fit(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        phrases=["a", "b"],
+        responsibilities=existing_R,
+        topic_keys=["T0"],
+        topic_labels={"T0": "Privacy"},
+        force_refit=False,
+    )
+    R, _, _, keys, labels, _, _, focus = packed
+    assert R == existing_R
+    assert keys == ["T0"]
+    assert labels["T0"] == "Privacy"
+    assert focus == "T0"
+
+
+def test_subject_grain_seed_fit_registered():
+    from referia.assess.compute import Compute
+
+    names = {e["name"] for e in Compute({"input": {}})._compute_functions_list()}
+    assert "subject_grain_seed_fit" in names
+
+
+def test_subject_grain_seed_fit_skip_generates_keys():
+    packed = subject_grain_seed_fit(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        responsibilities=[[1.0], [1.0]],
+        topic_labels="not-a-dict",
+        topic_parent={"T0": None},
+        uq_by_topic={"T0": {"ok": True}},
+        force_refit=False,
+        focus_topic="T0",
+    )
+    _, uq_map, spec, keys, labels, parent, tree, focus = packed
+    assert keys == ["T0"]
+    assert labels["T0"] == "Topic 0"
+    assert parent["T0"] is None
+    assert spec == {"ok": True}
+    assert focus == "T0"
+    assert isinstance(tree, str)
+
+
+def test_subject_grain_seed_fit_rejects_1d():
+    with pytest.raises(ValueError, match="2-D"):
+        subject_grain_seed_fit(embeddings=[1.0, 0.0], force_refit=True)
+
+
+def test_subject_grain_seed_fit_profile_and_defaults(monkeypatch):
+    monkeypatch.setattr(
+        "referia.assess.compute.mppca.profile_topic_sigma2",
+        lambda *a, **k: {
+            "fit": {
+                "responsibilities": [[1.0], [1.0]],
+                "sigma2": 0.2,
+                "component_fits": None,
+            },
+            "sigma2": 0.2,
+        },
+    )
+    monkeypatch.setattr(
+        "referia.assess.compute.mppca.rebuild_uq_by_topic",
+        lambda *a, **k: {"T0": {"sigma2": 0.2}},
+    )
+    packed = subject_grain_seed_fit(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        phrases="one string for both",
+        sigma2_mode="profile",
+        force_refit=True,
+        k=None,
+    )
+    R, uq_map, spec, keys, *_ = packed
+    assert np.asarray(R).shape == (2, 1)
+    assert keys == ["T0"]
+    assert spec["sigma2"] == 0.2
+
+    monkeypatch.setattr(
+        "referia.assess.compute.mppca.mppca_fit",
+        lambda *a, **k: {
+            "responsibilities": [[1.0], [1.0]],
+            "sigma2": 0.01,
+            "component_fits": None,
+        },
+    )
+    packed = subject_grain_seed_fit(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        phrases=["only-one"],
+        sigma2=None,
+        sigma2_mode="fixed",
+        force_refit=True,
+        k=1,
+    )
+    assert packed[3] == ["T0"]
+
+
+def test_subject_grain_seed_fit_invalid_responsibilities_refits(monkeypatch):
+    monkeypatch.setattr(
+        "referia.assess.compute.mppca.mppca_fit",
+        lambda *a, **k: {
+            "responsibilities": [[1.0], [1.0]],
+            "sigma2": 0.05,
+            "component_fits": None,
+        },
+    )
+    monkeypatch.setattr(
+        "referia.assess.compute.mppca.rebuild_uq_by_topic",
+        lambda *a, **k: {"T0": {"ok": True}},
+    )
+    packed = subject_grain_seed_fit(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        responsibilities=None,
+        force_refit=False,
+        k=1,
+        sigma2=0.05,
+    )
+    assert packed[3] == ["T0"]
+    packed = subject_grain_seed_fit(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        responsibilities="not-an-array",
+        force_refit=False,
+        k=1,
+        sigma2=0.05,
+    )
+    assert packed[3] == ["T0"]
+    assert packed[2] == {"ok": True}
+
+
+def test_subject_grain_seed_fit_skip_uses_existing_tree():
+    packed = subject_grain_seed_fit(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        responsibilities=[[1.0], [1.0]],
+        topic_keys_existing=["T0"],
+        topic_tree="kept-tree",
+        uq_by_topic={"T0": {"from": "map"}},
+        uq_spec="not-a-dict",
+        force_refit=False,
+    )
+    assert packed[6] == "kept-tree"
+    assert packed[2] == {"from": "map"}
+    empty_map = subject_grain_seed_fit(
+        embeddings=[[1.0, 0.0]],
+        responsibilities=[[1.0]],
+        force_refit=False,
+        uq_by_topic=None,
+        uq_spec=None,
+        topic_tree="t",
+    )
+    assert empty_map[2] == {}

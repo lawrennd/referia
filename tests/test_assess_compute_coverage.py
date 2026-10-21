@@ -91,6 +91,7 @@ class TestRegistrySmoke:
         with patch("lynguine.assess.compute.Compute.run", return_value=None) as parent_run:
             compute.run(data, iface)
         assert compute.interface is iface
+        assert compute._data is data
         parent_run.assert_called_once()
 
     def test_run_onchange_delegates(self):

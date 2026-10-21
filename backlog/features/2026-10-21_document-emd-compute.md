@@ -1,7 +1,7 @@
 ---
 id: "2026-10-21_document-emd-compute"
 title: "Port document histograms, EMD, MDS, and permutation tests as referia compute"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-10-21"
 last_updated: "2026-10-21"
@@ -40,17 +40,17 @@ and group field name come from `_referia.yml`.
 
 ## Acceptance Criteria
 
-- [ ] `document_soft_topic_distributions` writes `P`, `doc_ids_kept`, `doc_mass`
-- [ ] `topic_means_from_responsibilities` writes L2-normalised `topic_means`
-- [ ] `cosine_ground_cost` writes `ground_cost`
-- [ ] `emd_distance_matrix` writes `emd_matrix`; ImportError names the
+- [x] `document_soft_topic_distributions` writes `P`, `doc_ids_kept`, `doc_mass`
+- [x] `topic_means_from_responsibilities` writes L2-normalised `topic_means`
+- [x] `cosine_ground_cost` writes `ground_cost`
+- [x] `emd_distance_matrix` writes `emd_matrix`; ImportError names the
       Assess extra (`referia[distance]` today) if POT is missing
-- [ ] `classical_mds` writes `mds_coords` (and explained / negative-ratio)
-- [ ] `permanova` / `permdisp` / `axis_correlates` write JSON-serialisable
+- [x] `classical_mds` writes `mds_coords` (and explained / negative-ratio)
+- [x] `permanova` / `permdisp` / `axis_correlates` write JSON-serialisable
       results plus Markdown field `distance_tests_md`
-- [ ] Optional façade `run_document_distance_analysis` writes the same columns
-- [ ] Core install does not require `pot`
-- [ ] Unit tests without POT for histograms, cost, MDS, permutation count
+- [x] Optional façade `run_document_distance_analysis` writes the same columns
+- [x] Core install does not require `pot`
+- [x] Unit tests without POT for histograms, cost, MDS, permutation count
 
 ## Implementation Notes
 
@@ -72,3 +72,5 @@ Proposed only: do not implement until CIP-0016 is Accepted.
 ### 2026-10-21
 
 Task created as Proposed from CIP-0016.
+
+Implemented `referia/assess/compute/distance.py` and `referia[distance]` extra.

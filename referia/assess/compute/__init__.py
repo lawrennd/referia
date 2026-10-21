@@ -25,8 +25,23 @@ from ...util.files import file_from_re, files_from_re
 from .mppca import (
     subject_grain_confirm_split,
     subject_grain_propose_split,
+    subject_grain_seed_fit,
     subject_grain_undo_split,
 )
+from .phrases import llm_extract_phrases
+from .embed import llm_embed
+from .distance import (
+    axis_correlates,
+    classical_mds,
+    cosine_ground_cost,
+    document_soft_topic_distributions,
+    emd_distance_matrix,
+    permanova,
+    permdisp,
+    run_document_distance_analysis,
+    topic_means_from_responsibilities,
+)
+from .stores import named_store_status
 from .topic_naming import (
     subject_grain_apply_focus_label,
     subject_grain_keys_needing_names,
@@ -118,7 +133,25 @@ class Compute(lynguine.assess.compute.Compute):
         :type interface: lynguine.config.interface.Interface
         :return: None
         """
+        self._interface = interface
+        self._data = None
         super().__init__(interface=interface)
+
+    def _named_store_status(self, llm_cache_dir=None, **kwargs):
+        """CIP-0017: file facts for named stores plus a labelled LLM cache line."""
+        cache_dir = llm_cache_dir
+        if cache_dir is None and LLM_AVAILABLE and get_llm_manager is not None:
+            try:
+                mgr = get_llm_manager()
+                cache = getattr(mgr, "cache", None)
+                cache_dir = getattr(cache, "directory", None)
+            except Exception:
+                cache_dir = None
+        return named_store_status(
+            getattr(self, "_interface", None),
+            data=getattr(self, "_data", None),
+            llm_cache_dir=cache_dir,
+        )
         
     def prep_all(self, interface, data):
         """
@@ -212,6 +245,7 @@ class Compute(lynguine.assess.compute.Compute):
         """
         # Store interface for LLM functions to access
         self.interface = interface
+        self._data = data
         super().run(data, interface)
     
     def run_onchange(self, data, index, column):
@@ -632,6 +666,125 @@ class Compute(lynguine.assess.compute.Compute):
                     "configured LLM when label_model is not stub. Also "
                     "invoked automatically from Propose when label_model "
                     "is not stub."
+                ),
+            },
+            {
+                "name": "llm_extract_phrases",
+                "function": llm_extract_phrases,
+                "default_args": {
+                    "model": "gpt-4o-mini",
+                    "min_words": 3,
+                    "max_words": 10,
+                    "max_items": 8,
+                    "temperature": 0.2,
+                },
+                "docstr": (
+                    "Extract short concern/benefit/condition phrases from "
+                    "chunk text. Writes extraction_payload and a list of "
+                    "phrase dicts for explode (CIP-0015)."
+                ),
+            },
+            {
+                "name": "llm_embed",
+                "function": llm_embed,
+                "default_args": {
+                    "model": "text-embedding-3-large",
+                },
+                "docstr": (
+                    "Embed phrase text; write an L2-normalised float list "
+                    "(CIP-0015). Client injected; optional pca_dim on batches."
+                ),
+            },
+            {
+                "name": "subject_grain_seed_fit",
+                "function": subject_grain_seed_fit,
+                "default_args": {
+                    "k": 1,
+                    "force_refit": False,
+                    "sigma2_mode": "fixed",
+                    "em_accept": 40,
+                    "seed": 0,
+                },
+                "docstr": (
+                    "k=1 MPPCA seed on a packed corpus row. Writes "
+                    "responsibilities and local U_q planes. Skip if "
+                    "responsibilities already present unless force_refit."
+                ),
+            },
+            {
+                "name": "document_soft_topic_distributions",
+                "function": document_soft_topic_distributions,
+                "default_args": {"min_mass": 50.0},
+                "docstr": (
+                    "Sum phrase responsibilities per document into a "
+                    "row-stochastic histogram P (CIP-0016)."
+                ),
+            },
+            {
+                "name": "topic_means_from_responsibilities",
+                "function": topic_means_from_responsibilities,
+                "default_args": {},
+                "docstr": "L2-normalised responsibility-weighted topic means.",
+            },
+            {
+                "name": "cosine_ground_cost",
+                "function": cosine_ground_cost,
+                "default_args": {},
+                "docstr": "Cosine distance between topic means (zero diagonal).",
+            },
+            {
+                "name": "emd_distance_matrix",
+                "function": emd_distance_matrix,
+                "default_args": {},
+                "docstr": (
+                    "Pairwise EMD. Requires pip install 'referia[distance]'."
+                ),
+            },
+            {
+                "name": "classical_mds",
+                "function": classical_mds,
+                "default_args": {"n_components": 2},
+                "docstr": "Classical MDS on an EMD matrix.",
+            },
+            {
+                "name": "permanova",
+                "function": permanova,
+                "default_args": {"n_perm": 999, "seed": 0},
+                "docstr": "One-way PERMANOVA on a distance matrix.",
+            },
+            {
+                "name": "permdisp",
+                "function": permdisp,
+                "default_args": {"n_perm": 999, "seed": 0},
+                "docstr": "PERMDISP on a distance matrix.",
+            },
+            {
+                "name": "axis_correlates",
+                "function": axis_correlates,
+                "default_args": {"top": 5},
+                "docstr": "Pearson r of MDS axes with document topic shares.",
+            },
+            {
+                "name": "run_document_distance_analysis",
+                "function": run_document_distance_analysis,
+                "default_args": {
+                    "min_mass": 50.0,
+                    "n_perm": 999,
+                    "seed": 0,
+                    "n_components": 2,
+                },
+                "docstr": (
+                    "Façade: P, topic means, EMD, MDS, tests, and Plotly "
+                    "specs on a packed corpus row (CIP-0016)."
+                ),
+            },
+            {
+                "name": "named_store_status",
+                "function": self._named_store_status,
+                "default_args": {},
+                "docstr": (
+                    "File facts + catalogue for named Access stores "
+                    "(CIP-0017). LLM diskcache is labelled cost-only."
                 ),
             },
             {
