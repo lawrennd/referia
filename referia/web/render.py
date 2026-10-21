@@ -181,7 +181,7 @@ def _visibility_style(spec: dict, data: dict) -> str:
             if expected is None:
                 hidden = not _checkbox_checked(current)
             else:
-                hidden = str(current) != str(expected)
+                hidden = not _scalar_equals(current, expected)
     else:
         hidden = False
     return ' style="display:none"' if hidden else ""
@@ -404,6 +404,28 @@ def _checkbox_checked(value: Any) -> bool:
     if text in ("false", "0", "no", ""):
         return False
     return bool(value)
+
+
+def _scalar_equals(current: Any, expected: Any) -> bool:
+    """Compare ``visible_if`` ``equals`` / ``value`` against a cell.
+
+    YAML 1.1 unquoted ``yes`` / ``no`` / ``true`` / ``false`` become Python
+    bools, while Liquid compute fields typically emit the strings ``"yes"`` /
+    ``"no"``. Match those so ``equals: yes`` is not silently always-hidden.
+    Arbitrary non-empty strings must not match boolean ``True``.
+    """
+    if current is expected:
+        return True
+    if str(current) == str(expected):
+        return True
+    if isinstance(expected, bool):
+        text = "" if current is None else str(current).strip().lower()
+        if expected:
+            return text in ("true", "1", "yes")
+        return current is None or text in ("false", "0", "no", "")
+    if isinstance(current, bool):
+        return _scalar_equals(expected, current)
+    return False
 
 
 def _render_checkbox(spec: dict, value: Any) -> str:
@@ -1233,6 +1255,7 @@ def render_inline_listing(
     *,
     group_by: str = "directory",
     detail_field: str | None = None,
+    documents: list[dict] | None = None,
 ) -> str:
     """Directory-listing style list for ``display.layout: inline_list``.
 
@@ -1248,6 +1271,10 @@ def render_inline_listing(
     *detail_field* (from ``display.detail_field``) optionally names a tall
     column whose non-empty value is shown in a closed ``<details>`` under
     the row (e.g. ``abstract``).
+
+    *documents* are per-row Create-document actions (e.g. Email feedback).
+    Each button posts ``index`` so generation uses that listing row, not
+    the session's current record.
     """
     complete_spec, extra_specs = _split_review_specs_for_listing(review_specs)
     detail_key = str(detail_field).strip() if detail_field else ""
@@ -1365,8 +1392,8 @@ def render_inline_listing(
                         f"{_escape(detail_text)}"
                         f"</div></details>"
                     )
+            extras_html = []
             if extra_specs:
-                extras_html = []
                 for spec in extra_specs:
                     field = spec.get("field", "")
                     value = data.get(field) if field else None
@@ -1375,9 +1402,21 @@ def render_inline_listing(
                             spec, value, data, record_index=idx
                         )
                     )
+            row_docs = ""
+            if documents:
+                row_docs = render_document_actions(
+                    documents=documents,
+                    data=data,
+                    record_index=idx,
+                    container_id=(
+                        f"row-document-actions-{_widget_dom_id(str(idx))}"
+                    ),
+                )
+            if extras_html or row_docs:
                 sections.append(
                     '<div class="entry-extras">'
                     + "\n".join(extras_html)
+                    + row_docs
                     + "</div>"
                 )
             sections.append("</div>")  # entry-main
@@ -1392,6 +1431,9 @@ def render_document_actions(
     documents: list[dict] | None = None,
     summary_documents: list[dict] | None = None,
     data: dict | None = None,
+    *,
+    record_index: Any = None,
+    container_id: str = "nav-document-actions",
 ) -> str:
     """HTML for Create / Create Summary document buttons (nav chrome).
 
@@ -1402,30 +1444,51 @@ def render_document_actions(
     widgets).  The container always has ``id="nav-document-actions"`` so field
     updates can OOB-swap it when visibility changes.
 
+    When *record_index* is set (inline_list rows), each button includes
+    ``hx-vals`` so generation targets that row.  *container_id* must then be
+    unique per row so a nav OOB swap does not replace the listing buttons.
+
     Returns an empty string when there are no document actions at all.
     """
     action_entries = list(documents or []) + list(summary_documents or [])
     if not action_entries:
         return ""
-    parts = ['<div class="nav-document-actions" id="nav-document-actions">']
-    for entry in action_entries:
-        if data is not None and entry.get("visible_if") is not None:
-            if _visibility_style(entry, data):
-                continue
-        n = int(entry.get("n") or 0)
-        label = _escape(str(entry.get("label") or "Create document"))
-        if entry.get("summary"):
-            action = f"/generate-summary-document/{n}"
-        else:
-            action = f"/generate-document/{n}"
-        parts.append(
-            f'<button type="button" class="widget-button document-button" '
-            f'hx-post="{_escape(action)}" hx-target="#status-bar" '
-            f'hx-swap="innerHTML focus-scroll:false" hx-disabled-elt="this">'
-            f"{label}</button>"
-        )
-    parts.append("</div>")
-    return "\n".join(parts)
+    token = (
+        _record_index_ctx.set(record_index) if record_index is not None else None
+    )
+    try:
+        extra_class = " row-document-actions" if record_index is not None else ""
+        extra_hx = ""
+        ctx_index = _record_index_ctx.get()
+        if ctx_index is not None:
+            vals = _escape(json.dumps({"index": str(ctx_index)}))
+            extra_hx = f' hx-vals="{vals}"'
+        parts = [
+            f'<div class="nav-document-actions{extra_class}" '
+            f'id="{_escape(container_id)}">'
+        ]
+        for entry in action_entries:
+            if data is not None and entry.get("visible_if") is not None:
+                if _visibility_style(entry, data):
+                    continue
+            n = int(entry.get("n") or 0)
+            label = _escape(str(entry.get("label") or "Create document"))
+            if entry.get("summary"):
+                action = f"/generate-summary-document/{n}"
+            else:
+                action = f"/generate-document/{n}"
+            parts.append(
+                f'<button type="button" class="widget-button document-button" '
+                f'hx-post="{_escape(action)}" hx-target="#status-bar" '
+                f'hx-swap="innerHTML focus-scroll:false" '
+                f'hx-disabled-elt="this"{extra_hx}>'
+                f"{label}</button>"
+            )
+        parts.append("</div>")
+        return "\n".join(parts)
+    finally:
+        if token is not None:
+            _record_index_ctx.reset(token)
 
 
 def render_document_panel(
