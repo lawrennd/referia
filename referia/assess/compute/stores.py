@@ -19,10 +19,11 @@ def size_human(n: int | float | None) -> str:
     value = float(n or 0)
     if value < 1024:
         return f"{int(value)} B"
-    for unit in ("KiB", "MiB", "GiB", "TiB"):
+    for unit in ("KiB", "MiB", "GiB"):
         value /= 1024.0
-        if value < 1024 or unit == "TiB":
+        if value < 1024:
             return f"{value:.1f} {unit}"
+    value /= 1024.0
     return f"{value:.1f} TiB"
 
 

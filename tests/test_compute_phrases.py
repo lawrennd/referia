@@ -1,11 +1,14 @@
 """CIP-0015: llm_extract_phrases parse rules and stub client."""
 
+import pytest
+
 from referia.assess.compute import Compute
 from referia.assess.compute.phrases import (
     llm_extract_phrases,
     parse_extraction_payload,
     word_count_phrase,
 )
+from referia.exceptions import ComputeError
 
 
 PROMPT = (
@@ -117,3 +120,120 @@ def test_llm_extract_phrases_registered():
     names = {e["name"] for e in Compute({"input": {}})._compute_functions_list()}
     assert "llm_extract_phrases" in names
     assert "llm_extract" in names
+
+
+def test_parse_json_object_list_and_invalid_json():
+    from_items = parse_extraction_payload(
+        {"items": ["this is a valid phrase", 12, {"text": "another valid phrase here"}]},
+        kind="benefit",
+        sentinel="NO_BENEFIT",
+        min_words=3,
+        max_words=10,
+        chunk_id="c1",
+        doc_id="d",
+    )
+    assert [row["phrase"] for row in from_items] == [
+        "this is a valid phrase",
+        "another valid phrase here",
+    ]
+    fallback = parse_extraction_payload(
+        "{not-json\nstill a valid three word line",
+        kind="concern",
+        sentinel="NO_CONCERN",
+        min_words=3,
+        max_words=10,
+    )
+    assert fallback[0]["phrase"] == "still a valid three word line"
+    assert parse_extraction_payload(3.14, kind="concern", sentinel="NO") == []
+    empty_quote = parse_extraction_payload(
+        "|| only a quote",
+        kind="concern",
+        sentinel="NO",
+        min_words=1,
+        max_words=10,
+    )
+    assert empty_quote == []
+    no_chunk = parse_extraction_payload(
+        "this is a valid phrase",
+        kind="concern",
+        sentinel="NO",
+        min_words=3,
+        max_words=10,
+    )
+    assert no_chunk[0]["phrase_id"] == "concern:0"
+    assert parse_extraction_payload(
+        {"other": "ignored"},
+        kind="concern",
+        sentinel="NO",
+        min_words=1,
+        max_words=10,
+    ) == []
+    assert parse_extraction_payload(
+        {"phrases": "not-a-list"},
+        kind="concern",
+        sentinel="NO",
+        min_words=1,
+        max_words=10,
+    ) == []
+    listed = parse_extraction_payload(
+        ["this is a valid phrase"],
+        kind="concern",
+        sentinel="NO",
+        min_words=3,
+        max_words=10,
+    )
+    assert listed[0]["phrase"] == "this is a valid phrase"
+
+
+def test_llm_extract_empty_text_and_kinds_string():
+    assert llm_extract_phrases("  ", prompt_template="p", kinds=["concern"]) == ({}, [])
+    with pytest.raises(ValueError, match="kinds"):
+        llm_extract_phrases("hello there friends", prompt_template="p", kinds=None)
+
+
+def test_llm_extract_sentinels_and_none_reply():
+    class _NoneReply:
+        def call(self, **kwargs):
+            return None
+
+    payload, phrases = llm_extract_phrases(
+        "hello there friends",
+        prompt_template="kind={{kind}} sentinel={{sentinel}} <<TEXT>>",
+        kinds="concern",
+        client=_NoneReply(),
+        sentinels={"concern": "NONE"},
+        min_words=1,
+        max_words=10,
+    )
+    assert payload == {"concern": ""}
+    assert phrases == []
+
+
+def test_llm_extract_client_must_have_call():
+    with pytest.raises(ComputeError, match="call"):
+        llm_extract_phrases(
+            "hello there friends",
+            prompt_template="<<TEXT>>",
+            kinds=["concern"],
+            client=object(),
+        )
+
+
+def test_llm_extract_uses_injected_manager(monkeypatch):
+    class _Mgr:
+        def call(self, **kwargs):
+            return "this is a valid phrase"
+
+    monkeypatch.setattr(
+        "referia.util.llm.get_llm_manager", lambda: _Mgr()
+    )
+    payload, phrases = llm_extract_phrases(
+        "hello there friends",
+        prompt_template="s={{ sentinel }} <<TEXT>>",
+        kinds=["concern"],
+        sentinel="NONE",
+        min_words=3,
+        max_words=10,
+    )
+    assert "concern" in payload
+    assert phrases[0]["phrase"] == "this is a valid phrase"

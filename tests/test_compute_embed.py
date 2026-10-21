@@ -1,9 +1,11 @@
 """CIP-0015: llm_embed with a stub client."""
 
 import numpy as np
+import pytest
 
 from referia.assess.compute import Compute
 from referia.assess.compute.embed import llm_embed, l2_normalize_vector
+from referia.exceptions import ComputeError
 
 
 class _StubEmbed:
@@ -50,3 +52,47 @@ def test_llm_embed_batch_pca():
 def test_llm_embed_registered():
     names = {e["name"] for e in Compute({"input": {}})._compute_functions_list()}
     assert "llm_embed" in names
+
+
+def test_l2_normalize_empty_and_zero():
+    assert l2_normalize_vector([]) == []
+    zeros = l2_normalize_vector([0.0, 0.0])
+    assert zeros == [0.0, 0.0]
+
+
+def test_llm_embed_none_and_sequence():
+    assert llm_embed(None, client=_StubEmbed()) == []
+    vecs = llm_embed(["one", "  ", "two"], client=_StubEmbed())
+    assert len(vecs) == 2
+    assert all(abs(np.linalg.norm(row) - 1.0) < 1e-9 for row in vecs)
+
+
+def test_llm_embed_pca_skipped_when_dim_too_large():
+    vecs = llm_embed(
+        ["a", "b", "c", "d"],
+        pca_dim=8,
+        client=_StubEmbed(),
+    )
+    assert len(vecs) == 4
+    assert len(vecs[0]) == 4
+
+
+def test_llm_embed_flat_vector_and_missing_embed():
+    class _Flat:
+        def embed(self, texts, model="text-embedding-3-large"):
+            return [3.0, 4.0]
+
+    unit = llm_embed("hello", client=_Flat())
+    assert abs(np.linalg.norm(unit) - 1.0) < 1e-9
+    with pytest.raises(ComputeError, match="embed"):
+        llm_embed("hello", client=object())
+
+
+def test_llm_embed_uses_manager(monkeypatch):
+    class _Mgr:
+        def embed(self, texts, model="text-embedding-3-large"):
+            return [[0.0, 4.0]]
+
+    monkeypatch.setattr("referia.util.llm.get_llm_manager", lambda: _Mgr())
+    unit = llm_embed("hello")
+    assert abs(unit[1] - 1.0) < 1e-9
