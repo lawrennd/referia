@@ -1,7 +1,7 @@
 ---
 id: "2026-10-21_llm-embed-phrases"
 title: "Register llm_embed compute writing embedding on the phrase row"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-10-21"
 last_updated: "2026-10-21"
@@ -32,14 +32,14 @@ hash directory as the only copy.
 
 ## Acceptance Criteria
 
-- [ ] Reads `phrase` (or a configured text field); writes `embedding` (list of
+- [x] Reads `phrase` (or a configured text field); writes `embedding` (list of
       floats, L2-normalised)
-- [ ] Optional `pca_dim` from constants reduces the stored vector
-- [ ] Batching inside one call is allowed; no module-level queue as analysis
+- [x] Optional `pca_dim` from constants reduces the stored vector
+- [x] Batching inside one call is allowed; no module-level queue as analysis
       state
-- [ ] LLMManager cost cache is optional and insufficient as the store
-- [ ] Unit tests with a fake client; vectors have unit L2 norm
-- [ ] Draft `02_embed` PopulateButton names `llm_embed`
+- [x] LLMManager cost cache is optional and insufficient as the store
+- [x] Unit tests with a fake client; vectors have unit L2 norm
+- [x] Draft `02_embed` PopulateButton names `llm_embed`
 
 ## Implementation Notes
 
@@ -59,3 +59,5 @@ Proposed only: do not implement until CIP-0015 is Accepted.
 ### 2026-10-21
 
 Task created as Proposed from CIP-0015.
+
+Implemented `llm_embed` plus `LLMManager.embed`; `02_embed` names this function.

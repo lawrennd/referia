@@ -61,6 +61,10 @@ uvicorn = {version = "*", extras = ["standard"]}
 jinja2 = "*"
 python-multipart = "*"
 aiofiles = "*"
+pot = {version = "*", optional = true}
+
+[tool.poetry.extras]
+distance = ["pot"]
 
 # The docs group remains for local development but the dependencies
 # are duplicated in dev-dependencies to ensure they're installed in CI

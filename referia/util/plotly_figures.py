@@ -21,6 +21,10 @@ __all__ = [
     "local_uq_plotly_spec",
     "proposed_split_plotly_spec",
     "relabel_proposed_split_plotly_spec",
+    "doc_mds_plotly_spec",
+    "topic_document_heatmap_spec",
+    "emd_heatmap_spec",
+    "axis_correlate_bars_spec",
 ]
 
 
@@ -582,5 +586,213 @@ def proposed_split_plotly_spec(
                 "y": 1.02,
                 "x": 0,
             },
+        },
+    }
+
+
+_GROUP_PALETTE = ("#2a78d6", "#eb6834", "#3d9b8f", "#8b5cf6", "#c45c26", "#5a6a7a")
+
+
+def _topic_label(k: int, topic_labels: dict | None) -> str:
+    labels = topic_labels or {}
+    key = f"T{k}"
+    return str(labels.get(key, labels.get(k, labels.get(str(k), key))))
+
+
+def doc_mds_plotly_spec(
+    mds_coords,
+    doc_ids: Sequence[Any],
+    *,
+    groups: Sequence[Any] | None = None,
+    topic_labels=None,
+    title: str | None = None,
+) -> dict[str, Any]:
+    """MDS scatter; ``customdata.doc`` for CIP-0011 click → ``selected_doc``."""
+    coords = np.asarray(mds_coords, float)
+    docs = [str(d) for d in list(doc_ids)]
+    if coords.ndim != 2 or coords.shape[0] != len(docs):
+        return {"data": [], "layout": {"title": {"text": title or "Document MDS"}}}
+    if coords.shape[1] < 2:
+        padded = np.zeros((len(docs), 2))
+        padded[:, : coords.shape[1]] = coords
+        coords = padded
+    grp = [
+        str(g) if g is not None else ""
+        for g in (list(groups) if groups is not None else [""] * len(docs))
+    ]
+    if len(grp) != len(docs):
+        grp = [""] * len(docs)
+    uniq: list[str] = []
+    for g in grp:
+        if g not in uniq:
+            uniq.append(g)
+    color_of = {
+        g: _GROUP_PALETTE[i % len(_GROUP_PALETTE)] for i, g in enumerate(uniq)
+    }
+    traces = []
+    for g in uniq:
+        idx = [i for i, val in enumerate(grp) if val == g]
+        customdata = [{"doc": docs[i], "group": grp[i]} for i in idx]
+        traces.append(
+            {
+                "type": "scatter",
+                "mode": "markers",
+                "name": g or "document",
+                "x": [float(coords[i, 0]) for i in idx],
+                "y": [float(coords[i, 1]) for i in idx],
+                "customdata": customdata,
+                "hovertemplate": "%{customdata.doc}<extra></extra>",
+                "marker": {
+                    "size": 10,
+                    "color": color_of[g],
+                    "line": {"width": 1, "color": "#ffffff"},
+                },
+            }
+        )
+    return {
+        "data": traces,
+        "layout": {
+            "title": {
+                "text": title or "Document MDS",
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "xaxis": {"title": "MDS1", "gridcolor": "#e4e3df", "zeroline": False},
+            "yaxis": {"title": "MDS2", "gridcolor": "#e4e3df", "zeroline": False},
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 50, "r": 20, "t": 50, "b": 50},
+            "legend": {"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
+        },
+    }
+
+
+def topic_document_heatmap_spec(
+    P,
+    doc_ids: Sequence[Any],
+    *,
+    topic_labels=None,
+    title: str | None = None,
+) -> dict[str, Any]:
+    """Heatmap of document × topic soft histograms."""
+    arr = np.asarray(P, float)
+    docs = [str(d) for d in list(doc_ids)]
+    k = int(arr.shape[1]) if arr.ndim == 2 else 0
+    x = [_topic_label(i, topic_labels) for i in range(k)]
+    return {
+        "data": [
+            {
+                "type": "heatmap",
+                "z": arr.tolist() if arr.ndim == 2 else [],
+                "x": x,
+                "y": docs,
+                "hovertemplate": "%{y} · %{x}: %{z:.3f}<extra></extra>",
+                "customdata": [[{"doc": d} for _ in x] for d in docs],
+            }
+        ],
+        "layout": {
+            "title": {
+                "text": title or "Document topic shares",
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "xaxis": {"title": "Topic"},
+            "yaxis": {"title": "Document", "autorange": "reversed"},
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 80, "r": 20, "t": 50, "b": 80},
+        },
+    }
+
+
+def emd_heatmap_spec(
+    emd_matrix,
+    doc_ids: Sequence[Any],
+    *,
+    title: str | None = None,
+) -> dict[str, Any]:
+    """Pairwise EMD heatmap."""
+    arr = np.asarray(emd_matrix, float)
+    docs = [str(d) for d in list(doc_ids)]
+    return {
+        "data": [
+            {
+                "type": "heatmap",
+                "z": arr.tolist() if arr.ndim == 2 else [],
+                "x": docs,
+                "y": docs,
+                "hovertemplate": "%{y} → %{x}: %{z:.3f}<extra></extra>",
+                "customdata": [[{"doc": d} for d in docs] for _ in docs],
+            }
+        ],
+        "layout": {
+            "title": {
+                "text": title or "Pairwise EMD",
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "xaxis": {"title": "Document"},
+            "yaxis": {"title": "Document", "autorange": "reversed"},
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 80, "r": 20, "t": 50, "b": 80},
+        },
+    }
+
+
+def axis_correlate_bars_spec(
+    correlates: Sequence[dict[str, Any]] | None,
+    *,
+    title: str | None = None,
+) -> dict[str, Any]:
+    """Bar chart of Pearson r between MDS axes and topic shares."""
+    rows = list(correlates or [])
+    traces = []
+    axes = sorted({int(r.get("axis", 1)) for r in rows}) or [1]
+    for axis in axes:
+        subset = [
+            r
+            for r in rows
+            if int(r.get("axis", 1)) == axis and r.get("end") == "positive"
+        ]
+        subset += [
+            r
+            for r in rows
+            if int(r.get("axis", 1)) == axis and r.get("end") == "negative"
+        ]
+        seen: set[str] = set()
+        uniq = []
+        for row in subset:
+            label = str(row.get("label") or row.get("topic_id"))
+            if label in seen:
+                continue
+            seen.add(label)
+            uniq.append(row)
+        traces.append(
+            {
+                "type": "bar",
+                "name": f"MDS{axis}",
+                "x": [str(r.get("label") or r.get("topic_id")) for r in uniq],
+                "y": [float(r.get("r") or 0.0) for r in uniq],
+            }
+        )
+    return {
+        "data": traces,
+        "layout": {
+            "title": {
+                "text": title or "MDS axis correlates",
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "barmode": "group",
+            "xaxis": {"title": "Topic"},
+            "yaxis": {"title": "Pearson r", "range": [-1, 1]},
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 50, "r": 20, "t": 50, "b": 80},
         },
     }

@@ -1,7 +1,7 @@
 ---
 id: "2026-10-21_permanova-markdown-viewer"
 title: "Review pane Markdown for PERMANOVA / PERMDISP and selected-document topic profile"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-10-21"
 last_updated: "2026-10-21"
@@ -32,11 +32,11 @@ the current `selected_doc`.
 
 ## Acceptance Criteria
 
-- [ ] Review Markdown renders PERMANOVA / PERMDISP / axis-correlate summary
+- [x] Review Markdown renders PERMANOVA / PERMDISP / axis-correlate summary
       from `distance_tests_md` (an output column)
-- [ ] Selected-document profile lists topic shares for `selected_doc`
-- [ ] Group column name is a config/widget field later steps can read
-- [ ] Draft `04_distance/_referia.yml` review section names these fields
+- [x] Selected-document profile lists topic shares for `selected_doc`
+- [x] Group column name is a config/widget field later steps can read
+- [x] Draft `04_distance/_referia.yml` review section names these fields
 
 ## Implementation Notes
 
@@ -56,3 +56,5 @@ Proposed only: do not implement until CIP-0016 is Accepted.
 ### 2026-10-21
 
 Task created as Proposed from CIP-0016.
+
+`04_distance` review pane binds `distance_tests_md`, `selected_doc`, and `group_field`.

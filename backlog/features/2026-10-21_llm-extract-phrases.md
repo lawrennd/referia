@@ -1,7 +1,7 @@
 ---
 id: "2026-10-21_llm-extract-phrases"
 title: "Register llm_extract_phrases compute (cache payload + phrase rows)"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-10-21"
 last_updated: "2026-10-21"
@@ -35,13 +35,13 @@ Does not replace `llm_extract` (free-text comments).
 
 ## Acceptance Criteria
 
-- [ ] Compute is field-in / field-out: `(text, constants) → extraction_payload`
+- [x] Compute is field-in / field-out: `(text, constants) → extraction_payload`
       plus a list of phrase dicts for explode
-- [ ] Sentinel and word-count drop rules are parameters, not hidden code
-- [ ] Phrase rows carry `phrase`, `kind`, `chunk_id`, `doc_id` (optional quote)
-- [ ] LLMManager diskcache, if used, is cost-only; payload is still in cache
-- [ ] Unit tests with a stub client (no live API); sentinels dropped
-- [ ] Draft `02_embed/_referia.yml` PopulateButton uses this name
+- [x] Sentinel and word-count drop rules are parameters, not hidden code
+- [x] Phrase rows carry `phrase`, `kind`, `chunk_id`, `doc_id` (optional quote)
+- [x] LLMManager diskcache, if used, is cost-only; payload is still in cache
+- [x] Unit tests with a stub client (no live API); sentinels dropped
+- [x] Draft `02_embed/_referia.yml` PopulateButton uses this name
 
 ## Implementation Notes
 
@@ -60,3 +60,5 @@ Proposed only: do not implement until CIP-0015 is Accepted.
 ### 2026-10-21
 
 Task created as Proposed from CIP-0015.
+
+Implemented `llm_extract_phrases` with a stub-client test; `02_embed` uses this name.

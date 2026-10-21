@@ -14,6 +14,7 @@ from referia.assess.compute.mppca import (
     responsibilities_to_labels,
     subject_grain_confirm_split,
     subject_grain_propose_split,
+    subject_grain_seed_fit,
     subject_grain_undo_split,
     topic_keys,
 )
@@ -1102,3 +1103,55 @@ def test_name_one_topic_surfaces_llm_failure(monkeypatch):
             n_exemplars=1,
             temperature=0.0,
         )
+
+
+def test_subject_grain_seed_fit_k1_rows_sum_to_one():
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(12, 6))
+    X /= np.clip(np.linalg.norm(X, axis=1, keepdims=True), 1e-12, None)
+    phrases = [f"phrase {i} about scoring" for i in range(12)]
+    packed = subject_grain_seed_fit(
+        embeddings=X.tolist(),
+        phrases=phrases,
+        sigma2=0.05,
+        sigma2_mode="fixed",
+        k=1,
+        em_accept=20,
+        force_refit=True,
+        seed=0,
+    )
+    R, uq_by_topic, uq_spec, keys, labels, parent, tree, focus = packed
+    R = np.asarray(R, float)
+    assert R.shape == (12, 1)
+    assert np.allclose(R.sum(axis=1), 1.0)
+    assert keys == ["T0"]
+    assert focus == "T0"
+    assert "T0" in labels
+    assert parent["T0"] is None
+    assert isinstance(tree, str) and tree
+    assert isinstance(uq_by_topic, dict)
+    assert isinstance(uq_spec, dict)
+
+
+def test_subject_grain_seed_fit_skips_when_already_fit():
+    existing_R = [[1.0], [1.0]]
+    packed = subject_grain_seed_fit(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        phrases=["a", "b"],
+        responsibilities=existing_R,
+        topic_keys=["T0"],
+        topic_labels={"T0": "Privacy"},
+        force_refit=False,
+    )
+    R, _, _, keys, labels, _, _, focus = packed
+    assert R == existing_R
+    assert keys == ["T0"]
+    assert labels["T0"] == "Privacy"
+    assert focus == "T0"
+
+
+def test_subject_grain_seed_fit_registered():
+    from referia.assess.compute import Compute
+
+    names = {e["name"] for e in Compute({"input": {}})._compute_functions_list()}
+    assert "subject_grain_seed_fit" in names

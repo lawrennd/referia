@@ -27,6 +27,7 @@ __all__ = [
     "subject_grain_propose_split",
     "subject_grain_confirm_split",
     "subject_grain_undo_split",
+    "subject_grain_seed_fit",
     "format_topic_tree_markdown",
     "topic_fit_diagnostics",
     "profile_topic_sigma2",
@@ -948,6 +949,121 @@ def rebuild_uq_by_topic(
         if spec is not None:
             out[key] = spec
     return out
+
+
+def _responsibilities_present(responsibilities: Any) -> bool:
+    if responsibilities is None:
+        return False
+    try:
+        arr = np.asarray(responsibilities, dtype=float)
+    except (TypeError, ValueError):
+        return False
+    return arr.ndim == 2 and arr.size > 0
+
+
+def subject_grain_seed_fit(
+    embeddings,
+    phrases=None,
+    sigma2: float | None = None,
+    sigma2_mode: str = "fixed",
+    em_accept: int = 40,
+    k: int = 1,
+    force_refit: bool = False,
+    responsibilities=None,
+    uq_by_topic=None,
+    uq_spec=None,
+    topic_keys_existing=None,
+    topic_labels=None,
+    topic_parent=None,
+    topic_tree=None,
+    focus_topic=None,
+    seed: int = 0,
+    **_kwargs,
+):
+    """k=1 (or k) MPPCA seed on a packed corpus row (CIP-0015).
+
+    Skip-if-already-fit is a field check on ``responsibilities`` when
+    ``force_refit`` is false. Parameters come from config / row fields.
+    Returns
+    ``(responsibilities, uq_by_topic, uq_spec, topic_keys, topic_labels,
+    topic_parent, topic_tree, focus_topic)``.
+    """
+    if not force_refit and _responsibilities_present(responsibilities):
+        existing_keys = topic_keys_existing or _kwargs.get("topic_keys")
+        keys = [str(x) for x in (existing_keys or topic_keys(
+            np.asarray(responsibilities, float).shape[1]
+        ))]
+        focus = str(focus_topic) if focus_topic not in (None, "") else keys[0]
+        labels = dict(topic_labels) if isinstance(topic_labels, dict) else {
+            key: f"Topic {i}" for i, key in enumerate(keys)
+        }
+        parent = _topic_parent_map(topic_parent, keys)
+        tree = topic_tree or format_topic_tree_markdown(
+            keys, labels, parent, focus, responsibilities=responsibilities
+        )
+        uq_map = uq_by_topic if isinstance(uq_by_topic, dict) else {}
+        spec = uq_spec if isinstance(uq_spec, dict) else (
+            uq_map.get(focus) or next(iter(uq_map.values()), {})
+        )
+        return (
+            responsibilities,
+            uq_map,
+            spec,
+            keys,
+            labels,
+            parent,
+            tree,
+            focus,
+        )
+
+    X = np.asarray(embeddings, dtype=float)
+    if X.ndim != 2:
+        raise ValueError(
+            f"subject_grain_seed_fit embeddings must be 2-D, got shape {X.shape}"
+        )
+    k = int(k) if k is not None else 1
+    max_iter = int(em_accept) if em_accept is not None else 40
+    mode = str(sigma2_mode or "fixed").strip().lower()
+    if mode == "profile":
+        profiled = profile_topic_sigma2(
+            X, k, seed=int(seed), max_iter=max_iter
+        )
+        fit = profiled["fit"]
+        s2 = float(profiled["sigma2"])
+    else:
+        s2 = float(sigma2) if sigma2 not in (None, "") else DEFAULT_TOPIC_SIGMA2
+        fit = mppca_fit(
+            X, k, sigma2=s2, seed=int(seed), max_iter=max_iter
+        )
+        s2 = float(fit["sigma2"])
+
+    R = np.asarray(fit["responsibilities"], float)
+    keys = topic_keys(R.shape[1])
+    phrase_list = _phrase_list(phrases, X.shape[0])
+    uq_map = rebuild_uq_by_topic(
+        X,
+        R,
+        phrases=phrase_list,
+        sigma2=s2,
+        component_fits=fit.get("component_fits"),
+    )
+    focus = keys[0]
+    labels = {key: f"Topic {i}" for i, key in enumerate(keys)}
+    parent = {key: None for key in keys}
+    tree = format_topic_tree_markdown(
+        keys, labels, parent, focus, responsibilities=R
+    )
+    spec = uq_map.get(focus) or next(iter(uq_map.values()), {})
+    return (
+        R.tolist(),
+        uq_map,
+        spec,
+        keys,
+        labels,
+        parent,
+        tree,
+        focus,
+    )
 
 
 def _topic_index(keys: Sequence[str], focus_topic: Any) -> int:

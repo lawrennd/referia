@@ -30,9 +30,7 @@ if str(ROOT) not in sys.path:
 
 from referia.assess.compute.mppca import (  # noqa: E402
     format_topic_tree_markdown,
-    mppca_fit,
-    rebuild_uq_by_topic,
-    topic_keys,
+    subject_grain_seed_fit,
 )
 
 
@@ -269,20 +267,21 @@ def embed_phrases(
 
 def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -> None:
     INFO.mkdir(parents=True, exist_ok=True)
-    # Multilogue 03 Layer B: Assess entry is k=1; Propose split grows grain.
-    k = 1
-    fit = mppca_fit(X, k=k, sigma2=0.05, seed=7, max_iter=50, n_init=10)
-    keys = topic_keys(k)
-    R = np.asarray(fit["responsibilities"], float)
-    sigma2 = float(fit["sigma2"])
-    uq_by_topic = rebuild_uq_by_topic(
-        X,
-        R,
-        phrases=phrases,
-        sigma2=sigma2,
-        component_fits=fit["component_fits"],
+    # CIP-0015 seed fit replaces the Assess half of this bake.
+    R, uq_by_topic, uq_spec, keys, topic_labels, topic_parent, topic_tree, focus0 = (
+        subject_grain_seed_fit(
+            embeddings=X.tolist(),
+            phrases=phrases,
+            sigma2=0.05,
+            sigma2_mode="fixed",
+            em_accept=50,
+            k=1,
+            force_refit=True,
+            seed=7,
+        )
     )
-    focus0 = keys[0]
+    R = np.asarray(R, float)
+    sigma2 = 0.05
     records = [
         {
             "Name": "corpus",
@@ -292,8 +291,6 @@ def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -
             "embeddings": X.tolist(),
         }
     ]
-    topic_labels = {key: f"Topic {i}" for i, key in enumerate(keys)}
-    topic_parent = {key: None for key in keys}
     # Prefer live naming when the bake already saw OPENAI_API_KEY (.env).
     label_model = (
         "gpt-4.1-mini" if os.getenv("OPENAI_API_KEY") else "stub"
@@ -334,7 +331,7 @@ def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -
         "topic_tree": topic_tree,
         "responsibilities": R.tolist(),
         "uq_by_topic": uq_by_topic,
-        "uq_spec": uq_by_topic[focus0],
+        "uq_spec": uq_spec or uq_by_topic.get(focus0),
         "sigma2": sigma2,
         "sigma2_mode": "fixed",
         "em_accept": 40,
@@ -395,7 +392,7 @@ def _write_yaml(phrases: list[str], X: np.ndarray, *, title: str, source: str) -
     print(f"Wrote 1 corpus record → {INFO / 'records.yml'}")
     print(f"source={source}, n_phrases={len(phrases)}, dim={X.shape[1]}")
     print(
-        f"Assess entry k=1, σ²={sigma2:.4g}, n_iter={fit['n_iter']}, "
+        f"Assess entry k=1, σ²={sigma2:.4g}, "
         f"topics={keys}, label_model={label_model}"
     )
 
