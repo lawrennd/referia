@@ -6,6 +6,7 @@ reads the centroids as its grain. Phrase-to-lens membership is QR.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import numpy as np
@@ -26,7 +27,57 @@ def _as_bool(value: Any, default: bool = True) -> bool:
         return value
     if isinstance(value, (int, np.integer)):
         return bool(value)
+    try:
+        if np.isnan(value):
+            return default
+    except (TypeError, ValueError):
+        pass
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _as_int(value: Any, default: int) -> int:
+    """Coerce a knob; empty output columns arrive as NaN and must not crash."""
+    if value is None or value == "":
+        return int(default)
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return int(default)
+    if not np.isfinite(f):
+        return int(default)
+    return int(f)
+
+
+def _as_spec_dict(value: Any) -> dict:
+    if value is None or value == "":
+        return {}
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _spec_for_store(spec: Any) -> str:
+    """Parquet cannot mix list traces with a layout mapping; store JSON."""
+    if spec is None or spec == "":
+        return ""
+    if isinstance(spec, str):
+        return spec
+    return json.dumps(spec)
+
+
+def _as_float(value: Any, default: float) -> float:
+    if value is None or value == "":
+        return float(default)
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    if not np.isfinite(f):
+        return float(default)
+    return f
 
 
 def expand_vq_responsibilities(cluster_ids, codebook_responsibilities) -> np.ndarray:
@@ -82,15 +133,14 @@ def subject_vq_fit(
             f"VQ embeddings must be non-empty 2-D, got shape {X.shape}"
         )
     n = int(X.shape[0])
-    m = min(int(n_vq) if n_vq is not None else 64, n)
+    m = min(_as_int(n_vq, 64), n)
     if m < 1:
         raise ValueError(f"n_vq must be >= 1, got {n_vq!r}")
     if (
         not force_refit
         and cluster_ids is not None
         and codebook_embeddings is not None
-        and isinstance(vq_spec, dict)
-        and vq_spec.get("frames")
+        and _as_spec_dict(vq_spec).get("frames")
     ):
         ids = np.asarray(cluster_ids).ravel()
         if ids.size == n:
@@ -104,19 +154,19 @@ def subject_vq_fit(
                 if not isinstance(stored_phrases, str)
                 else [stored_phrases],
                 np.asarray(vq_mass if vq_mass is not None else []).tolist(),
-                vq_spec,
+                _spec_for_store(vq_spec),
                 int(m),
-                float(vq_inertia or 0.0),
+                _as_float(vq_inertia, 0.0),
                 n,
             )
 
     packed = fit_kmeans(
         X,
         m,
-        init=kmeans_init,
-        n_init=int(kmeans_n_init),
-        max_iter=int(kmeans_max_iter),
-        seed=int(seed),
+        init=kmeans_init if kmeans_init not in (None, "") else "k-means++",
+        n_init=_as_int(kmeans_n_init, 10),
+        max_iter=_as_int(kmeans_max_iter, 300),
+        seed=_as_int(seed, 0),
     )
     labels = np.asarray(packed["labels"], dtype=int)
     centres = np.asarray(packed.get("centers"), dtype=float)
@@ -148,11 +198,11 @@ def subject_vq_fit(
         centres,
         phrases=phrase_vals,
         masses=mass,
-        n_frames=int(vq_walk_frames),
-        speed=float(vq_walk_speed),
-        subspace=int(vq_walk_subspace),
+        n_frames=_as_int(vq_walk_frames, 48),
+        speed=_as_float(vq_walk_speed, 0.08),
+        subspace=_as_int(vq_walk_subspace, 8),
         linger=_as_bool(vq_walk_linger, True),
-        seed=int(seed),
+        seed=_as_int(seed, 0),
     ) or {}
 
     return (
@@ -160,7 +210,7 @@ def subject_vq_fit(
         l2_normalize_rows(centres).tolist(),
         exemplars,
         mass.tolist(),
-        spec,
+        _spec_for_store(spec),
         int(m),
         float(packed.get("inertia", 0.0)),
         n,

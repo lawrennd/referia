@@ -5,7 +5,15 @@ import pytest
 
 from referia.assess.compute.grain_fit import subject_grain_fit
 from referia.assess.compute.kmeans import fit_kmeans
-from referia.assess.compute.vq import expand_vq_responsibilities, subject_vq_fit
+from referia.assess.compute.vq import (
+    _as_bool,
+    _as_float,
+    _as_int,
+    _as_spec_dict,
+    _spec_for_store,
+    expand_vq_responsibilities,
+    subject_vq_fit,
+)
 from referia.assess.viewer_bindings import parse_figure_spec
 from referia.util.plotly_figures import (
     stiefel_step_scale,
@@ -54,8 +62,10 @@ def test_subject_vq_fit_codebook_shapes():
     assert np.asarray(cents).shape == (5, 12)
     assert len(exemplars) == 5
     np.testing.assert_allclose(np.sum(mass), 40)
-    assert spec["frames"]
-    labels = [b["label"] for b in spec["layout"]["updatemenus"][0]["buttons"]]
+    parsed = parse_figure_spec(spec)
+    assert parsed is not None
+    assert parsed["frames"]
+    labels = [b["label"] for b in parsed["layout"]["updatemenus"][0]["buttons"]]
     assert labels == ["Play", "Pause"]
 
 
@@ -177,6 +187,120 @@ def test_expand_vq_rejects_empty_and_1d():
         expand_vq_responsibilities([0], np.arange(3.0))
     with pytest.raises(ValueError, match="non-empty"):
         expand_vq_responsibilities([], np.eye(2))
+
+
+def test_vq_knob_coercion_fallbacks():
+    assert _as_int(None, 64) == 64
+    assert _as_int("", 64) == 64
+    assert _as_int("n_vq", 64) == 64
+    assert _as_int(np.nan, 64) == 64
+    assert _as_int(np.inf, 64) == 64
+    assert _as_int(7.9, 64) == 7
+    assert _as_float(None, 0.08) == 0.08
+    assert _as_float("", 0.08) == 0.08
+    assert _as_float("speed", 0.08) == 0.08
+    assert _as_float(np.nan, 0.08) == 0.08
+    assert _as_float(-0.5, 0.08) == -0.5
+    assert _as_bool(None) is True
+    assert _as_bool("") is True
+    assert _as_bool(np.nan) is True
+    assert _as_bool(0) is False
+    assert _as_bool("off") is False
+    assert _as_spec_dict(None) == {}
+    assert _as_spec_dict("") == {}
+    assert _as_spec_dict("not-json") == {}
+    assert _as_spec_dict("[1]") == {}
+    assert _as_spec_dict('{"frames": [1]}') == {"frames": [1]}
+    assert _as_spec_dict({"frames": [1]}) == {"frames": [1]}
+    assert _spec_for_store(None) == ""
+    assert _spec_for_store("") == ""
+    assert _spec_for_store('{"frames": []}') == '{"frames": []}'
+    assert '"frames"' in _spec_for_store({"frames": [1]})
+
+
+def test_subject_vq_fit_nan_n_vq_uses_default():
+    rng = np.random.default_rng(8)
+    X = _l2(rng.normal(size=(12, 5)))
+    out = subject_vq_fit(
+        X,
+        phrases=[f"p{i}" for i in range(12)],
+        n_vq=np.nan,
+        force_refit=True,
+        seed="",
+        kmeans_init="",
+        kmeans_n_init=2,
+        kmeans_max_iter="",
+        vq_walk_frames=4,
+        vq_walk_speed=np.nan,
+        vq_walk_subspace=None,
+        vq_walk_linger=np.nan,
+    )
+    assert out[5] == 12
+    assert len(out[0]) == 12
+    parsed = parse_figure_spec(out[4])
+    assert parsed is not None
+    assert parsed["frames"]
+
+
+def test_subject_vq_fit_skip_accepts_dict_or_json_spec():
+    rng = np.random.default_rng(9)
+    X = _l2(rng.normal(size=(10, 4)))
+    phrases = [f"p{i}" for i in range(10)]
+    first = subject_vq_fit(
+        X,
+        phrases=phrases,
+        n_vq=3,
+        force_refit=True,
+        seed=0,
+        kmeans_n_init=2,
+        vq_walk_frames=4,
+        vq_walk_subspace=3,
+    )
+    parsed = parse_figure_spec(first[4])
+    skipped_json = subject_vq_fit(
+        X,
+        phrases=phrases,
+        n_vq="",
+        force_refit=False,
+        cluster_ids=first[0],
+        codebook_embeddings=first[1],
+        codebook_phrases=first[2],
+        vq_mass=first[3],
+        vq_spec=first[4],
+        vq_inertia=np.nan,
+    )
+    assert skipped_json[0] == first[0]
+    assert skipped_json[4] == first[4]
+    skipped_dict = subject_vq_fit(
+        X,
+        phrases=phrases,
+        n_vq=3,
+        force_refit=False,
+        cluster_ids=first[0],
+        codebook_embeddings=first[1],
+        codebook_phrases=first[2],
+        vq_mass=first[3],
+        vq_spec=parsed,
+        vq_inertia="",
+    )
+    assert skipped_dict[0] == first[0]
+    assert parse_figure_spec(skipped_dict[4])["frames"]
+    refit = subject_vq_fit(
+        X,
+        phrases=phrases,
+        n_vq=3,
+        force_refit=False,
+        cluster_ids=first[0],
+        codebook_embeddings=first[1],
+        codebook_phrases=first[2],
+        vq_mass=first[3],
+        vq_spec="{not json",
+        seed=0,
+        kmeans_n_init=2,
+        vq_walk_frames=4,
+        vq_walk_subspace=3,
+    )
+    assert parse_figure_spec(refit[4]) is not None
 
 
 def test_subject_vq_fit_guards_and_skip(monkeypatch):
