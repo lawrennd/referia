@@ -248,8 +248,9 @@ class TestGetValue:
         assert val == 3
 
     def test_get_value_none_for_missing_column(self):
-        reviewer, _, _ = _build_reviewer(col_vals={})
+        reviewer, data, _ = _build_reviewer(col_vals={})
         assert reviewer.get_value("nonexistent") is None
+        data.set_column.assert_not_called()
 
 
 class TestSetValue:
@@ -1251,6 +1252,48 @@ class TestDocumentGeneration:
         assert docs[0]["visible_if"] == "Interview"
         assert "visible_if" not in docs[1]
 
+    def test_list_document_entries_skips_named_store_mapping(self):
+        reviewer, _, _ = _build_reviewer(
+            extra={
+                "documents": {
+                    "type": "yaml",
+                    "filename": "documents.yml",
+                    "directory": "../info",
+                    "index": "Name",
+                },
+            }
+        )
+        assert reviewer.list_document_entries("documents") == []
+
+    def test_list_document_entries_keeps_store_codec_with_content(self):
+        from referia.assess.web_review import _is_document_action
+
+        assert _is_document_action("not a mapping") is False
+        assert _is_document_action({"filename": "x.yml"}) is False
+        assert _is_document_action(
+            {"type": "yaml", "filename": "documents.yml", "directory": "../info"}
+        ) is False
+        assert _is_document_action(
+            {
+                "type": "yaml",
+                "filename": "out.yml",
+                "content": "body",
+            }
+        ) is True
+        reviewer, _, _ = _build_reviewer(
+            extra={
+                "documents": [
+                    {
+                        "type": "markdown",
+                        "filename": "out.md",
+                        "content": "hello",
+                    }
+                ],
+            }
+        )
+        docs = reviewer.list_document_entries("documents")
+        assert docs[0]["type"] == "markdown"
+
     def test_template_to_value_viewer(self):
         reviewer, data, _ = _build_reviewer(
             viewer=[{"liquid": "Hello {{name}}"}],
@@ -1440,7 +1483,7 @@ class TestRowsAndFilters:
         """Unset/NaN complete should match Complete=False (incomplete work)."""
         reviewer, _, storage = _build_reviewer(
             index_vals=["a", "b", "c"],
-            col_vals={"title": "x"},
+            col_vals={"title": "x", "complete": False},
             review=[{"type": "Checkbox", "field": "complete", "default": False}],
             extra={
                 "display": {"layout": "inline_list"},
@@ -1601,6 +1644,142 @@ class TestRowsAndFilters:
         storage[("a", "complete")] = None
         reviewer.set_index("a")
         assert reviewer.get_value("complete") is True
+
+    def test_section_nested_defaults_collected(self):
+        reviewer, _, _ = _build_reviewer(
+            review=[
+                {
+                    "type": "Section",
+                    "title": "EM",
+                    "entries": [
+                        {
+                            "type": "BoundedFloatText",
+                            "field": "sigma2",
+                            "default": 0.01,
+                        },
+                        {
+                            "type": "Dropdown",
+                            "field": "label_model",
+                            "args": {"default": "gpt-4.1-mini"},
+                        },
+                    ],
+                }
+            ]
+        )
+        assert reviewer._field_defaults["sigma2"] == 0.01
+        assert reviewer._field_defaults["label_model"] == "gpt-4.1-mini"
+
+    def test_apply_field_defaults_writes_missing_output_cells(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"sigma2": None},
+            review=[
+                {
+                    "type": "BoundedFloatText",
+                    "field": "sigma2",
+                    "default": 0.01,
+                }
+            ],
+        )
+        data.ismutable.return_value = True
+        storage[("a", "sigma2")] = None
+        reviewer.set_index("a")
+        reviewer._apply_field_defaults()
+        assert storage[("a", "sigma2")] == 0.01
+
+    def test_cell_is_missing_covers_nan_sentinels(self):
+        import math
+
+        import numpy as np
+        import pandas as pd
+
+        reviewer, _, _ = _build_reviewer()
+        assert reviewer._cell_is_missing(None) is True
+        assert reviewer._cell_is_missing(float("nan")) is True
+        assert reviewer._cell_is_missing(np.float64("nan")) is True
+        assert reviewer._cell_is_missing(np.datetime64("NaT")) is True
+        assert reviewer._cell_is_missing(pd.NaT) is True
+        assert reviewer._cell_is_missing(0.0) is False
+        assert reviewer._cell_is_missing("kept") is False
+        assert math.isnan(float("nan"))
+
+    def test_apply_field_defaults_skips_immutable_and_present_cells(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"sigma2": 0.5, "other": None},
+            review=[
+                {"type": "BoundedFloatText", "field": "sigma2", "default": 0.01},
+                {"type": "Text", "field": "ghost", "default": "x"},
+            ],
+        )
+        data.ismutable.side_effect = lambda col: col != "sigma2"
+        storage[("a", "sigma2")] = 0.5
+        reviewer.set_index("a")
+        reviewer._apply_field_defaults()
+        assert storage[("a", "sigma2")] == 0.5
+        assert "ghost" not in data.columns
+
+    def test_apply_field_defaults_swallows_write_errors(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"sigma2": None},
+            review=[{"type": "BoundedFloatText", "field": "sigma2", "default": 0.01}],
+        )
+        data.ismutable.return_value = True
+        storage[("a", "sigma2")] = None
+        reviewer.set_value = MagicMock(side_effect=RuntimeError("locked"))
+        reviewer._apply_field_defaults()
+
+    def test_get_value_unknown_column_uses_widget_default(self):
+        reviewer, data, _ = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"title": "x"},
+            review=[
+                {
+                    "type": "BoundedFloatText",
+                    "field": "sigma2",
+                    "args": {"default": 0.01},
+                }
+            ],
+        )
+        assert "sigma2" not in data.columns
+        assert reviewer.get_value("sigma2") == 0.01
+        assert reviewer.get_value("missing") is None
+
+    def test_get_value_unknown_when_columns_probe_fails(self):
+        reviewer, data, _ = _build_reviewer(
+            col_vals={"title": "x"},
+            review=[{"type": "Text", "field": "label_model", "default": "gpt"}],
+        )
+
+        class Boom:
+            def __contains__(self, item):
+                raise RuntimeError("no columns")
+
+        data.columns = Boom()
+        assert reviewer.get_value("label_model") == "gpt"
+
+    def test_section_children_and_specifications_yield_defaults(self):
+        reviewer, _, _ = _build_reviewer(
+            review=[
+                "skip-me",
+                {
+                    "type": "Section",
+                    "title": "Via children",
+                    "children": [
+                        {"type": "Text", "field": "a", "default": "from-children"},
+                    ],
+                },
+                {
+                    "type": "precompute",
+                    "specifications": [
+                        {"type": "Text", "field": "b", "value": "from-specs"},
+                    ],
+                },
+            ]
+        )
+        assert reviewer._field_defaults["a"] == "from-children"
+        assert reviewer._field_defaults["b"] == "from-specs"
 
     def test_sort_orders_working_indices(self):
         reviewer, _, storage = _build_reviewer(

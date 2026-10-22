@@ -29,11 +29,13 @@
         <button class="widget-button save-button"
                 hx-post="/save"
                 hx-target="#status-bar"
-                hx-swap="innerHTML focus-scroll:false">Save</button>
+                hx-swap="innerHTML focus-scroll:false"
+                hx-disabled-elt="this">Save</button>
         <button class="widget-button reload-button"
                 hx-post="/reload"
                 hx-target="#review-panel"
-                hx-swap="innerHTML focus-scroll:false">Reload</button>
+                hx-swap="innerHTML focus-scroll:false"
+                hx-disabled-elt="this">Reload</button>
     </div>
 </div>
 

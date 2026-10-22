@@ -153,3 +153,32 @@ def test_nested_expansion():
         assert expanded[0]['type'] == 'group'
         assert expanded[0]['entries'][0]['type'] == 'group'
         assert mock_expand.call_count == 2
+
+def test_section_preserves_collapse_args():
+    section = {
+        "type": "Section",
+        "title": "Cache",
+        "args": {"collapse": False},
+        "entries": [
+            {"type": "ReloadButton", "field": "_reload"},
+        ],
+    }
+    expanded = Interface._expand_review_cluster([section])
+    assert expanded[0]["type"] == "Section"
+    assert expanded[0]["title"] == "Cache"
+    assert expanded[0]["args"]["collapse"] is False
+    assert expanded[0]["entries"][0]["field"] == "_reload"
+
+def test_section_copies_top_level_chrome_flags_into_args():
+    section = {
+        "type": "Section",
+        "title": "Cache",
+        "collapse": False,
+        "open": True,
+        "entries": [
+            {"type": "ReloadButton", "field": "_reload"},
+        ],
+    }
+    expanded = Interface._expand_review_cluster([section])
+    assert expanded[0]["args"]["collapse"] is False
+    assert expanded[0]["args"]["open"] is True

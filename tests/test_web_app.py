@@ -123,6 +123,65 @@ class TestSingleConfigMode:
             for call in mock_rev.set_value.call_args_list
         )
 
+    def test_field_bulk_parameter_writes_once(self):
+        mock_rev = _mock_reviewer()
+        data = MagicMock()
+        data.isparameter.return_value = True
+        data.ismutable.return_value = True
+        mock_rev._data = data
+        mock_rev.working_indices.return_value = ["a", "b"]
+        mock_rev.get_display_layout.return_value = "inline_list"
+        mock_rev.get_filter_specs.return_value = []
+        mock_rev.get_sort_specs.return_value = []
+        mock_rev.get_filter_state.return_value = {}
+        spec = {"type": "Text", "field": "phrase_kinds"}
+        mock_rev.get_review_specs.return_value = [spec]
+        mock_rev.get_widget_specs.return_value = [spec]
+        mock_rev.list_pdf_entries.return_value = []
+        mock_rev.list_url_entries.return_value = []
+        mock_rev.list_document_entries.return_value = []
+        mock_rev.affected_widgets.return_value = []
+        with patch("referia.assess.web_review.WebReviewer", return_value=mock_rev):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                resp = client.post(
+                    "/field-bulk/phrase_kinds",
+                    data={"phrase_kinds": "concern, benefit"},
+                )
+        assert resp.status_code == 200
+        mock_rev.set_value.assert_called_once_with("phrase_kinds", "concern, benefit")
+
+    def test_populate_all_runs_for_working_indices(self):
+        mock_rev = _mock_reviewer()
+        mock_rev.working_indices.return_value = ["a", "b"]
+        mock_rev.get_display_layout.return_value = "inline_list"
+        mock_rev.get_filter_specs.return_value = []
+        mock_rev.get_sort_specs.return_value = []
+        mock_rev.get_filter_state.return_value = {}
+        mock_rev.get_display_detail_field.return_value = None
+        btn = {
+            "type": "PopulateButton",
+            "field": "_segment",
+            "args": {
+                "description": "Segment document",
+                "target": "units",
+                "compute": {"field": "units", "function": "document_segment"},
+            },
+        }
+        mock_rev.get_review_specs.return_value = [btn]
+        mock_rev.get_widget_specs.return_value = [btn]
+        mock_rev.list_pdf_entries.return_value = []
+        mock_rev.list_url_entries.return_value = []
+        mock_rev.list_document_entries.return_value = []
+        mock_rev.affected_widgets.return_value = []
+        mock_rev.run_populate.return_value = None
+        with patch("referia.assess.web_review.WebReviewer", return_value=mock_rev):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                resp = client.post("/populate-all/_segment")
+        assert resp.status_code == 200
+        assert mock_rev.run_populate.call_count == 2
+
 
 # ---------------------------------------------------------------------------
 # Root-server mode
@@ -502,6 +561,67 @@ class TestRootRouterRoutes:
         assert "Generate document failed" in resp.text
         assert "See server log" in resp.text
         reviewer.generate_document.assert_not_called()
+
+    def _listing_populate_reviewer(self):
+        reviewer = _mock_reviewer()
+        btn = {
+            "type": "PopulateButton",
+            "field": "_segment",
+            "args": {
+                "description": "Segment document",
+                "target": "units",
+                "compute": {"field": "units", "function": "document_segment"},
+            },
+        }
+        reviewer.get_widget_specs.return_value = [btn]
+        reviewer.get_review_specs.return_value = [btn]
+        reviewer.get_display_layout.return_value = "inline_list"
+        reviewer.working_indices.return_value = ["a", "b"]
+        reviewer.get_filter_specs.return_value = []
+        reviewer.get_sort_specs.return_value = []
+        reviewer.get_filter_state.return_value = {}
+        reviewer.get_display_detail_field.return_value = None
+        reviewer.get_row_data.return_value = {"Name": "a"}
+        reviewer.list_pdf_entries.return_value = []
+        reviewer.list_url_entries.return_value = []
+        reviewer.list_document_entries.return_value = []
+        reviewer.affected_widgets.return_value = []
+        reviewer.run_populate.return_value = None
+        return reviewer
+
+    def test_root_populate_all_runs_for_working_indices(self, tmp_path):
+        reviewer = self._listing_populate_reviewer()
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                resp = client.post("/reviews/intro/populate-all/_segment")
+        assert resp.status_code == 200
+        assert reviewer.run_populate.call_count == 2
+        assert "Segment document all filtered" in resp.text
+
+    def test_root_populate_all_unknown_field_warns(self, tmp_path):
+        reviewer = self._listing_populate_reviewer()
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                resp = client.post("/reviews/intro/populate-all/missing")
+        assert resp.status_code == 200
+        assert "No PopulateButton" in resp.text
+        reviewer.run_populate.assert_not_called()
+
+    def test_root_populate_honours_form_index(self, tmp_path):
+        reviewer = self._listing_populate_reviewer()
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                reviewer.set_index.reset_mock()
+                resp = client.post(
+                    "/reviews/intro/populate/_segment",
+                    data={"index": "bob"},
+                )
+        assert resp.status_code == 200
+        reviewer.set_index.assert_any_call("bob")
+        reviewer.run_populate.assert_called_once()
 
     def test_root_missing_config_404(self, tmp_path):
         app = create_app(root=str(tmp_path))

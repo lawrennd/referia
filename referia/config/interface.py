@@ -472,6 +472,14 @@ class Interface(lynguine.config.interface.Interface):
                         cluster["entries"] = expand_group_review(entry)
                     else:
                         cluster["entries"] = []
+                    # Preserve chrome flags (open, collapse) — otherwise
+                    # listing cache buttons cannot stay outside <details>.
+                    args = dict(entry.get("args") or {})
+                    for key in ("open", "collapse", "collapsible"):
+                        if key in entry and key not in args:
+                            args[key] = entry[key]
+                    if args:
+                        cluster["args"] = args
                 elif entry["type"] in [
                         "Criterion",
                         "CriterionComment",
