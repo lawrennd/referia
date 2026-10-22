@@ -6,6 +6,8 @@ import pytest
 from referia.assess.compute.mppca import (
     DEFAULT_TOPIC_SIGMA2,
     DEFAULT_TOPIC_SIGMA2_GRID,
+    DENSE_CHEAP_SIDE_MAX,
+    component_local_plane,
     fit_weighted_ppca,
     mppca_fit,
     profile_topic_sigma2,
@@ -17,6 +19,7 @@ from referia.assess.compute.mppca import (
     subject_grain_seed_fit,
     subject_grain_undo_split,
     topic_keys,
+    weighted_leading_ppca,
 )
 from referia.assess.compute.topic_naming import (
     subject_grain_apply_focus_label,
@@ -94,13 +97,144 @@ def test_fit_weighted_ppca_survives_svd_failure(monkeypatch):
         calls["n"] += 1
         raise np.linalg.LinAlgError("SVD did not converge")
 
-    monkeypatch.setattr(np.linalg, "svd", boom)
+    monkeypatch.setattr(
+        "referia.assess.compute.mppca._leading_singular_vectors", boom
+    )
     fit = fit_weighted_ppca(X, w, sigma2=0.1)
     assert fit["q"] == 0
     assert fit["U_q"].shape == (8, 0)
     assert calls["n"] >= 1
     out = mppca_fit(X, k=3, sigma2=0.1, seed=0, max_iter=5, n_init=2)
     assert out["responsibilities"].shape == (30, 3)
+
+
+def _subspace_principal_cosines(A: np.ndarray, B: np.ndarray) -> np.ndarray:
+    if A.size == 0 and B.size == 0:
+        return np.zeros(0)
+    if A.size == 0 or B.size == 0:
+        return np.zeros(1)
+    qa, _ = np.linalg.qr(A)
+    qb, _ = np.linalg.qr(B)
+    k = min(qa.shape[1], qb.shape[1])
+    return np.linalg.svd(qa[:, :k].T @ qb[:, :k], compute_uv=False)
+
+
+def test_weighted_leading_ppca_matches_full_on_small_dense():
+    """Randomized helper agrees with cheap-side eigh on (n, d) ≤ (40, 20)."""
+    rng = np.random.default_rng(7)
+    n, d, q_true = 40, 20, 4
+    W = rng.normal(size=(d, q_true))
+    X = rng.normal(size=(n, q_true)) @ W.T + 0.05 * rng.normal(size=(n, d))
+    w = np.ones(n)
+    w_sum = float(w.sum())
+    mu = X.mean(axis=0)
+    Xw = X - mu
+    full_U, full_lam = weighted_leading_ppca(
+        Xw, w_sum, sigma2=0.08, max_q=12, algorithm="full", seed=0
+    )
+    rand_U, rand_lam = weighted_leading_ppca(
+        Xw, w_sum, sigma2=0.08, max_q=12, algorithm="randomized", seed=0
+    )
+    assert abs(full_U.shape[1] - rand_U.shape[1]) <= 1
+    q = min(full_U.shape[1], rand_U.shape[1])
+    if q:
+        cos = _subspace_principal_cosines(full_U[:, :q], rand_U[:, :q])
+        np.testing.assert_allclose(cos, 1.0, atol=0.05)
+        np.testing.assert_allclose(full_lam[:q], rand_lam[:q], rtol=0.1, atol=0.05)
+
+
+def test_fit_weighted_ppca_hot_path_skips_full_numpy_svd(monkeypatch):
+    rng = np.random.default_rng(1)
+    X = rng.normal(size=(80, 90))
+    w = np.ones(len(X))
+    assert min(X.shape) > DENSE_CHEAP_SIDE_MAX
+    real_svd = np.linalg.svd
+
+    def guarded(a, *args, **kwargs):
+        arr = np.asarray(a)
+        if min(arr.shape) > DENSE_CHEAP_SIDE_MAX:
+            raise AssertionError(
+                "np.linalg.svd must not run on the M-step hot path"
+            )
+        return real_svd(arr, *args, **kwargs)
+
+    monkeypatch.setattr(np.linalg, "svd", guarded)
+    fit = fit_weighted_ppca(X, w, sigma2=0.5, max_q=8, algorithm="randomized")
+    assert fit["U_q"].shape[0] == 90
+    assert fit["q"] <= 8
+
+
+def test_k1_skips_kmeans(monkeypatch):
+    rng = np.random.default_rng(2)
+    X = rng.normal(size=(20, 6))
+
+    def boom(*_a, **_k):
+        raise AssertionError("k=1 must not run KMeans")
+
+    monkeypatch.setattr("referia.assess.compute.mppca.KMeans", boom)
+    out = mppca_fit(X, k=1, sigma2=0.1, seed=0, max_iter=5)
+    assert out["responsibilities"].shape == (20, 1)
+    np.testing.assert_allclose(out["responsibilities"], 1.0)
+
+
+def test_object_list_embeddings_stack_to_float_matrix():
+    rng = np.random.default_rng(3)
+    X = rng.normal(size=(12, 5))
+    packed = np.empty(len(X), dtype=object)
+    packed[:] = [row.tolist() for row in X]
+    fit = mppca_fit(packed, k=1, sigma2=0.2, seed=0)
+    assert fit["responsibilities"].shape == (12, 1)
+    np.testing.assert_allclose(fit["means"][0], X.mean(axis=0) / np.linalg.norm(X.mean(axis=0)), atol=1e-6)
+
+
+def test_component_local_plane_skips_full_svd(monkeypatch):
+    rng = np.random.default_rng(4)
+    X = rng.normal(size=(25, 8))
+    w = np.ones(len(X))
+    fit = fit_weighted_ppca(X, w, sigma2=10.0)  # q=0 so the plane pads
+    assert fit["q"] == 0
+
+    real_svd = np.linalg.svd
+
+    def guarded(a, *args, **kwargs):
+        arr = np.asarray(a)
+        if min(arr.shape) > 2:
+            raise AssertionError(
+                "component_local_plane must not call np.linalg.svd"
+            )
+        return real_svd(arr, *args, **kwargs)
+
+    monkeypatch.setattr(np.linalg, "svd", guarded)
+    plane = component_local_plane(X, w, fit, q_viz=2)
+    assert plane is not None
+    mu, U, scales, q_model = plane
+    assert U.shape == (8, 2)
+    assert q_model == 0
+
+
+def test_draghi_shaped_k1_mstep_is_fast():
+    """One k=1 M-step on a 1028 × 3072 low-rank corpus stays on CPU budget."""
+    rng = np.random.default_rng(5)
+    n, d, q_true = 1028, 3072, 12
+    factors = rng.normal(size=(n, q_true))
+    loading = rng.normal(size=(q_true, d))
+    X = factors @ loading + 0.01 * rng.normal(size=(n, d))
+    w = np.ones(n)
+    import time
+
+    t0 = time.perf_counter()
+    fit = fit_weighted_ppca(
+        X, w, sigma2=0.05, max_q=24, algorithm="randomized", seed=0
+    )
+    elapsed = time.perf_counter() - t0
+    assert elapsed < 1.0, f"k=1 M-step took {elapsed:.3f}s"
+    assert fit["U_q"].shape[0] == d
+    assert 1 <= fit["q"] <= 24
+    out = mppca_fit(
+        X, k=1, sigma2=0.05, seed=0, max_iter=5, max_q=24, algorithm="randomized"
+    )
+    assert out["n_iter"] == 0
+    assert out["responsibilities"].shape == (n, 1)
 
 
 def test_mppca_responsibilities_row_stochastic():

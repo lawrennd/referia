@@ -1,7 +1,7 @@
 ---
 id: "2026-10-22_mppca-dominant-components"
 title: "MPPCA M-step: dominant components, cheap matrix side, stop early"
-status: "Proposed"
+status: "In Progress"
 priority: "High"
 created: "2026-10-22"
 last_updated: "2026-10-22"
@@ -280,21 +280,21 @@ with `n, d ≤ 32`, and plot planes that still show two axes.
 
 ## Acceptance Criteria
 
-- [ ] Survey above agreed (or amended in this file); no separate design doc
-- [ ] `fit_weighted_ppca` no longer calls full `np.linalg.svd` on the
+- [x] Survey above agreed (or amended in this file); no separate design doc
+- [x] `fit_weighted_ppca` no longer calls full `np.linalg.svd` on the
       hot path; it requests a leading subspace with an explicit cheap
       side / randomized method
-- [ ] `component_local_plane` does not run a second full SVD
-- [ ] `k=1` does not run KMeans
-- [ ] EM can stop on relative log-likelihood using the existing E-step
+- [x] `component_local_plane` does not run a second full SVD
+- [x] `k=1` does not run KMeans
+- [x] EM can stop on relative log-likelihood using the existing E-step
       `log_joint` (no extra data pass)
-- [ ] Packed embeddings enter EM as a contiguous `(n, d)` float array
-- [ ] Tests: small dense SVD vs truncated helper on synthetic
+- [x] Packed embeddings enter EM as a contiguous `(n, d)` float array
+- [x] Tests: small dense SVD vs truncated helper on synthetic
       `(n, d) ≤ (40, 20)`; Draghi-shaped `(1028, 3072)` smoke test
       completes one k=1 M-step in well under a second on CPU; existing
       `tests/test_compute_mppca.py` still pass with loosened exact `U_q`
       equality where needed
-- [ ] 03_grain Propose / Reset remain the same buttons; no YAML schema
+- [x] 03_grain Propose / Reset remain the same buttons; no YAML schema
       change required except optional `max_q`
 
 ## Implementation Notes
@@ -332,3 +332,12 @@ Draghi corpus. Survey: full economy SVD on every M-step; no cheap-side
 Gram; `U` discarded; Propose pays up to 8 × 40 child fits; k=1 still
 runs KMeans; likelihood is already in the E-step and is not the
 bottleneck. Timing via pandas object arrays hung before SVD.
+
+Implementation started on `mppca-dominant-components`. Helper
+`weighted_leading_ppca` uses sklearn `randomized_svd` (default when
+`min(n, d) > 64`) or cheap-side Gram + `eigh`. `fit_weighted_ppca` and
+`component_local_plane` no longer call `np.linalg.svd`. k=1 skips
+KMeans and the E-loop. EM also stops on `|Δℓ|/n`. Packed embeddings
+stack to C-contiguous float64. Default `max_q=128` is an explicit
+factor cap (optional YAML still deferred). `tests/test_compute_mppca.py`
+passes, including a 1028 × 3072 k=1 smoke test.
