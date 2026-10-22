@@ -109,29 +109,21 @@ def _as_embedding_matrix(X: Any) -> np.ndarray:
     """
     arr = np.asarray(X)
     if arr.ndim == 2 and arr.dtype != object:
-        out = np.ascontiguousarray(arr, dtype=np.float64)
-        return out
-    if arr.ndim == 1 and arr.dtype != object:
+        return np.ascontiguousarray(arr, dtype=np.float64)
+    if arr.dtype != object and arr.ndim != 2:
         raise ValueError(f"embeddings must be 2-D, got shape {arr.shape}")
-    if arr.dtype == object or arr.ndim != 2:
-        seq = arr.tolist() if isinstance(arr, np.ndarray) else list(X)
-        if isinstance(seq, (float, int)):
-            seq = [seq]
-        rows = [np.asarray(row, dtype=np.float64).reshape(-1) for row in seq]
-        if not rows:
-            return np.zeros((0, 0), dtype=np.float64)
-        d = int(rows[0].shape[0])
-        out = np.empty((len(rows), d), dtype=np.float64, order="C")
-        for i, row in enumerate(rows):
-            if int(row.shape[0]) != d:
-                raise ValueError(
-                    f"embedding row {i} has length {row.shape[0]}, expected {d}"
-                )
-            out[i] = row
-        return out
-    out = np.ascontiguousarray(arr, dtype=np.float64)
-    if out.ndim != 2:
-        raise ValueError(f"embeddings must be 2-D, got shape {out.shape}")
+    seq = arr.tolist() if isinstance(arr, np.ndarray) else list(X)
+    if not seq:
+        return np.zeros((0, 0), dtype=np.float64)
+    rows = [np.asarray(row, dtype=np.float64).reshape(-1) for row in seq]
+    d = int(rows[0].shape[0])
+    out = np.empty((len(rows), d), dtype=np.float64, order="C")
+    for i, row in enumerate(rows):
+        if int(row.shape[0]) != d:
+            raise ValueError(
+                f"embedding row {i} has length {row.shape[0]}, expected {d}"
+            )
+        out[i] = row
     return out
 
 
