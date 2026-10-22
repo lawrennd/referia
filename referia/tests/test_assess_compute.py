@@ -1,8 +1,10 @@
 import pytest
 from referia.assess.compute import Compute  # Adjust the import as necessary
+from lynguine.assess.compute import Compute as LynguineCompute
 from lynguine.assess.data import CustomDataFrame
 from unittest.mock import MagicMock
 import pandas as pd
+import inspect
 
 """
 Test suite for the Compute class in referia.assess.compute.
@@ -416,4 +418,31 @@ def test_copy_screen_capture(compute_instance, mocker):
     # Check the result is as expected
     assert image == mock_image_data, "Image data should match the mocked binary data"
     assert isinstance(image, bytes), "Return value should be bytes"
-       
+
+
+def test_method_signature_validation():
+    """Overridden Compute methods must keep lynguine parameter names."""
+    lynguine_methods = {
+        name: method
+        for name, method in inspect.getmembers(LynguineCompute, predicate=inspect.isfunction)
+        if not name.startswith('_') or name in ['__init__']
+    }
+    referia_methods = {
+        name: method
+        for name, method in inspect.getmembers(Compute, predicate=inspect.isfunction)
+        if not name.startswith('_') or name in ['__init__']
+    }
+    skip_methods = {'copy_screen_capture', 'prep_all'}
+    for method_name, lynguine_method in lynguine_methods.items():
+        if method_name in referia_methods and method_name not in skip_methods:
+            lynguine_params = list(inspect.signature(lynguine_method).parameters.keys())
+            referia_params = list(inspect.signature(referia_methods[method_name]).parameters.keys())
+            if lynguine_params and lynguine_params[0] == 'self':
+                lynguine_params = lynguine_params[1:]
+            if referia_params and referia_params[0] == 'self':
+                referia_params = referia_params[1:]
+            assert lynguine_params == referia_params, (
+                f"Method '{method_name}' has different signatures: "
+                f"lynguine: {lynguine_params}, referia: {referia_params}"
+            )
+ 
