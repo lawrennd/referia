@@ -14,12 +14,16 @@ from typing import Any, Optional, Sequence
 
 import numpy as np
 from sklearn.cluster import KMeans
+from sklearn.utils.extmath import randomized_svd
 
 __all__ = [
     "DEFAULT_TOPIC_SIGMA2",
     "DEFAULT_TOPIC_SIGMA2_GRID",
+    "DEFAULT_MAX_Q",
+    "DENSE_CHEAP_SIDE_MAX",
     "log_likelihood_ppca",
     "fit_weighted_ppca",
+    "weighted_leading_ppca",
     "mppca_fit",
     "fit_from_responsibilities",
     "propose_split",
@@ -81,6 +85,15 @@ DEFAULT_TOPIC_SIGMA2_GRID: tuple[float, ...] = (
     1.0,
 )
 
+# Dense Gram + eigh is only for tiny cheap-side length. Above this, use
+# randomized SVD (Halko, Martinsson, Tropp 2011 via sklearn).
+DENSE_CHEAP_SIDE_MAX: int = 64
+_RANDOMIZED_Q0: int = 32
+DEFAULT_LL_TOL: float = 1e-6
+# Cap on PPCA factors. Hitting this with λ_min > σ² is an explicit
+# truncation, not a silent bug. Pass a larger ``max_q`` to raise it.
+DEFAULT_MAX_Q: int = 128
+
 
 def _l2_normalize_rows(X: np.ndarray, eps: float = 1e-12) -> np.ndarray:
     X = np.asarray(X, dtype=float)
@@ -88,18 +101,200 @@ def _l2_normalize_rows(X: np.ndarray, eps: float = 1e-12) -> np.ndarray:
     return X / np.clip(norms, eps, None)
 
 
+def _as_embedding_matrix(X: Any) -> np.ndarray:
+    """C-contiguous ``(n, d)`` float64, including pandas object columns of lists.
+
+    ``np.asarray`` on a packed object series of 3072-float lists is a 1-D
+    object array; stacking that inside EM is the hang we saw on Draghi.
+    """
+    arr = np.asarray(X)
+    if arr.ndim == 2 and arr.dtype != object:
+        return np.ascontiguousarray(arr, dtype=np.float64)
+    if arr.dtype != object and arr.ndim != 2:
+        raise ValueError(f"embeddings must be 2-D, got shape {arr.shape}")
+    seq = arr.tolist() if isinstance(arr, np.ndarray) else list(X)
+    if not seq:
+        return np.zeros((0, 0), dtype=np.float64)
+    rows = [np.asarray(row, dtype=np.float64).reshape(-1) for row in seq]
+    d = int(rows[0].shape[0])
+    out = np.empty((len(rows), d), dtype=np.float64, order="C")
+    for i, row in enumerate(rows):
+        if int(row.shape[0]) != d:
+            raise ValueError(
+                f"embedding row {i} has length {row.shape[0]}, expected {d}"
+            )
+        out[i] = row
+    return out
+
+
+def _logsumexp_rows(log_joint: np.ndarray) -> np.ndarray:
+    """Row-wise logsumexp; ``-inf`` rows stay ``-inf``."""
+    m = np.max(log_joint, axis=1, keepdims=True)
+    finite = np.isfinite(m)
+    m_safe = np.where(finite, m, 0.0)
+    summed = np.exp(log_joint - m_safe).sum(axis=1)
+    out = m.ravel() + np.log(summed + 1e-300)
+    out = np.where(finite.ravel(), out, -np.inf)
+    return out
+
+
+def _ll_converged(
+    ll: float, prev: Optional[float], n: int, ll_tol: float
+) -> bool:
+    if prev is None or ll_tol <= 0 or n <= 0:
+        return False
+    if not (np.isfinite(ll) and np.isfinite(prev)):
+        return False
+    return abs(ll - prev) / float(n) < ll_tol
+
+
+def _resolve_svd_algorithm(algorithm: str, n: int, d: int, n_components: int) -> str:
+    algo = str(algorithm).strip().lower()
+    cheap = min(n, d)
+    if algo == "auto":
+        if n_components >= cheap or cheap <= DENSE_CHEAP_SIDE_MAX:
+            return "full"
+        return "randomized"
+    if algo not in {"full", "randomized"}:
+        raise ValueError(
+            f"algorithm must be 'auto', 'full', or 'randomized', got {algorithm!r}"
+        )
+    if n_components >= cheap:
+        return "full"
+    return algo
+
+
+def _full_leading_svd(
+    Xw: np.ndarray, n_components: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """Economy leading SVD via the cheap Gram (``min(n, d)`` side)."""
+    n, d = Xw.shape
+    k = int(min(max(n_components, 0), n, d))
+    if k <= 0:
+        return np.zeros(0, dtype=float), np.zeros((0, d), dtype=float)
+    if n <= d:
+        gram = Xw @ Xw.T
+    else:
+        gram = Xw.T @ Xw
+    evals, evecs = np.linalg.eigh(gram)
+    evals = evals[::-1]
+    evecs = evecs[:, ::-1]
+    evals = np.clip(evals[:k], 0.0, None)
+    s = np.sqrt(evals)
+    if n <= d:
+        U = evecs[:, :k]
+        Vt = np.zeros((k, d), dtype=float)
+        good = s > 1e-12
+        if np.any(good):
+            Vt[good] = (Xw.T @ U[:, good] / s[good]).T
+        return s, Vt
+    return s, evecs[:, :k].T
+
+
+def _leading_singular_vectors(
+    Xw: np.ndarray,
+    n_components: int,
+    *,
+    algorithm: str = "auto",
+    seed: int = 0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return ``(s, Vt)`` with at most ``n_components`` right singular vectors."""
+    n, d = Xw.shape
+    k = int(min(max(n_components, 0), n, d))
+    if k <= 0:
+        return np.zeros(0, dtype=float), np.zeros((0, d), dtype=float)
+    algo = _resolve_svd_algorithm(algorithm, n, d, k)
+    if algo == "full":
+        return _full_leading_svd(Xw, k)
+    n_over = min(10, max(1, min(n, d) - k))
+    _, s, Vt = randomized_svd(
+        Xw,
+        n_components=k,
+        n_oversamples=n_over,
+        n_iter=3,
+        random_state=int(seed),
+    )
+    return np.asarray(s, dtype=float), np.asarray(Vt, dtype=float)
+
+
+def weighted_leading_ppca(
+    Xw: np.ndarray,
+    w_sum: float,
+    sigma2: float,
+    *,
+    max_q: Optional[int] = None,
+    q_min: int = 0,
+    algorithm: str = "auto",
+    seed: int = 0,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Leading weighted PPCA factors of a centred matrix ``Xw = √w (x − μ)``.
+
+    Returns ``(U_q, lambdas_q)`` with ``U_q`` of shape ``(d, q)``. ``q`` is
+    ``max(#{λ > σ²}, q_min)`` capped by ``max_q`` / ``min(n-1, d-1)``.
+    Randomized SVD grows ``q`` from 32 until the last returned λ is at or
+    below the noise floor (or ``max_q`` is hit).
+    """
+    Xw = np.asarray(Xw, dtype=float)
+    if Xw.ndim != 2:
+        raise ValueError(f"Xw must be 2-D, got shape {Xw.shape}")
+    n, d = Xw.shape
+    q_cap = min(max(n - 1, 0), max(d - 1, 0))
+    cap = int(max_q) if max_q is not None else DEFAULT_MAX_Q
+    q_cap = min(q_cap, max(cap, 0))
+    q_min_i = max(0, min(int(q_min), q_cap))
+    if q_cap <= 0:
+        return np.zeros((d, 0), dtype=float), np.zeros(0, dtype=float)
+
+    algo = _resolve_svd_algorithm(algorithm, n, d, q_cap)
+    if algo == "randomized":
+        q_req = max(q_min_i, min(_RANDOMIZED_Q0, q_cap))
+        s = np.zeros(0, dtype=float)
+        Vt = np.zeros((0, d), dtype=float)
+        while True:
+            s, Vt = _leading_singular_vectors(
+                Xw, q_req, algorithm="randomized", seed=seed
+            )
+            lambdas = (s ** 2) / w_sum if w_sum > 0 else (s ** 2)
+            if (
+                q_req >= q_cap
+                or lambdas.size == 0
+                or float(lambdas[-1]) <= sigma2
+            ):
+                break
+            q_req = min(q_cap, max(q_req * 2, q_req + 1))
+    else:
+        s, Vt = _leading_singular_vectors(
+            Xw, q_cap, algorithm="full", seed=seed
+        )
+        lambdas = (s ** 2) / w_sum if w_sum > 0 else (s ** 2)
+
+    q = int(np.sum(lambdas > sigma2)) if lambdas.size else 0
+    q = max(q, q_min_i)
+    q = min(q, int(lambdas.shape[0]))
+    if q <= 0:
+        return np.zeros((d, 0), dtype=float), np.zeros(0, dtype=float)
+    return Vt[:q].T, lambdas[:q]
+
+
 def fit_weighted_ppca(
     X: np.ndarray,
     weights: np.ndarray,
     sigma2: float,
+    *,
+    max_q: Optional[int] = None,
+    q_min: int = 0,
+    algorithm: str = "auto",
+    seed: int = 0,
 ) -> dict:
     """PPCA Gaussian for one component under soft (or hard) weights.
 
     Mean is the responsibility-weighted mean. Covariance uses a weighted
-    SVD of centred points (``sqrt(w_i) (x_i - μ)``); eigenvalues are
-    ``s² / Σ w``. Factors with eigenvalue > ``sigma2`` are retained.
+    leading SVD of centred points (``sqrt(w_i) (x_i - μ)``); eigenvalues
+    are ``s² / Σ w``. Factors with eigenvalue > ``sigma2`` are retained.
+    The hot path requests only that leading subspace (randomized SVD, or
+    cheap-side Gram + eigh when ``min(n, d)`` is tiny).
     """
-    X = np.asarray(X, dtype=float)
+    X = _as_embedding_matrix(X)
     w = np.asarray(weights, dtype=float).ravel()
     if X.ndim != 2:
         raise ValueError(f"X must be 2-D, got shape {X.shape}")
@@ -141,12 +336,30 @@ def fit_weighted_ppca(
     # weighted matrix ill-conditioned; never let SVD kill the whole EM fit.
     Xw = np.nan_to_num(Xw, nan=0.0, posinf=0.0, neginf=0.0)
     try:
-        _, s, Vt = np.linalg.svd(Xw, full_matrices=False)
+        U_q, lambdas_q = weighted_leading_ppca(
+            Xw,
+            w_sum,
+            sigma2,
+            max_q=max_q,
+            q_min=q_min,
+            algorithm=algorithm,
+            seed=seed,
+        )
     except np.linalg.LinAlgError:
         scale = float(np.linalg.norm(Xw)) + 1e-12
-        jitter = (1e-8 * scale) * np.random.default_rng(0).standard_normal(Xw.shape)
+        jitter = (1e-8 * scale) * np.random.default_rng(int(seed)).standard_normal(
+            Xw.shape
+        )
         try:
-            _, s, Vt = np.linalg.svd(Xw + jitter, full_matrices=False)
+            U_q, lambdas_q = weighted_leading_ppca(
+                Xw + jitter,
+                w_sum,
+                sigma2,
+                max_q=max_q,
+                q_min=q_min,
+                algorithm=algorithm,
+                seed=seed,
+            )
         except np.linalg.LinAlgError:
             return {
                 "mu": mu,
@@ -156,11 +369,7 @@ def fit_weighted_ppca(
                 "q": 0,
                 "weight_sum": w_sum,
             }
-    lambdas = (s ** 2) / w_sum
-    retain = lambdas > sigma2
-    q = int(retain.sum())
-    U_q = Vt[retain].T
-    lambdas_q = lambdas[retain]
+    q = int(U_q.shape[1]) if U_q.ndim == 2 else 0
     log_det = float(np.sum(np.log(lambdas_q))) + (d - q) * float(np.log(sigma2))
     return {
         "mu": mu,
@@ -186,7 +395,10 @@ def mppca_fit(
     seed: int = 0,
     max_iter: int = 50,
     tol: float = 1e-5,
-    n_init: int = 10,
+    ll_tol: float = DEFAULT_LL_TOL,
+    n_init: int = 1,
+    max_q: Optional[int] = None,
+    algorithm: str = "auto",
     normalize_means: bool = True,
 ) -> dict[str, Any]:
     """Fit a mixture of PPCA components (k-means init, fixed shared σ²).
@@ -205,8 +417,15 @@ def mppca_fit(
         Maximum EM iterations after initialisation.
     tol :
         Stop when max absolute change in responsibilities falls below this.
+    ll_tol :
+        Also stop when ``|Δℓ| / n`` of the E-step joint log-likelihood
+        falls below this (no extra data pass).
     n_init :
-        Passed to sklearn ``KMeans``.
+        Passed to sklearn ``KMeans`` when ``k >= 2``. Ignored for ``k=1``.
+    max_q :
+        Optional cap on PPCA factors per component.
+    algorithm :
+        ``auto`` (default), ``full``, or ``randomized`` SVD backend.
     normalize_means :
         If True, L2-normalise returned ``means`` for cosine consumers
         (raw EM means remain in each component fit's ``mu``).
@@ -221,7 +440,7 @@ def mppca_fit(
         ``n_iter`` : EM iterations performed
         ``component_fits`` : list of per-component PPCA dicts
     """
-    X = np.asarray(X, dtype=float)
+    X = _as_embedding_matrix(X)
     if X.ndim != 2:
         raise ValueError(f"X must be 2-D, got shape {X.shape}")
     n, d = X.shape
@@ -232,45 +451,65 @@ def mppca_fit(
     if sigma2 <= 0:
         raise ValueError(f"sigma2 must be positive, got {sigma2}")
 
-    # Explicit k-means++ (sklearn default) so topic EM does not silently
-    # depend on a library default change.
-    km = KMeans(
-        n_clusters=k,
-        init="k-means++",
-        random_state=seed,
-        n_init=n_init,
-    )
-    labels_init = km.fit_predict(X)
+    # k=1: responsibilities are identically 1; k-means is a no-op in 3072-d.
+    if k == 1:
+        labels_init = np.zeros(n, dtype=int)
+    else:
+        km = KMeans(
+            n_clusters=k,
+            init="k-means++",
+            random_state=seed,
+            n_init=n_init,
+        )
+        labels_init = km.fit_predict(X)
     R = np.zeros((n, k), dtype=float)
     R[np.arange(n), labels_init] = 1.0
     pi = R.mean(axis=0)
     R_init = R.copy()
 
+    def _m_step(resp: np.ndarray) -> list[dict]:
+        return [
+            fit_weighted_ppca(
+                X,
+                resp[:, j],
+                sigma2,
+                max_q=max_q,
+                algorithm=algorithm,
+                seed=seed,
+            )
+            for j in range(k)
+        ]
+
     component_fits: list[dict] = []
     n_iter = 0
     collapsed = False
-    for n_iter in range(1, max_iter + 1):
-        component_fits = [
-            fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)
-        ]
-        log_lik = np.column_stack(
-            [log_likelihood_ppca(X, fit, sigma2) for fit in component_fits]
-        )
-        # Empty components: zero prior mass → -inf joint
-        log_pi = np.log(np.clip(pi, 1e-300, None))
-        for j, fit in enumerate(component_fits):
-            if fit.get("weight_sum", 0.0) <= 0:
-                log_pi[j] = -np.inf
-        log_joint = log_lik + log_pi[None, :]
-        R_new = _softmax_rows(log_joint)
-        pi = R_new.mean(axis=0)
-        delta = float(np.max(np.abs(R_new - R)))
-        R = R_new
-        if delta < tol:
-            break
+    prev_ll: Optional[float] = None
+    if k == 1:
+        # E-step cannot move; one M-step is the model.
+        n_iter = 0
+    else:
+        for n_iter in range(1, max_iter + 1):
+            component_fits = _m_step(R)
+            log_lik = np.column_stack(
+                [log_likelihood_ppca(X, fit, sigma2) for fit in component_fits]
+            )
+            # Empty components: zero prior mass → -inf joint
+            log_pi = np.log(np.clip(pi, 1e-300, None))
+            for j, fit in enumerate(component_fits):
+                if fit.get("weight_sum", 0.0) <= 0:
+                    log_pi[j] = -np.inf
+            log_joint = log_lik + log_pi[None, :]
+            R_new = _softmax_rows(log_joint)
+            pi = R_new.mean(axis=0)
+            delta = float(np.max(np.abs(R_new - R)))
+            ll = float(_logsumexp_rows(log_joint).sum())
+            R = R_new
+            if delta < tol or _ll_converged(ll, prev_ll, n, ll_tol):
+                break
+            prev_ll = ll
 
     # Final M-step so returned fits match responsibilities
-    component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+    component_fits = _m_step(R)
     means = np.vstack([fit["mu"] for fit in component_fits])
     if normalize_means:
         means = _l2_normalize_rows(means)
@@ -288,7 +527,7 @@ def mppca_fit(
         collapsed = True
         R = R_init
         pi = R.mean(axis=0)
-        component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+        component_fits = _m_step(R)
         means = np.vstack([fit["mu"] for fit in component_fits])
         if normalize_means:
             means = _l2_normalize_rows(means)
@@ -598,7 +837,7 @@ def component_local_plane(
     that plane (``sqrt(lambda)`` along each column of ``U``). Prefer the
     fitted component's ``U_q``; pad with weighted SVD if model ``q < q_viz``.
     """
-    X = np.asarray(X, float)
+    X = _as_embedding_matrix(X)
     w = np.asarray(weights, float).ravel()
     if X.ndim != 2 or w.shape[0] != X.shape[0] or float(w.sum()) <= 0:
         return None
@@ -635,14 +874,26 @@ def component_local_plane(
                 lams.append(0.0)
     if len(cols) < need:
         sw = np.sqrt(np.clip(w, 0.0, None))
-        Xw = sw[:, None] * Xc
-        _, s, Vt = np.linalg.svd(Xw, full_matrices=False)
+        Xw = np.nan_to_num(
+            sw[:, None] * Xc, nan=0.0, posinf=0.0, neginf=0.0
+        )
         w_sum = float(w.sum())
-        eig = (s ** 2) / w_sum if w_sum > 0 else s ** 2
-        for i, row in enumerate(Vt):
+        try:
+            U_pad, eig = weighted_leading_ppca(
+                Xw,
+                w_sum,
+                sigma2=float("inf"),
+                max_q=need,
+                q_min=need,
+                seed=0,
+            )
+        except np.linalg.LinAlgError:
+            U_pad = np.zeros((X.shape[1], 0))
+            eig = np.zeros(0)
+        for i in range(U_pad.shape[1]):
             if len(cols) >= need:
                 break
-            v = row.astype(float)
+            v = U_pad[:, i].astype(float)
             if any(abs(float(np.dot(v, c))) > 0.99 for c in cols):
                 continue
             cols.append(v)
@@ -676,17 +927,34 @@ def fit_from_responsibilities(
     seed: int = 0,
     max_iter: int = 30,
     tol: float = 1e-5,
+    ll_tol: float = DEFAULT_LL_TOL,
+    max_q: Optional[int] = None,
+    algorithm: str = "auto",
     normalize_means: bool = True,
 ) -> dict[str, Any]:
     """Run EM M-/E-steps starting from given responsibilities (fixed σ²)."""
-    X = np.asarray(X, dtype=float)
+    X = _as_embedding_matrix(X)
     R = np.asarray(R, dtype=float)
     n, k = R.shape
     pi = R.mean(axis=0)
     n_iter = 0
     max_iter = max(0, int(max_iter))
+
+    def _m_step(resp: np.ndarray) -> list[dict]:
+        return [
+            fit_weighted_ppca(
+                X,
+                resp[:, j],
+                sigma2,
+                max_q=max_q,
+                algorithm=algorithm,
+                seed=seed,
+            )
+            for j in range(k)
+        ]
+
     if max_iter == 0:
-        component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+        component_fits = _m_step(R)
         means = np.vstack([fit["mu"] for fit in component_fits])
         if normalize_means:
             means = _l2_normalize_rows(means)
@@ -709,8 +977,9 @@ def fit_from_responsibilities(
                 }
             )["collapsed"]),
         }
+    prev_ll: Optional[float] = None
     for n_iter in range(1, max_iter + 1):
-        component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+        component_fits = _m_step(R)
         log_lik = np.column_stack(
             [log_likelihood_ppca(X, fit, sigma2) for fit in component_fits]
         )
@@ -718,13 +987,16 @@ def fit_from_responsibilities(
         for j, fit in enumerate(component_fits):
             if fit.get("weight_sum", 0.0) <= 0:
                 log_pi[j] = -np.inf
-        R_new = _softmax_rows(log_lik + log_pi[None, :])
+        log_joint = log_lik + log_pi[None, :]
+        R_new = _softmax_rows(log_joint)
         pi = R_new.mean(axis=0)
         delta = float(np.max(np.abs(R_new - R)))
+        ll = float(_logsumexp_rows(log_joint).sum())
         R = R_new
-        if delta < tol:
+        if delta < tol or _ll_converged(ll, prev_ll, n, ll_tol):
             break
-    component_fits = [fit_weighted_ppca(X, R[:, j], sigma2) for j in range(k)]
+        prev_ll = ll
+    component_fits = _m_step(R)
     means = np.vstack([fit["mu"] for fit in component_fits])
     if normalize_means:
         means = _l2_normalize_rows(means)
@@ -1016,7 +1288,7 @@ def subject_grain_seed_fit(
             focus,
         )
 
-    X = np.asarray(embeddings, dtype=float)
+    X = _as_embedding_matrix(embeddings)
     if X.ndim != 2:
         raise ValueError(
             f"subject_grain_seed_fit embeddings must be 2-D, got shape {X.shape}"
@@ -1297,7 +1569,7 @@ def subject_grain_propose_split(
         ``(uq_spec, uq_by_topic, topic_keys, responsibilities, focus_topic,
         topic_labels, topic_parent, topic_tree, pending_proposal, split_undo)``.
     """
-    X = np.asarray(embeddings, dtype=float)
+    X = _as_embedding_matrix(embeddings)
     R = np.asarray(responsibilities, dtype=float)
     s2 = float(sigma2)
     phrase_list = _phrase_list(phrases, len(X))
@@ -1524,7 +1796,7 @@ def subject_grain_undo_split(
     # Prefer a fresh redraw at the live control σ² when we have embeddings.
     if embeddings is not None and R is not None and sigma2 is not None:
         try:
-            X = np.asarray(embeddings, dtype=float)
+            X = _as_embedding_matrix(embeddings)
             R_arr = np.asarray(R, dtype=float)
             s2 = float(sigma2)
             if X.ndim == 2 and R_arr.ndim == 2 and R_arr.shape[0] == len(X):
