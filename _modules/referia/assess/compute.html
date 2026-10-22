@@ -856,6 +856,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">...util.system</span><span class="w"> </span><span class="kn">import</span> <span class="n">most_recent_screen_shot</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">...util.plot</span><span class="w"> </span><span class="kn">import</span> <span class="n">bar_plot</span><span class="p">,</span> <span class="n">histogram</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">...util.files</span><span class="w"> </span><span class="kn">import</span> <span class="n">file_from_re</span><span class="p">,</span> <span class="n">files_from_re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.grain_fit</span><span class="w"> </span><span class="kn">import</span> <span class="n">subject_grain_fit</span><span class="p">,</span> <span class="n">subject_grain_reset</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.mppca</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">subject_grain_confirm_split</span><span class="p">,</span>
     <span class="n">subject_grain_propose_split</span><span class="p">,</span>
@@ -1563,6 +1564,42 @@
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;subject_grain_fit&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">subject_grain_fit</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;cluster_method&quot;</span><span class="p">:</span> <span class="s2">&quot;mppca&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;n_clusters&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+                    <span class="s2">&quot;force_refit&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;sigma2_mode&quot;</span><span class="p">:</span> <span class="s2">&quot;fixed&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;em_accept&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;kmeans_init&quot;</span><span class="p">:</span> <span class="s2">&quot;k-means++&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;kmeans_n_init&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+                    <span class="s2">&quot;kmeans_max_iter&quot;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span>
+                    <span class="s2">&quot;agglo_linkage&quot;</span><span class="p">:</span> <span class="s2">&quot;average&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;agglo_metric&quot;</span><span class="p">:</span> <span class="s2">&quot;cosine&quot;</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Fit grain catalogue for cluster_method (mppca, &quot;</span>
+                    <span class="s2">&quot;kmeans, agglomerative). Hard methods write one-hot R.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;subject_grain_reset&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">subject_grain_reset</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;cluster_method&quot;</span><span class="p">:</span> <span class="s2">&quot;mppca&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;n_clusters&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+                    <span class="s2">&quot;force_refit&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;k&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Refit grain: MPPCA returns to k=1; sklearn methods &quot;</span>
+                    <span class="s2">&quot;refit current n_clusters. Clears pending split.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
                 <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;document_soft_topic_distributions&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">document_soft_topic_distributions</span><span class="p">,</span>
                 <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;min_mass&quot;</span><span class="p">:</span> <span class="mf">50.0</span><span class="p">},</span>
@@ -1672,6 +1709,7 @@
         <span class="n">label_prompt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">n_exemplars</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
         <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">cluster_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;mppca&quot;</span><span class="p">,</span>
         <span class="o">**</span><span class="n">_kwargs</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Propose a soft split, then name provisional children when not stub.</span>
@@ -1694,6 +1732,7 @@
             <span class="n">topic_labels</span><span class="o">=</span><span class="n">topic_labels</span><span class="p">,</span>
             <span class="n">topic_parent</span><span class="o">=</span><span class="n">topic_parent</span><span class="p">,</span>
             <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+            <span class="n">cluster_method</span><span class="o">=</span><span class="n">cluster_method</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="p">(</span>
             <span class="n">uq_spec</span><span class="p">,</span>
