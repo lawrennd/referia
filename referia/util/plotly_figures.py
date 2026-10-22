@@ -25,6 +25,8 @@ __all__ = [
     "topic_document_heatmap_spec",
     "emd_heatmap_spec",
     "axis_correlate_bars_spec",
+    "cluster_pca_plotly_spec",
+    "cluster_dendrogram_plotly_spec",
 ]
 
 
@@ -794,5 +796,153 @@ def axis_correlate_bars_spec(
             "plot_bgcolor": "white",
             "paper_bgcolor": "white",
             "margin": {"l": 50, "r": 20, "t": 50, "b": 80},
+        },
+    }
+
+
+def cluster_pca_plotly_spec(
+    embeddings: np.ndarray,
+    responsibilities: np.ndarray,
+    *,
+    focus: int = 0,
+    phrases: Sequence[Any] | None = None,
+    title: str | None = None,
+    topic_prefix: str = "T",
+    hover_max_chars: int = 72,
+) -> dict[str, Any] | None:
+    """2-D PCA scatter of embeddings, colour = MAP cluster (CIP-0019)."""
+    from sklearn.decomposition import PCA
+
+    X = np.asarray(embeddings, float)
+    R = np.asarray(responsibilities, float)
+    if X.ndim != 2 or len(X) < 2 or R.ndim != 2 or R.shape[0] != len(X):
+        return None
+    if not np.isfinite(X).all() or not np.isfinite(R).all():
+        return None
+    focus = int(focus)
+    k = R.shape[1]
+    if k < 1 or focus < 0 or focus >= k:
+        return None
+    n_comp = 2 if X.shape[1] >= 2 else 1
+    xy = PCA(n_components=n_comp, random_state=0).fit_transform(X)
+    if n_comp == 1:
+        xy = np.column_stack([xy[:, 0], np.zeros(len(X))])
+    keys = topic_keys(k, prefix=topic_prefix)
+    labels = responsibilities_to_labels(R)
+    if phrases is None:
+        phrase_list = [f"phrase {i}" for i in range(len(X))]
+    else:
+        phrase_list = [str(p) for p in phrases]
+        if len(phrase_list) != len(X):
+            phrase_list = (phrase_list + ["—"] * len(X))[: len(X)]
+    traces: list[dict[str, Any]] = []
+    for j, key in enumerate(keys):
+        mask = labels == j
+        if not np.any(mask):
+            continue
+        idx = np.where(mask)[0]
+        hover = []
+        custom = []
+        for i in idx:
+            text = " ".join(phrase_list[i].split()) or "—"
+            short = text if len(text) <= hover_max_chars else text[: hover_max_chars - 1] + "…"
+            hover.append(short)
+            custom.append({"topic": key, "phrase": text})
+        colour = _UQ_PALETTE[j % len(_UQ_PALETTE)]
+        traces.append(
+            {
+                "type": "scatter",
+                "mode": "markers",
+                "name": key,
+                "x": xy[idx, 0].tolist(),
+                "y": xy[idx, 1].tolist(),
+                "text": hover,
+                "customdata": custom,
+                "hovertemplate": "%{text}<extra></extra>",
+                "marker": {
+                    "size": 8 if j == focus else 5,
+                    "color": colour,
+                    "opacity": 1.0 if j == focus else 0.45,
+                    "line": {"width": 1 if j == focus else 0, "color": "#0b0b0b"},
+                },
+            }
+        )
+    return {
+        "data": traces,
+        "layout": {
+            "title": {
+                "text": title or f"Focus {keys[focus]} — PCA",
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "xaxis": {"title": "PC1", "zeroline": False, "showgrid": True, "gridcolor": "#e4e3df"},
+            "yaxis": {"title": "PC2", "zeroline": False, "showgrid": True, "gridcolor": "#e4e3df", "scaleanchor": "x"},
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 50, "r": 20, "t": 50, "b": 50},
+            "legend": {"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
+        },
+    }
+
+
+def cluster_dendrogram_plotly_spec(
+    children: np.ndarray,
+    distances: np.ndarray,
+    *,
+    phrases: Sequence[Any] | None = None,
+    labels: np.ndarray | None = None,
+    n: int | None = None,
+    title: str | None = None,
+) -> dict[str, Any] | None:
+    """U-shaped dendrogram from sklearn ``children_`` / ``distances_``."""
+    ch = np.asarray(children, dtype=int)
+    dist = np.asarray(distances, dtype=float).ravel()
+    if ch.ndim != 2 or ch.shape[1] != 2 or ch.shape[0] == 0:
+        return None
+    n_leaves = int(n if n is not None else ch.shape[0] + 1)
+    if dist.shape[0] != ch.shape[0]:
+        return None
+    xpos = [float(i) for i in range(n_leaves)]
+    ypos = [0.0] * n_leaves
+    xs: list[float | None] = []
+    ys: list[float | None] = []
+    for i, (a, b) in enumerate(ch):
+        a = int(a)
+        b = int(b)
+        if a >= len(xpos) or b >= len(xpos):
+            return None
+        xa, xb = xpos[a], xpos[b]
+        ya, yb = ypos[a], ypos[b]
+        y = float(dist[i])
+        x = 0.5 * (xa + xb)
+        xs.extend([xa, xa, xb, xb, None])
+        ys.extend([ya, y, y, yb, None])
+        xpos.append(x)
+        ypos.append(y)
+    return {
+        "data": [
+            {
+                "type": "scatter",
+                "mode": "lines",
+                "x": xs,
+                "y": ys,
+                "line": {"color": "#0b0b0b", "width": 1},
+                "hoverinfo": "skip",
+                "showlegend": False,
+            }
+        ],
+        "layout": {
+            "title": {
+                "text": title or "Agglomerative dendrogram",
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "xaxis": {"title": "phrase order", "showticklabels": False, "zeroline": False},
+            "yaxis": {"title": "join distance", "zeroline": False},
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 50, "r": 20, "t": 50, "b": 40},
         },
     }
