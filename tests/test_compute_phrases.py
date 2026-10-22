@@ -119,6 +119,8 @@ def test_as_kinds_splits_comma_string():
     assert _as_kinds("benefit") == ["benefit"]
     assert _as_kinds(["concern", "benefit", " "]) == ["concern", "benefit"]
     assert _as_kinds("  ,  ") == [","]
+    assert _as_kinds([]) == []
+    assert _as_kinds(("concern", "", "benefit")) == ["concern", "benefit"]
 
 
 def test_llm_extract_phrases_comma_kinds_runs_each_kind():

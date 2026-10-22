@@ -570,11 +570,13 @@ def test_coerce_em_controls_treat_nan_and_junk_as_defaults():
     assert _coerce_float("not-a-float", DEFAULT_TOPIC_SIGMA2) == DEFAULT_TOPIC_SIGMA2
     assert _coerce_float(float("nan"), DEFAULT_TOPIC_SIGMA2) == DEFAULT_TOPIC_SIGMA2
     assert _coerce_float("0.25", 0.01) == pytest.approx(0.25)
+    assert _coerce_float(object(), DEFAULT_TOPIC_SIGMA2) == DEFAULT_TOPIC_SIGMA2
     assert _coerce_int(None, DEFAULT_EM_ACCEPT) == DEFAULT_EM_ACCEPT
     assert _coerce_int("", DEFAULT_EM_ACCEPT) == DEFAULT_EM_ACCEPT
     assert _coerce_int("nope", DEFAULT_EM_ACCEPT) == DEFAULT_EM_ACCEPT
     assert _coerce_int(float("nan"), DEFAULT_EM_ACCEPT) == DEFAULT_EM_ACCEPT
     assert _coerce_int("12.9", 40) == 12
+    assert _coerce_int(object(), DEFAULT_EM_ACCEPT) == DEFAULT_EM_ACCEPT
 
 
 def test_subject_grain_propose_split_accepts_missing_sigma2():
