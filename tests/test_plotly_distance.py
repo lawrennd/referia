@@ -2,6 +2,7 @@
 
 from referia.util.plotly_figures import (
     axis_correlate_bars_spec,
+    chapter_lens_radar_spec,
     doc_mds_plotly_spec,
     emd_heatmap_spec,
     topic_document_heatmap_spec,
@@ -98,3 +99,54 @@ def test_plotly_titles_and_topic_id_fallback():
     )
     assert bars["layout"]["title"]["text"] == "Bars"
     assert "T3" in bars["data"][0]["x"]
+
+
+def test_chapter_lens_radar_and_heatmap_labels():
+    radar = chapter_lens_radar_spec(
+        [[0.8, 0.2], [0.1, 0.9]],
+        ["chapter_1.pdf", "chapter_2.pdf"],
+        topic_labels={"T0": "Privacy", "T1": "Access"},
+        doc_labels=["Chapter 1", "Chapter 2"],
+    )
+    assert radar["data"][0]["type"] == "scatterpolar"
+    assert radar["data"][0]["name"] == "Chapter 1"
+    assert radar["data"][0]["theta"][0] == "Privacy"
+    empty = chapter_lens_radar_spec([0.5], ["docA"])
+    assert empty["data"] == []
+    heat = topic_document_heatmap_spec(
+        [[0.8, 0.2]],
+        ["chapter_1.pdf"],
+        doc_labels=["1. The starting point"],
+    )
+    assert heat["layout"]["title"]["text"] == "Lens share by chapter"
+    assert heat["data"][0]["y"] == ["1. The starting point"]
+    assert heat["data"][0]["customdata"][0][0]["doc"] == "chapter_1.pdf"
+
+
+def _adjacent(a, b, seq) -> bool:
+    return abs(seq.index(a) - seq.index(b)) == 1
+
+
+def test_heatmap_leaf_order_groups_similar_rows_and_columns():
+    # Interleaved block structure: A≈C on lenses 0–1, B≈D on lenses 2–3.
+    P = [
+        [0.9, 0.1, 0.0, 0.0],
+        [0.0, 0.0, 0.9, 0.1],
+        [0.8, 0.2, 0.0, 0.0],
+        [0.0, 0.0, 0.8, 0.2],
+    ]
+    docs = ["A", "B", "C", "D"]
+    topics = {"T0": "L0", "T1": "L1", "T2": "L2", "T3": "L3"}
+    heat = topic_document_heatmap_spec(P, docs, topic_labels=topics)
+    y = heat["data"][0]["y"]
+    x = heat["data"][0]["x"]
+    assert _adjacent("A", "C", y)
+    assert _adjacent("B", "D", y)
+    assert _adjacent("L0", "L1", x)
+    assert _adjacent("L2", "L3", x)
+    raw = topic_document_heatmap_spec(
+        P, docs, topic_labels=topics, reorder=False
+    )
+    assert raw["data"][0]["y"] == docs
+    radar = chapter_lens_radar_spec(P, docs, topic_labels=topics)
+    assert radar["data"][0]["theta"][:-1] == x

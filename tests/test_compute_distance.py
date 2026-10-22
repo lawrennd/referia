@@ -152,13 +152,14 @@ def test_facade_with_stub_emd(monkeypatch):
         n_perm=9,
         seed=0,
     )
-    assert len(packed) == 16
-    P, means, mass, docs, cost, D, coords, explained, perm, disp, axes, md, mds_spec, heat, emd, bars = packed
+    assert len(packed) == 17
+    P, means, mass, docs, cost, D, coords, explained, perm, disp, axes, md, mds_spec, heat, emd, bars, radar = packed
     assert docs == ["A", "B", "C", "D"]
     assert np.allclose(np.sum(P, axis=1), 1.0)
     assert "PERMANOVA" in md
     assert mds_spec["data"][0]["customdata"][0]["doc"] in docs
     assert heat["data"][0]["type"] == "heatmap"
+    assert radar["data"][0]["type"] == "scatterpolar"
 
 
 def test_distance_functions_registered():
@@ -365,3 +366,84 @@ def test_zero_mass_kept_when_min_mass_none():
     assert kept == ["A"]
     assert P.shape == (1, 2)
     assert mass == [0.0]
+
+
+def test_cluster_ids_missing_accepts_numpy_array():
+    from referia.assess.compute.distance import cluster_ids_missing
+
+    assert cluster_ids_missing(None) is True
+    assert cluster_ids_missing("") is True
+    assert cluster_ids_missing(float("nan")) is True
+    assert cluster_ids_missing(np.array([0, 0, 1, 1])) is False
+    assert cluster_ids_missing(np.array([], dtype=int)) is True
+
+
+def test_chapter_display_name_and_nan_min_mass(monkeypatch):
+    from referia.assess.compute.distance import chapter_display_name
+
+    assert chapter_display_name("foreword.pdf") == "Foreword"
+    assert chapter_display_name("chapter_2.pdf") == "Chapter 2"
+    assert chapter_display_name(
+        "chapter_2.pdf", {"chapter_2.pdf": "2. Closing the innovation gap"}
+    ) == "2. Closing the innovation gap"
+
+    from referia.assess.compute import distance as dist
+
+    monkeypatch.setattr(
+        dist,
+        "emd_distance_matrix",
+        lambda P, M: np.abs(P[:, None, :] - P[None, :, :]).sum(-1),
+    )
+    packed = run_document_distance_analysis(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        doc_ids=["chapter_1.pdf", "chapter_2.pdf"],
+        responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+        min_mass=float("nan"),
+        group_field="chapter",
+        n_perm=5,
+        seed=0,
+    )
+    assert packed[3] == ["chapter_1.pdf", "chapter_2.pdf"]
+    assert packed[13]["data"][0]["y"] == ["Chapter 1", "Chapter 2"]
+    assert "PERMANOVA is not identified" in packed[11]
+    assert packed[16]["data"][0]["type"] == "scatterpolar"
+
+
+def test_compute_wrapper_loads_codebook_cluster_ids(tmp_path, monkeypatch):
+    import pandas as pd
+    from referia.assess.compute import distance as dist
+
+    info = tmp_path / "info"
+    info.mkdir()
+    pd.DataFrame({"cluster_ids": [[0, 0, 1, 1]]}).to_parquet(info / "codebook.parquet")
+    (info / "documents.yml").write_text(
+        "- filename: chapter_1.pdf\n  title: '1. Starting point'\n"
+        "- filename: chapter_2.pdf\n  title: '2. Innovation'\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        dist,
+        "emd_distance_matrix",
+        lambda P, M: np.abs(P[:, None, :] - P[None, :, :]).sum(-1),
+    )
+    compute = Compute(
+        {
+            "input": {
+                "type": "parquet",
+                "filename": "records.parquet",
+                "directory": str(info),
+            }
+        }
+    )
+    packed = compute._run_document_distance_analysis(
+        embeddings=[[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.1, 0.9]],
+        doc_ids=["chapter_1.pdf", "chapter_1.pdf", "chapter_2.pdf", "chapter_2.pdf"],
+        responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+        min_mass=1.0,
+        group_field="chapter",
+        n_perm=5,
+        seed=0,
+    )
+    assert packed[3] == ["chapter_1.pdf", "chapter_2.pdf"]
+    assert packed[16]["data"][0]["name"] == "1. Starting point"
+    np.testing.assert_allclose(packed[0], [[1.0, 0.0], [0.0, 1.0]])

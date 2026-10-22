@@ -35,9 +35,11 @@ from .embed import llm_embed, llm_embed_extraction_phrases
 from .distance import (
     axis_correlates,
     classical_mds,
+    cluster_ids_missing,
     cosine_ground_cost,
     document_soft_topic_distributions,
     emd_distance_matrix,
+    load_document_titles,
     permanova,
     permdisp,
     run_document_distance_analysis,
@@ -154,7 +156,58 @@ class Compute(lynguine.assess.compute.Compute):
             data=getattr(self, "_data", None),
             llm_cache_dir=cache_dir,
         )
-        
+
+    def _config_info_dir(self):
+        """Directory of the packed corpus / scores stores (``../info``)."""
+        from pathlib import Path
+
+        iface = getattr(self, "_interface", None)
+        if iface is None:
+            return None
+        base = getattr(iface, "directory", None)
+        getter = getattr(iface, "get", None)
+        details = None
+        if callable(getter):
+            for key in ("data", "input", "output", "cache"):
+                details = getter(key)
+                if details is not None:
+                    break
+        rel = None
+        if details is not None:
+            dget = getattr(details, "get", None)
+            if callable(dget):
+                rel = dget("directory")
+        if base and rel:
+            return Path(str(base)) / str(rel)
+        if rel and Path(str(rel)).is_absolute():
+            return Path(str(rel))
+        if base:
+            return Path(str(base)) / ".." / "info"
+        return None
+
+    def _run_document_distance_analysis(
+        self, cluster_ids=None, doc_titles=None, **kwargs
+    ):
+        """Fill VQ ``cluster_ids`` and chapter titles from sibling info files."""
+        info = self._config_info_dir()
+        if cluster_ids_missing(cluster_ids) and info is not None:
+            codebook = info / "codebook.parquet"
+            if codebook.exists():
+                try:
+                    frame = pd.read_parquet(codebook)
+                    if "cluster_ids" in frame.columns and len(frame):
+                        cluster_ids = frame.iloc[0]["cluster_ids"]
+                except Exception:
+                    pass
+        if not doc_titles and info is not None:
+            documents = info / "documents.yml"
+            if documents.exists():
+                doc_titles = load_document_titles(documents)
+        return run_document_distance_analysis(
+            cluster_ids=cluster_ids, doc_titles=doc_titles, **kwargs
+        )
+
+
     def prep_all(self, interface, data):
         """
         Prepare all compute entries for use.
@@ -838,9 +891,9 @@ class Compute(lynguine.assess.compute.Compute):
             },
             {
                 "name": "run_document_distance_analysis",
-                "function": run_document_distance_analysis,
+                "function": self._run_document_distance_analysis,
                 "default_args": {
-                    "min_mass": 50.0,
+                    "min_mass": 1.0,
                     "n_perm": 999,
                     "seed": 0,
                     "n_components": 2,

@@ -83,6 +83,67 @@ def test_skips_non_stores_and_empty_interface():
     assert named_store_status({"title": "Review", "compute": []}) == {}
 
 
+class _DictLike:
+    """lynguine Interface is dict-like but is not a Mapping."""
+
+    def __init__(self, data):
+        self._data = data
+
+    def items(self):
+        return self._data.items()
+
+    def get(self, key, default=None):
+        return self._data.get(key, default)
+
+    def keys(self):
+        return self._data.keys()
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+
+def test_named_store_status_resolves_relative_directory(tmp_path):
+    info = tmp_path / "info"
+    info.mkdir()
+    (info / "document_distance.yml").write_text("x: 1\n")
+    status = named_store_status(
+        {
+            "base_directory": str(tmp_path / "04_distance"),
+            "output": {
+                "type": "yaml",
+                "filename": "document_distance.yml",
+                "directory": "../info",
+            },
+        }
+    )
+    assert status["output"]["exists"] is True
+    assert status["output"]["path"].endswith("info/document_distance.yml")
+
+
+def test_named_store_status_accepts_dict_like_interface(tmp_path):
+    path = tmp_path / "document_distance.yml"
+    path.write_text("x: 1\n")
+    status = named_store_status(
+        _DictLike(
+            {
+                "title": "Review",
+                "output": _DictLike(
+                    {
+                        "type": "yaml",
+                        "filename": "document_distance.yml",
+                        "directory": str(tmp_path),
+                    }
+                ),
+            }
+        )
+    )
+    assert status["output"]["exists"] is True
+    assert status["output"]["path"].endswith("document_distance.yml")
+
+
 def test_store_stat_fallback_when_lynguine_raises(tmp_path, monkeypatch):
     import lynguine.access.io as io
 
