@@ -22,6 +22,7 @@ from ...util.text import word_count, text_summarizer, paragraph_split, list_leng
 from ...util.system import most_recent_screen_shot
 from ...util.plot import bar_plot, histogram
 from ...util.files import file_from_re, files_from_re
+from .grain_fit import subject_grain_fit, subject_grain_reset
 from .mppca import (
     subject_grain_confirm_split,
     subject_grain_propose_split,
@@ -712,6 +713,42 @@ class Compute(lynguine.assess.compute.Compute):
                 ),
             },
             {
+                "name": "subject_grain_fit",
+                "function": subject_grain_fit,
+                "default_args": {
+                    "cluster_method": "mppca",
+                    "n_clusters": 8,
+                    "force_refit": True,
+                    "sigma2_mode": "fixed",
+                    "em_accept": 40,
+                    "seed": 0,
+                    "kmeans_init": "k-means++",
+                    "kmeans_n_init": 10,
+                    "kmeans_max_iter": 300,
+                    "agglo_linkage": "average",
+                    "agglo_metric": "cosine",
+                },
+                "docstr": (
+                    "Fit grain catalogue for cluster_method (mppca, "
+                    "kmeans, agglomerative). Hard methods write one-hot R."
+                ),
+            },
+            {
+                "name": "subject_grain_reset",
+                "function": subject_grain_reset,
+                "default_args": {
+                    "cluster_method": "mppca",
+                    "n_clusters": 8,
+                    "force_refit": True,
+                    "k": 1,
+                    "seed": 0,
+                },
+                "docstr": (
+                    "Refit grain: MPPCA returns to k=1; sklearn methods "
+                    "refit current n_clusters. Clears pending split."
+                ),
+            },
+            {
                 "name": "document_soft_topic_distributions",
                 "function": document_soft_topic_distributions,
                 "default_args": {"min_mass": 50.0},
@@ -821,6 +858,7 @@ class Compute(lynguine.assess.compute.Compute):
         label_prompt=None,
         n_exemplars: int = 8,
         temperature: float = 0.2,
+        cluster_method: str = "mppca",
         **_kwargs,
     ):
         """Propose a soft split, then name provisional children when not stub.
@@ -843,6 +881,7 @@ class Compute(lynguine.assess.compute.Compute):
             topic_labels=topic_labels,
             topic_parent=topic_parent,
             seed=seed,
+            cluster_method=cluster_method,
         )
         (
             uq_spec,
