@@ -29,6 +29,32 @@ SOFT_METHODS = frozenset({"mppca"})
 HARD_METHODS = frozenset({"kmeans", "agglomerative"})
 
 
+def _lens_row_weights(n: int, lens_weight: Any, vq_mass: Any, method: str):
+    mode = str(lens_weight or "uniform").strip().lower()
+    if mode in ("", "uniform"):
+        return None
+    if mode != "mass":
+        raise ValueError(
+            f"lens_weight must be uniform or mass, got {lens_weight!r}"
+        )
+    if method == "agglomerative":
+        raise ValueError(
+            "lens_weight=mass is not supported with agglomerative clustering "
+            "(sklearn AgglomerativeClustering has no sample_weight); "
+            "use cluster_method=kmeans or mppca, or lens_weight=uniform"
+        )
+    if vq_mass is None:
+        raise ValueError(
+            "lens_weight=mass requires vq_mass from the VQ codebook"
+        )
+    w = np.asarray(vq_mass, dtype=float).ravel()
+    if w.shape[0] != n:
+        raise ValueError(
+            f"vq_mass length {w.shape[0]} != codebook n={n}"
+        )
+    return w
+
+
 def require_soft_method(cluster_method: Any = None) -> None:
     """Raise if Propose / Confirm / Undo is called on a hard partition."""
     method = str(cluster_method or "mppca").strip().lower()
@@ -145,13 +171,16 @@ def subject_grain_fit(
     kmeans_max_iter: int = 300,
     agglo_linkage: str = "average",
     agglo_metric: str = "cosine",
+    lens_weight: str = "uniform",
+    vq_mass=None,
     **_kwargs,
 ):
     """Fit the grain catalogue for ``cluster_method``.
 
     ``mppca`` keeps the CIP-0015 k=1 seed (or ``k``). Hard methods use
     ``n_clusters`` and write one-hot ``R``. Skip-if-``R``-present unless
-    ``force_refit``.
+    ``force_refit``, and only when ``R`` rows match the current embeddings
+    (codebook ``m``, not leftover phrase-level scores).
     """
     method = str(cluster_method or "mppca").strip().lower()
     if method not in SOFT_METHODS | HARD_METHODS:
@@ -160,22 +189,27 @@ def subject_grain_fit(
             f"got {cluster_method!r}"
         )
 
+    X = as_embedding_matrix(embeddings)
     if not force_refit and responsibilities_present(responsibilities):
-        from .mppca import subject_grain_seed_fit
+        R_exist = np.asarray(responsibilities, dtype=float)
+        if R_exist.ndim == 2 and R_exist.shape[0] == X.shape[0]:
+            from .mppca import subject_grain_seed_fit
 
-        return subject_grain_seed_fit(
-            embeddings,
-            phrases=phrases,
-            force_refit=False,
-            responsibilities=responsibilities,
-            uq_by_topic=uq_by_topic,
-            uq_spec=uq_spec,
-            topic_keys_existing=topic_keys_existing,
-            topic_labels=topic_labels,
-            topic_parent=topic_parent,
-            topic_tree=topic_tree,
-            focus_topic=focus_topic,
-        )
+            return subject_grain_seed_fit(
+                embeddings,
+                phrases=phrases,
+                force_refit=False,
+                responsibilities=responsibilities,
+                uq_by_topic=uq_by_topic,
+                uq_spec=uq_spec,
+                topic_keys_existing=topic_keys_existing,
+                topic_labels=topic_labels,
+                topic_parent=topic_parent,
+                topic_tree=topic_tree,
+                focus_topic=focus_topic,
+            )
+
+    weights = _lens_row_weights(X.shape[0], lens_weight, vq_mass, method)
 
     if method == "mppca":
         from .mppca import subject_grain_seed_fit
@@ -190,9 +224,9 @@ def subject_grain_fit(
             k=k_use,
             force_refit=True,
             seed=int(seed),
+            row_weights=weights,
         )
 
-    X = as_embedding_matrix(embeddings)
     n_k = int(n_clusters) if n_clusters is not None else 8
     if method == "kmeans":
         packed = fit_kmeans(
@@ -202,6 +236,7 @@ def subject_grain_fit(
             n_init=int(kmeans_n_init),
             max_iter=int(kmeans_max_iter),
             seed=int(seed),
+            sample_weight=weights,
         )
         fig_title = "k-means PCA"
         children = distances = None

@@ -317,6 +317,37 @@ def test_facade_doc_group_and_phrase_groups(monkeypatch):
     assert "No group labels" in mismatched[11]
 
 
+def test_run_document_distance_expands_vq_qr(monkeypatch):
+    from referia.assess.compute import distance as dist
+
+    monkeypatch.setattr(
+        dist,
+        "emd_distance_matrix",
+        lambda P, M: np.abs(P[:, None, :] - P[None, :, :]).sum(-1),
+    )
+    packed = run_document_distance_analysis(
+        embeddings=[[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.1, 0.9]],
+        doc_ids=["A", "A", "B", "B"],
+        responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+        cluster_ids=[0, 0, 1, 1],
+        groups=["g1", "g1", "g2", "g2"],
+        min_mass=1.0,
+        n_perm=5,
+        seed=0,
+    )
+    P, _means, mass, docs, *_rest = packed
+    assert docs == ["A", "B"]
+    np.testing.assert_allclose(P, [[1.0, 0.0], [0.0, 1.0]])
+    np.testing.assert_allclose(mass, [2.0, 2.0])
+    with pytest.raises(ValueError, match="pass cluster_ids"):
+        run_document_distance_analysis(
+            embeddings=[[1.0, 0.0], [0.0, 1.0]],
+            doc_ids=["A", "B"],
+            responsibilities=[[1.0, 0.0]],
+            min_mass=1.0,
+        )
+
+
 def test_zero_mass_kept_when_min_mass_none():
     P, kept, mass = document_soft_topic_distributions(
         ["A"],

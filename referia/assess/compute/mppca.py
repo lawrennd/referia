@@ -383,6 +383,7 @@ def mppca_fit(
     max_q: Optional[int] = None,
     algorithm: str = "auto",
     normalize_means: bool = True,
+    row_weights: Optional[np.ndarray] = None,
 ) -> dict[str, Any]:
     """Fit a mixture of PPCA components (k-means init, fixed shared σ²).
 
@@ -434,6 +435,22 @@ def mppca_fit(
     if sigma2 <= 0:
         raise ValueError(f"sigma2 must be positive, got {sigma2}")
 
+    weighted = row_weights is not None
+    if row_weights is None:
+        w = np.ones(n, dtype=float)
+    else:
+        w = np.asarray(row_weights, dtype=float).ravel()
+        if w.shape[0] != n:
+            raise ValueError(
+                f"row_weights length {w.shape[0]} != n={n}"
+            )
+        w = np.clip(w, 0.0, None)
+        if float(w.sum()) <= 0:
+            raise ValueError("row_weights must sum to a positive mass")
+
+    def _mixing(resp: np.ndarray) -> np.ndarray:
+        return (resp * w[:, None]).sum(axis=0) / float(w.sum())
+
     # k=1: responsibilities are identically 1; k-means is a no-op in 3072-d.
     if k == 1:
         labels_init = np.zeros(n, dtype=int)
@@ -444,17 +461,21 @@ def mppca_fit(
             random_state=seed,
             n_init=n_init,
         )
-        labels_init = km.fit_predict(X)
+        if weighted:
+            km.fit(X, sample_weight=w)
+            labels_init = np.asarray(km.labels_, dtype=int)
+        else:
+            labels_init = np.asarray(km.fit_predict(X), dtype=int)
     R = np.zeros((n, k), dtype=float)
     R[np.arange(n), labels_init] = 1.0
-    pi = R.mean(axis=0)
+    pi = _mixing(R)
     R_init = R.copy()
 
     def _m_step(resp: np.ndarray) -> list[dict]:
         return [
             fit_weighted_ppca(
                 X,
-                resp[:, j],
+                resp[:, j] * w,
                 sigma2,
                 max_q=max_q,
                 algorithm=algorithm,
@@ -483,7 +504,7 @@ def mppca_fit(
                     log_pi[j] = -np.inf
             log_joint = log_lik + log_pi[None, :]
             R_new = _softmax_rows(log_joint)
-            pi = R_new.mean(axis=0)
+            pi = _mixing(R_new)
             delta = float(np.max(np.abs(R_new - R)))
             ll = float(_logsumexp_rows(log_joint).sum())
             R = R_new
@@ -509,7 +530,7 @@ def mppca_fit(
     if int((map_sizes > 0).sum()) <= 1 or max_mean_cos > 0.999:
         collapsed = True
         R = R_init
-        pi = R.mean(axis=0)
+        pi = _mixing(R)
         component_fits = _m_step(R)
         means = np.vstack([fit["mu"] for fit in component_fits])
         if normalize_means:
@@ -572,6 +593,7 @@ def profile_topic_sigma2(
     n_init: int = 10,
     normalize_means: bool = True,
     min_map_fraction: float = 0.5,
+    row_weights: Optional[np.ndarray] = None,
 ) -> dict[str, Any]:
     r"""Sweep topic σ² and pick the softest floor that does not collapse.
 
@@ -601,6 +623,7 @@ def profile_topic_sigma2(
             tol=tol,
             n_init=n_init,
             normalize_means=normalize_means,
+            row_weights=row_weights,
         )
         diag = topic_fit_diagnostics(fit)
         return {
@@ -625,6 +648,7 @@ def profile_topic_sigma2(
             tol=tol,
             n_init=n_init,
             normalize_means=normalize_means,
+            row_weights=row_weights,
         )
         diag = topic_fit_diagnostics(fit)
         curve.append(diag)
@@ -1218,62 +1242,71 @@ def subject_grain_seed_fit(
     topic_tree=None,
     focus_topic=None,
     seed: int = 0,
+    row_weights=None,
     **_kwargs,
 ):
     """k=1 (or k) MPPCA seed on a packed corpus row (CIP-0015).
 
     Skip-if-already-fit is a field check on ``responsibilities`` when
-    ``force_refit`` is false. Parameters come from config / row fields.
+    ``force_refit`` is false **and** ``R`` rows match the current
+    embeddings (CIP-001A codebook vs leftover phrase-level scores).
     Returns
     ``(responsibilities, uq_by_topic, uq_spec, topic_keys, topic_labels,
     topic_parent, topic_tree, focus_topic)``.
     """
-    if not force_refit and _responsibilities_present(responsibilities):
-        existing_keys = topic_keys_existing or _kwargs.get("topic_keys")
-        keys = [str(x) for x in (existing_keys or topic_keys(
-            np.asarray(responsibilities, float).shape[1]
-        ))]
-        focus = str(focus_topic) if focus_topic not in (None, "") else keys[0]
-        labels = dict(topic_labels) if isinstance(topic_labels, dict) else {
-            key: f"Topic {i}" for i, key in enumerate(keys)
-        }
-        parent = _topic_parent_map(topic_parent, keys)
-        tree = topic_tree or format_topic_tree_markdown(
-            keys, labels, parent, focus, responsibilities=responsibilities
-        )
-        uq_map = uq_by_topic if isinstance(uq_by_topic, dict) else {}
-        spec = uq_spec if isinstance(uq_spec, dict) else (
-            uq_map.get(focus) or next(iter(uq_map.values()), {})
-        )
-        return (
-            responsibilities,
-            uq_map,
-            spec,
-            keys,
-            labels,
-            parent,
-            tree,
-            focus,
-        )
-
     X = _as_embedding_matrix(embeddings)
     if X.ndim != 2:
         raise ValueError(
             f"subject_grain_seed_fit embeddings must be 2-D, got shape {X.shape}"
         )
+    if not force_refit and _responsibilities_present(responsibilities):
+        R_exist = np.asarray(responsibilities, float)
+        if R_exist.ndim == 2 and R_exist.shape[0] == X.shape[0]:
+            existing_keys = topic_keys_existing or _kwargs.get("topic_keys")
+            keys = [str(x) for x in (existing_keys or topic_keys(
+                R_exist.shape[1]
+            ))]
+            focus = str(focus_topic) if focus_topic not in (None, "") else keys[0]
+            labels = dict(topic_labels) if isinstance(topic_labels, dict) else {
+                key: f"Topic {i}" for i, key in enumerate(keys)
+            }
+            parent = _topic_parent_map(topic_parent, keys)
+            tree = topic_tree or format_topic_tree_markdown(
+                keys, labels, parent, focus, responsibilities=responsibilities
+            )
+            uq_map = uq_by_topic if isinstance(uq_by_topic, dict) else {}
+            spec = uq_spec if isinstance(uq_spec, dict) else (
+                uq_map.get(focus) or next(iter(uq_map.values()), {})
+            )
+            return (
+                responsibilities,
+                uq_map,
+                spec,
+                keys,
+                labels,
+                parent,
+                tree,
+                focus,
+            )
     k = int(k) if k is not None else 1
     max_iter = int(em_accept) if em_accept is not None else 40
     mode = str(sigma2_mode or "fixed").strip().lower()
+    weights = row_weights
     if mode == "profile":
         profiled = profile_topic_sigma2(
-            X, k, seed=int(seed), max_iter=max_iter
+            X, k, seed=int(seed), max_iter=max_iter, row_weights=weights
         )
         fit = profiled["fit"]
         s2 = float(profiled["sigma2"])
     else:
         s2 = float(sigma2) if sigma2 not in (None, "") else DEFAULT_TOPIC_SIGMA2
         fit = mppca_fit(
-            X, k, sigma2=s2, seed=int(seed), max_iter=max_iter
+            X,
+            k,
+            sigma2=s2,
+            seed=int(seed),
+            max_iter=max_iter,
+            row_weights=weights,
         )
         s2 = float(fit["sigma2"])
 

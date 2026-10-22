@@ -23,11 +23,13 @@ def fit_kmeans(
     n_init: int = 10,
     max_iter: int = 300,
     seed: int = 0,
+    sample_weight: Any = None,
 ) -> dict[str, Any]:
     """Partition ``(n, d)`` embeddings with sklearn ``KMeans``.
 
     Returns ``responsibilities`` (one-hot), L2-normalised ``means``,
-    integer ``labels``, and ``inertia``.
+    integer ``labels``, and ``inertia``. ``sample_weight`` is CIP-001A
+    lens mass when the rows are VQ codewords.
     """
     X = as_embedding_matrix(embeddings)
     if X.ndim != 2 or X.shape[0] == 0:
@@ -48,7 +50,17 @@ def fit_kmeans(
         max_iter=int(max_iter),
         random_state=int(seed),
     )
-    labels = np.asarray(est.fit_predict(X), dtype=int)
+    weights = None
+    if sample_weight is not None:
+        weights = np.asarray(sample_weight, dtype=float).ravel()
+        if weights.shape[0] != X.shape[0]:
+            raise ValueError(
+                f"sample_weight length {weights.shape[0]} != n={X.shape[0]}"
+            )
+        est.fit(X, sample_weight=weights)
+        labels = np.asarray(est.labels_, dtype=int)
+    else:
+        labels = np.asarray(est.fit_predict(X), dtype=int)
     R = one_hot_from_labels(labels, k)
     means = l2_normalize_rows(np.asarray(est.cluster_centers_, dtype=float))
     return {
@@ -56,4 +68,5 @@ def fit_kmeans(
         "means": means,
         "labels": labels,
         "inertia": float(est.inertia_),
+        "centers": np.asarray(est.cluster_centers_, dtype=float),
     }

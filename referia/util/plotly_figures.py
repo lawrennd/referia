@@ -27,6 +27,8 @@ __all__ = [
     "axis_correlate_bars_spec",
     "cluster_pca_plotly_spec",
     "cluster_dendrogram_plotly_spec",
+    "vq_projection_walk_plotly_spec",
+    "stiefel_step_scale",
 ]
 
 
@@ -945,4 +947,314 @@ def cluster_dendrogram_plotly_spec(
             "paper_bgcolor": "white",
             "margin": {"l": 50, "r": 20, "t": 50, "b": 40},
         },
+    }
+
+
+def stiefel_step_scale(speed: float, plane_var: float, linger: bool) -> float:
+    """Diffusion coefficient for one Stiefel step.
+
+    When ``linger`` is on, high-variance planes take smaller steps so the
+    walk spends more time on views that capture codebook variance.
+    """
+    s = float(speed)
+    if linger:
+        s = s / float(np.sqrt(max(float(plane_var), 1e-12)))
+    return s
+
+
+def _plane_captured_variance(Xq: np.ndarray, U: np.ndarray) -> float:
+    z = Xq @ U
+    return float(z.var(axis=0, ddof=0).sum())
+
+
+def _qr_stiefel(U: np.ndarray) -> np.ndarray:
+    q, _ = np.linalg.qr(U)
+    for j in range(q.shape[1]):
+        if q[0, j] < 0:
+            q[:, j] *= -1.0
+    return q
+
+
+def _cluster_cov2(xy: np.ndarray, floor: float) -> np.ndarray:
+    if xy.shape[0] < 2:
+        return (floor ** 2) * np.eye(2)
+    cov = np.cov(xy, rowvar=False, ddof=0)
+    if cov.shape != (2, 2) or not np.isfinite(cov).all():
+        return (floor ** 2) * np.eye(2)
+    vals = np.linalg.eigvalsh(cov)
+    if float(np.min(vals)) < 0.25 * floor ** 2:
+        cov = cov + (floor ** 2) * np.eye(2)
+    return cov
+
+
+def vq_projection_walk_plotly_spec(
+    embeddings: np.ndarray,
+    labels: np.ndarray,
+    centres: np.ndarray,
+    *,
+    phrases: Sequence[Any] | None = None,
+    masses: np.ndarray | None = None,
+    n_frames: int = 48,
+    speed: float = 0.08,
+    subspace: int = 8,
+    linger: bool = True,
+    max_points: int = 300,
+    ellipse_n: int = 24,
+    seed: int = 0,
+    title: str | None = None,
+    hover_max_chars: int = 72,
+) -> dict[str, Any] | None:
+    """Brownian 2-frame walk through the leading-variance PCA subspace.
+
+    Each frame projects phrases (subsampled), codebook centres, and 1-SD
+    member ellipses. Play / Pause live on ``layout.updatemenus``.
+    """
+    X = np.asarray(embeddings, float)
+    y = np.asarray(labels, int).ravel()
+    C = np.asarray(centres, float)
+    if X.ndim != 2 or X.shape[0] < 3 or X.shape[1] < 2:
+        return None
+    n, d = X.shape
+    if y.shape[0] != n:
+        return None
+    m = int(C.shape[0]) if C.ndim == 2 else 0
+    if m < 1 or C.shape[1] != d:
+        return None
+    k = int(max(int(y.max()) + 1 if y.size else 0, m))
+    q = int(max(2, min(int(subspace), n - 1, d)))
+    n_frames = int(max(2, n_frames))
+    rng = np.random.default_rng(int(seed))
+
+    Xc = X - X.mean(axis=0, keepdims=True)
+    try:
+        from sklearn.decomposition import PCA
+
+        pca = PCA(n_components=q, svd_solver="randomized", random_state=int(seed))
+        Xq = np.asarray(pca.fit_transform(X), float)
+        Cq = np.asarray(pca.transform(C), float)
+    except Exception:
+        gram = Xc @ Xc.T
+        vals, vecs = np.linalg.eigh(gram)
+        order = np.argsort(vals)[::-1][:q]
+        Xq = vecs[:, order] * np.sqrt(np.clip(vals[order], 0.0, None))
+        denom = np.sqrt(np.clip(vals[order], 1e-12, None))
+        Vt = (Xc.T @ vecs[:, order]) / denom
+        Cq = (C - X.mean(axis=0)) @ Vt
+
+    if Xq.shape[1] < 2:
+        return None
+
+    if n > int(max_points):
+        keep = np.sort(rng.choice(n, size=int(max_points), replace=False))
+    else:
+        keep = np.arange(n, dtype=int)
+    Xq_keep = Xq[keep]
+    y_keep = y[keep]
+
+    phrase_vals = [str(p) for p in phrases] if phrases is not None else []
+    if len(phrase_vals) != n:
+        phrase_vals = [f"phrase {i}" for i in range(n)]
+    hover = []
+    for i in keep:
+        text = " ".join(phrase_vals[i].split()) or "—"
+        if len(text) > hover_max_chars:
+            text = text[: hover_max_chars - 1] + "…"
+        hover.append(text)
+    colours = [_UQ_PALETTE[int(lab) % len(_UQ_PALETTE)] for lab in y_keep]
+    mass = (
+        np.asarray(masses, float).ravel()
+        if masses is not None
+        else np.bincount(np.clip(y, 0, k - 1), minlength=k).astype(float)
+    )
+    if mass.shape[0] < m:
+        mass = np.pad(mass, (0, m - mass.shape[0]))
+    mass = mass[:m]
+    size = 10.0 + 8.0 * np.sqrt(np.clip(mass, 1.0, None) / max(float(mass.max()), 1.0))
+
+    U = np.zeros((q, 2), dtype=float)
+    U[0, 0] = 1.0
+    U[1, 1] = 1.0
+    frames: list[dict[str, Any]] = []
+    first_phrases: tuple[list[float], list[float]] | None = None
+    first_centres: tuple[list[float], list[float]] | None = None
+    first_ellipses: tuple[list[float | None], list[float | None]] | None = None
+
+    for t in range(n_frames):
+        v = _plane_captured_variance(Xq, U)
+        sigma = stiefel_step_scale(speed, v, bool(linger))
+        if t > 0:
+            z = rng.normal(size=(q, 2)) * sigma
+            z = z - U @ (U.T @ z)
+            U = _qr_stiefel(U + z)
+        xy = Xq_keep @ U
+        cy = Cq @ U
+        px, py = xy[:, 0].tolist(), xy[:, 1].tolist()
+        cx, cy_l = cy[:, 0].tolist(), cy[:, 1].tolist()
+        rms = float(np.sqrt(np.mean(xy ** 2))) if xy.size else 1.0
+        floor = max(0.04 * rms, 1e-4)
+        ex: list[float | None] = []
+        ey: list[float | None] = []
+        for j in range(m):
+            members = Xq[y == j] @ U if np.any(y == j) else cy[j : j + 1]
+            poly = _ellipse_polyline(
+                cy[j],
+                _cluster_cov2(np.asarray(members, float), floor),
+                n=int(ellipse_n),
+            )
+            if poly is None:
+                continue
+            ex.extend(poly[0] + [None])
+            ey.extend(poly[1] + [None])
+        if first_phrases is None:
+            first_phrases = (px, py)
+            first_centres = (cx, cy_l)
+            first_ellipses = (ex, ey)
+        frames.append(
+            {
+                "name": str(t),
+                "data": [
+                    {"x": px, "y": py},
+                    {"x": cx, "y": cy_l},
+                    {"x": ex, "y": ey},
+                ],
+            }
+        )
+
+    assert first_phrases is not None and first_centres is not None
+    assert first_ellipses is not None
+    dt = 90
+    steps = [
+        {
+            "args": [
+                [str(t)],
+                {
+                    "frame": {"duration": 0, "redraw": False},
+                    "mode": "immediate",
+                    "transition": {"duration": 0},
+                },
+            ],
+            "label": str(t),
+            "method": "animate",
+        }
+        for t in range(n_frames)
+    ]
+    play_args = [
+        None,
+        {
+            "frame": {"duration": dt, "redraw": False},
+            "fromcurrent": True,
+            "transition": {"duration": 0},
+        },
+    ]
+    pause_args = [
+        [None],
+        {
+            "frame": {"duration": 0, "redraw": False},
+            "mode": "immediate",
+            "transition": {"duration": 0},
+        },
+    ]
+    heading = title or (
+        "VQ projection walk — centres and 1-SD extent "
+        f"(q={q}, linger={'on' if linger else 'off'})"
+    )
+    return {
+        "data": [
+            {
+                "type": "scatter",
+                "mode": "markers",
+                "name": "phrases",
+                "x": first_phrases[0],
+                "y": first_phrases[1],
+                "marker": {"color": colours, "size": 6, "opacity": 0.55},
+                "text": hover,
+                "hovertemplate": "%{text}<extra></extra>",
+                "showlegend": False,
+            },
+            {
+                "type": "scatter",
+                "mode": "markers",
+                "name": "centres",
+                "x": first_centres[0],
+                "y": first_centres[1],
+                "marker": {
+                    "symbol": "diamond",
+                    "size": size.tolist(),
+                    "color": [
+                        _UQ_PALETTE[j % len(_UQ_PALETTE)] for j in range(m)
+                    ],
+                    "line": {"width": 1, "color": "#0b0b0b"},
+                },
+                "text": [f"cluster {j} · n={int(mass[j])}" for j in range(m)],
+                "hovertemplate": "%{text}<extra></extra>",
+                "showlegend": False,
+            },
+            {
+                "type": "scatter",
+                "mode": "lines",
+                "name": "extent",
+                "x": first_ellipses[0],
+                "y": first_ellipses[1],
+                "line": {"color": "#5a6a7a", "width": 1},
+                "hoverinfo": "skip",
+                "showlegend": False,
+            },
+        ],
+        "layout": {
+            "title": {
+                "text": heading,
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "xaxis": {
+                "title": "plane 1",
+                "zeroline": False,
+                "scaleanchor": "y",
+                "scaleratio": 1,
+            },
+            "yaxis": {"title": "plane 2", "zeroline": False},
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 50, "r": 20, "t": 70, "b": 70},
+            "updatemenus": [
+                {
+                    "type": "buttons",
+                    "showactive": False,
+                    "x": 0.0,
+                    "y": 1.16,
+                    "xanchor": "left",
+                    "yanchor": "top",
+                    "direction": "left",
+                    "pad": {"r": 10, "t": 0},
+                    "buttons": [
+                        {
+                            "label": "Play",
+                            "method": "animate",
+                            "args": play_args,
+                        },
+                        {
+                            "label": "Pause",
+                            "method": "animate",
+                            "args": pause_args,
+                        },
+                    ],
+                }
+            ],
+            "sliders": [
+                {
+                    "active": 0,
+                    "y": 0.0,
+                    "x": 0.12,
+                    "len": 0.75,
+                    "pad": {"t": 30, "b": 0},
+                    "currentvalue": {
+                        "prefix": "frame ",
+                        "xanchor": "right",
+                    },
+                    "steps": steps,
+                }
+            ],
+        },
+        "frames": frames,
     }

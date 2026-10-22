@@ -227,6 +227,8 @@ def test_parse_figure_spec_variants():
     assert parse_figure_spec(traces) == {"data": traces, "layout": {}}
     # mapping with only data
     assert parse_figure_spec({"data": traces})["layout"] == {}
+    framed = {"data": traces, "layout": {}, "frames": [{"name": "0", "data": []}]}
+    assert parse_figure_spec(framed)["frames"][0]["name"] == "0"
     assert parse_figure_spec({"layout": {}})["data"] == []
 
 
