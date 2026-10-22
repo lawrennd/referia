@@ -557,6 +557,26 @@ def test_propose_split_from_k1_keeps_both_children_populated():
     assert int((mass > 0.2).sum()) >= 5
 
 
+def test_coerce_em_controls_treat_nan_and_junk_as_defaults():
+    from referia.assess.compute.mppca import (
+        DEFAULT_EM_ACCEPT,
+        DEFAULT_TOPIC_SIGMA2,
+        _coerce_float,
+        _coerce_int,
+    )
+
+    assert _coerce_float(None, DEFAULT_TOPIC_SIGMA2) == DEFAULT_TOPIC_SIGMA2
+    assert _coerce_float("", DEFAULT_TOPIC_SIGMA2) == DEFAULT_TOPIC_SIGMA2
+    assert _coerce_float("not-a-float", DEFAULT_TOPIC_SIGMA2) == DEFAULT_TOPIC_SIGMA2
+    assert _coerce_float(float("nan"), DEFAULT_TOPIC_SIGMA2) == DEFAULT_TOPIC_SIGMA2
+    assert _coerce_float("0.25", 0.01) == pytest.approx(0.25)
+    assert _coerce_int(None, DEFAULT_EM_ACCEPT) == DEFAULT_EM_ACCEPT
+    assert _coerce_int("", DEFAULT_EM_ACCEPT) == DEFAULT_EM_ACCEPT
+    assert _coerce_int("nope", DEFAULT_EM_ACCEPT) == DEFAULT_EM_ACCEPT
+    assert _coerce_int(float("nan"), DEFAULT_EM_ACCEPT) == DEFAULT_EM_ACCEPT
+    assert _coerce_int("12.9", 40) == 12
+
+
 def test_subject_grain_propose_split_accepts_missing_sigma2():
     """Empty EM controls (None/NaN) must not crash Propose."""
     X, _ = _planted_subspace_mixture(n_per=15, d=8, seed=4)

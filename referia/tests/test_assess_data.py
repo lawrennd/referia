@@ -607,3 +607,6 @@ def test_set_value_updates_parameters_series():
     cdf.set_column("files_glob")
     with pytest.raises(KeyError, match="immutable"):
         cdf.set_value("*.docx")
+    cdf.set_column("filename")
+    with pytest.raises(KeyError, match="immutable"):
+        cdf.set_value("c.pdf")

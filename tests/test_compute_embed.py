@@ -78,6 +78,31 @@ def test_llm_embed_extraction_phrases_empty_is_noop():
     assert llm_embed_extraction_phrases(None, client=_StubEmbed()) == []
     assert llm_embed_extraction_phrases(float("nan"), client=_StubEmbed()) == []
     assert llm_embed_extraction_phrases(np.nan, client=_StubEmbed()) == []
+    assert llm_embed_extraction_phrases("not-a-list", client=_StubEmbed()) == []
+
+
+def test_llm_embed_extraction_phrases_skips_blank_and_wraps_scalar():
+    class _Scalar:
+        def embed(self, texts, model="text-embedding-3-large"):
+            return [3.0, 4.0]
+
+    blank = llm_embed_extraction_phrases(
+        [{"phrase": "  "}, ""],
+        client=_StubEmbed(),
+    )
+    assert blank == [{"phrase": "  "}, {"phrase": ""}]
+    wrapped = llm_embed_extraction_phrases(
+        {"text": "privacy risk from scoring"},
+        client=_Scalar(),
+        pca_dim="null",
+    )
+    assert isinstance(wrapped[0]["embedding"], list)
+    skipped = llm_embed_extraction_phrases(
+        [{"phrase": "privacy risk from scoring"}],
+        client=_StubEmbed(),
+        pca_dim="not-a-dim",
+    )
+    assert isinstance(skipped[0]["embedding"], list)
 
 
 def test_l2_normalize_empty_and_zero():
