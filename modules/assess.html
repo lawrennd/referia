@@ -1628,13 +1628,21 @@ columns are still broadcast onto every row via <code class="docutils literal not
 
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mapping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">series</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span></dt>
+<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mapping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">series</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Generate dictionary of mapping between variable names and column values.</p>
+<p>No-arg <code class="docutils literal notranslate"><span class="pre">mapping()</span></code> returns every mapped column on the current row.
+<code class="docutils literal notranslate"><span class="pre">mapping(names=[&quot;store_status&quot;])</span></code> fetches only those names. Names
+that are not in the name-column map are omitted. A name that is in
+the map whose column is absent still raises KeyError.</p>
+<p>Subset and full maps for the current index are memoized. The cache
+is a per-object render memo, not a second data store; it is cleared
+on <code class="docutils literal notranslate"><span class="pre">set_index</span></code>, <code class="docutils literal notranslate"><span class="pre">set_value</span></code>, and new <code class="docutils literal notranslate"><span class="pre">from_flow</span></code> instances.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>mapping</strong> – mapping to use, if None use default mapping</p></li>
 <li><p><strong>series</strong> – series to use, if None use current series</p></li>
+<li><p><strong>names</strong> – optional iterable of variable names to fetch</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -2310,7 +2318,7 @@ the focus.</p>
 <dl class="py method">
 <dt class="sig sig-object py">
 <span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">save_flows</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
-<dd><p>Save the output flows.</p>
+<dd><p>Save output, cache, and parameter stores, then the pack store.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -4106,13 +4114,21 @@ the focus.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.mapping">
-<span class="sig-name descname"><span class="pre">mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mapping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">series</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lynguine/assess/data.html#CustomDataFrame.mapping"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.data.CustomDataFrame.mapping" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mapping</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">series</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lynguine/assess/data.html#CustomDataFrame.mapping"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.assess.data.CustomDataFrame.mapping" title="Link to this definition"></a></dt>
 <dd><p>Generate dictionary of mapping between variable names and column values.</p>
+<p>No-arg <code class="docutils literal notranslate"><span class="pre">mapping()</span></code> returns every mapped column on the current row.
+<code class="docutils literal notranslate"><span class="pre">mapping(names=[&quot;store_status&quot;])</span></code> fetches only those names. Names
+that are not in the name-column map are omitted. A name that is in
+the map whose column is absent still raises KeyError.</p>
+<p>Subset and full maps for the current index are memoized. The cache
+is a per-object render memo, not a second data store; it is cleared
+on <code class="docutils literal notranslate"><span class="pre">set_index</span></code>, <code class="docutils literal notranslate"><span class="pre">set_value</span></code>, and new <code class="docutils literal notranslate"><span class="pre">from_flow</span></code> instances.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>mapping</strong> – mapping to use, if None use default mapping</p></li>
 <li><p><strong>series</strong> – series to use, if None use current series</p></li>
+<li><p><strong>names</strong> – optional iterable of variable names to fetch</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -4184,7 +4200,7 @@ the focus.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.save_flows">
 <span class="sig-name descname"><span class="pre">save_flows</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#referia.assess.data.CustomDataFrame.save_flows" title="Link to this definition"></a></dt>
-<dd><p>Save the output flows.</p>
+<dd><p>Save output, cache, and parameter stores, then the pack store.</p>
 </dd></dl>
 
 <dl class="py method">

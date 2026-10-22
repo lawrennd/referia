@@ -842,6 +842,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">..config.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">Context</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..config.interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interface</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..util.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">remove_nan</span><span class="p">,</span> <span class="n">to_camel_case</span><span class="p">,</span> <span class="n">is_valid_var</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..util.liquid</span><span class="w"> </span><span class="kn">import</span> <span class="n">liquid_root_identifiers</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..assess.compute</span><span class="w"> </span><span class="kn">import</span> <span class="n">Compute</span>
 
@@ -919,7 +920,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">at</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AtAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">iloc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_IlocAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_locAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mapping_cache</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;lynguine.assess.data.DataObject initialiser called.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_invalidate_mapping_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear the per-index mapping memo (CIP-0016). Not a second data store.&quot;&quot;&quot;</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_mapping_cache&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cache</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cache</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
 
     <span class="k">class</span><span class="w"> </span><span class="nc">_AtAccessor</span><span class="p">(</span><span class="n">Accessor</span><span class="p">):</span>
         <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
@@ -1020,9 +1028,11 @@
         <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Setting index to None.&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_invalidate_mapping_cache</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Setting index to </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>            
             <span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">=</span> <span class="n">index</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_invalidate_mapping_cache</span><span class="p">()</span>
                 
         <span class="k">else</span><span class="p">:</span>
             <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Index </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> not found in data&quot;</span>
@@ -1385,9 +1395,9 @@
         <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_index</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">index</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Getting value for index </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> and column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Getting value for index </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2"> and column </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
         <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Value is </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">val</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Got value for column </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2"> type=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
@@ -1464,7 +1474,15 @@
             <span class="c1"># Update the data object with the modified data</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span> <span class="o">=</span> <span class="n">series_df</span>
 
-        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Set value </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2"> for index </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">, column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">, selector </span><span class="se">\&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_selector</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">, subindex </span><span class="se">\&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_subindex</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_invalidate_mapping_cache</span><span class="p">()</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Set value type=</span><span class="si">%s</span><span class="s2"> for index </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2">, column </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2">, selector </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2">, subindex </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">index</span><span class="p">,</span>
+            <span class="n">col</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_selector</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_subindex</span><span class="p">,</span>
+        <span class="p">)</span>
 
     
     <span class="k">def</span><span class="w"> </span><span class="nf">add_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">typ</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -2215,18 +2233,12 @@
         <span class="n">_stamp_path_roots</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">details</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_parent_grain_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Join row-aligned partitions for CIP-0014 explode/pack.</span>
-
-<span class="sd">        ``units`` and inherit columns often sit on input/cache while</span>
-<span class="sd">        ``output.explode`` is declared on the output store. Pack columns</span>
-<span class="sd">        similarly span input phrase text and output embeddings. Series and</span>
-<span class="sd">        parameter partitions are skipped.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_join_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">types</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Outer-join row-aligned partitions, first flow wins duplicate columns.&quot;&quot;&quot;</span>
         <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">seen</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">skip</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;series&quot;</span><span class="p">])</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">])</span>
-        <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;cache&quot;</span><span class="p">,</span> <span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="s2">&quot;writedata&quot;</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="n">types</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="n">skip</span> <span class="ow">or</span> <span class="n">typ</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span>
@@ -2241,11 +2253,84 @@
             <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">parts</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parent_grain_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Join row-aligned partitions for CIP-0014 explode/pack.</span>
+
+<span class="sd">        ``units`` and inherit columns often sit on input/cache while</span>
+<span class="sd">        ``output.explode`` is declared on the output store. Pack columns</span>
+<span class="sd">        similarly span input phrase text and output embeddings. Series and</span>
+<span class="sd">        parameter partitions are skipped.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_join_partitions</span><span class="p">(</span>
+            <span class="p">(</span><span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;cache&quot;</span><span class="p">,</span> <span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="s2">&quot;writedata&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_explode_source_frame</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Chunk-grain table for ``output.explode`` (not already-tall output).</span>
+
+<span class="sd">        After a previous Save, ``output`` is the exploded phrase table with a</span>
+<span class="sd">        different index. Joining it onto chunks before explode mixes grains</span>
+<span class="sd">        and hangs Save.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_join_partitions</span><span class="p">((</span><span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;cache&quot;</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parameter_series_for_write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">series</span><span class="p">,</span> <span class="n">details</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;One-row DataFrame for a constants/parameters Series (index = field names).&quot;&quot;&quot;</span>
+        <span class="n">idx_col</span> <span class="o">=</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">_store_index_name</span><span class="p">(</span><span class="n">details</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;index&quot;</span>
+        <span class="n">idx_val</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">idx_val</span> <span class="o">=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;select&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">idx_val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">idx_val</span> <span class="o">=</span> <span class="n">series</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">series</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;default&quot;</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">series</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+                <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">row</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Index</span><span class="p">([</span><span class="n">idx_val</span><span class="p">],</span> <span class="n">name</span><span class="o">=</span><span class="n">idx_col</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">idx_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">idx_col</span><span class="p">,</span> <span class="n">idx_val</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_explode_output_for_pack</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Turn parent-grain rows into tall phrase rows using ``output.explode``.</span>
+
+<span class="sd">        Pack needs phrase/embedding/doc_id, which exist only after explode.</span>
+<span class="sd">        Chunk-grain parent tables do not have those columns.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="n">Interface</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">frame</span>
+        <span class="n">output_details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output_details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;explode&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">output_details</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">frame</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">output_details</span><span class="p">[</span><span class="s2">&quot;explode&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;field&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;explode must be a mapping with &quot;field&quot;.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">frame</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">and</span> <span class="n">frame</span><span class="o">.</span><span class="n">empty</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="n">work</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="s2">&quot;to_pandas&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">frame</span>
+        <span class="n">field</span> <span class="o">=</span> <span class="n">spec</span><span class="p">[</span><span class="s2">&quot;field&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">field</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">work</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;pack explode field &quot;</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">&quot; is not on the parent grain &#39;</span>
+                <span class="sa">f</span><span class="s2">&quot;(have </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">work</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">); writing an empty pack.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">explode_list_field</span><span class="p">(</span>
+            <span class="n">work</span><span class="p">,</span>
+            <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+            <span class="n">inherit</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inherit&quot;</span><span class="p">),</span>
+            <span class="n">index</span><span class="o">=</span><span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">_store_index_name</span><span class="p">(</span><span class="n">output_details</span><span class="p">)</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_write_frame_for_store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">typ</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Parent-grain frame when the store explodes or packs; else *df*.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
-            <span class="s2">&quot;explode&quot;</span> <span class="ow">in</span> <span class="n">details</span> <span class="ow">or</span> <span class="s2">&quot;pack&quot;</span> <span class="ow">in</span> <span class="n">details</span>
-        <span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;explode&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">combined</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_explode_source_frame</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">combined</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">combined</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;pack&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
             <span class="n">combined</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_grain_frame</span><span class="p">()</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">combined</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
                 <span class="n">df</span> <span class="o">=</span> <span class="n">combined</span>
@@ -2254,9 +2339,9 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_write_pack_store</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write CIP-0014 pack store from the tall source frame.</span>
 
-<span class="sd">        ``source`` selects a loaded partition. When omitted, pack the</span>
-<span class="sd">        parent-grain table (input/cache/output columns) so a tall input</span>
-<span class="sd">        store does not need a dummy output partition.</span>
+<span class="sd">        ``source`` selects a loaded partition. When omitted, explode the</span>
+<span class="sd">        chunk-grain table using ``output.explode`` so phrase/embedding</span>
+<span class="sd">        columns exist, then pack. Empty tall frames write empty arrays.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pack_details</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">details</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -2274,12 +2359,9 @@
                 <span class="p">)</span>
             <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">source_key</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_grain_frame</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">frame</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">and</span> <span class="n">frame</span><span class="o">.</span><span class="n">empty</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;pack has no tall rows to stack &quot;</span>
-                <span class="sa">f</span><span class="s1">&#39;(partitions: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s1">).&#39;</span>
-            <span class="p">)</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_explode_output_for_pack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_explode_source_frame</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">frame</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
             <span class="s1">&#39;Saving packed store&#39;</span>
             <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s1">&#39; from &quot;</span><span class="si">{</span><span class="n">source_key</span><span class="si">}</span><span class="s1">&quot;&#39;</span> <span class="k">if</span> <span class="n">source_key</span> <span class="k">else</span> <span class="s2">&quot; from parent grain&quot;</span><span class="p">)</span>
@@ -2289,15 +2371,36 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">save_flows</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Save the output flows.</span>
+<span class="sd">        Save output, cache, and parameter stores, then the pack store.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">]:</span>
-            <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">:</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span>
-                <span class="n">details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span> <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">write_types</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">])</span>
+            <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;cache&quot;</span><span class="p">])</span>
+            <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">])</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">typ</span><span class="p">)</span>
+            <span class="n">write_types</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">typ</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">typ</span> <span class="ow">in</span> <span class="n">write_types</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;input&quot;</span><span class="p">]:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">typ</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span> <span class="ow">or</span> <span class="n">typ</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span>
+            <span class="n">details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">details</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
+                <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_series_for_write</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
+                <span class="n">details</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">details</span><span class="p">)</span>
+                <span class="n">details</span><span class="p">[</span><span class="s2">&quot;keep_nulls&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
                 <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_frame_for_store</span><span class="p">(</span><span class="n">typ</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
-                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving data for flow type &#39;</span><span class="si">{</span><span class="n">typ</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
-                <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write_data</span><span class="p">(</span><span class="n">write_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">[</span><span class="n">typ</span><span class="p">])</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving data for flow type &#39;</span><span class="si">{</span><span class="n">typ</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write_data</span><span class="p">(</span><span class="n">write_df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write_pack_store</span><span class="p">()</span>
     
     <span class="k">def</span><span class="w"> </span><span class="nf">sort_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -3527,6 +3630,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">at</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_AtAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">loc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_LocAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">iloc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ILocAccessor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mapping_cache</span> <span class="o">=</span> <span class="p">{}</span>
 
 <div class="viewcode-block" id="CustomDataFrame.get_type_columns">
 <a class="viewcode-back" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.get_type_columns">[docs]</a>
@@ -4047,10 +4151,13 @@
                 <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">cols</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">cols</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                        <span class="c1"># All-missing (None / NaN / pd.NA) is a valid identical</span>
+                        <span class="c1"># parameter. np.isnan(None) TypeErrors on object dtype.</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">][</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="k">elif</span> <span class="nb">bool</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">()):</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">][</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-                        <span class="c1"># Check if the column is all NaN/None and the value is NaN.</span>
-                        <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">())</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                        <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="p">[</span><span class="n">typ</span><span class="p">][</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                         <span class="k">else</span><span class="p">:</span>
                             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -4324,12 +4431,22 @@
 
 <div class="viewcode-block" id="CustomDataFrame.mapping">
 <a class="viewcode-back" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.mapping">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">mapping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">series</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mapping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">series</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Generate dictionary of mapping between variable names and column values.</span>
 
+<span class="sd">        No-arg ``mapping()`` returns every mapped column on the current row.</span>
+<span class="sd">        ``mapping(names=[&quot;store_status&quot;])`` fetches only those names. Names</span>
+<span class="sd">        that are not in the name-column map are omitted. A name that is in</span>
+<span class="sd">        the map whose column is absent still raises KeyError.</span>
+
+<span class="sd">        Subset and full maps for the current index are memoized. The cache</span>
+<span class="sd">        is a per-object render memo, not a second data store; it is cleared</span>
+<span class="sd">        on ``set_index``, ``set_value``, and new ``from_flow`` instances.</span>
+
 <span class="sd">        :param mapping: mapping to use, if None use default mapping</span>
 <span class="sd">        :param series: series to use, if None use current series</span>
+<span class="sd">        :param names: optional iterable of variable names to fetch</span>
 <span class="sd">        :returns: dictionary of mapping between variable names and column values</span>
 <span class="sd">        :rtype: dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -4337,27 +4454,50 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_column_name_map</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">update_name_column_map</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">column</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
 
+        <span class="n">explicit_mapping</span> <span class="o">=</span> <span class="n">mapping</span>
+        <span class="n">cache_key</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">explicit_mapping</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">series</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">names</span><span class="p">]</span>
+            <span class="n">cache_key</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_index</span><span class="p">(),</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">names</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">names</span><span class="p">))</span>
+            <span class="n">cached</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_mapping_cache&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cache_key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">cached</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="n">mapping</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Creating new mapping as mapping is None.&quot;</span><span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Creating new mapping as mapping is None.&quot;</span><span class="p">)</span>
+            <span class="n">source_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_column_map</span>
+            <span class="k">if</span> <span class="n">names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">names</span><span class="p">]</span>
+                <span class="n">source_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">source_map</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">source_map</span><span class="p">}</span>
             <span class="k">if</span> <span class="n">series</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="c1"># Always include all columns and the index in the mapping</span>
-                <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">column</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">column</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_column_map</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="n">column</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">}</span>
-                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mapping is </span><span class="se">\&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># Full row: skip names whose column is not on the frame.</span>
+                    <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">column</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">source_map</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="n">column</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">}</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Named subset: mapped-but-missing columns still KeyError below.</span>
+                    <span class="n">mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">source_map</span><span class="p">)</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Mapping is </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">column</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">column</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_column_map</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">series</span><span class="o">.</span><span class="n">index</span> <span class="ow">or</span> <span class="n">column</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">}</span>
+                <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">column</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">source_map</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">series</span><span class="o">.</span><span class="n">index</span> <span class="ow">or</span> <span class="n">column</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">}</span>
 
         <span class="n">form</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">mapping</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">series</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="n">column</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
-                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Setting column to </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> to extract mapping.&quot;</span><span class="p">)</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Setting column to </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2"> to extract mapping.&quot;</span><span class="p">,</span> <span class="n">column</span><span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">set_column</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
                     <span class="k">try</span><span class="p">:</span>
                         <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value</span><span class="p">()</span>
                     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                         <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
                         <span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
-                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Setting </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> column of format to </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                        <span class="s2">&quot;Setting </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2"> column of format to type=</span><span class="si">%s</span><span class="s2">.&quot;</span><span class="p">,</span>
+                        <span class="n">name</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+                    <span class="p">)</span>
                     <span class="n">form</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Column </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> in mapping is not in columns </span><span class="se">\&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span>
@@ -4366,9 +4506,13 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">series</span> <span class="ow">or</span> <span class="n">column</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
                     <span class="n">form</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">series</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">series</span> <span class="k">else</span> <span class="n">series</span><span class="o">.</span><span class="n">name</span>
-        <span class="n">mapping</span> <span class="o">=</span> <span class="n">remove_nan</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mapping now has the following keys </span><span class="se">\&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span>        
-        <span class="k">return</span> <span class="n">remove_nan</span><span class="p">(</span><span class="n">form</span><span class="p">)</span></div>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">remove_nan</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Mapping now has the following keys </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">cache_key</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_mapping_cache&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mapping_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_mapping_cache</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mapping_cache</span><span class="p">[</span><span class="n">cache_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="n">result</span></div>
 
 
 <div class="viewcode-block" id="CustomDataFrame.viewer_to_value">
@@ -4408,10 +4552,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Ensure view is a dictionary or an Interface</span>
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Entering view to value&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">kwargs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Creating mapping as kwargs not present.&quot;</span><span class="p">)</span>
-            <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">()</span>
-            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;kwargs are now </span><span class="se">\&quot;</span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">view</span><span class="p">,</span> <span class="n">Interface</span><span class="p">):</span>
             <span class="n">view</span> <span class="o">=</span> <span class="n">view</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">view</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
@@ -4708,19 +4848,33 @@
 <span class="sd">        :param local: Local overrides to use on top of the kwargs for substitution in the liquid template, defaults to {}</span>
 <span class="sd">        :type local: dict, optional</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calling liquid_to_value with display argument </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">display</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Calling liquid_to_value with display argument </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">,</span> <span class="n">display</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Compute needs to be initialised before liquid_to_value is called.&quot;</span>
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
 
         
-        <span class="k">if</span> <span class="n">kwargs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">kwargs</span><span class="o">==</span><span class="p">{}:</span>
-            <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">()</span>
-        <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">local</span><span class="p">)</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Kwargs keys: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">omitted</span> <span class="o">=</span> <span class="n">kwargs</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">kwargs</span> <span class="o">==</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">omitted</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">names</span> <span class="o">=</span> <span class="n">liquid_root_identifiers</span><span class="p">(</span><span class="n">display</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="s2">&quot;Liquid identifier extraction failed (</span><span class="si">%s</span><span class="s2">); using full mapping().&quot;</span><span class="p">,</span>
+                    <span class="n">err</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">names</span><span class="p">:</span>
+                    <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">(</span><span class="n">names</span><span class="o">=</span><span class="n">names</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">local</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Kwargs keys: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">_liquid_env</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">display</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="o">**</span><span class="n">remove_nan</span><span class="p">(</span><span class="n">kwargs</span><span class="p">))</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">_liquid_env</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">display</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="o">**</span><span class="n">remove_nan</span><span class="p">(</span><span class="n">context</span><span class="p">))</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
             <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;In </span><span class="si">{</span><span class="n">display</span><span class="si">}</span><span class="se">\n\n</span><span class="s2"> </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span>
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
