@@ -410,12 +410,17 @@
           var bindGen = String(Date.now()) + "-" + Math.random();
           container.dataset.plotlyBindGen = bindGen;
           var layout = layoutForReact(container, fig);
-          return Plotly.react(
-            target,
-            (fig && fig.data) || [],
-            layout,
-            {responsive: true}
-          ).then(function () {
+          var data = (fig && fig.data) || [];
+          var frames = (fig && fig.frames) || [];
+          /* Plotly.react(data, layout) drops frames; Play/Pause needs addFrames. */
+          var chain = Plotly.react(target, data, layout, {responsive: true});
+          if (typeof Plotly.deleteFrames === "function") {
+            chain = chain.then(function () { return Plotly.deleteFrames(target); });
+          }
+          if (frames.length && typeof Plotly.addFrames === "function") {
+            chain = chain.then(function () { return Plotly.addFrames(target, frames); });
+          }
+          return chain.then(function () {
             if (
               !container.isConnected ||
               container.dataset.plotlyBindGen !== bindGen

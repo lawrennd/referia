@@ -23,6 +23,7 @@ from ...util.system import most_recent_screen_shot
 from ...util.plot import bar_plot, histogram
 from ...util.files import file_from_re, files_from_re
 from .grain_fit import subject_grain_fit, subject_grain_reset
+from .vq import subject_vq_fit
 from .mppca import (
     subject_grain_confirm_split,
     subject_grain_propose_split,
@@ -713,6 +714,27 @@ class Compute(lynguine.assess.compute.Compute):
                 ),
             },
             {
+                "name": "subject_vq_fit",
+                "function": subject_vq_fit,
+                "default_args": {
+                    "n_vq": 64,
+                    "force_refit": True,
+                    "seed": 0,
+                    "kmeans_init": "k-means++",
+                    "kmeans_n_init": 10,
+                    "kmeans_max_iter": 300,
+                    "vq_walk_speed": 0.08,
+                    "vq_walk_frames": 48,
+                    "vq_walk_subspace": 8,
+                    "vq_walk_linger": True,
+                },
+                "docstr": (
+                    "K-means vector quantisation of phrase embeddings "
+                    "(CIP-001A). Writes codebook centroids, masses, "
+                    "cluster_ids, and a Brownian projection-walk figure."
+                ),
+            },
+            {
                 "name": "subject_grain_fit",
                 "function": subject_grain_fit,
                 "default_args": {
@@ -727,6 +749,7 @@ class Compute(lynguine.assess.compute.Compute):
                     "kmeans_max_iter": 300,
                     "agglo_linkage": "average",
                     "agglo_metric": "cosine",
+                    "lens_weight": "uniform",
                 },
                 "docstr": (
                     "Fit grain catalogue for cluster_method (mppca, "

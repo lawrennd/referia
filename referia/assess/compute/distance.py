@@ -394,16 +394,37 @@ def run_document_distance_analysis(
     seed: int = 0,
     n_components: int = 2,
     group_field: str | None = None,
+    cluster_ids=None,
     **_kwargs,
 ) -> tuple:
     """Façade: histograms → cost → EMD → MDS → tests → Plotly specs.
 
     Return order matches ``04_distance`` ``field:`` list.
+    When ``responsibilities`` are codebook-level (VQ), pass ``cluster_ids``
+    (phrase → cluster) and phrase embeddings; membership is ``QR``.
     """
+    from .grain_catalogue import as_embedding_matrix
+
+    X = as_embedding_matrix(embeddings)
+    R = _as_2d("responsibilities", responsibilities)
+    if R.shape[0] != X.shape[0]:
+        if cluster_ids is None:
+            raise ValueError(
+                f"responsibilities rows {R.shape[0]} != embeddings {X.shape[0]}; "
+                "pass cluster_ids from the VQ codebook to expand QR"
+            )
+        from .vq import expand_vq_responsibilities
+
+        R = expand_vq_responsibilities(cluster_ids, R)
+        if R.shape[0] != X.shape[0]:
+            raise ValueError(
+                f"expanded responsibilities rows {R.shape[0]} != "
+                f"embeddings {X.shape[0]}"
+            )
     P, docs, mass = document_soft_topic_distributions(
-        doc_ids, responsibilities, min_mass=min_mass
+        doc_ids, R, min_mass=min_mass
     )
-    means = topic_means_from_responsibilities(embeddings, responsibilities)
+    means = topic_means_from_responsibilities(X, R)
     cost = cosine_ground_cost(means)
     note = ""
     try:
