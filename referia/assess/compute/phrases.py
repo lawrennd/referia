@@ -30,8 +30,9 @@ def _as_kinds(kinds: Any) -> list[str]:
             "(e.g. concern, benefit, condition)."
         )
     if isinstance(kinds, str):
-        return [kinds]
-    return [str(k) for k in kinds]
+        parts = [p.strip() for p in kinds.replace(";", ",").split(",") if p.strip()]
+        return parts or [kinds.strip()]
+    return [str(k).strip() for k in kinds if str(k).strip()]
 
 
 def _sentinel_for(kind: str, sentinels: Mapping[str, str] | None, **kwargs) -> str:

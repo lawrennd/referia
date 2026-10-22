@@ -75,7 +75,7 @@ notebook 03 Layer B.
 - Pack: lynguine CIP-0014
 - PR: #35
 - Example: `examples/subject_grain_uq/`
-- Draft: OneDrive `applications/2026-10-21_dialogue-analysis/`
+- Draft: OneDrive `dialogue-analysis/template/`
 
 ## Progress Updates
 

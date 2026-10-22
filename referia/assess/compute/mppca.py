@@ -78,6 +78,31 @@ def log_likelihood_ppca(
 # Fallback single-value floor if profiling is skipped. Prefer
 # :func:`profile_topic_sigma2` (short profile grid, then fix).
 DEFAULT_TOPIC_SIGMA2: float = 0.01
+DEFAULT_EM_ACCEPT: int = 40
+
+
+def _coerce_float(value: Any, default: float) -> float:
+    """Return a finite float; missing/NaN/unparseable → *default*."""
+    if value is None or value == "":
+        return float(default)
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    if parsed != parsed:  # NaN
+        return float(default)
+    return parsed
+
+
+def _coerce_int(value: Any, default: int) -> int:
+    """Return an int; missing/NaN/unparseable → *default*."""
+    if value is None or value == "":
+        return int(default)
+    try:
+        parsed = int(float(value))
+    except (TypeError, ValueError):
+        return int(default)
+    return parsed
 
 # Log-spaced candidate floors for one-shot topic σ² profiling.
 # Softest non-collapsing value on this grid is selected.
@@ -1414,7 +1439,8 @@ def subject_grain_propose_split(
     require_soft_method(cluster_method)
     X = _as_embedding_matrix(embeddings)
     R = np.asarray(responsibilities, dtype=float)
-    s2 = float(sigma2)
+    s2 = _coerce_float(sigma2, DEFAULT_TOPIC_SIGMA2)
+    em_iters = max(1, _coerce_int(em_accept, DEFAULT_EM_ACCEPT))
     phrase_list = _phrase_list(phrases, len(X))
     keys = topic_keys(R.shape[1])
     focus_idx = _topic_index(keys, focus_topic)
@@ -1449,7 +1475,7 @@ def subject_grain_propose_split(
         n_children=int(n_children),
         seed=int(seed),
         mass_threshold=float(mass_threshold),
-        max_iter=max(1, int(em_accept)),
+        max_iter=em_iters,
     )
     new_fit = out["fit"]
     R_new = np.asarray(new_fit["responsibilities"], float)
