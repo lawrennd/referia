@@ -616,13 +616,27 @@ def _display_docs(
     return docs, labels
 
 
-def _leaf_order(X: np.ndarray) -> np.ndarray:
-    """Optimal leaf order of rows under average-linkage cosine clustering.
+def _pdist_or_empty(arr: np.ndarray, metric: str):
+    try:
+        from scipy.spatial.distance import pdist
+    except ImportError:
+        return None
 
-    This is the microarray seriation: hierarchical clustering of the vectors,
-    then Bar-Joseph leaf order so adjacent leaves are as similar as the
-    dendrogram allows. n ≤ 2 keeps the given order. Missing scipy falls back
-    to the original order.
+    y = np.asarray(pdist(arr, metric=metric), float)
+    finite = y[np.isfinite(y)]
+    if finite.size == 0 or not np.any(finite > 0):
+        return None
+    return np.nan_to_num(y, nan=1.0, posinf=1.0, neginf=1.0)
+
+
+def _leaf_order(X: np.ndarray) -> np.ndarray:
+    """Optimal leaf order of rows under average-linkage clustering.
+
+    Microarray seriation: cluster the profile vectors, then Bar-Joseph
+    leaf order so adjacent leaves are as similar as the dendrogram allows.
+    Pearson correlation is the gene-expression metric (similar *response*
+    across conditions). Cosine is the fallback when correlation is
+    undefined (constant rows). n ≤ 2 keeps the given order.
     """
     arr = np.asarray(X, float)
     if arr.ndim != 2:
@@ -636,12 +650,12 @@ def _leaf_order(X: np.ndarray) -> np.ndarray:
             linkage,
             optimal_leaf_ordering,
         )
-        from scipy.spatial.distance import pdist
     except ImportError:
         return np.arange(n)
-    y = pdist(arr, metric="cosine")
-    y = np.nan_to_num(np.asarray(y, float), nan=1.0, posinf=1.0, neginf=1.0)
-    if not np.any(y > 0):
+    y = _pdist_or_empty(arr, "correlation")
+    if y is None:
+        y = _pdist_or_empty(arr, "cosine")
+    if y is None:
         return np.arange(n)
     Z = linkage(y, method="average")
     try:
@@ -649,6 +663,37 @@ def _leaf_order(X: np.ndarray) -> np.ndarray:
     except (ValueError, FloatingPointError):
         pass
     return np.asarray(leaves_list(Z), dtype=int)
+
+
+def _orient_leaf_orders(
+    arr: np.ndarray, row_ord: np.ndarray, col_ord: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Flip each dendrogram so high mass tends toward the main diagonal.
+
+    Row order and column order from independent clustering are unique only
+    up to reversing the whole axis (root flip). Cosine leaf order of the
+    Draghi 7×6 share matrix left lenses in pack order and stacked the dark
+    cells on an anti-diagonal; choosing the flips that maximise
+    mass-weighted covariance of row and column indices restores the
+    microarray block look.
+    """
+    row_ord = np.asarray(row_ord, dtype=int)
+    col_ord = np.asarray(col_ord, dtype=int)
+    n, k = int(row_ord.size), int(col_ord.size)
+    ii = np.arange(n, dtype=float)[:, None]
+    jj = np.arange(k, dtype=float)[None, :]
+    ii = ii - float(ii.mean())
+    jj = jj - float(jj.mean())
+    best = (row_ord, col_ord)
+    best_s = -np.inf
+    for rows in (row_ord, row_ord[::-1]):
+        for cols in (col_ord, col_ord[::-1]):
+            mass = arr[np.ix_(rows, cols)]
+            score = float((mass * ii * jj).sum())
+            if score > best_s:
+                best_s = score
+                best = (np.asarray(rows, dtype=int), np.asarray(cols, dtype=int))
+    return best
 
 
 def _seriate_share_matrix(
@@ -669,6 +714,7 @@ def _seriate_share_matrix(
     if reorder and arr.shape[0] == len(docs) and k > 0:
         row_ord = _leaf_order(arr)
         col_ord = _leaf_order(arr.T)
+        row_ord, col_ord = _orient_leaf_orders(arr, row_ord, col_ord)
         arr = arr[np.ix_(row_ord, col_ord)]
         docs = [docs[i] for i in row_ord]
         labels = [labels[i] for i in row_ord]
@@ -760,9 +806,11 @@ def topic_document_heatmap_spec(
 ) -> dict[str, Any]:
     """Heatmap of chapter × lens soft histograms.
 
-    Rows and columns are leaf-ordered (average-linkage cosine, optimal
-    leaf order) so similar share profiles sit next to each other — the
-    microarray seriation. Pass ``reorder=False`` to keep pack order.
+    Rows and columns are leaf-ordered (average-linkage Pearson
+    correlation, Bar-Joseph order, then a root flip so high mass sits
+    toward the diagonal) so similar share profiles sit next to each
+    other — the microarray seriation. Pass ``reorder=False`` to keep
+    pack order.
     """
     arr, docs, labels, x = _seriate_share_matrix(
         P,

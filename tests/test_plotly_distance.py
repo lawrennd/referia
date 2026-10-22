@@ -4,6 +4,7 @@ import numpy as np
 
 from referia.util.plotly_figures import (
     _leaf_order,
+    _orient_leaf_orders,
     _seriate_share_matrix,
     axis_correlate_bars_spec,
     chapter_lens_radar_spec,
@@ -161,6 +162,11 @@ def test_heatmap_leaf_order_groups_similar_rows_and_columns():
     assert ser_x == x
     assert list(_leaf_order(np.asarray(P, float))) != list(range(4))
     assert list(_leaf_order(np.asarray(P, float).T)) != list(range(4))
+    # Root flip puts the two blocks on a diagonal, not an anti-diagonal.
+    z = np.asarray(heat["data"][0]["z"], float)
+    ii = np.arange(z.shape[0])[:, None]
+    jj = np.arange(z.shape[1])[None, :]
+    assert float((z * (ii - ii.mean()) * (jj - jj.mean())).sum()) > 0
 
 
 def test_leaf_order_fallbacks(monkeypatch):
@@ -216,3 +222,52 @@ def test_seriate_share_matrix_skips_when_shape_mismatch():
     assert docs2 == ["only-one"]
     assert labels2 == ["only-one"]
     assert x2 == ["L0", "L1"]
+
+
+def test_orient_flips_anti_diagonal_mass_onto_diagonal():
+    arr = np.array(
+        [
+            [0.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0],
+            [1.0, 0.0, 0.0],
+        ]
+    )
+    rows, cols = _orient_leaf_orders(arr, np.arange(3), np.arange(3))
+    z = arr[np.ix_(rows, cols)]
+    assert np.allclose(np.diag(z), 1.0)
+
+
+def test_draghi_share_matrix_leaf_orders_lenses_not_pack_order():
+    # Pack-order P from Draghi 04 (chapter_1 … chapter_6, foreword).
+    P = [
+        [0.0814, 0.1629, 0.0769, 0.3167, 0.2760, 0.0860],
+        [0.2000, 0.0979, 0.1106, 0.3191, 0.2000, 0.0723],
+        [0.0988, 0.0698, 0.1337, 0.4593, 0.1163, 0.1221],
+        [0.0692, 0.0462, 0.4462, 0.1692, 0.2077, 0.0615],
+        [0.0091, 0.0545, 0.2182, 0.2636, 0.3364, 0.1182],
+        [0.0000, 0.1146, 0.0208, 0.0625, 0.5104, 0.2917],
+        [0.0938, 0.0938, 0.0156, 0.4375, 0.2344, 0.1250],
+    ]
+    topics = {
+        "T0": "Collaborative Investment and Coordination",
+        "T1": "Enhancing AI and Trade Infrastructure",
+        "T2": "Enhancing European Innovation and Growth",
+        "T3": "Economic Growth Strategies",
+        "T4": "European Capital Markets Integration",
+        "T5": "Regulatory Simplification and Efficiency",
+    }
+    docs = [f"chapter_{i}.pdf" for i in range(1, 7)] + ["foreword.pdf"]
+    heat = topic_document_heatmap_spec(P, docs, topic_labels=topics)
+    x = heat["data"][0]["x"]
+    y = heat["data"][0]["y"]
+    assert x != list(topics.values())
+    assert _adjacent(
+        "European Capital Markets Integration",
+        "Regulatory Simplification and Efficiency",
+        x,
+    )
+    assert y != docs
+    z = np.asarray(heat["data"][0]["z"], float)
+    ii = np.arange(z.shape[0])[:, None]
+    jj = np.arange(z.shape[1])[None, :]
+    assert float((z * (ii - ii.mean()) * (jj - jj.mean())).sum()) > 0
