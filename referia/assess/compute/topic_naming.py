@@ -209,7 +209,7 @@ def subject_grain_prepare_label(
         exemplars = [phrase_list[i] for i in order if R[i, j] > 0]
     if label_prompt is None or not str(label_prompt).strip():
         raise ValueError(
-            "label_prompt is required (set it in the review config / scores seed)"
+            "label_prompt is required (set it on the parameters store / review widgets)"
         )
     tmpl = str(label_prompt)
     if "<<PHRASES>>" not in tmpl:

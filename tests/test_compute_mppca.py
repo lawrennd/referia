@@ -843,6 +843,20 @@ def test_prepare_label_fills_phrases_placeholder():
     assert "- Safe cycle lanes" in prompt
 
 
+def test_prepare_label_honours_n_exemplars_count():
+    phrases = [f"phrase {i} about cycling policy" for i in range(12)]
+    # k=1: every phrase has R=1, so n_exemplars is the cap on the prompt list.
+    R = np.ones((12, 1), dtype=float)
+    _, exemplars, _ = subject_grain_prepare_label(
+        phrases,
+        R,
+        focus_topic="T0",
+        label_prompt=_TEST_LABEL_PROMPT,
+        n_exemplars=3,
+    )
+    assert len(exemplars) == 3
+
+
 def test_parse_label_reply_json_and_stub_fallback():
     assert (
         subject_grain_parse_label_reply(
