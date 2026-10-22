@@ -49,6 +49,7 @@ Each CIP can have one of the following statuses:
 - [CIP-0015](./cip0015.md): Stateless phrase-extract, embed, and grain-seed compute (Implemented; REQ-0010)
 - [CIP-0016](./cip0016.md): Document-level EMD Address compute and Plotly visualisations (Implemented; REQ-0010; row-local after pack)
 - [CIP-0017](./cip0017.md): Named-store status in the review interface (Implemented; REQ-0011)
+- [CIP-0018](./cip0018.md): Stacked inherit view — ancestor sections above child on one page (Proposed; REQ-0012)
 
 ## Creating a Good CIP
 
