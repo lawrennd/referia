@@ -248,8 +248,9 @@ class TestGetValue:
         assert val == 3
 
     def test_get_value_none_for_missing_column(self):
-        reviewer, _, _ = _build_reviewer(col_vals={})
+        reviewer, data, _ = _build_reviewer(col_vals={})
         assert reviewer.get_value("nonexistent") is None
+        data.set_column.assert_not_called()
 
 
 class TestSetValue:
@@ -1251,6 +1252,19 @@ class TestDocumentGeneration:
         assert docs[0]["visible_if"] == "Interview"
         assert "visible_if" not in docs[1]
 
+    def test_list_document_entries_skips_named_store_mapping(self):
+        reviewer, _, _ = _build_reviewer(
+            extra={
+                "documents": {
+                    "type": "yaml",
+                    "filename": "documents.yml",
+                    "directory": "../info",
+                    "index": "Name",
+                },
+            }
+        )
+        assert reviewer.list_document_entries("documents") == []
+
     def test_template_to_value_viewer(self):
         reviewer, data, _ = _build_reviewer(
             viewer=[{"liquid": "Hello {{name}}"}],
@@ -1440,7 +1454,7 @@ class TestRowsAndFilters:
         """Unset/NaN complete should match Complete=False (incomplete work)."""
         reviewer, _, storage = _build_reviewer(
             index_vals=["a", "b", "c"],
-            col_vals={"title": "x"},
+            col_vals={"title": "x", "complete": False},
             review=[{"type": "Checkbox", "field": "complete", "default": False}],
             extra={
                 "display": {"layout": "inline_list"},
@@ -1601,6 +1615,48 @@ class TestRowsAndFilters:
         storage[("a", "complete")] = None
         reviewer.set_index("a")
         assert reviewer.get_value("complete") is True
+
+    def test_section_nested_defaults_collected(self):
+        reviewer, _, _ = _build_reviewer(
+            review=[
+                {
+                    "type": "Section",
+                    "title": "EM",
+                    "entries": [
+                        {
+                            "type": "BoundedFloatText",
+                            "field": "sigma2",
+                            "default": 0.01,
+                        },
+                        {
+                            "type": "Dropdown",
+                            "field": "label_model",
+                            "args": {"default": "gpt-4.1-mini"},
+                        },
+                    ],
+                }
+            ]
+        )
+        assert reviewer._field_defaults["sigma2"] == 0.01
+        assert reviewer._field_defaults["label_model"] == "gpt-4.1-mini"
+
+    def test_apply_field_defaults_writes_missing_output_cells(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"sigma2": None},
+            review=[
+                {
+                    "type": "BoundedFloatText",
+                    "field": "sigma2",
+                    "default": 0.01,
+                }
+            ],
+        )
+        data.ismutable.return_value = True
+        storage[("a", "sigma2")] = None
+        reviewer.set_index("a")
+        reviewer._apply_field_defaults()
+        assert storage[("a", "sigma2")] == 0.01
 
     def test_sort_orders_working_indices(self):
         reviewer, _, storage = _build_reviewer(

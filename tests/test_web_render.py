@@ -401,6 +401,7 @@ class TestButtons:
         html = render_widget({"type": "SaveButton", "field": "", "args": {}})
         assert "<button" in html
         assert 'hx-post="/save"' in html
+        assert 'hx-disabled-elt="this"' in html
 
     def test_save_button_has_no_hx_include(self):
         """Save button must NOT use hx-include to gather form data.
@@ -416,6 +417,21 @@ class TestButtons:
     def test_populate_button(self):
         html = render_widget({"type": "PopulateButton", "field": "summary", "args": {}})
         assert 'hx-post="/populate/summary"' in html
+
+    def test_populate_button_with_record_index_posts_index(self):
+        html = render_widget(
+            {
+                "type": "PopulateButton",
+                "field": "_segment",
+                "args": {"description": "Segment document", "target": "units"},
+            },
+            record_index="doc-a",
+        )
+        assert 'hx-post="/populate/_segment"' in html
+        assert "hx-vals=" in html
+        assert "doc-a" in html
+        assert 'hx-target="#review-panel"' in html
+        assert 'hx-target="#status-bar"' not in html
 
     def test_populate_button_indicator_targets_target_field(self):
         """hx-indicator should point to the target field's widget container."""
@@ -967,6 +983,38 @@ class TestRenderForm:
         assert 'name="after"' in html2
         assert html2.index("</details>") < html2.index('name="after"')
 
+    def test_section_collapse_false_is_static(self):
+        """args.collapse: false keeps cache-style chrome out of <details>."""
+        specs = [
+            {
+                "type": "Section",
+                "title": "Extract parameters",
+                "entries": [_w("Text", "phrase_kinds")],
+            },
+            {
+                "type": "Section",
+                "title": "Cache",
+                "args": {"collapse": False},
+                "entries": [
+                    {
+                        "type": "HTML",
+                        "args": {
+                            "value": '<p class="chrome-hint">Reload from disk.</p>'
+                        },
+                    },
+                    _w("ReloadButton", "_reload", args={"description": "Reload cache"}),
+                ],
+            },
+        ]
+        html = render_form(specs, {"phrase_kinds": "benefit"})
+        assert '<details class="review-section"' in html
+        assert "<summary>Extract parameters</summary>" in html
+        assert 'class="review-section review-section-static"' in html
+        assert "<h3>Cache</h3>" in html
+        assert "chrome-hint" in html
+        assert "Reload cache" in html
+        assert "<summary>Cache</summary>" not in html
+
 
 # ---------------------------------------------------------------------------
 # Criterion widget
@@ -1492,3 +1540,296 @@ class TestInlineListing:
         assert "entry-extras" in html
         assert "Email feedback" in html
         assert 'id="row-document-actions-ua257"' in html
+
+    def test_populate_all_chrome_and_per_row_button(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "placeholder-report",
+                    "data": {
+                        "Name": "placeholder-report",
+                        "filename": "placeholder.pdf",
+                        "units": [
+                            {
+                                "unit_id": "u1",
+                                "word_count": 42,
+                                "text": "First paragraph.",
+                            }
+                        ],
+                    },
+                }
+            ],
+            [
+                {"type": "precompute", "specifications": []},
+                {
+                    "type": "PopulateButton",
+                    "field": "_segment",
+                    "args": {
+                        "description": "Segment document",
+                        "target": "units",
+                    },
+                },
+                {
+                    "type": "Markdown",
+                    "field": "filename",
+                    "liquid": "**Path**",
+                },
+            ],
+            detail_field="units",
+        )
+        assert "Segment document all filtered" in html
+        assert 'hx-post="/populate-all/_segment"' in html
+        assert 'hx-post="/populate/_segment"' in html
+        assert "placeholder-report" in html
+        assert "placeholder.pdf" in html
+        assert "1 paragraph" in html
+        assert "First paragraph." in html
+        assert 'data-detail-field="units"' in html
+        assert "unsupported widget type" not in html
+        assert "**Path**" not in html
+
+    def test_name_and_filename_fallbacks_without_title(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "doc-a",
+                    "data": {"Name": "Doc A", "filename": "a.pdf"},
+                }
+            ],
+            [],
+        )
+        assert "Doc A · doc-a" in html
+        assert "a.pdf" in html
+
+    def test_extract_embed_all_and_phrase_detail(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "chunk-0",
+                    "data": {
+                        "Name": "foreword",
+                        "filename": "foreword.pdf",
+                        "extraction_phrases": [
+                            {
+                                "kind": "concern",
+                                "phrase": "fragmented capital markets",
+                                "embedding": [0.1, 0.2],
+                            }
+                        ],
+                    },
+                }
+            ],
+            [
+                {
+                    "type": "PopulateButton",
+                    "field": "_extract",
+                    "args": {
+                        "description": "Extract",
+                        "target": "extraction_payload",
+                    },
+                },
+                {
+                    "type": "PopulateButton",
+                    "field": "_embed",
+                    "args": {
+                        "description": "Embed",
+                        "target": "extraction_phrases",
+                        "requires": "extraction_phrases",
+                    },
+                },
+            ],
+            detail_field="extraction_phrases",
+        )
+        assert "Extract all filtered" in html
+        assert "Embed all filtered" in html
+        assert 'hx-post="/populate-all/_extract"' in html
+        assert 'hx-post="/populate-all/_embed"' in html
+        assert "foreword · chunk-0" in html
+        assert "1 phrase" in html
+        assert "[concern] fragmented capital markets" in html or (
+            "[concern]" in html and "fragmented capital markets" in html
+        )
+        assert "embedded" in html
+        assert ">Phrases<" in html
+        assert 'data-detail-field="extraction_phrases"' in html
+        assert "is-blocked" not in html
+
+    def test_embed_blocked_until_extract(self):
+        from referia.web.render import render_inline_listing
+
+        specs = [
+            {
+                "type": "PopulateButton",
+                "field": "_extract",
+                "args": {
+                    "description": "Extract",
+                    "target": "extraction_payload",
+                },
+            },
+            {
+                "type": "PopulateButton",
+                "field": "_embed",
+                "args": {
+                    "description": "Embed",
+                    "target": "extraction_phrases",
+                    "requires": "extraction_phrases",
+                },
+            },
+        ]
+        empty = render_inline_listing(
+            [
+                {
+                    "index": "chunk-0",
+                    "data": {"Name": "foreword", "filename": "foreword.pdf"},
+                }
+            ],
+            specs,
+        )
+        assert 'hx-post="/populate-all/_extract"' in empty
+        assert 'hx-post="/populate/_extract"' in empty
+        assert 'hx-post="/populate-all/_embed"' not in empty
+        assert 'hx-post="/populate/_embed"' not in empty
+        assert "is-blocked" in empty
+        assert "Extract all filtered rows first" in empty
+        assert "Extract this row first" in empty
+
+        mixed = render_inline_listing(
+            [
+                {
+                    "index": "chunk-0",
+                    "data": {
+                        "Name": "foreword",
+                        "extraction_phrases": [{"kind": "concern", "phrase": "x"}],
+                    },
+                },
+                {
+                    "index": "chunk-1",
+                    "data": {"Name": "chapter-1"},
+                },
+            ],
+            specs,
+        )
+        assert 'hx-post="/populate-all/_embed"' not in mixed
+        assert mixed.count("is-blocked") >= 2
+        assert 'hx-post="/populate/_embed"' in mixed
+
+    def test_listing_chrome_parameters_and_refresh_cache(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "chunk-0",
+                    "data": {
+                        "Name": "foreword",
+                        "phrase_kinds": "concern, benefit, condition",
+                        "extract_model": "gpt-4o-mini",
+                    },
+                }
+            ],
+            [
+                {
+                    "type": "Section",
+                    "title": "Extract parameters",
+                    "entries": [
+                        {
+                            "type": "HTML",
+                            "args": {
+                                "value": '<p class="chrome-hint">Extract uses these values.</p>'
+                            },
+                        },
+                        {
+                            "type": "Text",
+                            "field": "phrase_kinds",
+                            "args": {"description": "Phrase kinds"},
+                        },
+                    ],
+                },
+                {
+                    "type": "Section",
+                    "title": "Embed parameters",
+                    "entries": [
+                        {
+                            "type": "Dropdown",
+                            "field": "embed_model",
+                            "args": {
+                                "description": "Embed model",
+                                "options": ["text-embedding-3-large"],
+                            },
+                        },
+                    ],
+                },
+                {
+                    "type": "Section",
+                    "title": "Cache",
+                    "args": {"collapse": False},
+                    "entries": [
+                        {
+                            "type": "PopulateButton",
+                            "field": "_refresh_cache",
+                            "args": {
+                                "description": "Refresh cache",
+                                "target": "extraction_payload",
+                            },
+                        },
+                        {
+                            "type": "ReloadButton",
+                            "field": "_reload",
+                            "args": {"description": "Reload cache"},
+                        },
+                    ],
+                },
+                {
+                    "type": "PopulateButton",
+                    "field": "_extract",
+                    "args": {"description": "Extract", "target": "extraction_payload"},
+                },
+            ],
+        )
+        assert "Extract parameters" in html
+        assert "Embed parameters" in html
+        assert "<h3>Cache</h3>" in html
+        assert 'id="listing-chrome-form"' in html
+        assert 'hx-post="/field-bulk/phrase_kinds"' in html
+        assert 'hx-post="/field-bulk/embed_model"' in html
+        assert 'hx-post="/populate-all/_refresh_cache"' in html
+        assert "Refresh cache" in html
+        assert 'hx-post="/reload"' in html
+        assert "Reload cache" in html
+        assert 'class="review-section review-section-static"' in html
+        assert "<summary>Cache</summary>" not in html
+        assert 'hx-post="/populate-all/_extract"' in html
+
+    def test_textarea_extra_is_collapsed(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "doc-a",
+                    "data": {
+                        "title": "Doc A",
+                        "notes": "A catalog remark.",
+                    },
+                }
+            ],
+            [
+                {
+                    "type": "Textarea",
+                    "field": "notes",
+                    "args": {"description": "Catalog notes"},
+                }
+            ],
+        )
+        assert 'class="entry-detail entry-extra-collapse"' in html
+        assert "<summary>Catalog notes</summary>" in html
+        assert "A catalog remark." in html
+        assert 'name="notes"' in html
+        # Inner widget label is omitted; the summary is the label.
+        assert "widget-description" not in html

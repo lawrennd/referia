@@ -131,6 +131,12 @@ class TestGetRoot:
     def test_html_contains_status_bar(self, client):
         response = client.get("/")
         assert 'id="status-bar"' in response.text
+        assert 'aria-live="polite"' in response.text
+        assert "longOpLabel" in response.text
+        assert "completeLongOpBar" in response.text
+        assert "status-busy" in response.text
+        assert "Saving" in response.text
+        assert "Reloaded" in response.text
 
     def test_html_includes_htmx_script(self, client):
         response = client.get("/")
@@ -415,6 +421,33 @@ class TestViewerOobHelpers:
         assert 'hx-swap-oob="true"' in parts[0]
         reviewer.render_viewer_html.assert_not_called()
 
+    def test_viewer_highlight_oobs_refreshes_watched_liquid(self):
+        from referia.web.routes import _viewer_highlight_oobs
+
+        reviewer = MagicMock()
+        reviewer.get_viewer_specs.return_value = [
+            {"liquid": "store status"},
+            {
+                "liquid": "{{ units }}",
+                "watch": ["units"],
+                "collapse": {"headings": ["Paragraphs"]},
+            },
+            {"liquid": "also units", "field": "units"},
+        ]
+        reviewer.render_viewer_html.side_effect = (
+            lambda spec, viewer_index=0: (
+                f'<div class="viewer viewer-markdown" '
+                f'id="viewer-markdown-{viewer_index}">n={viewer_index}</div>'
+            )
+        )
+        parts = _viewer_highlight_oobs(reviewer, "units")
+        assert len(parts) == 2
+        assert 'id="viewer-markdown-1"' in parts[0]
+        assert 'id="viewer-markdown-2"' in parts[1]
+        assert all('hx-swap-oob="true"' in part for part in parts)
+        ignored = _viewer_highlight_oobs(reviewer, "notes")
+        assert ignored == []
+
     def test_viewer_source_without_trigger_spec_skips_widget_oob(
         self, client, mock_reviewer
     ):
@@ -684,6 +717,8 @@ class TestPostReload:
     def test_response_contains_review_panel(self, client):
         response = client.post("/reload")
         assert 'id="index-select"' in response.text
+        assert 'hx-swap-oob="true"' in response.text
+        assert "Reloaded" in response.text
 
     def test_reload_failure_omits_exception_text(self, client, mock_reviewer):
         mock_reviewer.load_flows.side_effect = OSError("secret path /tmp/xyz")
@@ -765,6 +800,33 @@ class TestPopulateStatusHtml:
             ],
         )
         assert "Split rejected" in html
+        assert "sealed" not in html
+
+    def test_reset_reports_k1_seed_not_rejected(self):
+        from referia.web.routes import _populate_status_html
+
+        reviewer = MagicMock()
+        reviewer.get_value.side_effect = lambda c: {
+            "pending_proposal": None,
+            "topic_keys": ["T0"],
+        }.get(c)
+        html = _populate_status_html(
+            reviewer,
+            [
+                "pending_proposal",
+                "uq_spec",
+                "uq_by_topic",
+                "topic_keys",
+                "responsibilities",
+                "focus_topic",
+                "topic_labels",
+                "split_undo",
+                "selected_phrase",
+            ],
+            button_field="_reset_grain",
+        )
+        assert "Reset to k=1 seed" in html
+        assert "rejected" not in html
         assert "sealed" not in html
 
     def test_name_while_pending_does_not_say_proposed(self):
@@ -939,6 +1001,110 @@ class TestPostPopulate:
         assert response.status_code == 200
         assert "failed" in response.text.lower()
         assert "internal compute boom" not in response.text
+
+    def test_populate_honours_form_index(self, populate_client):
+        client, reviewer = populate_client
+        response = client.post("/populate/SummaryBtn", data={"index": "bob"})
+        assert response.status_code == 200
+        reviewer.set_index.assert_called_with("bob")
+        reviewer.run_populate.assert_called_once()
+
+    def test_inline_list_populate_returns_panel(self, populate_client):
+        client, reviewer = populate_client
+        reviewer.get_display_layout.return_value = "inline_list"
+        reviewer.working_indices.return_value = ["alice"]
+        reviewer.get_filter_specs.return_value = []
+        reviewer.get_sort_specs.return_value = []
+        reviewer.get_filter_state.return_value = {}
+        reviewer.get_display_detail_field.return_value = None
+        reviewer.get_row_data.return_value = {"title": "Alice"}
+        response = client.post("/populate/SummaryBtn", data={"index": "alice"})
+        assert response.status_code == 200
+        assert 'class="inline-listing"' in response.text
+        assert 'id="widget-Summary"' not in response.text
+
+
+class TestPostPopulateAll:
+    def _listing_reviewer(self):
+        reviewer = _build_mock_reviewer()
+        btn = {
+            "type": "PopulateButton",
+            "field": "_segment",
+            "args": {
+                "description": "Segment document",
+                "target": "units",
+                "compute": {"field": "units", "function": "document_segment"},
+            },
+        }
+        reviewer.get_widget_specs.return_value = [btn]
+        reviewer.get_review_specs.return_value = [btn]
+        reviewer.get_display_layout.return_value = "inline_list"
+        reviewer.working_indices.return_value = ["a", "b"]
+        reviewer.get_filter_specs.return_value = []
+        reviewer.get_sort_specs.return_value = []
+        reviewer.get_filter_state.return_value = {}
+        reviewer.get_display_detail_field.return_value = "units"
+        reviewer.get_row_data.return_value = {"Name": "a", "filename": "a.pdf"}
+        reviewer.run_populate.return_value = None
+        return reviewer
+
+    def test_runs_for_each_working_index(self):
+        reviewer = self._listing_reviewer()
+        seen = []
+        reviewer.set_index.side_effect = lambda idx: seen.append(idx)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 2
+        assert seen[:2] == ["a", "b"]
+        assert "Segment document all filtered" in response.text
+
+    def test_continues_after_one_failure(self):
+        reviewer = self._listing_reviewer()
+        current = {"idx": "alice"}
+        reviewer.get_index.side_effect = lambda: current["idx"]
+
+        def _set_index(idx):
+            current["idx"] = idx
+
+        reviewer.set_index.side_effect = _set_index
+
+        def _run(interface):
+            if current["idx"] == "a":
+                raise RuntimeError("missing pdf /secret")
+
+        reviewer.run_populate.side_effect = _run
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 2
+        assert "missing pdf" not in response.text
+        assert "/secret" not in response.text
+        assert 'class="inline-listing"' in response.text
+
+    def test_all_failures_report_generic_error(self):
+        reviewer = self._listing_reviewer()
+        reviewer.run_populate.side_effect = RuntimeError("boom")
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert "failed" in response.text.lower()
+        assert "boom" not in response.text
+
+    def test_unknown_field_warns(self):
+        reviewer = self._listing_reviewer()
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/missing")
+        assert response.status_code == 200
+        assert "No PopulateButton" in response.text
 
 
 # ---------------------------------------------------------------------------

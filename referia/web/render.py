@@ -33,6 +33,10 @@ _warned_dom_ids: set[str] = set()
 
 # Optional record index for inline_list per-row widgets (hx-vals + unique DOM ids).
 _record_index_ctx: ContextVar[Any] = ContextVar("referia_record_index", default=None)
+# Listing chrome (Section parameters): field posts write every filtered row.
+_listing_chrome_ctx: ContextVar[bool] = ContextVar(
+    "referia_listing_chrome", default=False
+)
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +141,15 @@ def _htmx_field_attrs(column: str, trigger: str = "change") -> str:
     """
     col = _escape(column)
     col_url = _url_path_segment(column)
+    if _listing_chrome_ctx.get():
+        return (
+            f'name="{col}" '
+            f'hx-post="/field-bulk/{col_url}" '
+            f'hx-trigger="{trigger}" '
+            f'hx-target="#review-panel" '
+            f'hx-swap="innerHTML" '
+            f'hx-disabled-elt="this"'
+        )
     attrs = (
         f'name="{col}" '
         f'hx-post="/field/{col_url}" '
@@ -326,6 +339,8 @@ def _render_dropdown(spec: dict, value: Any, data: dict | None = None) -> str:
             options = [str(o) for o in raw]
         elif isinstance(raw, dict):
             options = [str(k) for k in raw.keys()]
+    if value not in (None, "") and str(value) not in {str(o) for o in options}:
+        options = [str(value)] + list(options)
     # Optional display labels keyed by option value (e.g. topic_labels → T0)
     labels_map: dict[str, str] = {}
     labels_field = args.get("options_labels_field")
@@ -584,7 +599,7 @@ def _render_save_button(spec: dict, value: Any) -> str:
     return (
         f'<button class="widget-button save-button" '
         f'hx-post="/save" hx-target="#status-bar" '
-        f'hx-swap="innerHTML focus-scroll:false">'
+        f'hx-swap="innerHTML focus-scroll:false" hx-disabled-elt="this">'
         f"{_escape(label)}</button>"
     )
 
@@ -592,10 +607,17 @@ def _render_save_button(spec: dict, value: Any) -> str:
 def _render_reload_button(spec: dict, value: Any) -> str:
     args = spec.get("args", {})
     label = args.get("description", "Reload")
+    if _listing_chrome_ctx.get():
+        return (
+            f'<button type="button" class="widget-button reload-button" '
+            f'hx-post="/reload" hx-target="#review-panel" '
+            f'hx-swap="innerHTML" hx-disabled-elt="this">'
+            f"{_escape(label)}</button>"
+        )
     return (
         f'<button class="widget-button reload-button" '
         f'hx-post="/reload" hx-target="#status-bar" '
-        f'hx-swap="innerHTML focus-scroll:false">'
+        f'hx-swap="innerHTML focus-scroll:false" hx-disabled-elt="this">'
         f"{_escape(label)}</button>"
     )
 
@@ -638,13 +660,73 @@ def _populate_button_route_key(spec: dict) -> str:
     return _populate_button_target(spec)
 
 
-def _render_populate_button(spec: dict, value: Any) -> str:
+def _populate_requires_field(spec: dict) -> str:
+    """Field that must already be set before this PopulateButton can run."""
+    args = spec.get("args") or {}
+    raw = args.get("requires")
+    if raw is None:
+        raw = spec.get("requires")
+    if raw is None or raw is False:
+        return ""
+    return str(raw).strip()
+
+
+def _requires_satisfied(value: Any) -> bool:
+    """True once extract (or similar) has written *value*, including ``[]``."""
+    if value is None:
+        return False
+    if isinstance(value, (list, tuple, dict)):
+        return True
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, bool):
+        return bool(value)
+    try:
+        if value != value:
+            return False
+    except Exception:
+        pass
+    if isinstance(value, (int, float)):
+        return False
+    return bool(value)
+
+
+def _blocked_populate_button(label: str, reason: str) -> str:
+    return (
+        f'<button type="button" class="widget-button populate-button is-blocked" '
+        f'disabled title="{_escape(reason)}">{_escape(label)}</button>'
+    )
+
+
+def _render_populate_button(spec: dict, value: Any, data: dict | None = None) -> str:
     args = spec.get("args", {})
     label = args.get("description", "Populate")
     route_key = _populate_button_route_key(spec)
     target = _populate_button_target(spec)
     col_url = _url_path_segment(route_key)
     indicator = f"widget-{_widget_dom_id(target)}"
+    record_index = _record_index_ctx.get()
+    requires = _populate_requires_field(spec)
+    if requires and not _listing_chrome_ctx.get():
+        row = data or {}
+        if not _requires_satisfied(row.get(requires)):
+            return _blocked_populate_button(label, "Extract this row first")
+    if _listing_chrome_ctx.get():
+        return (
+            f'<button type="button" class="widget-button populate-button" '
+            f'hx-post="/populate-all/{col_url}" hx-target="#review-panel" '
+            f'hx-swap="innerHTML" hx-disabled-elt="this">'
+            f"{_escape(label)}</button>"
+        )
+    if record_index is not None:
+        vals = _escape(json.dumps({"index": str(record_index)}))
+        # Listing rows refresh the whole panel so extras / detail_field update.
+        return (
+            f'<button class="widget-button populate-button" '
+            f'hx-post="/populate/{col_url}" hx-target="#review-panel" '
+            f'hx-swap="innerHTML" hx-vals="{vals}" hx-disabled-elt="this">'
+            f"{_escape(label)}</button>"
+        )
     return (
         f'<button class="widget-button populate-button" '
         f'hx-post="/populate/{col_url}" hx-target="#status-bar" '
@@ -660,7 +742,7 @@ def _render_populate_button(spec: dict, value: Any) -> str:
 
 # Renderers in this set receive (spec, value, data) instead of (spec, value).
 _DATA_AWARE_RENDERERS: frozenset[str] = frozenset(
-    {"Criterion", "Markdown", "Dropdown", "Select"}
+    {"Criterion", "Markdown", "Dropdown", "Select", "PopulateButton"}
 )
 
 _RENDERERS: dict[str, Any] = {
@@ -958,6 +1040,7 @@ def render_form(
     data: dict,
     *,
     record_index: Any = None,
+    form_id: str | None = None,
 ) -> str:
     """Render all widget specs for a record into a complete HTML form fragment.
 
@@ -971,8 +1054,11 @@ def render_form(
 
     Returns:
         HTML string containing the full review form wrapped in a ``<form>``
-        element.  Each ``type: Section`` with ``entries:`` becomes a
+        element.          Each ``type: Section`` with ``entries:`` becomes a
         collapsible ``<details class="review-section">`` (closed by default).
+        Set ``args.collapse: false`` (or ``collapsible: false``) for a static
+        heading that stays in the open flow — e.g. cache buttons that must
+        not sit inside Extract / Embed parameters.
         Sibling widgets outside a Section stay in the open flow.
     """
     section_index = 0
@@ -991,8 +1077,20 @@ def render_form(
                 if not isinstance(children, list):
                     children = []
                 body = "\n".join(_render_list(children))
+                args = spec.get("args") or {}
+                if not _section_collapsible(spec):
+                    heading = f"<h3>{_escape(title)}</h3>\n" if title else ""
+                    parts.append(
+                        f'<section class="review-section review-section-static" '
+                        f'data-section-key="{key}">\n'
+                        f"{heading}"
+                        f"{body}\n"
+                        f"</section>"
+                    )
+                    continue
+                open_attr = " open" if args.get("open") else ""
                 parts.append(
-                    f'<details class="review-section" data-section-key="{key}">\n'
+                    f'<details class="review-section" data-section-key="{key}"{open_attr}>\n'
                     f"<summary>{_escape(title)}</summary>\n"
                     f"{body}\n"
                     f"</details>"
@@ -1006,11 +1104,13 @@ def render_form(
         return parts
 
     inner = "\n".join(_render_list(specs))
-    if record_index is not None:
-        form_id = f'review-form-{_widget_dom_id(str(record_index))}'
+    if form_id:
+        fid = form_id
+    elif record_index is not None:
+        fid = f'review-form-{_widget_dom_id(str(record_index))}'
     else:
-        form_id = "review-form"
-    return f'<form id="{form_id}" hx-boost="false">\n{inner}\n</form>'
+        fid = "review-form"
+    return f'<form id="{fid}" hx-boost="false">\n{inner}\n</form>'
 
 
 def render_filter_bar(
@@ -1156,12 +1256,37 @@ def render_filter_bar(
     return "\n".join(parts)
 
 
+def _section_collapsible(spec: dict) -> bool:
+    """True unless the Section opts out with ``collapse`` / ``collapsible``."""
+    args = spec.get("args") or {}
+    for key in ("collapse", "collapsible"):
+        if key in args:
+            return bool(args[key])
+    return True
+
+
+_LISTING_SKIP_TYPES = frozenset(
+    {
+        "SaveButton",
+        "ReloadButton",
+        "precompute",
+        "postcompute",
+        "Section",
+        "Markdown",
+        "HTML",
+        "HTMLMath",
+        "Label",
+    }
+)
+
+
 def _split_review_specs_for_listing(
     specs: list[dict],
 ) -> tuple[dict | None, list[dict]]:
     """Pull out the ``complete`` Checkbox; return (complete_spec, other_specs).
 
     Save/Reload buttons are omitted from per-row extras (nav already has Save).
+    Compute and Markdown extras are skipped so listing rows stay compact.
     """
     complete_spec = None
     extras: list[dict] = []
@@ -1169,7 +1294,7 @@ def _split_review_specs_for_listing(
         if not isinstance(spec, dict):
             continue
         wtype = spec.get("type", "")
-        if wtype in {"SaveButton", "ReloadButton"}:
+        if wtype in _LISTING_SKIP_TYPES:
             continue
         if (
             complete_spec is None
@@ -1239,6 +1364,145 @@ def render_select_all_checkbox(
     )
 
 
+def render_populate_all_button(
+    spec: dict, *, count: int = 0, entries: list[dict] | None = None
+) -> str:
+    """Listing chrome that runs a PopulateButton on every filtered index."""
+    args = spec.get("args") or {}
+    label = str(args.get("description") or "Populate")
+    route_key = _populate_button_route_key(spec)
+    col_url = _url_path_segment(route_key)
+    n = int(count)
+    noun = "row" if n == 1 else "rows"
+    requires = _populate_requires_field(spec)
+    blocked = False
+    reason = f"Run {_escape(label)} on all filtered rows"
+    desc = "Runs this action on every row matching the current filters."
+    if requires:
+        rows = entries or []
+        blocked = (not rows) or any(
+            not _requires_satisfied((entry.get("data") or {}).get(requires))
+            for entry in rows
+        )
+        if blocked:
+            reason = "Extract all filtered rows first"
+            desc = "Extract every filtered row before embedding."
+    button = (
+        _blocked_populate_button(f"{label} all", reason)
+        if blocked
+        else (
+            f'<button type="button" class="widget-button populate-button" '
+            f'hx-post="/populate-all/{col_url}" '
+            f'hx-target="#review-panel" hx-swap="innerHTML" '
+            f'hx-disabled-elt="this" '
+            f'title="{reason}">'
+            f"{_escape(label)} all</button>"
+        )
+    )
+    return (
+        f'<div class="widget-container complete-toggle">'
+        f"{button}"
+        f"</div>"
+        f'<div class="entry-main">'
+        f'<span class="entry-title">{_escape(label)} all filtered</span>'
+        f'<span class="badge-meta">{n} {noun}</span>'
+        f'<span class="desc">{desc}</span>'
+        f"</div>"
+    )
+
+
+def _listing_row_title(data: dict, idx: Any) -> Any:
+    title = data.get("title") or data.get("Title")
+    if title:
+        return title
+    name = data.get("Name")
+    if name and idx not in (None, "") and str(idx) != str(name):
+        return f"{name} · {idx}"
+    return name or idx
+
+
+def _listing_detail_noun(detail_field: str) -> str:
+    key = str(detail_field or "").strip().lower()
+    if key == "units":
+        return "paragraph"
+    if "phrase" in key:
+        return "phrase"
+    return "item"
+
+
+def _listing_row_description(data: dict, *, detail_field: str = "") -> str:
+    desc = data.get("description") or data.get("Description") or ""
+    if not desc:
+        desc = data.get("filename") or ""
+    desc = str(desc)
+    if not detail_field:
+        return desc
+    detail_val = data.get(detail_field)
+    if not isinstance(detail_val, list):
+        return desc
+    n = len(detail_val)
+    noun = _listing_detail_noun(detail_field)
+    count_bit = f"{n} {noun}" if n == 1 else f"{n} {noun}s"
+    return f"{desc} · {count_bit}" if desc else count_bit
+
+
+_LISTING_COLLAPSE_TYPES = frozenset({"Textarea"})
+
+
+def _listing_extra_widget_html(spec: dict, data: dict, idx: Any) -> str:
+    """Render a listing extra; Textareas sit in a closed ``<details>``."""
+    field = spec.get("field", "")
+    value = data.get(field) if field else None
+    if spec.get("type") not in _LISTING_COLLAPSE_TYPES:
+        return render_widget(spec, value, data, record_index=idx)
+    args = spec.get("args") or {}
+    label = args.get("description") or field or "Notes"
+    inner_spec = dict(spec)
+    inner_args = dict(args)
+    inner_args["description"] = ""
+    inner_spec["args"] = inner_args
+    inner = render_widget(inner_spec, value, data, record_index=idx)
+    return (
+        f'<details class="entry-detail entry-extra-collapse">'
+        f"<summary>{_escape(str(label))}</summary>"
+        f'<div class="entry-detail-body entry-widget-body">{inner}</div>'
+        f"</details>"
+    )
+
+
+def _listing_detail_text(value: Any) -> str:
+    """Plain text for ``display.detail_field`` (string or list of unit dicts)."""
+    if value is None or value == "":
+        return ""
+    if isinstance(value, list):
+        if not value:
+            return ""
+        if all(isinstance(item, dict) for item in value):
+            blocks: list[str] = []
+            for i, item in enumerate(value, 1):
+                phrase = item.get("phrase")
+                if phrase not in (None, "") or item.get("kind") not in (None, ""):
+                    kind = item.get("kind") or ""
+                    header = f"{i}."
+                    if kind:
+                        header += f" [{kind}]"
+                    if item.get("embedding"):
+                        header += " embedded"
+                    body = str(phrase or "").strip()
+                    blocks.append(f"{header} {body}".strip() if body else header)
+                    continue
+                ident = item.get("unit_id") or item.get("id") or i
+                words = item.get("word_count")
+                text = item.get("text") or item.get("body") or ""
+                header = f"{i}. {ident}"
+                if words not in (None, ""):
+                    header += f" ({words} words)"
+                blocks.append(f"{header}\n{text}" if text else header)
+            return "\n\n".join(blocks)
+        return "\n".join(str(item) for item in value if item not in (None, ""))
+    return str(value).strip()
+
+
 def _version_badge(data: dict) -> str:
     """Render ``referia_config_version`` (or ``version``) as a compact badge."""
     raw = data.get("referia_config_version")
@@ -1264,6 +1528,8 @@ def render_inline_listing(
     A leading Complete checkbox is promoted when ``review`` has
     ``field: complete``; remaining widgets render as compact extras.
     When a complete field exists, a select-all row is prepended.
+    PopulateButtons also get a listing-chrome ``… all`` row that posts
+    ``/populate-all/{field}``.
 
     *group_by* controls section heading style (``directory`` adds a trailing
     slash; ``version`` does not).
@@ -1277,6 +1543,14 @@ def render_inline_listing(
     the session's current record.
     """
     complete_spec, extra_specs = _split_review_specs_for_listing(review_specs)
+    populate_specs = [
+        spec for spec in extra_specs if spec.get("type") == "PopulateButton"
+    ]
+    chrome_specs = [
+        spec
+        for spec in (review_specs or [])
+        if isinstance(spec, dict) and spec.get("type") == "Section"
+    ]
     detail_key = str(detail_field).strip() if detail_field else ""
     complete_field = (
         str(complete_spec.get("field")) if complete_spec else "complete"
@@ -1292,24 +1566,47 @@ def render_inline_listing(
             groups.append((group, seen[group]))
         seen[group].append(entry)
 
-    if not entries:
+    if not entries and not chrome_specs:
         return '<p class="no-rows">No rows match the current filters.</p>'
 
     sections: list[str] = ['<div class="inline-listing">']
-    if complete_spec is not None:
-        all_done = all(
-            bool((entry.get("data") or {}).get(complete_field))
-            for entry in entries
-        )
+    if chrome_specs:
+        chrome_data = (entries[0].get("data") if entries else {}) or {}
+        token = _listing_chrome_ctx.set(True)
+        try:
+            chrome_html = render_form(
+                chrome_specs, chrome_data, form_id="listing-chrome-form"
+            )
+        finally:
+            _listing_chrome_ctx.reset(token)
+        sections.append(f'<section class="listing-chrome">{chrome_html}</section>')
+    if not entries:
+        sections.append('<p class="no-rows">No rows match the current filters.</p>')
+        sections.append("</div>")
+        return "\n".join(sections)
+    if complete_spec is not None or populate_specs:
         sections.append('<section class="select-all-section">')
         sections.append("<ul>")
-        sections.append('<li class="inline-entry select-all-entry">')
-        sections.append(
-            render_select_all_checkbox(
-                all_done, field=complete_field, count=len(entries)
+        if complete_spec is not None:
+            all_done = all(
+                bool((entry.get("data") or {}).get(complete_field))
+                for entry in entries
             )
-        )
-        sections.append("</li>")
+            sections.append('<li class="inline-entry select-all-entry">')
+            sections.append(
+                render_select_all_checkbox(
+                    all_done, field=complete_field, count=len(entries)
+                )
+            )
+            sections.append("</li>")
+        for spec in populate_specs:
+            sections.append('<li class="inline-entry select-all-entry">')
+            sections.append(
+                render_populate_all_button(
+                    spec, count=len(entries), entries=entries
+                )
+            )
+            sections.append("</li>")
         sections.append("</ul>")
         sections.append("</section>")
 
@@ -1327,9 +1624,9 @@ def render_inline_listing(
             idx = entry.get("index")
             data = entry.get("data") or {}
             href = entry.get("href")
-            title = data.get("title") or data.get("Title") or idx
+            title = _listing_row_title(data, idx)
             date = data.get("date") or data.get("Date") or ""
-            desc = data.get("description") or data.get("Description") or ""
+            desc = _listing_row_description(data, detail_field=detail_key)
             complete_val = data.get(complete_field)
             is_complete = bool(complete_val)
             li_class = "inline-entry"
@@ -1377,13 +1674,15 @@ def render_inline_listing(
                         if str(k).lower() == detail_key.lower():
                             detail_val = v
                             break
-                detail_text = (
-                    str(detail_val).strip()
-                    if detail_val is not None
-                    else ""
-                )
+                detail_text = _listing_detail_text(detail_val)
                 if detail_text:
-                    label = detail_key.replace("_", " ").strip().title() or "Detail"
+                    label = {
+                        "units": "Units",
+                        "extraction_phrases": "Phrases",
+                    }.get(
+                        detail_key,
+                        detail_key.replace("_", " ").strip().title() or "Detail",
+                    )
                     sections.append(
                         f'<details class="entry-detail" '
                         f'data-detail-field="{_escape(detail_key)}">'
@@ -1395,12 +1694,8 @@ def render_inline_listing(
             extras_html = []
             if extra_specs:
                 for spec in extra_specs:
-                    field = spec.get("field", "")
-                    value = data.get(field) if field else None
                     extras_html.append(
-                        render_widget(
-                            spec, value, data, record_index=idx
-                        )
+                        _listing_extra_widget_html(spec, data, idx)
                     )
             row_docs = ""
             if documents:

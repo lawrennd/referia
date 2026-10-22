@@ -123,6 +123,37 @@ class TestSingleConfigMode:
             for call in mock_rev.set_value.call_args_list
         )
 
+    def test_populate_all_runs_for_working_indices(self):
+        mock_rev = _mock_reviewer()
+        mock_rev.working_indices.return_value = ["a", "b"]
+        mock_rev.get_display_layout.return_value = "inline_list"
+        mock_rev.get_filter_specs.return_value = []
+        mock_rev.get_sort_specs.return_value = []
+        mock_rev.get_filter_state.return_value = {}
+        mock_rev.get_display_detail_field.return_value = None
+        btn = {
+            "type": "PopulateButton",
+            "field": "_segment",
+            "args": {
+                "description": "Segment document",
+                "target": "units",
+                "compute": {"field": "units", "function": "document_segment"},
+            },
+        }
+        mock_rev.get_review_specs.return_value = [btn]
+        mock_rev.get_widget_specs.return_value = [btn]
+        mock_rev.list_pdf_entries.return_value = []
+        mock_rev.list_url_entries.return_value = []
+        mock_rev.list_document_entries.return_value = []
+        mock_rev.affected_widgets.return_value = []
+        mock_rev.run_populate.return_value = None
+        with patch("referia.assess.web_review.WebReviewer", return_value=mock_rev):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                resp = client.post("/populate-all/_segment")
+        assert resp.status_code == 200
+        assert mock_rev.run_populate.call_count == 2
+
 
 # ---------------------------------------------------------------------------
 # Root-server mode

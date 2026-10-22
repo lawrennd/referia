@@ -486,6 +486,12 @@ span.entry-title {
     background: #eef3f8;
 }
 
+.inline-listing li.select-all-entry .populate-button {
+    white-space: nowrap;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.55rem;
+}
+
 .inline-listing .desc {
     display: block;
     font-size: 0.85rem;
@@ -559,6 +565,24 @@ span.entry-title {
 .entry-extras .widget-textarea,
 .entry-extras .widget-text {
     font-size: 0.85rem;
+}
+
+.entry-extras details.entry-extra-collapse {
+    flex: 1 1 100%;
+    min-width: 0;
+}
+
+.entry-extras .entry-widget-body {
+    white-space: normal;
+    background: transparent;
+    border: none;
+    padding: 0.25rem 0 0;
+}
+
+.entry-extras details.entry-extra-collapse .widget-textarea {
+    width: 100%;
+    min-height: 4.5rem;
+    box-sizing: border-box;
 }
 
 .entry-extras .row-document-actions {
@@ -724,6 +748,37 @@ span.entry-title {
 .review-section[open] > summary {
     margin-bottom: 0.5rem;
     border-bottom: 1px solid var(--colour-border);
+}
+
+.review-section-static > h3 {
+    margin: 0.35rem 0 0.45rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.listing-chrome {
+    margin-bottom: 1rem;
+}
+
+.listing-chrome .chrome-hint {
+    margin: 0 0 0.55rem;
+    color: var(--colour-muted, #555);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    max-width: 46rem;
+}
+
+.listing-chrome .review-section-static {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.75rem;
+    align-items: center;
+}
+
+.listing-chrome .review-section-static > h3,
+.listing-chrome .review-section-static > .widget-container:has(.widget-html),
+.listing-chrome .review-section-static > .widget-container:has(.chrome-hint) {
+    flex: 1 1 100%;
 }
 
 /* CIP-0014: collapsed headings inside a viewer markdown blob */
@@ -1025,6 +1080,18 @@ span.entry-title {
     content: " …";
 }
 
+.populate-button.is-blocked,
+.populate-button.is-blocked:disabled {
+    background: var(--colour-muted);
+    color: var(--colour-white);
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.populate-button.is-blocked:disabled::after {
+    content: none;
+}
+
 /* hx-indicator="#widget-{target}" adds htmx-request to the target container
    while the request is in flight, fading it to signal it is being updated. */
 .widget-container.htmx-request {
@@ -1047,9 +1114,11 @@ span.entry-title {
     color: var(--colour-white);
     display: none;
     z-index: 100;
+    overflow: hidden;
 }
 
-.status-bar.visible {
+.status-bar.visible,
+.status-bar.status-busy {
     display: block;
 }
 
@@ -1065,10 +1134,44 @@ span.entry-title {
     background: var(--colour-warning);
 }
 
+.status-bar.status-busy {
+    background: var(--colour-accent);
+}
+
+.status-bar.status-busy::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 40%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.35),
+        transparent
+    );
+    animation: status-indet 1.15s ease-in-out infinite;
+}
+
+@keyframes status-indet {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(280%); }
+}
+
 .status-ok,
 .status-error,
-.status-warning {
+.status-warning,
+.status-progress {
     color: inherit;
+    position: relative;
+    z-index: 1;
+}
+
+.save-button:disabled,
+.reload-button:disabled {
+    opacity: 0.55;
+    cursor: wait;
 }
 
 /* ── code (inline) ───────────────────────────────────────── */

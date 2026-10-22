@@ -73,6 +73,27 @@ _VALID_DISPLAY_LAYOUTS = frozenset({"side_by_side", "inline_list"})
 # Relative calendar tokens for ``display.filter_defaults`` date bounds.
 _RELATIVE_DATE_RE = re.compile(r"^today(?:([+-])(\d+)d)?$", re.IGNORECASE)
 
+# Lynguine store codecs. A ``documents:`` mapping with these types is a named
+# store (filename/directory), not a generate-document action. Misusing that
+# reserved key produced a "Create yaml" button whose download 404'd.
+_STORE_DOCUMENT_TYPES = frozenset(
+    {"yaml", "yml", "csv", "excel", "xlsx", "json", "parquet", "pickle"}
+)
+_DOCUMENT_ACTION_KEYS = frozenset(
+    {"content", "body", "header", "footer", "tally", "display", "liquid", "use", "template"}
+)
+
+
+def _is_document_action(doc: Any) -> bool:
+    """True when *doc* is a generate-document spec, not a lynguine store."""
+    if not isinstance(doc, dict) or "type" not in doc:
+        return False
+    dtype = str(doc.get("type") or "").strip().casefold()
+    if dtype in _STORE_DOCUMENT_TYPES and "filename" in doc:
+        if not any(key in doc for key in _DOCUMENT_ACTION_KEYS):
+            return False
+    return True
+
 
 def _visible_if_depends_on(condition: Any, column: str) -> bool:
     """True when a widget ``visible_if`` condition references *column*."""
@@ -206,6 +227,9 @@ class WebReviewer:
         # 2026-10-18_web-reviewer-skips-precompute-soft-fill).
         self._register_review_computes()
         self._ensure_compute_target_columns()
+        # Widget defaults must exist before precompute: Propose/Name read
+        # sigma2 / label_model from the row, not from the rendered widget.
+        self._field_defaults: dict[str, Any] = self._build_field_defaults()
 
         indices = list(self._data.index)
         if indices:
@@ -213,14 +237,13 @@ class WebReviewer:
             # from_flow often already selects the first row, so the first
             # set_index is a no-op for precompute — run it explicitly below.
             self.set_index(indices[0])
+            self._apply_field_defaults()
             self._run_review_precompute()
             self._run_interface_compute()
 
         # Session filter/sort state for display.layout: inline_list (CIP-0010).
         # Seed from ``display.filter_defaults`` when present (Clear restores it).
         self._filter_state: dict[str, Any] = self.get_filter_defaults()
-        # Review-widget defaults (``default:`` / Checkbox→False) for missing cells.
-        self._field_defaults: dict[str, Any] = self._build_field_defaults()
 
     # ------------------------------------------------------------------
     # Index management
@@ -578,15 +601,34 @@ class WebReviewer:
     # Value access
     # ------------------------------------------------------------------
 
+    def _iter_review_widget_specs(self, entries: list | None = None):
+        """Yield field-bearing widget specs, including nested ``Section``s."""
+        if entries is None:
+            entries = self._review_raw()
+        for spec in entries or []:
+            if not isinstance(spec, dict):
+                continue
+            if spec.get("type") in _CLUSTER_TYPES:
+                sub = spec.get(
+                    "entries",
+                    spec.get("children", spec.get("specifications", [])),
+                )
+                yield from self._iter_review_widget_specs(
+                    sub if isinstance(sub, list) else [sub]
+                )
+                continue
+            yield spec
+
     def _build_field_defaults(self) -> dict[str, Any]:
         """Collect per-field defaults from ``review:`` widget specs.
 
-        Honour explicit ``default:`` / ``value:`` (Jupyter parity).  Checkbox
-        and Flag widgets default to ``False`` when unset so incomplete work is
-        an explicit boolean rather than missing/NaN.
+        Honour explicit ``default:`` / ``value:`` / ``args.default`` (Jupyter
+        parity), including widgets nested in ``Section``. Checkbox and Flag
+        widgets default to ``False`` when unset so incomplete work is an
+        explicit boolean rather than missing/NaN.
         """
         defaults: dict[str, Any] = {}
-        for spec in self._review_raw():
+        for spec in self._iter_review_widget_specs():
             if not isinstance(spec, dict):
                 continue
             field = spec.get("field")
@@ -601,12 +643,56 @@ class WebReviewer:
                 else:
                     defaults[field] = detail
                 continue
+            args = spec.get("args") if isinstance(spec.get("args"), dict) else {}
+            if "default" in args:
+                defaults[field] = args["default"]
+                continue
             if "value" in spec:
                 defaults[field] = spec["value"]
                 continue
             if spec.get("type") in {"Checkbox", "Flag"}:
                 defaults[field] = False
         return defaults
+
+    def _cell_is_missing(self, val: Any) -> bool:
+        import math
+        import numpy as np
+
+        try:
+            if val is None:
+                return True
+            if isinstance(val, float) and math.isnan(val):
+                return True
+            if isinstance(val, (np.floating,)) and np.isnan(val):
+                return True
+            if isinstance(val, np.datetime64) and np.isnat(val):
+                return True
+            if pd.api.types.is_scalar(val) and pd.isnull(val):
+                return True
+        except (TypeError, ValueError):
+            return False
+        return False
+
+    def _apply_field_defaults(self) -> None:
+        """Write widget defaults into empty output cells on the current row.
+
+        Compute ``row_args`` reads the DataFrame, not ``get_value()``, so
+        display-only defaults would leave Propose/Name seeing ``None``.
+        """
+        defaults = getattr(self, "_field_defaults", None) or {}
+        ismutable = getattr(self._data, "ismutable", None)
+        for column, value in defaults.items():
+            try:
+                if column not in self._data.columns:
+                    continue
+                if callable(ismutable) and ismutable(column) is False:
+                    continue
+                self._data.set_column(column)
+                if not self._cell_is_missing(self._data.get_value()):
+                    continue
+                self.set_value(column, value)
+            except Exception as exc:
+                log.debug("Could not apply default for %r: %s", column, exc)
 
     def get_value(self, column: str) -> Any:
         """Return the current value of *column* for the active record.
@@ -627,6 +713,17 @@ class WebReviewer:
         import numpy as np
         import pandas as pd
 
+        try:
+            known = column in self._data.columns or column == getattr(
+                self._data.index, "name", None
+            )
+        except Exception:
+            known = False
+        if not known:
+            defaults = getattr(self, "_field_defaults", None) or {}
+            if column in defaults:
+                return defaults[column]
+            return None
         self._data.set_column(column)
         val = self._data.get_value()
         # Normalise all NaN-like sentinels to None.
@@ -781,12 +878,14 @@ class WebReviewer:
 
         self._register_review_computes()
         self._ensure_compute_target_columns()
+        self._field_defaults = self._build_field_defaults()
 
         indices = list(self._data.index)
         if current_index is not None and current_index in indices:
             self.set_index(current_index)
         elif indices:
             self.set_index(indices[0])
+        self._apply_field_defaults()
         # Same as __init__: from_flow may already hold this index so set_index
         # skips compute_pre — force review precomputes after reload.
         self._run_review_precompute()
@@ -1415,7 +1514,7 @@ class WebReviewer:
         summary = section == "summary_documents"
         entries: list[dict] = []
         for n, doc in enumerate(self._interface_section(section)):
-            if not isinstance(doc, dict) or "type" not in doc:
+            if not _is_document_action(doc):
                 continue
             dtype = str(doc["type"])
             entry = {

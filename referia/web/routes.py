@@ -32,7 +32,13 @@ All routes share a ``WebReviewer`` instance stored in ``app.state.reviewer``.
 
 ``POST /populate/{field}``
     Trigger an on-demand compute function for *field*; return a status
-    fragment plus the refreshed widget.
+    fragment plus the refreshed widget. Optional form ``index`` selects the
+    listing row (inline_list). On ``inline_list`` the response is a refreshed
+    review panel.
+
+``POST /populate-all/{field}``
+    Run that PopulateButton on every index in the current filtered working
+    set; return a refreshed review panel.
 
 ``POST /generate-document/{n}`` / ``POST /generate-summary-document/{n}``
     Run ``documents:`` / ``summary_documents:`` generation; return status
@@ -73,6 +79,9 @@ under the root directory.  Reviewers are lazily loaded and cached by
 
 ``POST /{config_path:path}/populate/{field}``
     On-demand compute.
+
+``POST /{config_path:path}/populate-all/{field}``
+    On-demand compute for every filtered row.
 
 ``POST /{config_path:path}/generate-document/{n}`` (and summary / edit-pdf)
     Document generation actions.
@@ -180,6 +189,15 @@ def _current_data(reviewer) -> dict:
                 data[col] = reviewer.get_value(col)
             except Exception:
                 data[col] = None
+    try:
+        detail = reviewer.get_display_detail_field()
+    except Exception:
+        detail = None
+    if isinstance(detail, str) and detail:
+        try:
+            data[detail] = reviewer.get_value(detail)
+        except Exception:
+            pass
     return data
 
 
@@ -530,6 +548,50 @@ def _user_error_html(action: str) -> str:
     )
 
 
+def _apply_field_bulk(reviewer, column: str, value: Any) -> None:
+    """Write *column* once for parameters, else on every working-set row."""
+    data = getattr(reviewer, "_data", None)
+    isparameter = getattr(data, "isparameter", None)
+    ismutable = getattr(data, "ismutable", None)
+    if callable(isparameter) and callable(ismutable):
+        try:
+            if isparameter(column) is True and ismutable(column) is True:
+                reviewer.set_value(column, value)
+                return
+        except Exception:
+            pass
+    saved = None
+    try:
+        saved = reviewer.get_index()
+    except Exception:
+        pass
+    try:
+        for idx in reviewer.working_indices():
+            reviewer.set_index(idx)
+            reviewer.set_value(column, value)
+    finally:
+        if saved is not None:
+            try:
+                reviewer.set_index(saved)
+            except Exception:
+                pass
+
+
+def _panel_with_oob_status(templates, request, ctx: dict, status_html: str) -> HTMLResponse:
+    """Review panel plus an OOB swap into ``#status-bar``."""
+    panel = templates.TemplateResponse(request, "review_panel.html", ctx)
+    body = panel.body
+    if isinstance(body, (bytes, bytearray, memoryview)):
+        text = bytes(body).decode("utf-8")
+    else:
+        text = str(body)
+    oob = (
+        f'<div id="status-bar" class="status-bar" hx-swap-oob="true">'
+        f"{status_html}</div>"
+    )
+    return HTMLResponse(text + oob)
+
+
 _BROWSER_ERROR_HINT = "See server log."
 _PARSE_FAIL_TOOLTIP = "Failed to parse. See server log."
 
@@ -609,6 +671,26 @@ _LIQUID_VIEWER_WATCH = frozenset(
 )
 
 
+def _liquid_viewer_watch_columns(spec: dict) -> set[str]:
+    """Columns that should OOB-refresh this liquid / Markdown viewer.
+
+    Config (on a ``viewer:`` entry)::
+
+        watch: [units]
+        field: units   # same meaning as a one-item watch list
+    """
+    cols: set[str] = set()
+    field = spec.get("field")
+    if field not in (None, "", "_"):
+        cols.add(str(field))
+    watch = spec.get("watch")
+    if isinstance(watch, str) and watch:
+        cols.add(watch)
+    elif isinstance(watch, (list, tuple, set)):
+        cols.update(str(item) for item in watch if item not in (None, "", "_"))
+    return cols
+
+
 def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
     """OOB fragments for viewers watching *column* (highlight or figure_source).
 
@@ -616,7 +698,8 @@ def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
     live graph is restyled in place (avoids a full remount / size flash).
     Viewer-chrome widgets replace their container when field/options change.
     Liquid intro blocks re-render when topic catalogue columns change so
-    named labels replace raw ``T0`` keys without a full page reload.
+    named labels replace raw ``T0`` keys without a full page reload, and
+    when the entry declares ``watch:`` / ``field:`` (e.g. Segment → units).
     """
     from referia.assess.viewer_bindings import (
         apply_highlight,
@@ -646,7 +729,10 @@ def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
             html = reviewer.render_viewer_html(spec, viewer_index=i)
             parts.append(_make_viewer_oob(html))
             continue
-        if is_liquid_viewer(spec) and column in _LIQUID_VIEWER_WATCH:
+        if is_liquid_viewer(spec) and (
+            column in _LIQUID_VIEWER_WATCH
+            or column in _liquid_viewer_watch_columns(spec)
+        ):
             html = reviewer.render_viewer_html(spec, viewer_index=i)
             parts.append(_make_viewer_oob(html))
             continue
@@ -932,25 +1018,14 @@ async def update_field_bulk(request: Request, column: str):
     spec = _find_spec(reviewer, column)
     value: Any = _coerce_form_value(raw_value, spec)
 
-    saved = None
     try:
-        saved = reviewer.get_index()
-    except Exception:
-        pass
-
-    try:
-        for idx in reviewer.working_indices():
-            reviewer.set_index(idx)
-            reviewer.set_value(column, value)
+        _apply_field_bulk(reviewer, column, value)
     except Exception as exc:
         _log_route_error("Bulk update", exc, column=column)
-        return HTMLResponse(_user_error_html("Bulk update"))
-    finally:
-        if saved is not None:
-            try:
-                reviewer.set_index(saved)
-            except Exception:
-                pass
+        ctx = _panel_response_context(reviewer)
+        return _panel_with_oob_status(
+            templates, request, ctx, _user_error_html("Bulk update")
+        )
 
     ctx = _panel_response_context(reviewer)
     return templates.TemplateResponse(request, "review_panel.html", ctx)
@@ -1064,7 +1139,12 @@ async def reload_data(request: Request):
         return HTMLResponse(_user_error_html("Reload"))
 
     ctx = _panel_response_context(reviewer)
-    return templates.TemplateResponse(request, "review_panel.html", ctx)
+    return _panel_with_oob_status(
+        templates,
+        request,
+        ctx,
+        '<span class="status-ok">&#10003; Reloaded</span>',
+    )
 
 
 def _apply_form_index(reviewer, form, *, action: str = "Generate document"):
@@ -1140,7 +1220,35 @@ async def populate_field(request: Request, field: str):
         return HTMLResponse(
             f'<span class="status-warning">&#9888; No PopulateButton found for field {_esc(field)}</span>'
         )
-    return _run_populate_and_respond(reviewer, field, btn_spec)
+    form = await request.form()
+    err = _apply_form_index(reviewer, form, action="Populate")
+    if err is not None:
+        return err
+    return _run_populate_and_respond(
+        reviewer,
+        field,
+        btn_spec,
+        request=request,
+        templates=_templates(request),
+    )
+
+
+@router.post("/populate-all/{field}", response_class=HTMLResponse)
+async def populate_all_field(request: Request, field: str):
+    """Run a PopulateButton on every filtered working-set row; refresh the panel."""
+    reviewer = _reviewer(request)
+    btn_spec = _find_populate_spec(reviewer, field)
+    if btn_spec is None:
+        return HTMLResponse(
+            f'<span class="status-warning">&#9888; No PopulateButton found for field {_esc(field)}</span>'
+        )
+    return _run_populate_all_and_respond(
+        reviewer,
+        field,
+        btn_spec,
+        request=request,
+        templates=_templates(request),
+    )
 
 
 def _file_response(path: Path, *, as_attachment: bool = False):
@@ -1814,8 +1922,21 @@ def _specs_with_options_field(reviewer, column: str) -> list[dict]:
     return out
 
 
-def _populate_status_html(reviewer, updated_cols: list[str]) -> str:
+def _populate_status_html(
+    reviewer, updated_cols: list[str], button_field: str = ""
+) -> str:
     """Human-readable status after a multi-output populate (e.g. Propose split)."""
+    key = str(button_field or "")
+    if "reset" in key.lower():
+        try:
+            keys = reviewer.get_value("topic_keys")
+        except Exception:
+            keys = None
+        n = len(keys) if isinstance(keys, (list, tuple)) else 1
+        return (
+            f'<span class="status-ok">&#10003; Reset to k={_esc(str(n))} seed.'
+            f"</span>"
+        )
     pending = None
     if "pending_proposal" in updated_cols:
         try:
@@ -1887,7 +2008,61 @@ def _populate_status_html(reviewer, updated_cols: list[str]) -> str:
     return '<span class="status-ok">&#10003; Populated</span>'
 
 
-def _run_populate_and_respond(reviewer, field: str, btn_spec: dict) -> HTMLResponse:
+def _run_populate_all_and_respond(
+    reviewer,
+    field: str,
+    btn_spec: dict,
+    request: Request,
+    templates,
+    path_prefix: str = "",
+) -> HTMLResponse:
+    """Run one PopulateButton on every ``working_indices()`` row."""
+    compute_spec = _build_populate_compute_spec(btn_spec, field)
+    if compute_spec is None:
+        return HTMLResponse(
+            '<span class="status-warning">&#9888; PopulateButton has no compute spec</span>'
+        )
+
+    saved = None
+    try:
+        saved = reviewer.get_index()
+    except Exception:
+        pass
+
+    n_ok = 0
+    n_fail = 0
+    try:
+        for idx in reviewer.working_indices():
+            try:
+                reviewer.set_index(idx)
+                reviewer.run_populate({"compute": compute_spec})
+                n_ok += 1
+            except Exception as exc:
+                n_fail += 1
+                _log_route_error("Populate all", exc, field=field, index=idx)
+    finally:
+        if saved is not None:
+            try:
+                reviewer.set_index(saved)
+            except Exception:
+                pass
+
+    if n_ok == 0 and n_fail > 0:
+        return HTMLResponse(_user_error_html("Populate all"))
+
+    ctx = _panel_response_context(reviewer, path_prefix)
+    return templates.TemplateResponse(request, "review_panel.html", ctx)
+
+
+def _run_populate_and_respond(
+    reviewer,
+    field: str,
+    btn_spec: dict,
+    *,
+    request: Request | None = None,
+    templates=None,
+    path_prefix: str = "",
+) -> HTMLResponse:
     """Shared populate logic for both single-config and root-mode routes."""
     compute_spec = _build_populate_compute_spec(btn_spec, field)
 
@@ -1909,6 +2084,18 @@ def _run_populate_and_respond(reviewer, field: str, btn_spec: dict) -> HTMLRespo
         _log_route_error("Populate", exc, field=field)
         return HTMLResponse(_user_error_html("Populate"))
 
+    try:
+        layout = reviewer.get_display_layout()
+    except Exception:
+        layout = ""
+    if (
+        layout == "inline_list"
+        and request is not None
+        and templates is not None
+    ):
+        ctx = _panel_response_context(reviewer, path_prefix)
+        return templates.TemplateResponse(request, "review_panel.html", ctx)
+
     data = _current_data(reviewer)
     # Refresh current values into *data* so options_field dropdowns see new keys.
     for col in updated_cols:
@@ -1917,7 +2104,7 @@ def _run_populate_and_respond(reviewer, field: str, btn_spec: dict) -> HTMLRespo
         except Exception:
             pass
 
-    parts = [_populate_status_html(reviewer, updated_cols)]
+    parts = [_populate_status_html(reviewer, updated_cols, button_field=field)]
     # Dedupe OOB fragments by DOM id so multiple updated_cols watching the
     # same Plotly pane / chrome dropdown do not fight HTMX.
     oob_by_id: dict[str, str] = {}
@@ -2128,25 +2315,14 @@ async def root_update_field_bulk(request: Request, config_path: str, column: str
     spec = _find_spec(reviewer, column)
     value: Any = _coerce_form_value(raw_value, spec)
 
-    saved = None
     try:
-        saved = reviewer.get_index()
-    except Exception:
-        pass
-
-    try:
-        for idx in reviewer.working_indices():
-            reviewer.set_index(idx)
-            reviewer.set_value(column, value)
+        _apply_field_bulk(reviewer, column, value)
     except Exception as exc:
         _log_route_error("Bulk update", exc, column=column)
-        return HTMLResponse(_user_error_html("Bulk update"))
-    finally:
-        if saved is not None:
-            try:
-                reviewer.set_index(saved)
-            except Exception:
-                pass
+        ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
+        return _panel_with_oob_status(
+            templates, request, ctx, _user_error_html("Bulk update")
+        )
 
     ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
     return templates.TemplateResponse(request, "review_panel.html", ctx)
@@ -2200,7 +2376,12 @@ async def root_reload(request: Request, config_path: str):
         _log_route_error("Reload", exc)
         return HTMLResponse(_user_error_html("Reload"))
     ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
-    return templates.TemplateResponse(request, "review_panel.html", ctx)
+    return _panel_with_oob_status(
+        templates,
+        request,
+        ctx,
+        '<span class="status-ok">&#10003; Reloaded</span>',
+    )
 
 
 @root_router.post("/{config_path:path}/generate-document/{n}", response_class=HTMLResponse)
@@ -2241,7 +2422,36 @@ async def root_populate(request: Request, config_path: str, field: str):
         return HTMLResponse(
             f'<span class="status-warning">&#9888; No PopulateButton for {_esc(field)}</span>'
         )
-    return _run_populate_and_respond(reviewer, field, btn_spec)
+    form = await request.form()
+    err = _apply_form_index(reviewer, form, action="Populate")
+    if err is not None:
+        return err
+    return _run_populate_and_respond(
+        reviewer,
+        field,
+        btn_spec,
+        request=request,
+        templates=_templates(request),
+        path_prefix=_config_path_prefix(config_path),
+    )
+
+
+@root_router.post("/{config_path:path}/populate-all/{field}", response_class=HTMLResponse)
+async def root_populate_all(request: Request, config_path: str, field: str):
+    reviewer = _root_reviewer(request, config_path)
+    btn_spec = _find_populate_spec(reviewer, field)
+    if btn_spec is None:
+        return HTMLResponse(
+            f'<span class="status-warning">&#9888; No PopulateButton for {_esc(field)}</span>'
+        )
+    return _run_populate_all_and_respond(
+        reviewer,
+        field,
+        btn_spec,
+        request=request,
+        templates=_templates(request),
+        path_prefix=_config_path_prefix(config_path),
+    )
 
 
 @root_router.get("/{config_path:path}/record-document/{kind}/{n}")

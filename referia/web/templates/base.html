@@ -47,11 +47,91 @@
         });
       })();
 
+      /* Long save / reload / populate: the bar stays empty until HTMX
+         settles, so show an indeterminate progress state immediately. */
+      function longOpLabel(path) {
+        if (!path) return null;
+        var clean = String(path).split("?")[0].replace(/\/+$/, "");
+        var parts = clean.split("/");
+        var last = parts[parts.length - 1] || "";
+        var prev = parts[parts.length - 2] || "";
+        if (last === "save") return "Saving\u2026";
+        if (last === "reload") return "Reloading\u2026";
+        if (prev === "populate-all") return "Updating all\u2026";
+        if (prev === "populate") return "Working\u2026";
+        if (prev === "generate-document") return "Creating document\u2026";
+        if (prev === "generate-summary-document") return "Creating summary\u2026";
+        if (prev === "edit-pdf") return "Preparing PDF\u2026";
+        return null;
+      }
+
+      function requestPath(evt) {
+        var cfg = evt.detail && evt.detail.requestConfig;
+        if (cfg && cfg.path) return cfg.path;
+        if (evt.detail && evt.detail.path) return evt.detail.path;
+        return "";
+      }
+
+      function longOpDoneHtml(path) {
+        if (!path) return null;
+        var clean = String(path).split("?")[0].replace(/\/+$/, "");
+        var last = clean.split("/").pop() || "";
+        if (last === "reload") return '<span class="status-ok">\u2713 Reloaded</span>';
+        return null;
+      }
+
+      function requestFailed(evt) {
+        var d = evt.detail || {};
+        if (d.failed) return true;
+        if (d.successful === false) return true;
+        var xhr = d.xhr;
+        return !!(xhr && xhr.status >= 400);
+      }
+
+      function completeLongOpBar(evt) {
+        var bar = document.getElementById("status-bar");
+        if (!bar) return bar;
+        bar.classList.remove("status-busy");
+        var path = requestPath(evt);
+        if (!longOpLabel(path)) return bar;
+        var target = evt.detail && evt.detail.target;
+        if (target && target.id === "status-bar") return bar;
+        if (!bar.querySelector(".status-progress")) return bar;
+        if (requestFailed(evt)) {
+          bar.innerHTML = '<span class="status-error">Request failed. See server log.</span>';
+        } else {
+          bar.innerHTML = longOpDoneHtml(path) || "";
+        }
+        return bar;
+      }
+
+      document.addEventListener("htmx:beforeRequest", function (evt) {
+        var label = longOpLabel(requestPath(evt));
+        if (!label) return;
+        var bar = document.getElementById("status-bar");
+        if (!bar) return;
+        clearTimeout(bar._timer);
+        bar.classList.add("visible", "status-busy");
+        bar.innerHTML =
+          '<span class="status-progress" role="progressbar" aria-busy="true">' +
+          label + "</span>";
+        var btn = evt.detail.elt;
+        if (btn && btn.disabled !== undefined &&
+            (btn.classList.contains("save-button") ||
+             btn.classList.contains("reload-button"))) {
+          btn.disabled = true;
+        }
+      });
+
+      /* Reload swaps #review-panel, not the bar — clear in-flight markup
+         here as well as afterSettle, in case settle is skipped. */
+      document.addEventListener("htmx:afterRequest", completeLongOpBar);
+
       /* Auto-show the status bar when HTMX writes to it, then fade after 3 s.
          If the fragment carries data-auto-download, start that download too
          (Create docx / Prepare PDF) — plain <a download> remains as fallback. */
       document.addEventListener("htmx:afterSettle", function (evt) {
-        var bar = document.getElementById("status-bar");
+        var bar = completeLongOpBar(evt);
         if (!bar) return;
         if (bar.innerHTML.trim() !== "") {
           bar.classList.add("visible");
@@ -72,7 +152,17 @@
               document.body.removeChild(a);
             }
           }
+        } else {
+          bar.classList.remove("visible");
         }
+      });
+
+      document.addEventListener("htmx:sendError", function () {
+        var bar = document.getElementById("status-bar");
+        if (!bar) return;
+        bar.classList.remove("status-busy");
+        bar.classList.add("visible");
+        bar.innerHTML = '<span class="status-error">Request failed.</span>';
       });
 
       /* PopulateButton loading state: dim the button and target textarea while
@@ -93,7 +183,12 @@
 
       document.addEventListener("htmx:afterRequest", function (evt) {
         var btn = evt.detail.elt;
-        if (!btn.classList || !btn.classList.contains("populate-button")) return;
+        if (!btn.classList) return;
+        if (btn.classList.contains("save-button") ||
+            btn.classList.contains("reload-button")) {
+          btn.disabled = false;
+        }
+        if (!btn.classList.contains("populate-button")) return;
         btn.disabled = false;
         if (btn._populateLabel !== undefined) { btn.textContent = btn._populateLabel; }
         var indicatorSel = btn.getAttribute("hx-indicator");
@@ -637,6 +732,6 @@
         </div>
     </main>
 
-    <div id="status-bar" class="status-bar"></div>
+    <div id="status-bar" class="status-bar" role="status" aria-live="polite"></div>
 </body>
 </html>
