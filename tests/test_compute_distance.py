@@ -346,6 +346,14 @@ def test_run_document_distance_expands_vq_qr(monkeypatch):
             responsibilities=[[1.0, 0.0]],
             min_mass=1.0,
         )
+    with pytest.raises(ValueError, match="expanded responsibilities"):
+        run_document_distance_analysis(
+            embeddings=[[1.0, 0.0], [0.0, 1.0], [0.5, 0.5]],
+            doc_ids=["A", "B", "C"],
+            responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+            cluster_ids=[0, 1],
+            min_mass=1.0,
+        )
 
 
 def test_zero_mass_kept_when_min_mass_none():
