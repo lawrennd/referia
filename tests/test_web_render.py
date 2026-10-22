@@ -1833,3 +1833,81 @@ class TestInlineListing:
         assert 'name="notes"' in html
         # Inner widget label is omitted; the summary is the label.
         assert "widget-description" not in html
+
+    def test_listing_helper_title_detail_and_requires(self):
+        from referia.web.render import (
+            _htmx_field_attrs,
+            _listing_chrome_ctx,
+            _listing_detail_noun,
+            _listing_detail_text,
+            _listing_row_description,
+            _listing_row_title,
+            _populate_requires_field,
+            _requires_satisfied,
+            _section_collapsible,
+            render_inline_listing,
+        )
+
+        assert _listing_row_title({"title": "Alpha"}, "idx") == "Alpha"
+        assert _listing_row_title({"Name": "same"}, "same") == "same"
+        assert _listing_row_title({}, "idx") == "idx"
+        assert _listing_detail_noun("units") == "paragraph"
+        assert _listing_detail_noun("extraction_phrases") == "phrase"
+        assert _listing_detail_noun("notes") == "item"
+        assert _listing_row_description({"filename": "a.pdf"}) == "a.pdf"
+        assert _listing_row_description(
+            {"units": [{}, {}]}, detail_field="units"
+        ) == "2 paragraphs"
+        assert _listing_detail_text(None) == ""
+        assert _listing_detail_text([]) == ""
+        assert _listing_detail_text(["one", "two"]) == "one\ntwo"
+        assert "embedded" not in _listing_detail_text(
+            [{"kind": "benefit", "phrase": "markets"}]
+        )
+        assert "body text" in _listing_detail_text(
+            [{"id": "u1", "body": "body text"}]
+        )
+        assert _listing_detail_text("plain") == "plain"
+        assert _requires_satisfied(None) is False
+        assert _requires_satisfied([]) is True
+        assert _requires_satisfied({}) is True
+        assert _requires_satisfied("  ") is False
+        assert _requires_satisfied("ok") is True
+        assert _requires_satisfied(False) is False
+        assert _requires_satisfied(True) is True
+        assert _requires_satisfied(float("nan")) is False
+        assert _requires_satisfied(0) is False
+        assert _populate_requires_field({"requires": "extraction_phrases"}) == (
+            "extraction_phrases"
+        )
+        assert _populate_requires_field({"args": {"requires": False}}) == ""
+        assert _section_collapsible({"args": {"collapse": False}}) is False
+        assert _section_collapsible({"args": {"collapsible": False}}) is False
+        assert _section_collapsible({}) is True
+        token = _listing_chrome_ctx.set(True)
+        try:
+            assert 'hx-post="/field-bulk/phrase_kinds"' in _htmx_field_attrs(
+                "phrase_kinds"
+            )
+        finally:
+            _listing_chrome_ctx.reset(token)
+        empty = render_inline_listing(
+            [],
+            [
+                {
+                    "type": "Section",
+                    "title": "Cache",
+                    "args": {"collapse": False},
+                    "entries": [
+                        {
+                            "type": "ReloadButton",
+                            "field": "_reload",
+                            "args": {"description": "Reload cache"},
+                        }
+                    ],
+                }
+            ],
+        )
+        assert "listing-chrome" in empty
+        assert "No rows match the current filters." in empty
+        assert "review-section-static" in empty

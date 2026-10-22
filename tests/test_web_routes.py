@@ -1106,6 +1106,53 @@ class TestPostPopulateAll:
         assert response.status_code == 200
         assert "No PopulateButton" in response.text
 
+    def test_missing_compute_spec_warns(self):
+        reviewer = self._listing_reviewer()
+        btn = {"type": "PopulateButton", "field": "_segment", "args": {}}
+        reviewer.get_widget_specs.return_value = [btn]
+        reviewer.get_review_specs.return_value = [btn]
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert "no compute spec" in response.text.lower()
+        reviewer.run_populate.assert_not_called()
+
+    def test_get_index_failure_still_runs(self):
+        reviewer = self._listing_reviewer()
+        n = {"calls": 0}
+
+        def _get_index():
+            n["calls"] += 1
+            if n["calls"] == 1:
+                raise RuntimeError("no current index")
+            return "alice"
+
+        reviewer.get_index.side_effect = _get_index
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 2
+
+    def test_restore_index_failure_is_swallowed(self):
+        reviewer = self._listing_reviewer()
+        reviewer.get_index.return_value = "alice"
+
+        def _set_index(idx):
+            if idx == "alice":
+                raise RuntimeError("restore failed")
+
+        reviewer.set_index.side_effect = _set_index
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 2
+
 
 # ---------------------------------------------------------------------------
 # POST /generate-document/{n} and /edit-pdf/{n}
@@ -1579,3 +1626,102 @@ class TestDocumentRoutes:
                 response = c.get("/")
         assert 'data-doc-key="editpdf/0"' in response.text
         assert "referia.pdfEntry.open" in response.text
+
+
+class TestListingChromeHelpers:
+    def test_liquid_viewer_watch_columns(self):
+        from referia.web.routes import _liquid_viewer_watch_columns
+
+        assert _liquid_viewer_watch_columns({"field": "units"}) == {"units"}
+        assert _liquid_viewer_watch_columns({"field": "_", "watch": "units"}) == {"units"}
+        assert _liquid_viewer_watch_columns(
+            {"watch": ["units", "_", None, ""]}
+        ) == {"units"}
+        assert _liquid_viewer_watch_columns({"field": None}) == set()
+
+    def test_apply_field_bulk_writes_parameter_once(self):
+        from referia.web.routes import _apply_field_bulk
+
+        reviewer = MagicMock()
+        data = MagicMock()
+        data.isparameter.return_value = True
+        data.ismutable.return_value = True
+        reviewer._data = data
+        _apply_field_bulk(reviewer, "phrase_kinds", "a, b")
+        reviewer.set_value.assert_called_once_with("phrase_kinds", "a, b")
+        reviewer.working_indices.assert_not_called()
+
+    def test_apply_field_bulk_falls_back_when_parameter_probe_fails(self):
+        from referia.web.routes import _apply_field_bulk
+
+        reviewer = MagicMock()
+        data = MagicMock()
+        data.isparameter.side_effect = RuntimeError("no store")
+        data.ismutable.return_value = True
+        reviewer._data = data
+        reviewer.get_index.return_value = "alice"
+        reviewer.working_indices.return_value = ["a", "b"]
+        _apply_field_bulk(reviewer, "complete", True)
+        assert reviewer.set_value.call_count == 2
+        reviewer.set_index.assert_any_call("alice")
+
+    def test_apply_field_bulk_swallows_get_and_restore_index_errors(self):
+        from referia.web.routes import _apply_field_bulk
+
+        reviewer = MagicMock()
+        reviewer._data = None
+        reviewer.get_index.side_effect = RuntimeError("no index")
+        reviewer.working_indices.return_value = ["a"]
+        _apply_field_bulk(reviewer, "complete", True)
+        reviewer.set_value.assert_called_once_with("complete", True)
+
+        reviewer = MagicMock()
+        reviewer._data = None
+        reviewer.get_index.return_value = "alice"
+        reviewer.working_indices.return_value = ["a"]
+
+        def _set_index(idx):
+            if idx == "alice":
+                raise RuntimeError("cannot restore")
+
+        reviewer.set_index.side_effect = _set_index
+        _apply_field_bulk(reviewer, "complete", True)
+        reviewer.set_value.assert_called_once_with("complete", True)
+
+    def test_field_bulk_error_returns_oob_status(self):
+        reviewer = _build_mock_reviewer()
+        n = {"calls": 0}
+
+        def _working_indices():
+            n["calls"] += 1
+            if n["calls"] == 1:
+                raise RuntimeError("bulk boom")
+            return []
+
+        reviewer.working_indices.side_effect = _working_indices
+        reviewer.get_display_layout.return_value = "inline_list"
+        reviewer.get_filter_specs.return_value = []
+        reviewer.get_sort_specs.return_value = []
+        reviewer.get_filter_state.return_value = {}
+        reviewer.get_display_detail_field.return_value = None
+        spec = {"type": "Checkbox", "field": "complete"}
+        reviewer.get_review_specs.return_value = [spec]
+        reviewer.get_widget_specs.return_value = [spec]
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/field-bulk/complete", data={"complete": "true"})
+        assert response.status_code == 200
+        assert "Bulk update failed" in response.text
+        assert "bulk boom" not in response.text
+        assert 'hx-swap-oob="true"' in response.text
+
+    def test_populate_without_compute_spec_warns(self, populate_client):
+        client, reviewer = populate_client
+        reviewer.get_widget_specs.return_value = [
+            {"type": "PopulateButton", "field": "SummaryBtn", "args": {}},
+        ]
+        response = client.post("/populate/SummaryBtn")
+        assert response.status_code == 200
+        assert "no compute spec" in response.text.lower()
+        reviewer.run_populate.assert_not_called()
