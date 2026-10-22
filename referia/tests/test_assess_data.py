@@ -584,3 +584,26 @@ def test_set_value_float_column_unchanged_for_float():
     cdf.set_value(2.25)
     assert cdf.get_value() == 2.25
     assert str(cdf._d["writedata"]["score"].dtype) == "float64"
+
+
+def test_set_value_updates_parameters_series():
+    """Writable globals live on parameters; constants stay frozen."""
+    cdf = referia.assess.data.CustomDataFrame(
+        {"filename": ["a.pdf", "b.pdf"]},
+        colspecs={"input": ["filename"]},
+    )
+    cdf._d["parameters"] = pd.Series({"phrase_kinds": "benefit"})
+    cdf._d["constants"] = pd.Series({"files_glob": "*.pdf"})
+    cdf._colspecs["parameters"] = ["phrase_kinds"]
+    cdf._colspecs["constants"] = ["files_glob"]
+    assert cdf.isparameter("phrase_kinds")
+    assert cdf.ismutable("phrase_kinds")
+    assert cdf.isparameter("files_glob")
+    assert not cdf.ismutable("files_glob")
+    cdf.set_index(cdf.index[0])
+    cdf.set_column("phrase_kinds")
+    cdf.set_value("concern, benefit, condition")
+    assert cdf._d["parameters"]["phrase_kinds"] == "concern, benefit, condition"
+    cdf.set_column("files_glob")
+    with pytest.raises(KeyError, match="immutable"):
+        cdf.set_value("*.docx")

@@ -53,7 +53,7 @@ Proposed only: do not implement until CIP-0015 is Accepted.
 ## Related
 
 - CIP: 0015
-- Draft: OneDrive `applications/2026-10-21_dialogue-analysis/02_embed/`
+- Draft: OneDrive `dialogue-analysis/template/02_embed/`
 
 ## Progress Updates
 

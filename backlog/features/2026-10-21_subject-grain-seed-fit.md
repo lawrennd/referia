@@ -65,7 +65,7 @@ Proposed only: do not implement until CIP-0015 is Accepted.
 - CIP-0012 remaining work (Assess bake only)
 - Pack: lynguine CIP-0014
 - Backlog: `2026-10-19_cip0017-lynguine-access-bake`
-- Draft: OneDrive `applications/2026-10-21_dialogue-analysis/03_grain/`
+- Draft: OneDrive `dialogue-analysis/template/03_grain/`
 
 ## Progress Updates
 

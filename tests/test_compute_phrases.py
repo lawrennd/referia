@@ -107,6 +107,34 @@ def test_llm_extract_phrases_stub_client():
     assert "concern" in client.prompts[0]
 
 
+def test_as_kinds_splits_comma_string():
+    from referia.assess.compute.phrases import _as_kinds
+
+    assert _as_kinds("concern, benefit, condition") == [
+        "concern",
+        "benefit",
+        "condition",
+    ]
+    assert _as_kinds("benefit") == ["benefit"]
+    assert _as_kinds(["concern", "benefit"]) == ["concern", "benefit"]
+
+
+def test_llm_extract_phrases_comma_kinds_runs_each_kind():
+    client = _StubComplete(["opaque scoring of views", "NO_BENEFIT"])
+    payload, phrases = llm_extract_phrases(
+        "People worry that opaque scoring will silence minority views.",
+        prompt_template=PROMPT,
+        kinds="concern, benefit",
+        chunk_id="u1",
+        doc_id="Doc",
+        client=client,
+        sentinel_concern="NO_CONCERN",
+        sentinel_benefit="NO_BENEFIT",
+    )
+    assert set(payload) == {"concern", "benefit"}
+    assert any(p["kind"] == "concern" for p in phrases)
+
+
 def test_llm_extract_phrases_requires_prompt():
     try:
         llm_extract_phrases("text", prompt_template="", kinds=["concern"])

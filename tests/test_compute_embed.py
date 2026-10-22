@@ -4,7 +4,11 @@ import numpy as np
 import pytest
 
 from referia.assess.compute import Compute
-from referia.assess.compute.embed import llm_embed, l2_normalize_vector
+from referia.assess.compute.embed import (
+    llm_embed,
+    llm_embed_extraction_phrases,
+    l2_normalize_vector,
+)
 from referia.exceptions import ComputeError
 
 
@@ -52,6 +56,28 @@ def test_llm_embed_batch_pca():
 def test_llm_embed_registered():
     names = {e["name"] for e in Compute({"input": {}})._compute_functions_list()}
     assert "llm_embed" in names
+    assert "llm_embed_extraction_phrases" in names
+
+
+def test_llm_embed_extraction_phrases_writes_embedding_on_dicts():
+    phrases = [
+        {"phrase": "privacy risk from scoring", "kind": "concern"},
+        {"phrase": "faster access to records", "kind": "benefit"},
+    ]
+    out = llm_embed_extraction_phrases(phrases, client=_StubEmbed())
+    assert len(out) == 2
+    assert out[0]["kind"] == "concern"
+    assert out[0]["phrase"] == "privacy risk from scoring"
+    assert isinstance(out[0]["embedding"], list)
+    assert abs(np.linalg.norm(out[0]["embedding"]) - 1.0) < 1e-9
+    assert isinstance(out[1]["embedding"], list)
+
+
+def test_llm_embed_extraction_phrases_empty_is_noop():
+    assert llm_embed_extraction_phrases([], client=_StubEmbed()) == []
+    assert llm_embed_extraction_phrases(None, client=_StubEmbed()) == []
+    assert llm_embed_extraction_phrases(float("nan"), client=_StubEmbed()) == []
+    assert llm_embed_extraction_phrases(np.nan, client=_StubEmbed()) == []
 
 
 def test_l2_normalize_empty_and_zero():

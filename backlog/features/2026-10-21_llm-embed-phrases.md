@@ -52,7 +52,7 @@ Proposed only: do not implement until CIP-0015 is Accepted.
 
 - CIP: 0015
 - Depends on: `2026-10-21_llm-extract-phrases` (phrase rows exist)
-- Draft: OneDrive `applications/2026-10-21_dialogue-analysis/02_embed/`
+- Draft: OneDrive `dialogue-analysis/template/02_embed/`
 
 ## Progress Updates
 

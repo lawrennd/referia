@@ -557,6 +557,28 @@ def test_propose_split_from_k1_keeps_both_children_populated():
     assert int((mass > 0.2).sum()) >= 5
 
 
+def test_subject_grain_propose_split_accepts_missing_sigma2():
+    """Empty EM controls (None/NaN) must not crash Propose."""
+    X, _ = _planted_subspace_mixture(n_per=15, d=8, seed=4)
+    fit = mppca_fit(X, k=1, sigma2=0.05, seed=4, max_iter=20)
+    phrases = [f"p{i}" for i in range(len(X))]
+    packed = subject_grain_propose_split(
+        X.tolist(),
+        fit["responsibilities"].tolist(),
+        phrases=phrases,
+        focus_topic="T0",
+        sigma2=None,
+        em_accept=None,
+        topic_labels={"T0": "Topic 0"},
+        topic_parent={"T0": None},
+        seed=4,
+    )
+    keys = packed[2]
+    assert len(keys) == 2
+    pending = packed[8]
+    assert pending["kind"] == "split"
+
+
 def test_propose_split_grows_k_and_rebuilds_planes():
     X, _ = _planted_subspace_mixture(n_per=20, d=12, seed=3)
     fit = mppca_fit(X, k=2, sigma2=0.05, seed=3, max_iter=30)
@@ -1448,6 +1470,7 @@ def test_subject_grain_seed_fit_registered():
 
     names = {e["name"] for e in Compute({"input": {}})._compute_functions_list()}
     assert "subject_grain_seed_fit" in names
+    assert "subject_grain_reset" in names
 
 
 def test_subject_grain_seed_fit_skip_generates_keys():

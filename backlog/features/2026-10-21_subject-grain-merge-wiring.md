@@ -48,7 +48,7 @@ before accepting a merge CIP.
 
 - CIP: 0012 (grain packaging; merge is extra Assess UX)
 - Deferred REQ-0010 step 13
-- Draft: OneDrive `applications/2026-10-21_dialogue-analysis/03_grain/`
+- Draft: OneDrive `dialogue-analysis/template/03_grain/`
 
 ## Progress Updates
 

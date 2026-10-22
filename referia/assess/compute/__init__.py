@@ -31,7 +31,7 @@ from .mppca import (
     subject_grain_undo_split,
 )
 from .phrases import llm_extract_phrases
-from .embed import llm_embed
+from .embed import llm_embed, llm_embed_extraction_phrases
 from .distance import (
     axis_correlates,
     classical_mds,
@@ -695,6 +695,18 @@ class Compute(lynguine.assess.compute.Compute):
                 "docstr": (
                     "Embed phrase text; write an L2-normalised float list "
                     "(CIP-0015). Client injected; optional pca_dim on batches."
+                ),
+            },
+            {
+                "name": "llm_embed_extraction_phrases",
+                "function": llm_embed_extraction_phrases,
+                "default_args": {
+                    "model": "text-embedding-3-large",
+                },
+                "docstr": (
+                    "Embed each dict in extraction_phrases on a chunk row "
+                    "(CIP-0015 listing). Writes embedding onto the dicts "
+                    "so explode copies vectors onto phrase rows."
                 ),
             },
             {

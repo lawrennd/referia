@@ -55,7 +55,7 @@ Proposed only: do not implement until CIP-0016 is Accepted.
 
 - CIP: 0016
 - Viewer: CIP-0011
-- Draft: OneDrive `applications/2026-10-21_dialogue-analysis/04_distance/`
+- Draft: OneDrive `dialogue-analysis/template/04_distance/`
 
 ## Progress Updates
 

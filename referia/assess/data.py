@@ -893,10 +893,20 @@ class CustomDataFrame(data.CustomDataFrame):
             if typ is not None and typ in self._d:
                 frame = self._d[typ]
                 if isinstance(frame, pd.DataFrame) and column in frame.columns:
+                    if not self.ismutable(column):
+                        raise KeyError(
+                            f'Column "{column}" is immutable and cannot be modified.'
+                        )
                     self._update_type(frame, column, value)
                 elif isinstance(frame, pd.Series) and column in frame.index:
-                    # parameters / globals: single Series of scalars
-                    pass
+                    if not self.ismutable(column):
+                        raise KeyError(
+                            f'Column "{column}" is immutable and cannot be modified.'
+                        )
+                    updated = frame.copy()
+                    updated[column] = value
+                    self._d[typ] = updated
+                    return
         return super().set_value(value)
 
     def drop_column(self, column_name):
