@@ -5,6 +5,10 @@ import pytest
 
 from referia.assess.compute import Compute
 from referia.assess.compute.embed import (
+    _as_phrase_items,
+    _coerce_pca_dim,
+    _is_missing_scalar,
+    _phrase_text,
     llm_embed,
     llm_embed_extraction_phrases,
     l2_normalize_vector,
@@ -79,6 +83,45 @@ def test_llm_embed_extraction_phrases_empty_is_noop():
     assert llm_embed_extraction_phrases(float("nan"), client=_StubEmbed()) == []
     assert llm_embed_extraction_phrases(np.nan, client=_StubEmbed()) == []
     assert llm_embed_extraction_phrases("not-a-list", client=_StubEmbed()) == []
+
+
+def test_embed_helper_missing_and_phrase_text():
+    assert _is_missing_scalar(None) is True
+    assert _is_missing_scalar("") is True
+    assert _is_missing_scalar(np.nan) is True
+    assert _is_missing_scalar(0) is False
+    assert _is_missing_scalar(b"x") is False
+    assert _is_missing_scalar(np.float64(1.0)) is False
+    assert _phrase_text({"phrase": " a "}) == "a"
+    assert _phrase_text({"text": " b "}) == "b"
+    assert _phrase_text({"kind": "empty"}) == ""
+    assert _phrase_text(None) == ""
+    assert _phrase_text(12) == "12"
+    assert _as_phrase_items(0) == []
+    assert _as_phrase_items(({"phrase": "a"},)) == [{"phrase": "a"}]
+    assert _coerce_pca_dim("") is None
+    assert _coerce_pca_dim("null") is None
+    assert _coerce_pca_dim("3") == 3
+    assert _coerce_pca_dim(object()) is None
+
+
+def test_llm_embed_extraction_phrases_mixed_blank_and_text():
+    out = llm_embed_extraction_phrases(
+        [
+            {"phrase": "privacy risk from scoring"},
+            {"kind": "empty"},
+            None,
+            "faster access to records",
+        ],
+        client=_StubEmbed(),
+        pca_dim="",
+    )
+    assert "embedding" in out[0]
+    assert out[1] == {"kind": "empty"}
+    assert "embedding" not in out[1]
+    assert out[2] == {"phrase": None}
+    assert "embedding" in out[3]
+    assert abs(np.linalg.norm(out[3]["embedding"]) - 1.0) < 1e-9
 
 
 def test_llm_embed_extraction_phrases_skips_blank_and_wraps_scalar():
