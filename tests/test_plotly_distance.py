@@ -1,6 +1,10 @@
 """CIP-0016 Plotly builders: keys and customdata.doc."""
 
+import numpy as np
+
 from referia.util.plotly_figures import (
+    _leaf_order,
+    _seriate_share_matrix,
     axis_correlate_bars_spec,
     chapter_lens_radar_spec,
     doc_mds_plotly_spec,
@@ -150,3 +154,65 @@ def test_heatmap_leaf_order_groups_similar_rows_and_columns():
     assert raw["data"][0]["y"] == docs
     radar = chapter_lens_radar_spec(P, docs, topic_labels=topics)
     assert radar["data"][0]["theta"][:-1] == x
+    # Seriation is Bar-Joseph leaf order on both axes: chapters (rows) and
+    # lenses (columns). Heatmap x must match radar spokes.
+    arr, ser_docs, _, ser_x = _seriate_share_matrix(P, docs, topic_labels=topics)
+    assert ser_docs == y
+    assert ser_x == x
+    assert list(_leaf_order(np.asarray(P, float))) != list(range(4))
+    assert list(_leaf_order(np.asarray(P, float).T)) != list(range(4))
+
+
+def test_leaf_order_fallbacks(monkeypatch):
+    assert list(_leaf_order(np.array([1.0, 2.0, 3.0]))) == []
+    assert list(_leaf_order(np.zeros((2, 4)))) == [0, 1]
+    identical = np.ones((4, 3))
+    assert list(_leaf_order(identical)) == [0, 1, 2, 3]
+
+    import sys
+    import types
+
+    monkeypatch.setitem(sys.modules, "scipy.cluster.hierarchy", types.ModuleType("scipy.cluster.hierarchy"))
+    assert list(_leaf_order(np.eye(4))) == [0, 1, 2, 3]
+
+
+def test_leaf_order_optimal_ordering_exception(monkeypatch):
+    import scipy.cluster.hierarchy as sch
+
+    monkeypatch.setattr(
+        sch,
+        "optimal_leaf_ordering",
+        lambda Z, y: (_ for _ in ()).throw(ValueError("degenerate")),
+    )
+    order = _leaf_order(
+        np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.9, 0.1, 0.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.1, 0.9],
+            ]
+        )
+    )
+    assert sorted(order.tolist()) == [0, 1, 2, 3]
+
+
+def test_seriate_share_matrix_skips_when_shape_mismatch():
+    arr, docs, labels, x = _seriate_share_matrix(
+        np.array([0.5, 0.5]),
+        ["a.pdf", "b.pdf"],
+        topic_labels={"T0": "L0"},
+    )
+    assert arr.ndim == 1
+    assert docs == ["a.pdf", "b.pdf"]
+    assert x == []
+    arr2, docs2, labels2, x2 = _seriate_share_matrix(
+        [[0.8, 0.2], [0.1, 0.9], [0.5, 0.5]],
+        ["only-one"],
+        topic_labels={"T0": "L0", "T1": "L1"},
+        doc_labels=["too", "many"],
+        reorder=True,
+    )
+    assert docs2 == ["only-one"]
+    assert labels2 == ["only-one"]
+    assert x2 == ["L0", "L1"]

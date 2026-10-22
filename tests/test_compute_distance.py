@@ -5,13 +5,18 @@ import pytest
 
 from referia.assess.compute import Compute
 from referia.assess.compute.distance import (
+    _as_float_knob,
+    _groups_for_docs,
     _jsonable,
     axis_correlates,
+    chapter_display_name,
     classical_mds,
+    cluster_ids_missing,
     cosine_ground_cost,
     distance_tests_markdown,
     document_soft_topic_distributions,
     emd_distance_matrix,
+    load_document_titles,
     permanova,
     permdisp,
     run_document_distance_analysis,
@@ -369,13 +374,33 @@ def test_zero_mass_kept_when_min_mass_none():
 
 
 def test_cluster_ids_missing_accepts_numpy_array():
-    from referia.assess.compute.distance import cluster_ids_missing
-
     assert cluster_ids_missing(None) is True
     assert cluster_ids_missing("") is True
+    assert cluster_ids_missing("   ") is True
     assert cluster_ids_missing(float("nan")) is True
     assert cluster_ids_missing(np.array([0, 0, 1, 1])) is False
     assert cluster_ids_missing(np.array([], dtype=int)) is True
+    assert cluster_ids_missing("[0, 1, 1]") is False
+    assert cluster_ids_missing("not-json") is True
+    assert cluster_ids_missing(np.array([None], dtype=object)) is True
+    assert cluster_ids_missing(np.array([[0, 1]], dtype=object)) is False
+
+    class _NoArray:
+        def __array__(self, dtype=None):
+            raise ValueError("cannot convert")
+
+    assert cluster_ids_missing(_NoArray()) is True
+
+
+def test_cluster_ids_missing_isfinite_typeerror(monkeypatch):
+    from referia.assess.compute import distance as dist
+
+    monkeypatch.setattr(
+        dist.np,
+        "isfinite",
+        lambda value: (_ for _ in ()).throw(TypeError("no")),
+    )
+    assert cluster_ids_missing(1.0) is False
 
 
 def test_chapter_display_name_and_nan_min_mass(monkeypatch):
@@ -447,3 +472,242 @@ def test_compute_wrapper_loads_codebook_cluster_ids(tmp_path, monkeypatch):
     assert packed[3] == ["chapter_1.pdf", "chapter_2.pdf"]
     assert packed[16]["data"][0]["name"] == "1. Starting point"
     np.testing.assert_allclose(packed[0], [[1.0, 0.0], [0.0, 1.0]])
+
+
+def test_chapter_display_name_stem_and_fallback():
+    assert chapter_display_name(
+        "files/foreword.pdf", {"foreword.pdf": "Opening"}
+    ) == "Opening"
+    assert chapter_display_name(
+        "files/foreword.pdf", {"foreword": "Opening stem"}
+    ) == "Opening stem"
+    assert chapter_display_name("closing_the_gap.pdf") == "closing the gap"
+
+
+def test_load_document_titles_skips_bad_rows(tmp_path, monkeypatch):
+    missing = load_document_titles(tmp_path / "absent.yml")
+    assert missing == {}
+    path = tmp_path / "documents.yml"
+    path.write_text(
+        "- just a string\n"
+        "- filename: a.pdf\n"
+        "- filename: b.pdf\n  title: 'B title'\n",
+        encoding="utf-8",
+    )
+    assert load_document_titles(path) == {"b.pdf": "B title"}
+
+    import builtins
+
+    real_import = builtins.__import__
+
+    def _block_yaml(name, *args, **kwargs):
+        if name == "yaml" or name.startswith("yaml."):
+            raise ImportError("yaml blocked")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _block_yaml)
+    assert load_document_titles(path) == {}
+
+
+def test_as_float_knob_and_groups_for_docs():
+    assert _as_float_knob(None, 1.0) == 1.0
+    assert _as_float_knob("", 2.5) == 2.5
+    assert _as_float_knob("bad", 3.0) == 3.0
+    assert _as_float_knob([], 4.0) == 4.0
+    docs = ["a.pdf", "b.pdf"]
+    assert _groups_for_docs(docs, group_field="chapter") == ["a", "b"]
+    assert _groups_for_docs(
+        docs, group_field="doc", display_names=["One", "Two"]
+    ) == ["One", "Two"]
+    assert _groups_for_docs(
+        docs, doc_group={"a.pdf": "survey", "b.pdf": "dialogue"}
+    ) == ["survey", "dialogue"]
+    assert _groups_for_docs(docs, groups=None) is None
+    assert _groups_for_docs(docs, groups=["s", "d"]) == ["s", "d"]
+    assert _groups_for_docs(
+        docs,
+        groups=["s", "s", "d", "d"],
+        doc_ids=["a.pdf", "a.pdf", "b.pdf", "b.pdf"],
+    ) == ["s", "d"]
+    assert _groups_for_docs(docs, groups=["only-one"]) is None
+
+
+def _patch_emd(monkeypatch):
+    from referia.assess.compute import distance as dist
+
+    monkeypatch.setattr(
+        dist,
+        "emd_distance_matrix",
+        lambda P, M: np.abs(P[:, None, :] - P[None, :, :]).sum(-1),
+    )
+
+
+def test_run_distance_expands_json_cluster_ids(monkeypatch):
+    _patch_emd(monkeypatch)
+    packed = run_document_distance_analysis(
+        embeddings=[[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.1, 0.9]],
+        doc_ids=["a.pdf", "a.pdf", "b.pdf", "b.pdf"],
+        responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+        cluster_ids="[0, 0, 1, 1]",
+        min_mass="",
+        group_field="chapter",
+        n_perm=5,
+        seed=0,
+    )
+    assert packed[3] == ["a.pdf", "b.pdf"]
+    np.testing.assert_allclose(packed[0], [[1.0, 0.0], [0.0, 1.0]])
+
+
+def test_run_distance_requires_cluster_ids_when_shapes_differ():
+    with pytest.raises(ValueError, match="pass cluster_ids"):
+        run_document_distance_analysis(
+            embeddings=[[1.0, 0.0], [0.0, 1.0], [0.5, 0.5]],
+            doc_ids=["a.pdf", "a.pdf", "b.pdf"],
+            responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+        )
+
+
+def test_run_distance_expanded_shape_mismatch():
+    with pytest.raises(ValueError, match="expanded responsibilities"):
+        run_document_distance_analysis(
+            embeddings=[[1.0, 0.0], [0.0, 1.0], [0.5, 0.5], [0.2, 0.8]],
+            doc_ids=["a.pdf"] * 4,
+            responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+            cluster_ids=[0, 0],
+        )
+
+
+def test_run_distance_emd_import_error_and_no_groups(monkeypatch):
+    from referia.assess.compute import distance as dist
+
+    monkeypatch.setattr(
+        dist,
+        "emd_distance_matrix",
+        lambda P, M: (_ for _ in ()).throw(ImportError("POT is required")),
+    )
+    packed = run_document_distance_analysis(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        doc_ids=["a.pdf", "b.pdf"],
+        responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+        min_mass=1.0,
+        n_perm=5,
+        seed=0,
+    )
+    assert "POT is required" in packed[11]
+    assert packed[5] == [[0.0, 0.0], [0.0, 0.0]]
+    assert "No group labels" in packed[11]
+
+
+def test_run_distance_doc_group_and_empty_min_mass(monkeypatch):
+    _patch_emd(monkeypatch)
+    packed = run_document_distance_analysis(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        doc_ids=["a.pdf", "b.pdf"],
+        responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+        doc_group={"a.pdf": "survey", "b.pdf": "dialogue"},
+        min_mass="not-a-number",
+        n_perm=5,
+        seed=0,
+        topic_labels={"T0": "Privacy", "T1": "Access"},
+    )
+    assert "PERMANOVA" in packed[11]
+    assert packed[16]["data"][0]["type"] == "scatterpolar"
+
+
+class _Iface:
+    def __init__(self, directory=None, stores=None):
+        self.directory = directory
+        self._stores = stores or {}
+
+    def get(self, key, default=None):
+        return self._stores.get(key, default)
+
+
+def test_config_info_dir_fallbacks(tmp_path):
+    compute = Compute({"input": {}})
+    compute._interface = None
+    assert compute._config_info_dir() is None
+
+    compute._interface = _Iface(directory=None, stores={})
+    assert compute._config_info_dir() is None
+
+    base = tmp_path / "04_distance"
+    compute._interface = _Iface(directory=str(base), stores={})
+    assert compute._config_info_dir() == base / ".." / "info"
+
+    info = tmp_path / "info"
+    compute._interface = _Iface(
+        directory=None,
+        stores={"data": {"directory": str(info), "filename": "records.parquet"}},
+    )
+    assert compute._config_info_dir() == info
+
+    compute._interface = _Iface(
+        directory=str(base),
+        stores={"input": {"directory": "../info", "filename": "records.parquet"}},
+    )
+    assert compute._config_info_dir() == base / "../info"
+
+
+def test_compute_wrapper_codebook_errors_and_titles(tmp_path, monkeypatch):
+    _patch_emd(monkeypatch)
+    info = tmp_path / "info"
+    info.mkdir()
+    (info / "codebook.parquet").write_bytes(b"not a parquet")
+    (info / "documents.yml").write_text(
+        "- filename: a.pdf\n  title: 'From yaml'\n"
+        "- filename: b.pdf\n  title: 'Also yaml'\n",
+        encoding="utf-8",
+    )
+    compute = Compute(
+        {
+            "input": {
+                "type": "parquet",
+                "filename": "records.parquet",
+                "directory": str(info),
+            }
+        }
+    )
+    with pytest.raises(ValueError, match="pass cluster_ids"):
+        compute._run_document_distance_analysis(
+            embeddings=[[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.1, 0.9]],
+            doc_ids=["a.pdf", "a.pdf", "b.pdf", "b.pdf"],
+            responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+            min_mass=1.0,
+        )
+
+    import pandas as pd
+
+    pd.DataFrame({"n_vq": [2]}).to_parquet(info / "codebook.parquet")
+    with pytest.raises(ValueError, match="pass cluster_ids"):
+        compute._run_document_distance_analysis(
+            embeddings=[[1.0, 0.0], [0.9, 0.1], [0.0, 1.0], [0.1, 0.9]],
+            doc_ids=["a.pdf", "a.pdf", "b.pdf", "b.pdf"],
+            responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+            min_mass=1.0,
+        )
+
+    pd.DataFrame({"cluster_ids": []}).to_parquet(info / "codebook.parquet")
+    packed = compute._run_document_distance_analysis(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        doc_ids=["a.pdf", "b.pdf"],
+        responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+        min_mass=1.0,
+        group_field="chapter",
+        n_perm=5,
+        seed=0,
+    )
+    assert packed[16]["data"][0]["name"] == "From yaml"
+
+    packed = compute._run_document_distance_analysis(
+        embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        doc_ids=["a.pdf", "b.pdf"],
+        responsibilities=[[1.0, 0.0], [0.0, 1.0]],
+        cluster_ids=[0, 1],
+        doc_titles={"a.pdf": "Given A", "b.pdf": "Given B"},
+        min_mass=1.0,
+        group_field="chapter",
+        n_perm=5,
+        seed=0,
+    )
+    assert packed[16]["data"][0]["name"] == "Given A"

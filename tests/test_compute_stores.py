@@ -5,7 +5,13 @@ from pathlib import Path
 import pandas as pd
 
 from referia.assess.compute import Compute
-from referia.assess.compute.stores import named_store_status, size_human
+from referia.assess.compute.stores import (
+    _iter_interface_items,
+    _store_get,
+    _with_abs_directory,
+    named_store_status,
+    size_human,
+)
 
 
 def test_size_human():
@@ -306,3 +312,70 @@ def test_compute_wrapper_reads_manager(tmp_path, monkeypatch):
     )
     status = compute._named_store_status()
     assert "llm_diskcache" not in status
+
+
+def test_store_helpers_absolute_and_non_dict(tmp_path):
+    abs_details = {"directory": str(tmp_path), "filename": "x.yml"}
+    assert _with_abs_directory(abs_details, "/unused")["directory"] == str(tmp_path)
+    assert _with_abs_directory({"filename": "x.yml"}, str(tmp_path))["filename"] == "x.yml"
+
+    class _Rel:
+        def get(self, key, default=None):
+            return "../info" if key == "directory" else default
+
+    rel = _Rel()
+    assert _with_abs_directory(rel, str(tmp_path)) is rel
+    assert _store_get(object(), "filename") is None
+    assert _store_get({"filename": "out.yml"}, "filename") == "out.yml"
+
+    class _BrokenItems:
+        def items(self):
+            raise TypeError("items() takes 2 positional arguments")
+
+    assert list(_iter_interface_items(_BrokenItems())) == []
+    assert list(_iter_interface_items(None)) == []
+
+    class _BrokenThenMap(dict):
+        n = 0
+
+        def items(self):
+            type(self).n += 1
+            if type(self).n == 1:
+                raise TypeError("first call")
+            return dict.items(self)
+
+    broken_map = _BrokenThenMap(output="store")
+    assert list(_iter_interface_items(broken_map)) == [("output", "store")]
+
+
+def test_store_stat_retries_plain_dict(tmp_path, monkeypatch):
+    import lynguine.access.io as io
+
+    def _plain_dict_only(details):
+        if type(details) is not dict:
+            raise TypeError("need a plain dict")
+        return {
+            "path": "/from-retry",
+            "exists": True,
+            "size_bytes": 5,
+            "codec": "gzip",
+        }
+
+    monkeypatch.setattr(io, "store_stat", _plain_dict_only, raising=False)
+
+    class _StoreDict(dict):
+        pass
+
+    status = named_store_status(
+        {
+            "output": _StoreDict(
+                {
+                    "type": "yaml",
+                    "filename": "out.yml.gz",
+                    "directory": str(tmp_path),
+                }
+            )
+        }
+    )
+    assert status["output"]["path"] == "/from-retry"
+    assert status["output"]["size_bytes"] == 5
