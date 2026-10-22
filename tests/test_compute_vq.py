@@ -54,8 +54,10 @@ def test_subject_vq_fit_codebook_shapes():
     assert np.asarray(cents).shape == (5, 12)
     assert len(exemplars) == 5
     np.testing.assert_allclose(np.sum(mass), 40)
-    assert spec["frames"]
-    labels = [b["label"] for b in spec["layout"]["updatemenus"][0]["buttons"]]
+    parsed = parse_figure_spec(spec)
+    assert parsed is not None
+    assert parsed["frames"]
+    labels = [b["label"] for b in parsed["layout"]["updatemenus"][0]["buttons"]]
     assert labels == ["Play", "Pause"]
 
 
@@ -177,6 +179,23 @@ def test_expand_vq_rejects_empty_and_1d():
         expand_vq_responsibilities([0], np.arange(3.0))
     with pytest.raises(ValueError, match="non-empty"):
         expand_vq_responsibilities([], np.eye(2))
+
+
+def test_subject_vq_fit_nan_n_vq_uses_default():
+    rng = np.random.default_rng(8)
+    X = _l2(rng.normal(size=(12, 5)))
+    out = subject_vq_fit(
+        X,
+        phrases=[f"p{i}" for i in range(12)],
+        n_vq=np.nan,
+        force_refit=True,
+        seed=0,
+        kmeans_n_init=2,
+        vq_walk_frames=4,
+        vq_walk_subspace=3,
+    )
+    assert out[5] == 12
+    assert len(out[0]) == 12
 
 
 def test_subject_vq_fit_guards_and_skip(monkeypatch):
