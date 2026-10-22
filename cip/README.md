@@ -50,6 +50,7 @@ Each CIP can have one of the following statuses:
 - [CIP-0016](./cip0016.md): Document-level EMD Address compute and Plotly visualisations (Implemented; REQ-0010; row-local after pack)
 - [CIP-0017](./cip0017.md): Named-store status in the review interface (Implemented; REQ-0011)
 - [CIP-0018](./cip0018.md): Stacked inherit view — ancestor sections above child on one page (Proposed; REQ-0012)
+- [CIP-0019](./cip0019.md): Grain methods — sklearn partitions vs soft MPPCA (In Progress; REQ-0010)
 
 ## Creating a Good CIP
 
