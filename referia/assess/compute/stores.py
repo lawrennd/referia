@@ -27,21 +27,38 @@ def size_human(n: int | float | None) -> str:
     return f"{value:.1f} TiB"
 
 
-def _store_stat(details: Mapping) -> dict[str, Any]:
+def _with_abs_directory(details: Any, base_directory: Any) -> Any:
+    """Resolve a store's relative ``directory`` against the config folder."""
+    directory = _store_get(details, "directory")
+    if not base_directory or not directory or os.path.isabs(str(directory)):
+        return details
+    abs_dir = os.path.abspath(os.path.join(str(base_directory), str(directory)))
+    if isinstance(details, dict):
+        out = dict(details)
+        out["directory"] = abs_dir
+        return out
+    return details
+
+
+def _store_stat(details: Mapping, base_directory: Any = None) -> dict[str, Any]:
+    details = _with_abs_directory(details, base_directory)
     try:
         from lynguine.access.io import store_stat
     except ImportError:
         store_stat = None
     if store_stat is not None:
         try:
-            return dict(store_stat(dict(details)))
+            return dict(store_stat(details))
         except Exception:
-            pass
-    filename = str(details.get("filename") or "")
-    directory = str(details.get("directory") or ".")
+            try:
+                return dict(store_stat(dict(details)))
+            except Exception:
+                pass
+    filename = str(_store_get(details, "filename") or "")
+    directory = str(_store_get(details, "directory") or ".")
     path = filename if os.path.isabs(filename) else os.path.join(directory, filename)
     abs_path = os.path.abspath(path)
-    codec = details.get("compress")
+    codec = _store_get(details, "compress")
     if not codec and filename.endswith(".gz"):
         codec = "gzip"
     if not os.path.exists(abs_path):
@@ -51,8 +68,8 @@ def _store_stat(details: Mapping) -> dict[str, Any]:
             "mtime": None,
             "size_bytes": 0,
             "codec": codec,
-            "logical_type": details.get("type"),
-            "role": details.get("role"),
+            "logical_type": _store_get(details, "type"),
+            "role": _store_get(details, "role"),
         }
     st = os.stat(abs_path)
     import datetime as _dt
@@ -66,13 +83,43 @@ def _store_stat(details: Mapping) -> dict[str, Any]:
         "mtime": mtime.isoformat(),
         "size_bytes": st.st_size,
         "codec": codec,
-        "logical_type": details.get("type"),
-        "role": details.get("role"),
+        "logical_type": _store_get(details, "type"),
+        "role": _store_get(details, "role"),
     }
 
 
+def _store_get(value: Any, key: str, default: Any = None) -> Any:
+    """Read a store field from a dict or a lynguine Interface."""
+    getter = getattr(value, "get", None)
+    if callable(getter):
+        return getter(key, default)
+    if isinstance(value, Mapping):
+        return value.get(key, default)
+    return default
+
+
 def _is_store(value: Any) -> bool:
-    return isinstance(value, Mapping) and any(k in value for k in _STORE_HINTS)
+    """True when *value* looks like an Access store spec.
+
+    lynguine ``Interface`` is dict-like but is not a ``collections.abc.Mapping``,
+    so ``isinstance(..., Mapping)`` would skip every store and leave the 04
+    pane claiming output is absent.
+    """
+    return any(
+        _store_get(value, key) not in (None, "") for key in _STORE_HINTS
+    )
+
+
+def _iter_interface_items(interface: Any):
+    items = getattr(interface, "items", None)
+    if callable(items):
+        try:
+            yield from items()
+            return
+        except TypeError:
+            pass
+    if isinstance(interface, Mapping):
+        yield from interface.items()
 
 
 def _frame_catalogue(frame: Any) -> dict[str, Any]:
@@ -106,19 +153,25 @@ def named_store_status(
     Does not dump cell values (payloads, embeddings, unit text).
     """
     status: dict[str, Any] = {}
+    base = None
+    if interface is not None:
+        base = _store_get(interface, "base_directory") or getattr(
+            interface, "directory", None
+        )
     if interface:
-        for key, details in dict(interface).items():
+        for key, details in _iter_interface_items(interface):
             if not _is_store(details):
                 continue
-            entry = _store_stat(details)
+            entry = _store_stat(details, base_directory=base)
             entry["size_human"] = size_human(entry.get("size_bytes"))
-            declared = details.get("columns")
+            declared = _store_get(details, "columns")
             if declared:
                 entry.setdefault("columns", [str(c) for c in list(declared)])
-            if details.get("index"):
-                entry.setdefault("index", str(details["index"]))
+            index = _store_get(details, "index")
+            if index:
+                entry.setdefault("index", str(index))
             entry.setdefault("role", key)
-            if key in {"input", "output", "cache"}:
+            if key in {"input", "output", "cache", "data"}:
                 cat = _frame_catalogue(data)
                 if "n_rows" in cat:
                     entry["n_rows"] = cat["n_rows"]

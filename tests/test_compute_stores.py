@@ -5,7 +5,13 @@ from pathlib import Path
 import pandas as pd
 
 from referia.assess.compute import Compute
-from referia.assess.compute.stores import named_store_status, size_human
+from referia.assess.compute.stores import (
+    _iter_interface_items,
+    _store_get,
+    _with_abs_directory,
+    named_store_status,
+    size_human,
+)
 
 
 def test_size_human():
@@ -81,6 +87,67 @@ def test_size_human_larger_units():
 def test_skips_non_stores_and_empty_interface():
     assert named_store_status(None) == {}
     assert named_store_status({"title": "Review", "compute": []}) == {}
+
+
+class _DictLike:
+    """lynguine Interface is dict-like but is not a Mapping."""
+
+    def __init__(self, data):
+        self._data = data
+
+    def items(self):
+        return self._data.items()
+
+    def get(self, key, default=None):
+        return self._data.get(key, default)
+
+    def keys(self):
+        return self._data.keys()
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+
+def test_named_store_status_resolves_relative_directory(tmp_path):
+    info = tmp_path / "info"
+    info.mkdir()
+    (info / "document_distance.yml").write_text("x: 1\n")
+    status = named_store_status(
+        {
+            "base_directory": str(tmp_path / "04_distance"),
+            "output": {
+                "type": "yaml",
+                "filename": "document_distance.yml",
+                "directory": "../info",
+            },
+        }
+    )
+    assert status["output"]["exists"] is True
+    assert status["output"]["path"].endswith("info/document_distance.yml")
+
+
+def test_named_store_status_accepts_dict_like_interface(tmp_path):
+    path = tmp_path / "document_distance.yml"
+    path.write_text("x: 1\n")
+    status = named_store_status(
+        _DictLike(
+            {
+                "title": "Review",
+                "output": _DictLike(
+                    {
+                        "type": "yaml",
+                        "filename": "document_distance.yml",
+                        "directory": str(tmp_path),
+                    }
+                ),
+            }
+        )
+    )
+    assert status["output"]["exists"] is True
+    assert status["output"]["path"].endswith("document_distance.yml")
 
 
 def test_store_stat_fallback_when_lynguine_raises(tmp_path, monkeypatch):
@@ -245,3 +312,70 @@ def test_compute_wrapper_reads_manager(tmp_path, monkeypatch):
     )
     status = compute._named_store_status()
     assert "llm_diskcache" not in status
+
+
+def test_store_helpers_absolute_and_non_dict(tmp_path):
+    abs_details = {"directory": str(tmp_path), "filename": "x.yml"}
+    assert _with_abs_directory(abs_details, "/unused")["directory"] == str(tmp_path)
+    assert _with_abs_directory({"filename": "x.yml"}, str(tmp_path))["filename"] == "x.yml"
+
+    class _Rel:
+        def get(self, key, default=None):
+            return "../info" if key == "directory" else default
+
+    rel = _Rel()
+    assert _with_abs_directory(rel, str(tmp_path)) is rel
+    assert _store_get(object(), "filename") is None
+    assert _store_get({"filename": "out.yml"}, "filename") == "out.yml"
+
+    class _BrokenItems:
+        def items(self):
+            raise TypeError("items() takes 2 positional arguments")
+
+    assert list(_iter_interface_items(_BrokenItems())) == []
+    assert list(_iter_interface_items(None)) == []
+
+    class _BrokenThenMap(dict):
+        n = 0
+
+        def items(self):
+            type(self).n += 1
+            if type(self).n == 1:
+                raise TypeError("first call")
+            return dict.items(self)
+
+    broken_map = _BrokenThenMap(output="store")
+    assert list(_iter_interface_items(broken_map)) == [("output", "store")]
+
+
+def test_store_stat_retries_plain_dict(tmp_path, monkeypatch):
+    import lynguine.access.io as io
+
+    def _plain_dict_only(details):
+        if type(details) is not dict:
+            raise TypeError("need a plain dict")
+        return {
+            "path": "/from-retry",
+            "exists": True,
+            "size_bytes": 5,
+            "codec": "gzip",
+        }
+
+    monkeypatch.setattr(io, "store_stat", _plain_dict_only, raising=False)
+
+    class _StoreDict(dict):
+        pass
+
+    status = named_store_status(
+        {
+            "output": _StoreDict(
+                {
+                    "type": "yaml",
+                    "filename": "out.yml.gz",
+                    "directory": str(tmp_path),
+                }
+            )
+        }
+    )
+    assert status["output"]["path"] == "/from-retry"
+    assert status["output"]["size_bytes"] == 5

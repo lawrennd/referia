@@ -6,12 +6,18 @@ the corpus + scores arrays. POT is optional (``referia[distance]``).
 
 from __future__ import annotations
 
+import json
+import re
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import numpy as np
 
 __all__ = [
+    "chapter_display_name",
+    "cluster_ids_missing",
     "document_soft_topic_distributions",
+    "load_document_titles",
     "topic_means_from_responsibilities",
     "cosine_ground_cost",
     "emd_distance_matrix",
@@ -22,6 +28,89 @@ __all__ = [
     "distance_tests_markdown",
     "run_document_distance_analysis",
 ]
+
+_CHAPTER_RE = re.compile(r"chapter[_-]?(\d+)$", re.IGNORECASE)
+
+
+def _as_float_knob(value: Any, default: float) -> float:
+    if value is None or value == "":
+        return float(default)
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    if not np.isfinite(f):
+        return float(default)
+    return f
+
+
+def cluster_ids_missing(value: Any) -> bool:
+    """True when VQ ``cluster_ids`` were not joined onto the 04 row."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        if not value.strip():
+            return True
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return True
+    try:
+        if isinstance(value, (float, np.floating)) and not np.isfinite(value):
+            return True
+    except TypeError:
+        pass
+    try:
+        arr = np.asarray(value)
+        if arr.dtype == object and arr.size == 1:
+            inner = arr.reshape(-1)[0]
+            if inner is None:
+                return True
+            arr = np.asarray(inner)
+        return arr.size == 0
+    except (TypeError, ValueError):
+        return True
+
+
+def chapter_display_name(doc_id: Any, titles: Mapping | None = None) -> str:
+    """Human chapter label for heatmap/radar axes (pub-dialogue analogue)."""
+    raw = str(doc_id)
+    names = {str(k): str(v) for k, v in dict(titles or {}).items()}
+    if raw in names:
+        return names[raw]
+    stem = Path(raw).name
+    if stem in names:
+        return names[stem]
+    key = Path(stem).stem
+    if key in names:
+        return names[key]
+    if key.lower() == "foreword":
+        return "Foreword"
+    match = _CHAPTER_RE.match(key)
+    if match:
+        return f"Chapter {int(match.group(1))}"
+    return key.replace("_", " ")
+
+
+def load_document_titles(path: str | Path) -> dict[str, str]:
+    """Map ``filename`` → ``title`` from a referia ``documents.yml`` list."""
+    try:
+        import yaml
+    except ImportError:
+        return {}
+    try:
+        rows = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    except OSError:
+        return {}
+    titles: dict[str, str] = {}
+    for row in rows or []:
+        if not isinstance(row, Mapping):
+            continue
+        filename = row.get("filename")
+        title = row.get("title")
+        if filename and title:
+            titles[str(filename)] = str(title)
+    return titles
 
 
 def _require_ot():
@@ -364,7 +453,14 @@ def _groups_for_docs(
     groups=None,
     doc_ids=None,
     doc_group: Mapping | None = None,
+    group_field: str | None = None,
+    display_names: Sequence[str] | None = None,
 ) -> list[str] | None:
+    field = str(group_field or "").strip().lower()
+    if field in {"chapter", "doc", "document", "doc_id", "filename"}:
+        if display_names is not None and len(list(display_names)) == len(docs_kept):
+            return [str(n) for n in display_names]
+        return [chapter_display_name(d) for d in docs_kept]
     if doc_group:
         return [str(doc_group.get(d, doc_group.get(str(d), ""))) for d in docs_kept]
     if groups is None:
@@ -389,12 +485,13 @@ def run_document_distance_analysis(
     groups=None,
     doc_group: Mapping | None = None,
     topic_labels: Mapping | None = None,
-    min_mass: float = 50.0,
+    min_mass: float = 1.0,
     n_perm: int = 999,
     seed: int = 0,
     n_components: int = 2,
     group_field: str | None = None,
     cluster_ids=None,
+    doc_titles: Mapping | None = None,
     **_kwargs,
 ) -> tuple:
     """Façade: histograms → cost → EMD → MDS → tests → Plotly specs.
@@ -408,22 +505,26 @@ def run_document_distance_analysis(
     X = as_embedding_matrix(embeddings)
     R = _as_2d("responsibilities", responsibilities)
     if R.shape[0] != X.shape[0]:
-        if cluster_ids is None:
+        if cluster_ids_missing(cluster_ids):
             raise ValueError(
                 f"responsibilities rows {R.shape[0]} != embeddings {X.shape[0]}; "
                 "pass cluster_ids from the VQ codebook to expand QR"
             )
         from .vq import expand_vq_responsibilities
 
+        if isinstance(cluster_ids, str):
+            cluster_ids = json.loads(cluster_ids)
         R = expand_vq_responsibilities(cluster_ids, R)
         if R.shape[0] != X.shape[0]:
             raise ValueError(
                 f"expanded responsibilities rows {R.shape[0]} != "
                 f"embeddings {X.shape[0]}"
             )
+    min_mass = _as_float_knob(min_mass, 1.0)
     P, docs, mass = document_soft_topic_distributions(
         doc_ids, R, min_mass=min_mass
     )
+    display = [chapter_display_name(d, doc_titles) for d in docs]
     means = topic_means_from_responsibilities(X, R)
     cost = cosine_ground_cost(means)
     note = ""
@@ -434,12 +535,30 @@ def run_document_distance_analysis(
         D = np.zeros((len(docs), len(docs)))
     mds = classical_mds(D, n_components=int(n_components))
     group_labels = _groups_for_docs(
-        docs, groups=groups, doc_ids=doc_ids, doc_group=doc_group
+        docs,
+        groups=groups,
+        doc_ids=doc_ids,
+        doc_group=doc_group,
+        group_field=group_field,
+        display_names=display,
     )
     perm_res: dict[str, Any] = {}
     disp_res: dict[str, Any] = {}
     correlates: list[dict[str, Any]] = []
-    if group_labels and len(docs) and not note:
+    n_groups = len({g for g in (group_labels or []) if g != ""})
+    chapter_color = str(group_field or "").strip().lower() in {
+        "chapter",
+        "doc",
+        "document",
+        "doc_id",
+        "filename",
+    }
+    if chapter_color and group_labels and n_groups >= len(docs):
+        note = (note + "\n" if note else "") + (
+            "Colour is by chapter (one document per group). PERMANOVA is "
+            "not identified; read the chapter × lens heatmap and radar."
+        )
+    elif group_labels and len(docs) and not note:
         perm_res = permanova(D, group_labels, n_perm=n_perm, seed=seed)
         disp_res = permdisp(D, group_labels, n_perm=n_perm, seed=seed)
         correlates = axis_correlates(mds["coords"], P, topic_labels=topic_labels)
@@ -452,16 +571,26 @@ def run_document_distance_analysis(
 
     from ...util.plotly_figures import (
         axis_correlate_bars_spec,
+        chapter_lens_radar_spec,
         doc_mds_plotly_spec,
         emd_heatmap_spec,
         topic_document_heatmap_spec,
     )
 
     mds_spec = doc_mds_plotly_spec(
-        mds["coords"], docs, groups=group_labels, topic_labels=topic_labels
+        mds["coords"],
+        docs,
+        groups=group_labels,
+        topic_labels=topic_labels,
+        doc_labels=display,
     )
-    heat_spec = topic_document_heatmap_spec(P, docs, topic_labels=topic_labels)
-    emd_spec = emd_heatmap_spec(D, docs)
+    heat_spec = topic_document_heatmap_spec(
+        P, docs, topic_labels=topic_labels, doc_labels=display
+    )
+    radar_spec = chapter_lens_radar_spec(
+        P, docs, topic_labels=topic_labels, doc_labels=display
+    )
+    emd_spec = emd_heatmap_spec(D, docs, doc_labels=display)
     bars_spec = axis_correlate_bars_spec(correlates)
 
     return (
@@ -481,4 +610,5 @@ def run_document_distance_analysis(
         heat_spec,
         emd_spec,
         bars_spec,
+        radar_spec,
     )

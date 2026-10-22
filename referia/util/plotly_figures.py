@@ -23,6 +23,7 @@ __all__ = [
     "relabel_proposed_split_plotly_spec",
     "doc_mds_plotly_spec",
     "topic_document_heatmap_spec",
+    "chapter_lens_radar_spec",
     "emd_heatmap_spec",
     "axis_correlate_bars_spec",
     "cluster_pca_plotly_spec",
@@ -603,6 +604,125 @@ def _topic_label(k: int, topic_labels: dict | None) -> str:
     return str(labels.get(key, labels.get(k, labels.get(str(k), key))))
 
 
+def _display_docs(
+    doc_ids: Sequence[Any], doc_labels: Sequence[Any] | None = None
+) -> tuple[list[str], list[str]]:
+    docs = [str(d) for d in list(doc_ids)]
+    if doc_labels is None:
+        return docs, docs
+    labels = [str(x) for x in list(doc_labels)]
+    if len(labels) != len(docs):
+        return docs, docs
+    return docs, labels
+
+
+def _pdist_or_empty(arr: np.ndarray, metric: str):
+    try:
+        from scipy.spatial.distance import pdist
+    except ImportError:
+        return None
+
+    y = np.asarray(pdist(arr, metric=metric), float)
+    finite = y[np.isfinite(y)]
+    if finite.size == 0 or not np.any(finite > 0):
+        return None
+    return np.nan_to_num(y, nan=1.0, posinf=1.0, neginf=1.0)
+
+
+def _leaf_order(X: np.ndarray) -> np.ndarray:
+    """Optimal leaf order of rows under average-linkage clustering.
+
+    Microarray seriation: cluster the profile vectors, then Bar-Joseph
+    leaf order so adjacent leaves are as similar as the dendrogram allows.
+    Pearson correlation is the gene-expression metric (similar *response*
+    across conditions). Cosine is the fallback when correlation is
+    undefined (constant rows). n ≤ 2 keeps the given order.
+    """
+    arr = np.asarray(X, float)
+    if arr.ndim != 2:
+        return np.arange(0)
+    n = int(arr.shape[0])
+    if n <= 2:
+        return np.arange(n)
+    try:
+        from scipy.cluster.hierarchy import (
+            leaves_list,
+            linkage,
+            optimal_leaf_ordering,
+        )
+    except ImportError:
+        return np.arange(n)
+    y = _pdist_or_empty(arr, "correlation")
+    if y is None:
+        y = _pdist_or_empty(arr, "cosine")
+    if y is None:
+        return np.arange(n)
+    Z = linkage(y, method="average")
+    try:
+        Z = optimal_leaf_ordering(Z, y)
+    except (ValueError, FloatingPointError):
+        pass
+    return np.asarray(leaves_list(Z), dtype=int)
+
+
+def _orient_leaf_orders(
+    arr: np.ndarray, row_ord: np.ndarray, col_ord: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Flip each dendrogram so high mass tends toward the main diagonal.
+
+    Row order and column order from independent clustering are unique only
+    up to reversing the whole axis (root flip). Cosine leaf order of the
+    Draghi 7×6 share matrix left lenses in pack order and stacked the dark
+    cells on an anti-diagonal; choosing the flips that maximise
+    mass-weighted covariance of row and column indices restores the
+    microarray block look.
+    """
+    row_ord = np.asarray(row_ord, dtype=int)
+    col_ord = np.asarray(col_ord, dtype=int)
+    n, k = int(row_ord.size), int(col_ord.size)
+    ii = np.arange(n, dtype=float)[:, None]
+    jj = np.arange(k, dtype=float)[None, :]
+    ii = ii - float(ii.mean())
+    jj = jj - float(jj.mean())
+    best = (row_ord, col_ord)
+    best_s = -np.inf
+    for rows in (row_ord, row_ord[::-1]):
+        for cols in (col_ord, col_ord[::-1]):
+            mass = arr[np.ix_(rows, cols)]
+            score = float((mass * ii * jj).sum())
+            if score > best_s:
+                best_s = score
+                best = (np.asarray(rows, dtype=int), np.asarray(cols, dtype=int))
+    return best
+
+
+def _seriate_share_matrix(
+    P,
+    doc_ids: Sequence[Any],
+    *,
+    topic_labels=None,
+    doc_labels: Sequence[Any] | None = None,
+    reorder: bool = True,
+) -> tuple[np.ndarray, list[str], list[str], list[str]]:
+    """Reorder chapters and lenses so similar share profiles are adjacent."""
+    arr = np.asarray(P, float)
+    docs, labels = _display_docs(doc_ids, doc_labels)
+    if arr.ndim != 2:
+        return arr, docs, labels, []
+    k = int(arr.shape[1])
+    col_ids = list(range(k))
+    if reorder and arr.shape[0] == len(docs) and k > 0:
+        row_ord = _leaf_order(arr)
+        col_ord = _leaf_order(arr.T)
+        row_ord, col_ord = _orient_leaf_orders(arr, row_ord, col_ord)
+        arr = arr[np.ix_(row_ord, col_ord)]
+        docs = [docs[i] for i in row_ord]
+        labels = [labels[i] for i in row_ord]
+        col_ids = [int(j) for j in col_ord]
+    x = [_topic_label(j, topic_labels) for j in col_ids]
+    return arr, docs, labels, x
+
+
 def doc_mds_plotly_spec(
     mds_coords,
     doc_ids: Sequence[Any],
@@ -610,10 +730,11 @@ def doc_mds_plotly_spec(
     groups: Sequence[Any] | None = None,
     topic_labels=None,
     title: str | None = None,
+    doc_labels: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
     """MDS scatter; ``customdata.doc`` for CIP-0011 click → ``selected_doc``."""
     coords = np.asarray(mds_coords, float)
-    docs = [str(d) for d in list(doc_ids)]
+    docs, labels = _display_docs(doc_ids, doc_labels)
     if coords.ndim != 2 or coords.shape[0] != len(docs):
         return {"data": [], "layout": {"title": {"text": title or "Document MDS"}}}
     if coords.shape[1] < 2:
@@ -636,7 +757,9 @@ def doc_mds_plotly_spec(
     traces = []
     for g in uniq:
         idx = [i for i, val in enumerate(grp) if val == g]
-        customdata = [{"doc": docs[i], "group": grp[i]} for i in idx]
+        customdata = [
+            {"doc": docs[i], "group": grp[i], "label": labels[i]} for i in idx
+        ]
         traces.append(
             {
                 "type": "scatter",
@@ -645,7 +768,7 @@ def doc_mds_plotly_spec(
                 "x": [float(coords[i, 0]) for i in idx],
                 "y": [float(coords[i, 1]) for i in idx],
                 "customdata": customdata,
-                "hovertemplate": "%{customdata.doc}<extra></extra>",
+                "hovertemplate": "%{customdata.label}<extra></extra>",
                 "marker": {
                     "size": 10,
                     "color": color_of[g],
@@ -678,35 +801,110 @@ def topic_document_heatmap_spec(
     *,
     topic_labels=None,
     title: str | None = None,
+    doc_labels: Sequence[Any] | None = None,
+    reorder: bool = True,
 ) -> dict[str, Any]:
-    """Heatmap of document × topic soft histograms."""
-    arr = np.asarray(P, float)
-    docs = [str(d) for d in list(doc_ids)]
-    k = int(arr.shape[1]) if arr.ndim == 2 else 0
-    x = [_topic_label(i, topic_labels) for i in range(k)]
+    """Heatmap of chapter × lens soft histograms.
+
+    Rows and columns are leaf-ordered (average-linkage Pearson
+    correlation, Bar-Joseph order, then a root flip so high mass sits
+    toward the diagonal) so similar share profiles sit next to each
+    other — the microarray seriation. Pass ``reorder=False`` to keep
+    pack order.
+    """
+    arr, docs, labels, x = _seriate_share_matrix(
+        P,
+        doc_ids,
+        topic_labels=topic_labels,
+        doc_labels=doc_labels,
+        reorder=reorder,
+    )
     return {
         "data": [
             {
                 "type": "heatmap",
                 "z": arr.tolist() if arr.ndim == 2 else [],
                 "x": x,
-                "y": docs,
+                "y": labels,
                 "hovertemplate": "%{y} · %{x}: %{z:.3f}<extra></extra>",
                 "customdata": [[{"doc": d} for _ in x] for d in docs],
+                "colorscale": "RdBu_r",
             }
         ],
         "layout": {
             "title": {
-                "text": title or "Document topic shares",
+                "text": title or "Lens share by chapter",
                 "x": 0.0,
                 "xanchor": "left",
                 "font": {"size": 14, "color": "#0b0b0b"},
             },
-            "xaxis": {"title": "Topic"},
-            "yaxis": {"title": "Document", "autorange": "reversed"},
+            "xaxis": {"title": "Lens", "tickangle": -35, "automargin": True},
+            "yaxis": {"title": "Chapter", "autorange": "reversed", "automargin": True},
             "plot_bgcolor": "white",
             "paper_bgcolor": "white",
-            "margin": {"l": 80, "r": 20, "t": 50, "b": 80},
+            "margin": {"l": 200, "r": 20, "t": 50, "b": 140},
+        },
+    }
+
+
+def chapter_lens_radar_spec(
+    P,
+    doc_ids: Sequence[Any],
+    *,
+    topic_labels=None,
+    title: str | None = None,
+    doc_labels: Sequence[Any] | None = None,
+    reorder: bool = True,
+) -> dict[str, Any]:
+    """One polar trace per chapter: lens shares, matching pub-dialogue radar.
+
+    Spoke order matches the leaf-ordered heatmap so the two views agree.
+    """
+    arr, docs, labels, theta = _seriate_share_matrix(
+        P,
+        doc_ids,
+        topic_labels=topic_labels,
+        doc_labels=doc_labels,
+        reorder=reorder,
+    )
+    if arr.ndim != 2 or arr.shape[0] != len(docs) or arr.shape[1] == 0:
+        return {
+            "data": [],
+            "layout": {"title": {"text": title or "Lens share by chapter"}},
+        }
+    theta_loop = theta + theta[:1]
+    peak = float(np.nanmax(arr)) if arr.size else 0.0
+    traces = []
+    for i, name in enumerate(labels):
+        row = [float(v) for v in arr[i]]
+        traces.append(
+            {
+                "type": "scatterpolar",
+                "r": row + row[:1],
+                "theta": theta_loop,
+                "fill": "toself",
+                "name": name,
+            }
+        )
+    return {
+        "data": traces,
+        "layout": {
+            "title": {
+                "text": title or "Lens share by chapter",
+                "x": 0.0,
+                "xanchor": "left",
+                "font": {"size": 14, "color": "#0b0b0b"},
+            },
+            "polar": {
+                "radialaxis": {
+                    "visible": True,
+                    "range": [0, max(peak * 1.1, 0.05)],
+                }
+            },
+            "legend": {"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
+            "plot_bgcolor": "white",
+            "paper_bgcolor": "white",
+            "margin": {"l": 60, "r": 20, "t": 70, "b": 40},
         },
     }
 
@@ -716,17 +914,18 @@ def emd_heatmap_spec(
     doc_ids: Sequence[Any],
     *,
     title: str | None = None,
+    doc_labels: Sequence[Any] | None = None,
 ) -> dict[str, Any]:
     """Pairwise EMD heatmap."""
     arr = np.asarray(emd_matrix, float)
-    docs = [str(d) for d in list(doc_ids)]
+    docs, labels = _display_docs(doc_ids, doc_labels)
     return {
         "data": [
             {
                 "type": "heatmap",
                 "z": arr.tolist() if arr.ndim == 2 else [],
-                "x": docs,
-                "y": docs,
+                "x": labels,
+                "y": labels,
                 "hovertemplate": "%{y} → %{x}: %{z:.3f}<extra></extra>",
                 "customdata": [[{"doc": d} for d in docs] for _ in docs],
             }
