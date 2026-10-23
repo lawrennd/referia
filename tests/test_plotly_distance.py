@@ -3,6 +3,8 @@
 import numpy as np
 
 from referia.util.plotly_figures import (
+    _axis_tick_text,
+    _barycenter_row_order,
     _leaf_order,
     _orient_leaf_orders,
     _seriate_share_matrix,
@@ -34,6 +36,13 @@ def test_topic_heatmap_uses_labels():
     assert spec["data"][0]["x"] == ["Privacy", "Access"]
     assert spec["data"][0]["y"] == ["docA", "docB"]
     assert spec["data"][0]["customdata"][0][0]["doc"] == "docA"
+    assert spec["layout"]["xaxis"]["categoryorder"] == "array"
+    assert spec["layout"]["xaxis"]["categoryarray"] == spec["data"][0]["x"]
+    assert spec["layout"]["xaxis"]["tickmode"] == "array"
+    assert spec["layout"]["xaxis"]["tickvals"] == spec["data"][0]["x"]
+    assert spec["layout"]["xaxis"]["tickangle"] == -90
+    assert spec["layout"]["yaxis"]["categoryarray"] == spec["data"][0]["y"]
+    assert spec["layout"]["yaxis"]["ticktext"] == spec["data"][0]["y"]
 
 
 def test_emd_heatmap_square():
@@ -116,6 +125,11 @@ def test_chapter_lens_radar_and_heatmap_labels():
     assert radar["data"][0]["type"] == "scatterpolar"
     assert radar["data"][0]["name"] == "Chapter 1"
     assert radar["data"][0]["theta"][0] == "Privacy"
+    assert radar["layout"]["polar"]["angularaxis"]["categoryorder"] == "array"
+    assert radar["layout"]["polar"]["angularaxis"]["categoryarray"] == [
+        "Privacy",
+        "Access",
+    ]
     empty = chapter_lens_radar_spec([0.5], ["docA"])
     assert empty["data"] == []
     heat = topic_document_heatmap_spec(
@@ -155,8 +169,8 @@ def test_heatmap_leaf_order_groups_similar_rows_and_columns():
     assert raw["data"][0]["y"] == docs
     radar = chapter_lens_radar_spec(P, docs, topic_labels=topics)
     assert radar["data"][0]["theta"][:-1] == x
-    # Seriation is Bar-Joseph leaf order on both axes: chapters (rows) and
-    # lenses (columns). Heatmap x must match radar spokes.
+    # Lenses are leaf-ordered; chapters follow the barycenter of that
+    # axis. Heatmap x must match radar spokes.
     arr, ser_docs, _, ser_x = _seriate_share_matrix(P, docs, topic_labels=topics)
     assert ser_docs == y
     assert ser_x == x
@@ -249,10 +263,10 @@ def test_draghi_share_matrix_leaf_orders_lenses_not_pack_order():
         [0.0938, 0.0938, 0.0156, 0.4375, 0.2344, 0.1250],
     ]
     topics = {
-        "T0": "Collaborative Investment and Coordination",
-        "T1": "Enhancing AI and Trade Infrastructure",
-        "T2": "Enhancing European Innovation and Growth",
-        "T3": "Economic Growth Strategies",
+        "T0": "Enhancing AI and Trade Infrastructure",
+        "T1": "Economic Growth Strategies",
+        "T2": "Collaborative Investment and Coordination",
+        "T3": "Enhancing European Innovation and Growth",
         "T4": "European Capital Markets Integration",
         "T5": "Regulatory Simplification and Efficiency",
     }
@@ -261,13 +275,50 @@ def test_draghi_share_matrix_leaf_orders_lenses_not_pack_order():
     x = heat["data"][0]["x"]
     y = heat["data"][0]["y"]
     assert x != list(topics.values())
+    assert heat["layout"]["xaxis"]["categoryarray"] == x
     assert _adjacent(
         "European Capital Markets Integration",
         "Regulatory Simplification and Efficiency",
         x,
     )
     assert y != docs
+    # Independent row clustering sat chapter 4 next to chapter 5 (similar
+    # mixed profiles, opposite peaks). Barycenter puts the Collaborative
+    # chapter first and the Capital chapter last so mass tracks the lenses.
+    assert y[0] == "chapter_4.pdf"
+    assert y[-1] == "chapter_6.pdf"
+    assert abs(y.index("chapter_4.pdf") - y.index("chapter_5.pdf")) > 1
     z = np.asarray(heat["data"][0]["z"], float)
     ii = np.arange(z.shape[0])[:, None]
     jj = np.arange(z.shape[1])[None, :]
     assert float((z * (ii - ii.mean()) * (jj - jj.mean())).sum()) > 0
+
+
+def test_heatmap_short_chapter_ticks_keep_full_hover_labels():
+    spec = topic_document_heatmap_spec(
+        [[0.8, 0.2]],
+        ["chapter_4.pdf"],
+        doc_labels=["4. Increasing security and reducing dependencies"],
+        reorder=False,
+    )
+    assert spec["data"][0]["y"] == [
+        "4. Increasing security and reducing dependencies"
+    ]
+    assert spec["layout"]["yaxis"]["ticktext"] == ["4"]
+    assert spec["layout"]["yaxis"]["tickvals"] == spec["data"][0]["y"]
+    assert _axis_tick_text(["Foreword", "2. Closing the innovation gap"]) == [
+        "Foreword",
+        "2",
+    ]
+
+
+def test_barycenter_row_order_follows_column_axis():
+    arr = np.array(
+        [
+            [0.1, 0.1, 0.8],
+            [0.8, 0.1, 0.1],
+            [0.1, 0.8, 0.1],
+        ]
+    )
+    order = _barycenter_row_order(arr, np.arange(3))
+    assert list(order) == [1, 2, 0]

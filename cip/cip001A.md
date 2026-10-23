@@ -2,7 +2,7 @@
 author: "Neil D. Lawrence"
 created: "2026-10-22"
 id: "001A"
-last_updated: "2026-10-22"
+last_updated: "2026-10-23"
 status: "In Progress"
 compressed: false
 related_requirements: ["0010"]
@@ -35,7 +35,7 @@ title: "VQ codebook before lens Assess, with a Brownian projection walk"
 
 ## Summary
 
-Insert a **vector quantisation (VQ)** stage between packed phrase embeddings and subject grain. K-means builds a large codebook: each **cluster** is a tight cell of nearby phrases. `03_grain` then finds **lenses** — broader thematic readings — on those codewords, not on the original points. Phrase-to-lens membership is \(QR\). Document histograms in `04_distance` still count phrases.
+Insert a **vector quantisation (VQ)** stage between packed phrase embeddings and subject grain. K-means builds a large codebook: each **cluster** is a tight cell of nearby phrases. `04_grain` then finds **lenses** — broader thematic readings — on those codewords, not on the original points. Phrase-to-lens membership is \(QR\). Document histograms in `05_distance` still count phrases.
 
 The VQ viewer is a **Brownian walk of 2-D projections** through the leading-variance subspace, with Play / Pause, a speed tied to captured variance, and each cell drawn as its centre plus 1-SD extent.
 
@@ -55,28 +55,28 @@ A static PCA scatter of 64 cells in 3072-d is one plane. A slow random walk of p
 |---|---|---|
 | Phrase | embedded extraction | \(n \approx 1028\), \(d=3072\) |
 | **Cluster** | VQ codeword (k-means cell) | \(m \approx 64\)–\(128\) |
-| **Lens** | 03 grain topic (MPPCA / k-means / agglomerative) | \(L\) small, interactive |
+| **Lens** | 04 grain topic (MPPCA / k-means / agglomerative) | \(L\) small, interactive |
 
 \(Q\) is \(n \times m\) one-hot (phrase \(\to\) cluster). \(R\) is \(m \times L\) (cluster \(\to\) lens). Phrase-level lens membership is \(QR\). `document_soft_topic_distributions` consumes the expanded rows plus `doc_ids`.
 
 ### Served config
 
-`02_vq/` sorts between `02_embed` and `03_grain`. It is a one-row packed Assess (same grain as 03), not a tall phrase table.
+`03_vq/` sorts between `02_embed` and `04_grain`. It is a one-row packed Assess (same grain as 04), not a tall phrase table.
 
 - **input** `../info/records.parquet` (phrases, embeddings, doc_ids)
 - **output** `../info/codebook.parquet` (centroids as `embeddings`, exemplar strings as `phrases`, `vq_mass`, `cluster_ids`, `vq_spec`)
 - **parameters** `n_vq`, walk knobs (`vq_walk_speed`, `vq_walk_frames`, `vq_walk_subspace`, `vq_walk_linger`)
 
-`03_grain` **input** becomes the codebook. `cluster_ids` is copied onto `scores.yml` (identity) so 04 can expand without a third store. Skip-if-\(R\) only when \(R\) rows match the codebook \(m\).
+`04_grain` **input** becomes the codebook. `cluster_ids` is copied onto `scores.yml` (identity) so 05 can expand without a third store. Skip-if-\(R\) only when \(R\) rows match the codebook \(m\).
 
-### Lens weights (03)
+### Lens weights (04)
 
 `lens_weight`: `uniform` (default) or `mass`.
 
 - **uniform** — each codeword is one geometric point. The lens is about neighbourhoods.
 - **mass** — k-means `sample_weight` and MPPCA row weights equal cell size. Large cells pull the lens. Agglomerative has no sample weights: error and name both knobs.
 
-04 always recovers document mass via \(QR\), even when 03 used uniform. The 03 widget and the stage notebook both explain that split.
+05 always recovers document mass via \(QR\), even when 04 used uniform. The 04 widget and the stage notebook both explain that split.
 
 ### Brownian projection walk
 
@@ -93,18 +93,18 @@ Knobs live on the parameters store. Regenerating the walk is a Fit / dedicated P
 
 ### Terminology
 
-Say **VQ** and **cluster** for codebook cells; **lens** in 03 copy. Catalogue fields stay `topic_*` (CIP-0019). Do not call VQ cells topics.
+Say **VQ** and **cluster** for codebook cells; **lens** in 04 copy. Catalogue fields stay `topic_*` (CIP-0019). Do not call VQ cells topics.
 
 ## Implementation Plan
 
-1. `subject_vq_fit` + codebook pack fields; `expand_vq_responsibilities` for 04.
+1. `subject_vq_fit` + codebook pack fields; `expand_vq_responsibilities` for 05.
 2. `vq_projection_walk_plotly_spec`; Plotly frames in `reactPlot`.
 3. `lens_weight` through `fit_kmeans` / `mppca_fit`; agglomerative rejects mass.
-4. Application YAML: `02_vq`, retarget 03 input, primers in viewer **and** `assessment.ipynb`.
+4. Application YAML: `03_vq`, retarget 04 input, primers in viewer **and** `assessment.ipynb`.
 
 ## Backward Compatibility
 
-Default `lens_weight: uniform`. Phrase-level 03 scores whose \(R\) rows \(\neq m\) do not skip; they refit. 04 without `cluster_ids` keeps the CIP-0016 path when \(R\) already matches phrase \(n\).
+Default `lens_weight: uniform`. Phrase-level 04 scores whose \(R\) rows \(\neq m\) do not skip; they refit. 05 without `cluster_ids` keeps the CIP-0016 path when \(R\) already matches phrase \(n\).
 
 ## Testing Strategy
 
@@ -123,7 +123,7 @@ Default `lens_weight: uniform`. Phrase-level 03 scores whose \(R\) rows \(\neq m
 - [x] `subject_vq_fit` + \(QR\) expand
 - [x] Brownian projection walk + Plotly frames
 - [x] `lens_weight` uniform / mass
-- [x] `02_vq` YAML, 03/04 wiring, viewer + notebook primers
+- [x] `03_vq` YAML, 04/05 wiring, viewer + notebook primers
 
 ## References
 

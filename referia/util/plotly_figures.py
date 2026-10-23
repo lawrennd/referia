@@ -7,6 +7,7 @@ figure JSON for the interactive viewer.
 
 from __future__ import annotations
 
+import re
 from typing import Any, Sequence
 
 import numpy as np
@@ -665,6 +666,41 @@ def _leaf_order(X: np.ndarray) -> np.ndarray:
     return np.asarray(leaves_list(Z), dtype=int)
 
 
+def _barycenter_row_order(arr: np.ndarray, col_ord: np.ndarray) -> np.ndarray:
+    """Order rows so each chapter sits near the lenses it actually uses.
+
+    Independent leaf-order of rows groups *similar profiles*, which on
+    Draghi put chapter 4 (Collaborative peak) next to chapter 5 (Capital
+    peak). The heatmap then cannot read as aligned along lenses: the
+    mass does not track the column axis. Given a column order, the
+    mass-weighted barycenter of each row is the 1-D layout that does.
+    """
+    cols = np.asarray(col_ord, dtype=int)
+    A = np.asarray(arr, float)[:, cols]
+    if A.ndim != 2 or A.shape[0] == 0 or A.shape[1] == 0:
+        return np.arange(int(np.asarray(arr).shape[0]) if np.ndim(arr) == 2 else 0)
+    weights = np.arange(A.shape[1], dtype=float)
+    mass = np.clip(A.sum(axis=1), 1e-12, None)
+    bary = (A * weights).sum(axis=1) / mass
+    return np.argsort(bary, kind="stable")
+
+
+_CHAPTER_TICK = re.compile(r"^(\d+)\.")
+
+
+def _axis_tick_text(values: Sequence[Any]) -> list[str]:
+    """Short chapter numbers on the axis; hover still has the full title."""
+    out: list[str] = []
+    for value in values:
+        text = str(value).strip()
+        if text.lower() == "foreword":
+            out.append("Foreword")
+            continue
+        match = _CHAPTER_TICK.match(text)
+        out.append(match.group(1) if match else text)
+    return out
+
+
 def _orient_leaf_orders(
     arr: np.ndarray, row_ord: np.ndarray, col_ord: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -704,7 +740,16 @@ def _seriate_share_matrix(
     doc_labels: Sequence[Any] | None = None,
     reorder: bool = True,
 ) -> tuple[np.ndarray, list[str], list[str], list[str]]:
-    """Reorder chapters and lenses so similar share profiles are adjacent."""
+    """Reorder so similar lenses sit together and chapter mass tracks them.
+
+    Columns: average-linkage leaf order of lens share *profiles* (similar
+    usage across chapters is adjacent). Rows: barycenter of that column
+    order, so a chapter dominated by the left-hand lens is drawn at the
+    top and mass walks toward the right. Independent row clustering
+    cannot do that — it will sandwich two mixed chapters whose peaks
+    sit at opposite ends of the lens axis. A final root flip puts the
+    high-mass cells toward the diagonal.
+    """
     arr = np.asarray(P, float)
     docs, labels = _display_docs(doc_ids, doc_labels)
     if arr.ndim != 2:
@@ -712,8 +757,8 @@ def _seriate_share_matrix(
     k = int(arr.shape[1])
     col_ids = list(range(k))
     if reorder and arr.shape[0] == len(docs) and k > 0:
-        row_ord = _leaf_order(arr)
         col_ord = _leaf_order(arr.T)
+        row_ord = _barycenter_row_order(arr, col_ord)
         row_ord, col_ord = _orient_leaf_orders(arr, row_ord, col_ord)
         arr = arr[np.ix_(row_ord, col_ord)]
         docs = [docs[i] for i in row_ord]
@@ -721,6 +766,23 @@ def _seriate_share_matrix(
         col_ids = [int(j) for j in col_ord]
     x = [_topic_label(j, topic_labels) for j in col_ids]
     return arr, docs, labels, x
+
+
+def _category_axis(values: Sequence[Any], **extra: Any) -> dict[str, Any]:
+    """Pin Plotly to the given category order (leaf order, not alphabetical).
+
+    ``tickmode`` / ``tickvals`` / ``ticktext`` stop Plotly placing long
+    rotated labels at the start of the glyph instead of the category
+    centre — otherwise lens names bunch and no longer sit under columns.
+    """
+    vals = list(values)
+    axis = dict(extra)
+    axis["categoryorder"] = "array"
+    axis["categoryarray"] = vals
+    axis["tickmode"] = "array"
+    axis["tickvals"] = list(axis["tickvals"]) if "tickvals" in axis else vals
+    axis["ticktext"] = list(axis["ticktext"]) if "ticktext" in axis else vals
+    return axis
 
 
 def doc_mds_plotly_spec(
@@ -806,11 +868,9 @@ def topic_document_heatmap_spec(
 ) -> dict[str, Any]:
     """Heatmap of chapter × lens soft histograms.
 
-    Rows and columns are leaf-ordered (average-linkage Pearson
-    correlation, Bar-Joseph order, then a root flip so high mass sits
-    toward the diagonal) so similar share profiles sit next to each
-    other — the microarray seriation. Pass ``reorder=False`` to keep
-    pack order.
+    Lenses are leaf-ordered so similar share profiles sit next to each
+    other; chapters are then sorted by barycenter on that axis so mass
+    tracks left to right. Pass ``reorder=False`` to keep pack order.
     """
     arr, docs, labels, x = _seriate_share_matrix(
         P,
@@ -838,11 +898,24 @@ def topic_document_heatmap_spec(
                 "xanchor": "left",
                 "font": {"size": 14, "color": "#0b0b0b"},
             },
-            "xaxis": {"title": "Lens", "tickangle": -35, "automargin": True},
-            "yaxis": {"title": "Chapter", "autorange": "reversed", "automargin": True},
+            "xaxis": _category_axis(
+                x,
+                title={"text": "Lens", "standoff": 12},
+                tickangle=-90,
+                automargin=True,
+                tickfont={"size": 11},
+            ),
+            "yaxis": _category_axis(
+                labels,
+                title="Chapter",
+                autorange="reversed",
+                automargin=True,
+                tickfont={"size": 12},
+                ticktext=_axis_tick_text(labels),
+            ),
             "plot_bgcolor": "white",
             "paper_bgcolor": "white",
-            "margin": {"l": 200, "r": 20, "t": 50, "b": 140},
+            "margin": {"l": 80, "r": 20, "t": 50, "b": 200},
         },
     }
 
@@ -858,7 +931,7 @@ def chapter_lens_radar_spec(
 ) -> dict[str, Any]:
     """One polar trace per chapter: lens shares, matching pub-dialogue radar.
 
-    Spoke order matches the leaf-ordered heatmap so the two views agree.
+    Spoke order matches the seriated heatmap so the two views agree.
     """
     arr, docs, labels, theta = _seriate_share_matrix(
         P,
@@ -899,7 +972,8 @@ def chapter_lens_radar_spec(
                 "radialaxis": {
                     "visible": True,
                     "range": [0, max(peak * 1.1, 0.05)],
-                }
+                },
+                "angularaxis": _category_axis(theta),
             },
             "legend": {"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
             "plot_bgcolor": "white",
@@ -919,13 +993,15 @@ def emd_heatmap_spec(
     """Pairwise EMD heatmap."""
     arr = np.asarray(emd_matrix, float)
     docs, labels = _display_docs(doc_ids, doc_labels)
+    labels_x = list(labels)
+    labels_y = list(labels)
     return {
         "data": [
             {
                 "type": "heatmap",
                 "z": arr.tolist() if arr.ndim == 2 else [],
-                "x": labels,
-                "y": labels,
+                "x": labels_x,
+                "y": labels_y,
                 "hovertemplate": "%{y} → %{x}: %{z:.3f}<extra></extra>",
                 "customdata": [[{"doc": d} for d in docs] for _ in docs],
             }
@@ -937,8 +1013,10 @@ def emd_heatmap_spec(
                 "xanchor": "left",
                 "font": {"size": 14, "color": "#0b0b0b"},
             },
-            "xaxis": {"title": "Document"},
-            "yaxis": {"title": "Document", "autorange": "reversed"},
+            "xaxis": _category_axis(labels_x, title="Document"),
+            "yaxis": _category_axis(
+                labels_y, title="Document", autorange="reversed"
+            ),
             "plot_bgcolor": "white",
             "paper_bgcolor": "white",
             "margin": {"l": 80, "r": 20, "t": 50, "b": 80},

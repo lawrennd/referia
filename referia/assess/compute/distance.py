@@ -411,7 +411,7 @@ def distance_tests_markdown(
     *,
     note: str = "",
 ) -> str:
-    """Markdown summary for the 04_distance review pane."""
+    """Markdown summary for the 05_distance review pane."""
     lines: list[str] = []
     if note:
         lines.append(str(note).rstrip() + "\n")
@@ -496,7 +496,7 @@ def run_document_distance_analysis(
 ) -> tuple:
     """Façade: histograms → cost → EMD → MDS → tests → Plotly specs.
 
-    Return order matches ``04_distance`` ``field:`` list.
+    Return order matches ``05_distance`` ``field:`` list.
     When ``responsibilities`` are codebook-level (VQ), pass ``cluster_ids``
     (phrase → cluster) and phrase embeddings; membership is ``QR``.
     """
@@ -606,9 +606,9 @@ def run_document_distance_analysis(
         _jsonable(disp_res),
         _jsonable(correlates),
         md,
-        mds_spec,
-        heat_spec,
-        emd_spec,
-        bars_spec,
-        radar_spec,
+        _jsonable(mds_spec),
+        _jsonable(heat_spec),
+        _jsonable(emd_spec),
+        _jsonable(bars_spec),
+        _jsonable(radar_spec),
     )
