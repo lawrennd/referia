@@ -1,6 +1,6 @@
 """Vector quantisation of phrase embeddings (CIP-001A).
 
-K-means codebook on the packed phrase row. Cluster = fine cell; 03_grain
+K-means codebook on the packed phrase row. Cluster = fine cell; 04_grain
 reads the centroids as its grain. Phrase-to-lens membership is QR.
 """
 
@@ -121,7 +121,7 @@ def subject_vq_fit(
 ):
     """Fit a k-means codebook and a Brownian projection-walk figure.
 
-    Return order matches ``02_vq`` ``field:``:
+    Return order matches ``03_vq`` ``field:``:
     cluster_ids, codebook_embeddings, codebook_phrases, vq_mass,
     vq_spec, n_vq, vq_inertia, vq_n_phrases.
 
