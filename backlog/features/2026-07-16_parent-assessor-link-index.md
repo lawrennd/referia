@@ -4,9 +4,10 @@ title: Parent assessor link should carry current index as query parameter
 status: Proposed
 priority: Medium
 created: '2026-07-16'
-last_updated: '2026-07-16'
+last_updated: '2026-10-23'
 related_cips:
 - 000C
+- "0018"
 tags:
 - web
 - navigation
@@ -96,6 +97,12 @@ time and can be embedded in the template.
   (conversation 2026-07-16)
 
 ## Progress updates
+
+### 2026-10-23
+
+CIP-0018 Accepted. `compose=stacked` puts `?index=` on each inherited Section
+header ("open in parent") and does not inject the static parent-assessor HTML.
+This task still applies to `compose=link` (today's default view).
 
 ### 2026-07-16
 Backlog created.  Root cause and three implementation options documented.
