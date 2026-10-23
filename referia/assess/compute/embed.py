@@ -129,8 +129,10 @@ def llm_embed_extraction_phrases(
     """Embed each phrase dict on a chunk row; write ``embedding`` on the dict.
 
     Chunk-grain listing (``02_embed``) holds phrases as a list-in-one-field.
-    Explode then copies ``embedding`` onto tall phrase rows. Empty input is a
-    no-op so **Embed all** can run before every chunk is extracted.
+    Explode copies ``embedding`` onto tall rows for pack. YAML cache/output
+    omit those vectors on write; ``records.parquet`` is the vector store.
+    Empty input is a no-op so **Embed all** can run before every chunk is
+    extracted.
     """
     items = _as_phrase_items(extraction_phrases)
     if not items:
