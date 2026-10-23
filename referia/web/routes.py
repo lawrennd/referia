@@ -113,6 +113,14 @@ from referia.web.render import (
     render_document_actions,
     render_filter_bar,
     render_inline_listing,
+    render_viewer_tree,
+    iter_spec_leaves,
+)
+from referia.config.inherit_view import (
+    inherited_readonly_fields,
+    interface_has_parent,
+    toggle_html,
+    view_options_for_interface,
 )
 
 log = logging.getLogger(__name__)
@@ -318,15 +326,26 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         log.error("Invalid display.layout: %s", exc)
         layout = "side_by_side"
 
-    viewer_specs = reviewer.get_viewer_specs()
-    viewer_blocks = [
-        reviewer.render_viewer_html(spec, viewer_index=i)
-        for i, spec in enumerate(viewer_specs)
-    ]
+    view_options = view_options_for_interface(getattr(reviewer, "_interface", None))
+    viewer_specs = reviewer.get_viewer_specs(view_options=view_options)
+    viewer_index = 0
+
+    def _viewer_leaf(spec: dict) -> str:
+        nonlocal viewer_index
+        html_block = reviewer.render_viewer_html(spec, viewer_index=viewer_index)
+        viewer_index += 1
+        return html_block
+
+    viewer_blocks = render_viewer_tree(viewer_specs, _viewer_leaf)
     needs_plotly = any(
         (spec.get("type") if isinstance(spec, dict) else None) == "PlotlyFigure"
-        for spec in viewer_specs
+        for spec in iter_spec_leaves(viewer_specs)
     )
+    inherit_view_toggle_html = ""
+    if interface_has_parent(getattr(reviewer, "_interface", None)):
+        inherit_view_toggle_html = toggle_html(
+            view_options, index=current_index
+        )
 
     row_forms: list[dict] = []
     listing_html = ""
@@ -343,7 +362,7 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
             reviewer.get_sort_specs(),
             filter_state,
         )
-        review_specs = reviewer.get_review_specs()
+        review_specs = reviewer.get_review_specs(view_options=view_options)
         listing_entries: list[dict] = []
         saved = current_index
         try:
@@ -389,7 +408,9 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         )
     else:
         row_data = _current_data(reviewer)
-        form_html = render_form(reviewer.get_review_specs(), row_data)
+        form_html = render_form(
+            reviewer.get_review_specs(view_options=view_options), row_data
+        )
         index_selector = _render_index_selector(indices, current_index)
         document_html = render_document_panel(
             reviewer.list_pdf_entries(),
@@ -423,6 +444,7 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         "total": total,
         "position": position,
         "needs_plotly": needs_plotly,
+        "inherit_view_toggle_html": inherit_view_toggle_html,
     }
 
 
@@ -539,6 +561,13 @@ def _render_index_selector(indices: list, current_index: Any) -> str:
 
 def _esc(value: Any) -> str:
     return html.escape(str(value) if value is not None else "")
+
+
+def _inherited_field_is_readonly(reviewer, column: str) -> bool:
+    """CIP-0018: stacked ancestor review is not writable via query or POST."""
+    interface = getattr(reviewer, "_interface", None)
+    options = view_options_for_interface(interface)
+    return str(column) in inherited_readonly_fields(interface, options)
 
 
 def _user_error_html(action: str) -> str:
@@ -983,6 +1012,10 @@ async def update_field(request: Request, column: str):
             _log_route_error("Update", exc, column=column, index=record_index)
             return HTMLResponse(_user_error_html("Update"))
 
+    if _inherited_field_is_readonly(reviewer, column):
+        log.warning("Refusing write to inherited read-only field")
+        return HTMLResponse(_user_error_html("Update"))
+
     spec = _find_spec(reviewer, column)
     value: Any = _coerce_form_value(raw_value, spec)
 
@@ -1015,6 +1048,12 @@ async def update_field_bulk(request: Request, column: str):
     templates = _templates(request)
     form = await request.form()
     raw_value = form.get(column)
+    if _inherited_field_is_readonly(reviewer, column):
+        log.warning("Refusing bulk write to inherited read-only field")
+        ctx = _panel_response_context(reviewer)
+        return _panel_with_oob_status(
+            templates, request, ctx, _user_error_html("Bulk update")
+        )
     spec = _find_spec(reviewer, column)
     value: Any = _coerce_form_value(raw_value, spec)
 
@@ -2281,6 +2320,10 @@ async def root_update_field(request: Request, config_path: str, column: str):
             _log_route_error("Update", exc, column=column, index=record_index)
             return HTMLResponse(_user_error_html("Update"))
 
+    if _inherited_field_is_readonly(reviewer, column):
+        log.warning("Refusing write to inherited read-only field")
+        return HTMLResponse(_user_error_html("Update"))
+
     spec = _find_spec(reviewer, column)
     value: Any = _coerce_form_value(raw_value, spec)
 
@@ -2312,6 +2355,12 @@ async def root_update_field_bulk(request: Request, config_path: str, column: str
     templates = _templates(request)
     form = await request.form()
     raw_value = form.get(column)
+    if _inherited_field_is_readonly(reviewer, column):
+        log.warning("Refusing bulk write to inherited read-only field")
+        ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
+        return _panel_with_oob_status(
+            templates, request, ctx, _user_error_html("Bulk update")
+        )
     spec = _find_spec(reviewer, column)
     value: Any = _coerce_form_value(raw_value, spec)
 

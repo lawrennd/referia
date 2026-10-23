@@ -35,15 +35,34 @@
       /* Root-server mode: CONFIG_PATH is the URL prefix for this config (e.g.
          "/theses/examined/introduction").  In single-config mode it is empty.
          The htmx:configRequest listener prepends it to every HTMX request path
-         so render.py never needs to know about path prefixes.             */
+         so render.py never needs to know about path prefixes.
+
+         CIP-0018: copy allowlisted inherit-view params from the page URL onto
+         every HTMX path so POST /reload and index changes keep compose=stacked. */
       (function() {
         var BASE = "{{ config_path_prefix | default('') }}";
-        if (!BASE) return;
+        var VIEW = ["compose", "inherit_viewer", "inherit_review"];
         document.addEventListener("htmx:configRequest", function(evt) {
           var path = evt.detail.path;
-          if (path && path.charAt(0) === "/" && path.indexOf(BASE + "/") !== 0) {
-            evt.detail.path = BASE + path;
+          if (!path) return;
+          if (BASE && path.charAt(0) === "/" && path.indexOf(BASE + "/") !== 0) {
+            path = BASE + path;
           }
+          try {
+            var url = new URL(path, window.location.origin);
+            var page = new URLSearchParams(window.location.search);
+            VIEW.forEach(function(key) {
+              if (page.has(key) && !url.searchParams.has(key)) {
+                url.searchParams.set(key, page.get(key));
+              }
+            });
+            if (path.indexOf("http") === 0) {
+              path = url.toString();
+            } else {
+              path = url.pathname + url.search;
+            }
+          } catch (e) {}
+          evt.detail.path = path;
         });
       })();
 

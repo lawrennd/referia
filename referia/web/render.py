@@ -37,6 +37,10 @@ _record_index_ctx: ContextVar[Any] = ContextVar("referia_record_index", default=
 _listing_chrome_ctx: ContextVar[bool] = ContextVar(
     "referia_listing_chrome", default=False
 )
+# Inherited ancestor review with inherit.writable: false (CIP-0018).
+_readonly_inherited_ctx: ContextVar[bool] = ContextVar(
+    "referia_readonly_inherited", default=False
+)
 
 
 # ---------------------------------------------------------------------------
@@ -141,6 +145,11 @@ def _htmx_field_attrs(column: str, trigger: str = "change") -> str:
     """
     col = _escape(column)
     col_url = _url_path_segment(column)
+    if _readonly_inherited_ctx.get():
+        return (
+            f'name="{col}" readonly disabled aria-readonly="true" '
+            f'title="Inherited from parent (read-only)"'
+        )
     if _listing_chrome_ctx.get():
         return (
             f'name="{col}" '
@@ -571,6 +580,65 @@ def _section_key(title: str, index: int) -> str:
     return f"{index}/{slug or 'section'}"
 
 
+def _section_summary_html(spec: dict, title: str) -> str:
+    """Section header text plus optional CIP-0018 'open in parent' control."""
+    summary = _escape(title)
+    href = spec.get("parent_href")
+    if spec.get("inherited") and href:
+        summary += (
+            f' <a class="inherited-open-parent" href="{_escape(href)}">'
+            f"open in parent</a>"
+        )
+    return summary
+
+
+def iter_spec_leaves(specs: list | None):
+    """Yield leaf widget/viewer dicts, walking nested ``type: Section``."""
+    for spec in specs or []:
+        if not isinstance(spec, dict):
+            continue
+        if spec.get("type") == "Section":
+            yield from iter_spec_leaves(
+                spec.get("entries") or spec.get("children") or []
+            )
+        else:
+            yield spec
+
+
+def render_viewer_tree(specs: list, leaf_html) -> list[str]:
+    """Render viewer specs, wrapping inherited Sections like review details.
+
+    *leaf_html(spec)* returns the HTML for one non-Section viewer entry
+    (typically ``WebReviewer.render_viewer_html``).
+    """
+    def _walk(items: list) -> list[str]:
+        parts: list[str] = []
+        for spec in items or []:
+            if not isinstance(spec, dict):
+                continue
+            if spec.get("type") == "Section":
+                title = (
+                    spec.get("title")
+                    or (spec.get("args") or {}).get("title")
+                    or "Section"
+                )
+                extra = " inherited-section" if spec.get("inherited") else ""
+                inner = "\n".join(_walk(spec.get("entries") or []))
+                summary = _section_summary_html(spec, str(title))
+                open_attr = " open" if (spec.get("args") or {}).get("open", True) else ""
+                parts.append(
+                    f'<details class="review-section viewer-section{extra}"{open_attr}>\n'
+                    f"<summary>{summary}</summary>\n"
+                    f"{inner}\n"
+                    f"</details>"
+                )
+            else:
+                parts.append(leaf_html(spec))
+        return parts
+
+    return _walk(specs)
+
+
 def _render_markdown_widget(spec: dict, value: Any, data: dict | None = None) -> str:
     content = _markdown_widget_content(spec, value, data)
     rendered = _ensure_links_new_tab(markdown2html(content) if content else "")
@@ -707,6 +775,10 @@ def _render_populate_button(spec: dict, value: Any, data: dict | None = None) ->
     indicator = f"widget-{_widget_dom_id(target)}"
     record_index = _record_index_ctx.get()
     requires = _populate_requires_field(spec)
+    if _readonly_inherited_ctx.get():
+        return _blocked_populate_button(
+            label, "Inherited from parent (read-only)"
+        )
     if requires and not _listing_chrome_ctx.get():
         row = data or {}
         if not _requires_satisfied(row.get(requires)):
@@ -1076,12 +1148,23 @@ def render_form(
                 children = spec.get("entries") or spec.get("children") or []
                 if not isinstance(children, list):
                     children = []
-                body = "\n".join(_render_list(children))
+                token = None
+                inherited = bool(spec.get("inherited"))
+                writable = spec.get("writable", True)
+                if inherited and not writable:
+                    token = _readonly_inherited_ctx.set(True)
+                try:
+                    body = "\n".join(_render_list(children))
+                finally:
+                    if token is not None:
+                        _readonly_inherited_ctx.reset(token)
                 args = spec.get("args") or {}
+                extra_class = " inherited-section" if inherited else ""
+                summary = _section_summary_html(spec, title)
                 if not _section_collapsible(spec):
-                    heading = f"<h3>{_escape(title)}</h3>\n" if title else ""
+                    heading = f"<h3>{summary}</h3>\n" if title else ""
                     parts.append(
-                        f'<section class="review-section review-section-static" '
+                        f'<section class="review-section review-section-static{extra_class}" '
                         f'data-section-key="{key}">\n'
                         f"{heading}"
                         f"{body}\n"
@@ -1090,8 +1173,9 @@ def render_form(
                     continue
                 open_attr = " open" if args.get("open") else ""
                 parts.append(
-                    f'<details class="review-section" data-section-key="{key}"{open_attr}>\n'
-                    f"<summary>{_escape(title)}</summary>\n"
+                    f'<details class="review-section{extra_class}" '
+                    f'data-section-key="{key}"{open_attr}>\n'
+                    f"<summary>{summary}</summary>\n"
                     f"{body}\n"
                     f"</details>"
                 )

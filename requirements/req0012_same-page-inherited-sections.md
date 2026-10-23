@@ -1,7 +1,7 @@
 ---
 id: "0012"
 title: "Reviewers see inherited interface sections on the same page as the child"
-status: "In Progress"
+status: "Implemented"
 priority: "High"
 created: "2026-10-22"
 last_updated: "2026-10-23"

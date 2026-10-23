@@ -1,7 +1,7 @@
 ---
 id: "2026-10-23_cip0018-jupyter-yaml-link"
 title: "Jupyter stacked inherit follows YAML inherit.compose or link only"
-status: "Ready"
+status: "Completed"
 priority: "Medium"
 created: "2026-10-23"
 last_updated: "2026-10-23"
@@ -50,3 +50,7 @@ If YAML says `stacked`, Jupyter concatenates `interface_layers()` the same way t
 ### 2026-10-23
 
 Task created (Ready) when CIP-0018 was Accepted.
+
+### 2026-10-23 (implementation)
+
+Implemented on branch `cip0018-implement-stacked-inherit`. Tests in `tests/test_inherit_view.py` pass (32). Status Completed.

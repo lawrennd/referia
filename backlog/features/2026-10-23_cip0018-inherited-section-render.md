@@ -1,7 +1,7 @@
 ---
 id: "2026-10-23_cip0018-inherited-section-render"
 title: "Render inherited Sections read-only with open-in-parent header link"
-status: "Ready"
+status: "Completed"
 priority: "High"
 created: "2026-10-23"
 last_updated: "2026-10-23"
@@ -57,3 +57,7 @@ Inherited Sections use existing collapsible `<details>` (CIP-0014 persist keys s
 ### 2026-10-23
 
 Task created (Ready) when CIP-0018 was Accepted.
+
+### 2026-10-23 (implementation)
+
+Implemented on branch `cip0018-implement-stacked-inherit`. Tests in `tests/test_inherit_view.py` pass (32). Status Completed.

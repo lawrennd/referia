@@ -1,7 +1,7 @@
 ---
 id: 2026-07-14_web-inherit-not-applied
 title: 'Web interface does not apply inherit: sections'
-status: Ready
+status: Completed
 priority: High
 created: '2026-07-14'
 last_updated: '2026-10-23'
@@ -81,3 +81,7 @@ populated. Status Ready, priority High.
 ### 2026-07-14
 
 Task created (Proposed).
+
+### 2026-10-23 (implementation)
+
+Implemented on branch `cip0018-implement-stacked-inherit`. Tests in `tests/test_inherit_view.py` pass (32). Status Completed.

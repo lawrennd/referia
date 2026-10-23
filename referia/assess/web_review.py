@@ -910,27 +910,69 @@ class WebReviewer:
         self._flatten_entries(self._review_raw(), specs, preserve_sections=False)
         return specs
 
-    def get_viewer_specs(self) -> list[dict]:
+    def get_viewer_specs(self, view_options=None) -> list[dict]:
         """Return widget specs from the ``viewer`` section only.
 
-        :return: Flat ordered list of viewer widget spec dicts.
+        When *view_options* selects ``compose=stacked``, ancestor viewers are
+        wrapped as inherited ``Section`` nodes (CIP-0018).  Default (link)
+        mode stays a flat list including the injected parent-assessor link.
+
+        :return: Ordered list of viewer widget spec dicts (and Sections when stacked).
         """
-        specs: list[dict] = []
+        stacked = self._stacked_interface_specs(view_options)
+        if stacked is not None:
+            specs: list[dict] = []
+            self._flatten_entries(stacked[0], specs, preserve_sections=True)
+            return specs
+        specs = []
         self._flatten_entries(self._viewer_raw(), specs, preserve_sections=False)
         return specs
 
-    def get_review_specs(self) -> list[dict]:
+    def get_review_specs(self, view_options=None) -> list[dict]:
         """Return review specs for form rendering.
 
         ``type: Section`` clusters are kept as nested nodes
         (``title`` + ``entries``) so the web renderer can wrap each group in
         a collapsible ``<details>``.  Other cluster types are still flattened.
 
+        Stacked inherit (CIP-0018) prepends ancestor review as inherited
+        Sections; default ignore of parent ``review`` is unchanged for link mode.
+
         :return: Ordered list of leaf widgets and Section clusters.
         """
-        specs: list[dict] = []
+        stacked = self._stacked_interface_specs(view_options)
+        if stacked is not None:
+            specs: list[dict] = []
+            self._flatten_entries(stacked[1], specs, preserve_sections=True)
+            return specs
+        specs = []
         self._flatten_entries(self._review_raw(), specs, preserve_sections=True)
         return specs
+
+    def _stacked_interface_specs(self, view_options=None):
+        from referia.config.inherit_view import (
+            InheritViewOptions,
+            compose_viewer_review,
+        )
+
+        opts = view_options or InheritViewOptions()
+        return compose_viewer_review(
+            self._interface,
+            opts,
+            href_for_layer=lambda layer: self._inherit_layer_href(layer, opts),
+        )
+
+    def _inherit_layer_href(self, layer, options) -> str:
+        from referia.config.inherit_view import layer_href
+
+        index = None
+        try:
+            index = self.get_index()
+        except Exception:
+            index = None
+        return layer_href(
+            self._directory, layer, options, index=index
+        )
 
     def list_url_entries(self) -> list[dict]:
         """Resolve ``urls:`` entries for the current record.
