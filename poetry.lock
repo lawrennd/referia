@@ -7710,4 +7710,4 @@ distance = ["POT"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4.0"
-content-hash = "ba4e4cff184e214aee788fc3ec074189e3139c398416dc73e33d67b476fadbbc"
+content-hash = "830b853fc7ead383c8ace546e35b0f4803fda5236569c40b3c467d6bd3b633f2"
