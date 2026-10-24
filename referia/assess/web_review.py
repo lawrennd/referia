@@ -1018,14 +1018,15 @@ class WebReviewer:
                     continue
                 path = self.get_record_document(kind, n)
                 label = view.get("name") or (path.name if path is not None else kind)
-                entries.append(
-                    {
-                        "kind": kind,
-                        "n": n,
-                        "label": str(label),
-                        "exists": bool(path is not None and path.is_file()),
-                    }
-                )
+                entry = {
+                    "kind": kind,
+                    "n": n,
+                    "label": str(label),
+                    "exists": bool(path is not None and path.is_file()),
+                }
+                if "visible_if" in view:
+                    entry["visible_if"] = view["visible_if"]
+                entries.append(entry)
         return entries
 
     def get_record_document(self, kind: str, n: int):
