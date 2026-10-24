@@ -942,6 +942,23 @@ class TestRenderForm:
         # Title is summary only — not a Markdown heading in the body
         assert "widget-markdown" not in html
 
+    def test_inherited_section_omits_absent_present_flags(self):
+        specs = [
+            {
+                "type": "Section",
+                "title": "PDF pages",
+                "inherited": True,
+                "writable": False,
+                "entries": [
+                    _w("Checkbox", "ch1Present", args={"description": "Chapter 1 present"}),
+                    _w("Checkbox", "ch8Present", args={"description": "Chapter 8 present"}),
+                ],
+            }
+        ]
+        html = render_form(specs, {"ch1Present": True, "ch8Present": False})
+        assert "Chapter 1 present" in html
+        assert "Chapter 8 present" not in html
+
     def test_heading_markdown_does_not_open_section(self):
         """Bare ### Markdown is not a section (must use nested entries)."""
         specs = [
@@ -1201,6 +1218,33 @@ class TestRenderDocumentPanel:
         )
         assert "generate-document" not in html
         assert "nav-document-actions" not in html
+
+    def test_visible_if_hides_missing_chapter_pdf(self):
+        from referia.web.render import render_document_panel
+
+        html = render_document_panel(
+            [
+                {
+                    "kind": "editpdf",
+                    "n": 0,
+                    "label": "thesis_ch1",
+                    "exists": True,
+                    "visible_if": "ch1Present",
+                },
+                {
+                    "kind": "editpdf",
+                    "n": 1,
+                    "label": "thesis_ch8",
+                    "exists": False,
+                    "visible_if": "ch8Present",
+                },
+            ],
+            [],
+            data={"ch1Present": True, "ch8Present": False},
+        )
+        assert "thesis_ch1" in html
+        assert "thesis_ch8" not in html
+        assert "PDF not found" not in html
 
 
 class TestRenderDocumentActions:

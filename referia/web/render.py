@@ -611,7 +611,10 @@ def render_viewer_tree(specs: list, leaf_html) -> list[str]:
     *leaf_html(spec)* returns the HTML for one non-Section viewer entry
     (typically ``WebReviewer.render_viewer_html``).
     """
+    section_index = 0
+
     def _walk(items: list) -> list[str]:
+        nonlocal section_index
         parts: list[str] = []
         for spec in items or []:
             if not isinstance(spec, dict):
@@ -623,11 +626,14 @@ def render_viewer_tree(specs: list, leaf_html) -> list[str]:
                     or "Section"
                 )
                 extra = " inherited-section" if spec.get("inherited") else ""
+                key = _escape(_section_key(str(title), section_index))
+                section_index += 1
                 inner = "\n".join(_walk(spec.get("entries") or []))
                 summary = _section_summary_html(spec, str(title))
                 open_attr = " open" if (spec.get("args") or {}).get("open", True) else ""
                 parts.append(
-                    f'<details class="review-section viewer-section{extra}"{open_attr}>\n'
+                    f'<details class="review-section viewer-section{extra}" '
+                    f'data-section-key="viewer/{key}"{open_attr}>\n'
                     f"<summary>{summary}</summary>\n"
                     f"{inner}\n"
                     f"</details>"
@@ -1141,7 +1147,16 @@ def render_form(
         for spec in items:
             if not isinstance(spec, dict):
                 continue
+            field = spec.get("field", "")
+            if (
+                _readonly_inherited_ctx.get()
+                and str(field).endswith("Present")
+                and not _checkbox_checked(data.get(field))
+            ):
+                continue
             if spec.get("type") == "Section":
+                if _visibility_style(spec, data):
+                    continue
                 title = _resolve_section_title(spec, data) or "Section"
                 key = _escape(_section_key(title, section_index))
                 section_index += 1
@@ -1180,7 +1195,6 @@ def render_form(
                     f"</details>"
                 )
                 continue
-            field = spec.get("field", "")
             value = data.get(field) if field else None
             parts.append(
                 render_widget(spec, value, data, record_index=record_index)
@@ -1875,6 +1889,7 @@ def render_document_panel(
     urls: list[dict],
     prefix: str = "",
     current_index: Any = None,
+    data: dict | None = None,
 ) -> str:
     """HTML for PDFs and URL links in the document column.
 
@@ -1887,9 +1902,19 @@ def render_document_panel(
 
     *current_index* is appended as ``?index=`` so each record has a distinct
     document URL (see backlog ``2026-10-07_web-record-document-index-in-url``).
+
+    Optional *data* evaluates each PDF entry's ``visible_if`` (same rules as
+    review widgets) so missing chapters can be omitted from the panel.
     """
     from urllib.parse import quote
 
+    row = data or {}
+    visible_pdfs = []
+    for entry in pdfs or []:
+        if entry.get("visible_if") is not None and _visibility_style(entry, row):
+            continue
+        visible_pdfs.append(entry)
+    pdfs = visible_pdfs
     if not pdfs and not urls:
         return ""
     index_q = ""

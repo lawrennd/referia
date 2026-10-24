@@ -914,10 +914,12 @@ class WebReviewer:
         """Return widget specs from the ``viewer`` section only.
 
         When *view_options* selects ``compose=stacked``, ancestor viewers are
-        wrapped as inherited ``Section`` nodes (CIP-0018).  Default (link)
-        mode stays a flat list including the injected parent-assessor link.
+        wrapped as inherited ``Section`` nodes (CIP-0018).  ``type: Section``
+        in this interface's own ``viewer`` is kept as a tree node so the web
+        renderer can wrap each figure group in a collapsible ``<details>``.
+        ``get_widget_specs`` still returns a flat leaf list.
 
-        :return: Ordered list of viewer widget spec dicts (and Sections when stacked).
+        :return: Ordered list of viewer widget spec dicts and Section nodes.
         """
         stacked = self._stacked_interface_specs(view_options)
         if stacked is not None:
@@ -925,7 +927,7 @@ class WebReviewer:
             self._flatten_entries(stacked[0], specs, preserve_sections=True)
             return specs
         specs = []
-        self._flatten_entries(self._viewer_raw(), specs, preserve_sections=False)
+        self._flatten_entries(self._viewer_raw(), specs, preserve_sections=True)
         return specs
 
     def get_review_specs(self, view_options=None) -> list[dict]:
@@ -1074,9 +1076,11 @@ class WebReviewer:
         """True when any ``viewer:`` entry is a ``PlotlyFigure`` (CIP-0011)."""
         from referia.assess.viewer_bindings import viewer_entry_type
 
+        from referia.web.render import iter_spec_leaves
+
         return any(
             viewer_entry_type(spec) == "PlotlyFigure"
-            for spec in self.get_viewer_specs()
+            for spec in iter_spec_leaves(self.get_viewer_specs())
         )
 
     def render_viewer_html(

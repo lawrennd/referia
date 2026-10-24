@@ -341,7 +341,31 @@ class TestRenderInherited:
         assert "inherited-section" in blocks[0]
         assert "open in parent" in blocks[0]
         assert "LEAF:" in blocks[0]
+        assert 'data-section-key="viewer/0/grandparent"' in blocks[0]
         assert blocks[1].startswith("LEAF:")
+
+    def test_viewer_tree_section_keys_are_stable_and_prefixed(self):
+        specs = [
+            {
+                "type": "Section",
+                "title": "Pairwise EMD",
+                "entries": [{"liquid": "caption"}, {"type": "PlotlyFigure", "field": "emd"}],
+            },
+            {
+                "type": "Section",
+                "title": "Radar",
+                "args": {"open": False},
+                "entries": [{"liquid": "radar"}],
+            },
+        ]
+        blocks = render_viewer_tree(specs, lambda spec: f"LEAF:{spec.get('field', spec.get('liquid'))}")
+        assert 'data-section-key="viewer/0/pairwise-emd"' in blocks[0]
+        assert 'data-section-key="viewer/1/radar"' in blocks[1]
+        assert blocks[0].startswith("<details")
+        assert ' open>' in blocks[0]
+        assert " open>" not in blocks[1]
+        assert "LEAF:emd" in blocks[0]
+        assert "LEAF:radar" in blocks[1]
 
 
 class TestWebRoutesInheritView:

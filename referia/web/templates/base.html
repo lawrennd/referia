@@ -362,6 +362,18 @@
         }
         window.referiaResizePlotly = resizeAllPlots;
 
+        document.addEventListener("toggle", function (evt) {
+          var d = evt.target;
+          if (!d || d.tagName !== "DETAILS" || !d.open) return;
+          if (
+            !d.classList.contains("review-section") &&
+            !d.classList.contains("viewer-heading-collapse")
+          ) {
+            return;
+          }
+          requestAnimationFrame(function () { resizeAllPlots(); });
+        }, true);
+
         function schedulePlotResize(target) {
           /* After CSS / splitter layout settles (width × aspect-ratio). */
           requestAnimationFrame(function () {
@@ -633,7 +645,9 @@
             var map = readMap();
             Array.prototype.forEach.call(collect(root), function (d) {
               var k = nodeKey(d);
-              if (k && map[k]) d.open = true;
+              if (k && Object.prototype.hasOwnProperty.call(map, k)) {
+                d.open = !!map[k];
+              }
             });
           }
 
@@ -645,8 +659,7 @@
                 var k = nodeKey(d);
                 if (!k) return;
                 var map = readMap();
-                if (d.open) map[k] = true;
-                else delete map[k];
+                map[k] = !!d.open;
                 writeMap(map);
               });
             });

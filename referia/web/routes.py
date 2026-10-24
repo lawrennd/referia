@@ -417,6 +417,7 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
             reviewer.list_url_entries(),
             prefix,
             current_index=current_index,
+            data=row_data,
         )
         position = (
             (indices.index(current_index) + 1) if current_index in indices else "?"
@@ -745,9 +746,7 @@ def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
     from referia.web.render import render_plotly_spec_oob
 
     parts: list[str] = []
-    for i, spec in enumerate(reviewer.get_viewer_specs()):
-        if not isinstance(spec, dict):
-            continue
+    for i, spec in enumerate(iter_spec_leaves(reviewer.get_viewer_specs())):
         if is_viewer_chrome_type(spec):
             field = spec.get("field")
             args = spec.get("args") or {}

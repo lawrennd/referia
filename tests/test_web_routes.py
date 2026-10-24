@@ -417,6 +417,35 @@ class TestViewerOobHelpers:
         )
         parts = _viewer_highlight_oobs(reviewer, "selected_topic")
         assert len(parts) == 1
+        assert 'id="plotly-spec-1"' in parts[0]
+        assert 'hx-swap-oob="true"' in parts[0]
+        reviewer.render_viewer_html.assert_not_called()
+
+    def test_viewer_highlight_oobs_walks_section_leaves(self):
+        from referia.web.routes import _viewer_highlight_oobs
+
+        reviewer = MagicMock()
+        reviewer.get_viewer_specs.return_value = [
+            {"liquid": "intro"},
+            {
+                "type": "Section",
+                "title": "Pairwise EMD",
+                "entries": [
+                    {"liquid": "caption"},
+                    {
+                        "type": "PlotlyFigure",
+                        "field": "emd_heatmap_spec",
+                    },
+                ],
+            },
+        ]
+        reviewer.get_value.side_effect = lambda col: (
+            {"data": [], "layout": {"height": 100}}
+            if col == "emd_heatmap_spec"
+            else "x"
+        )
+        parts = _viewer_highlight_oobs(reviewer, "emd_heatmap_spec")
+        assert len(parts) == 1
         assert 'id="plotly-spec-2"' in parts[0]
         assert 'hx-swap-oob="true"' in parts[0]
         reviewer.render_viewer_html.assert_not_called()

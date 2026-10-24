@@ -750,6 +750,10 @@ span.entry-title {
     border-bottom: 1px solid var(--colour-border);
 }
 
+.viewer-col .review-section.viewer-section {
+    margin-bottom: 0.65rem;
+}
+
 .review-section-static > h3 {
     margin: 0.35rem 0 0.45rem;
     font-size: 1.05rem;
