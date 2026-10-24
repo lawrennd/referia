@@ -52,6 +52,7 @@ Each CIP can have one of the following statuses:
 - [CIP-0018](./cip0018.md): Stacked inherit view — ancestor sections above child on one page (Proposed; REQ-0012)
 - [CIP-0019](./cip0019.md): Grain methods — sklearn partitions vs soft MPPCA (In Progress; REQ-0010)
 - [CIP-001A](./cip001A.md): VQ codebook before lens Assess, with a Brownian projection walk (In Progress; REQ-0010)
+- [CIP-001B](./cip001B.md): Jupyter-like kernel/server process split for the web review runtime (Proposed; REQ-0013)
 
 ## Creating a Good CIP
 
