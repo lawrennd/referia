@@ -157,14 +157,60 @@ def test_facade_with_stub_emd(monkeypatch):
         n_perm=9,
         seed=0,
     )
-    assert len(packed) == 17
-    P, means, mass, docs, cost, D, coords, explained, perm, disp, axes, md, mds_spec, heat, emd, bars, radar = packed
+    assert len(packed) == 18
+    P, means, mass, docs, cost, D, coords, explained, perm, disp, axes, md, mds_spec, heat, emd, bars, radar, cost_spec = packed
     assert docs == ["A", "B", "C", "D"]
     assert np.allclose(np.sum(P, axis=1), 1.0)
     assert "PERMANOVA" in md
     assert mds_spec["data"][0]["customdata"][0]["doc"] in docs
     assert heat["data"][0]["type"] == "heatmap"
     assert radar["data"][0]["type"] == "scatterpolar"
+    assert cost_spec["data"][0]["type"] == "heatmap"
+
+
+def test_facade_heatmap_uses_ground_cost_and_emd(monkeypatch):
+    from referia.assess.compute import distance as dist
+
+    def fake_emd(P, M):
+        P = np.asarray(P, float)
+        M = np.asarray(M, float)
+        peaks = P.argmax(axis=1)
+        n = int(P.shape[0])
+        D = np.zeros((n, n))
+        for i in range(n):
+            for j in range(i + 1, n):
+                D[i, j] = D[j, i] = float(M[peaks[i], peaks[j]])
+        return D
+
+    monkeypatch.setattr(dist, "emd_distance_matrix", fake_emd)
+    packed = run_document_distance_analysis(
+        embeddings=[[1.0, 0.0], [0.95, 0.05], [0.0, 1.0], [0.05, 0.95]],
+        doc_ids=["A.pdf", "B.pdf", "C.pdf", "D.pdf"],
+        responsibilities=[
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ],
+        topic_labels={"T0": "L0", "T1": "L1", "T2": "L2", "T3": "L3"},
+        min_mass=1.0,
+        group_field="chapter",
+        n_perm=5,
+        seed=0,
+        doc_titles={"A.pdf": "A", "B.pdf": "B", "C.pdf": "C", "D.pdf": "D"},
+    )
+    x = packed[13]["data"][0]["x"]
+    y = packed[13]["data"][0]["y"]
+    assert abs(x.index("L0") - x.index("L1")) == 1
+    assert abs(x.index("L2") - x.index("L3")) == 1
+    assert abs(y.index("A") - y.index("B")) == 1
+    assert abs(y.index("C") - y.index("D")) == 1
+    assert packed[16]["data"][0]["theta"][:-1] == x
+    cost_heat = packed[17]["data"][0]
+    assert abs(cost_heat["x"].index("L0") - cost_heat["x"].index("L1")) == 1
+    assert abs(cost_heat["x"].index("L2") - cost_heat["x"].index("L3")) == 1
+    assert cost_heat["x"] == cost_heat["y"]
+    assert dist._distance_matrix_for_seriation(np.zeros((4, 4)), 4) is None
 
 
 def test_distance_functions_registered():

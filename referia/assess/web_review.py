@@ -910,27 +910,71 @@ class WebReviewer:
         self._flatten_entries(self._review_raw(), specs, preserve_sections=False)
         return specs
 
-    def get_viewer_specs(self) -> list[dict]:
+    def get_viewer_specs(self, view_options=None) -> list[dict]:
         """Return widget specs from the ``viewer`` section only.
 
-        :return: Flat ordered list of viewer widget spec dicts.
+        When *view_options* selects ``compose=stacked``, ancestor viewers are
+        wrapped as inherited ``Section`` nodes (CIP-0018).  ``type: Section``
+        in this interface's own ``viewer`` is kept as a tree node so the web
+        renderer can wrap each figure group in a collapsible ``<details>``.
+        ``get_widget_specs`` still returns a flat leaf list.
+
+        :return: Ordered list of viewer widget spec dicts and Section nodes.
         """
-        specs: list[dict] = []
-        self._flatten_entries(self._viewer_raw(), specs, preserve_sections=False)
+        stacked = self._stacked_interface_specs(view_options)
+        if stacked is not None:
+            specs: list[dict] = []
+            self._flatten_entries(stacked[0], specs, preserve_sections=True)
+            return specs
+        specs = []
+        self._flatten_entries(self._viewer_raw(), specs, preserve_sections=True)
         return specs
 
-    def get_review_specs(self) -> list[dict]:
+    def get_review_specs(self, view_options=None) -> list[dict]:
         """Return review specs for form rendering.
 
         ``type: Section`` clusters are kept as nested nodes
         (``title`` + ``entries``) so the web renderer can wrap each group in
         a collapsible ``<details>``.  Other cluster types are still flattened.
 
+        Stacked inherit (CIP-0018) prepends ancestor review as inherited
+        Sections; default ignore of parent ``review`` is unchanged for link mode.
+
         :return: Ordered list of leaf widgets and Section clusters.
         """
-        specs: list[dict] = []
+        stacked = self._stacked_interface_specs(view_options)
+        if stacked is not None:
+            specs: list[dict] = []
+            self._flatten_entries(stacked[1], specs, preserve_sections=True)
+            return specs
+        specs = []
         self._flatten_entries(self._review_raw(), specs, preserve_sections=True)
         return specs
+
+    def _stacked_interface_specs(self, view_options=None):
+        from referia.config.inherit_view import (
+            InheritViewOptions,
+            compose_viewer_review,
+        )
+
+        opts = view_options or InheritViewOptions()
+        return compose_viewer_review(
+            self._interface,
+            opts,
+            href_for_layer=lambda layer: self._inherit_layer_href(layer, opts),
+        )
+
+    def _inherit_layer_href(self, layer, options) -> str:
+        from referia.config.inherit_view import layer_href
+
+        index = None
+        try:
+            index = self.get_index()
+        except Exception:
+            index = None
+        return layer_href(
+            self._directory, layer, options, index=index
+        )
 
     def list_url_entries(self) -> list[dict]:
         """Resolve ``urls:`` entries for the current record.
@@ -974,14 +1018,15 @@ class WebReviewer:
                     continue
                 path = self.get_record_document(kind, n)
                 label = view.get("name") or (path.name if path is not None else kind)
-                entries.append(
-                    {
-                        "kind": kind,
-                        "n": n,
-                        "label": str(label),
-                        "exists": bool(path is not None and path.is_file()),
-                    }
-                )
+                entry = {
+                    "kind": kind,
+                    "n": n,
+                    "label": str(label),
+                    "exists": bool(path is not None and path.is_file()),
+                }
+                if "visible_if" in view:
+                    entry["visible_if"] = view["visible_if"]
+                entries.append(entry)
         return entries
 
     def get_record_document(self, kind: str, n: int):
@@ -1032,9 +1077,11 @@ class WebReviewer:
         """True when any ``viewer:`` entry is a ``PlotlyFigure`` (CIP-0011)."""
         from referia.assess.viewer_bindings import viewer_entry_type
 
+        from referia.web.render import iter_spec_leaves
+
         return any(
             viewer_entry_type(spec) == "PlotlyFigure"
-            for spec in self.get_viewer_specs()
+            for spec in iter_spec_leaves(self.get_viewer_specs())
         )
 
     def render_viewer_html(

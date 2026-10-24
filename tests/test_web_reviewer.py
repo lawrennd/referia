@@ -11,6 +11,8 @@ import types
 from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
 
+from referia.web.render import iter_spec_leaves
+
 import pandas as pd
 import pytest
 
@@ -1122,6 +1124,23 @@ class TestDocumentEntries:
         assert entries[0]["exists"] is True
         assert entries[0]["label"] == "thesis"
 
+    def test_list_pdf_entries_copies_visible_if(self, tmp_path):
+        reviewer, _, _ = _build_reviewer(
+            extra={
+                "editpdf": [
+                    {
+                        "sourcedirectory": str(tmp_path),
+                        "storedirectory": str(tmp_path),
+                        "field": "ThesisPDF",
+                        "name": "thesis_ch8",
+                        "visible_if": "ch8Present",
+                    }
+                ]
+            },
+        )
+        entries = reviewer.list_pdf_entries()
+        assert entries[0]["visible_if"] == "ch8Present"
+
     def test_get_record_document_missing_field(self, tmp_path):
         reviewer, _, _ = _build_reviewer(
             extra={"localpdf": [{"directory": str(tmp_path), "field": "ThesisPDF"}]},
@@ -1832,6 +1851,48 @@ class TestInteractiveViewerHtml:
             viewer=[{"type": "Markdown", "liquid": "x"}]
         )
         assert reviewer.has_plotly_viewer() is False
+
+    def test_get_viewer_specs_preserves_sections(self):
+        reviewer, _, _ = _build_reviewer(
+            viewer=[
+                {"liquid": "intro"},
+                {
+                    "type": "Section",
+                    "title": "Pairwise EMD",
+                    "entries": [
+                        {"liquid": "caption"},
+                        {"type": "PlotlyFigure", "field": "fig"},
+                    ],
+                },
+            ]
+        )
+        specs = reviewer.get_viewer_specs()
+        assert specs[0]["liquid"] == "intro"
+        assert specs[1]["type"] == "Section"
+        assert specs[1]["title"] == "Pairwise EMD"
+        assert specs[1]["entries"][1]["type"] == "PlotlyFigure"
+        leaves = list(iter_spec_leaves(specs))
+        assert [s.get("type") or "liquid" for s in leaves] == [
+            "liquid",
+            "liquid",
+            "PlotlyFigure",
+        ]
+
+    def test_has_plotly_viewer_walks_section_leaves(self):
+        reviewer, _, _ = _build_reviewer(
+            viewer=[
+                {"liquid": "intro"},
+                {
+                    "type": "Section",
+                    "title": "Pairwise EMD",
+                    "entries": [
+                        {"liquid": "caption"},
+                        {"type": "PlotlyFigure", "field": "fig"},
+                    ],
+                },
+            ]
+        )
+        assert reviewer.has_plotly_viewer() is True
 
     def test_render_plotly_figure_from_field(self):
         fig = {

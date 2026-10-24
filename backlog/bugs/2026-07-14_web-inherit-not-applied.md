@@ -1,11 +1,12 @@
 ---
 id: 2026-07-14_web-inherit-not-applied
 title: 'Web interface does not apply inherit: sections'
-status: Proposed
-priority: Medium
+status: Completed
+priority: High
 created: '2026-07-14'
-last_updated: '2026-07-14'
-related_cips: []
+last_updated: '2026-10-23'
+related_cips:
+- "0018"
 tags:
 - web
 - inherit
@@ -65,5 +66,22 @@ config that uses `inherit:` for review widgets).
 
 ## Related
 
+- CIP: 0018 (prerequisite: stacked inherit needs the parent chain loaded)
 - Bug: 2026-07-14_web-template-expansion-missing
 - Tenet: progressive-augmentation
+
+## Progress Updates
+
+### 2026-10-23
+
+CIP-0018 Accepted. This bug is the first implementation step: confirm
+`WebReviewer` constructs `referia.config.interface.Interface` so `_parent` is
+populated. Status Ready, priority High.
+
+### 2026-07-14
+
+Task created (Proposed).
+
+### 2026-10-23 (implementation)
+
+Implemented on branch `cip0018-implement-stacked-inherit`. Tests in `tests/test_inherit_view.py` pass (32). Status Completed.

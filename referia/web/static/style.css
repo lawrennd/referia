@@ -750,10 +750,30 @@ span.entry-title {
     border-bottom: 1px solid var(--colour-border);
 }
 
+.viewer-col .review-section.viewer-section {
+    margin-bottom: 0.65rem;
+}
+
 .review-section-static > h3 {
     margin: 0.35rem 0 0.45rem;
     font-size: 1.05rem;
     font-weight: 600;
+}
+
+.review-section.inherited-section {
+    background: #f7f9fb;
+    border-style: dashed;
+}
+
+.inherited-open-parent {
+    font-weight: 400;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+}
+
+a.inherit-view-toggle {
+    font-size: 0.85rem;
+    white-space: nowrap;
 }
 
 .listing-chrome {

@@ -12,6 +12,7 @@ from referia.util.plotly_figures import (
     chapter_lens_radar_spec,
     doc_mds_plotly_spec,
     emd_heatmap_spec,
+    ground_cost_heatmap_spec,
     topic_document_heatmap_spec,
 )
 
@@ -107,6 +108,9 @@ def test_plotly_titles_and_topic_id_fallback():
     emd = emd_heatmap_spec([0.0], ["docA"], title="EMD")
     assert emd["layout"]["title"]["text"] == "EMD"
     assert emd["data"][0]["z"] == []
+    cost = ground_cost_heatmap_spec([0.0], title="Cost")
+    assert cost["layout"]["title"]["text"] == "Cost"
+    assert cost["data"][0]["z"] == []
     bars = axis_correlate_bars_spec(
         [{"axis": 2, "end": "positive", "topic_id": "T3", "r": 0.2}],
         title="Bars",
@@ -292,6 +296,78 @@ def test_draghi_share_matrix_leaf_orders_lenses_not_pack_order():
     ii = np.arange(z.shape[0])[:, None]
     jj = np.arange(z.shape[1])[None, :]
     assert float((z * (ii - ii.mean()) * (jj - jj.mean())).sum()) > 0
+
+
+def test_leaf_order_uses_supplied_distances():
+    cost = np.array(
+        [
+            [0.0, 0.1, 1.0, 1.0],
+            [0.1, 0.0, 1.0, 1.0],
+            [1.0, 1.0, 0.0, 0.1],
+            [1.0, 1.0, 0.1, 0.0],
+        ]
+    )
+    geo = list(_leaf_order(distances=cost))
+    assert _adjacent(0, 1, geo)
+    assert _adjacent(2, 3, geo)
+    condensed = cost[np.triu_indices(4, k=1)]
+    assert list(_leaf_order(distances=condensed)) == geo
+    assert list(_leaf_order(distances=np.zeros((4, 4)))) == [0, 1, 2, 3]
+    assert list(_leaf_order(distances=cost[:3])) == []
+    eye = np.eye(4)
+    assert list(_leaf_order(eye, distances=np.zeros((3, 4)))) == list(
+        _leaf_order(eye)
+    )
+
+
+def test_seriate_uses_emd_and_ground_cost_when_given():
+    P = [
+        [0.9, 0.05, 0.05, 0.0],
+        [0.05, 0.9, 0.05, 0.0],
+        [0.0, 0.05, 0.9, 0.05],
+        [0.0, 0.05, 0.05, 0.9],
+    ]
+    docs = ["A", "B", "C", "D"]
+    topics = {"T0": "L0", "T1": "L1", "T2": "L2", "T3": "L3"}
+    cost = [
+        [0.0, 0.1, 1.0, 1.0],
+        [0.1, 0.0, 1.0, 1.0],
+        [1.0, 1.0, 0.0, 0.1],
+        [1.0, 1.0, 0.1, 0.0],
+    ]
+    heat = topic_document_heatmap_spec(
+        P, docs, topic_labels=topics, row_distances=cost, col_distances=cost
+    )
+    x = heat["data"][0]["x"]
+    y = heat["data"][0]["y"]
+    assert _adjacent("L0", "L1", x)
+    assert _adjacent("L2", "L3", x)
+    assert _adjacent("A", "B", y)
+    assert _adjacent("C", "D", y)
+    radar = chapter_lens_radar_spec(
+        P, docs, topic_labels=topics, row_distances=cost, col_distances=cost
+    )
+    assert radar["data"][0]["theta"][:-1] == x
+    fallback = topic_document_heatmap_spec(
+        P, docs, topic_labels=topics, row_distances=[[0.0]], col_distances=[[0.0]]
+    )
+    default = topic_document_heatmap_spec(P, docs, topic_labels=topics)
+    assert fallback["data"][0]["x"] == default["data"][0]["x"]
+    assert fallback["data"][0]["y"] == default["data"][0]["y"]
+    emd = emd_heatmap_spec(cost, docs)
+    assert _adjacent("A", "B", emd["data"][0]["y"])
+    assert _adjacent("C", "D", emd["data"][0]["y"])
+    raw = emd_heatmap_spec(cost, docs, reorder=False)
+    assert raw["data"][0]["y"] == docs
+    lenses = ground_cost_heatmap_spec(cost, topic_labels=topics)
+    assert _adjacent("L0", "L1", lenses["data"][0]["y"])
+    assert _adjacent("L2", "L3", lenses["data"][0]["y"])
+    assert lenses["data"][0]["x"] == lenses["data"][0]["y"]
+    assert lenses["layout"]["title"]["text"] == "Pairwise ground cost"
+    raw_lenses = ground_cost_heatmap_spec(
+        cost, topic_labels=topics, reorder=False
+    )
+    assert raw_lenses["data"][0]["y"] == ["L0", "L1", "L2", "L3"]
 
 
 def test_heatmap_short_chapter_ticks_keep_full_hover_labels():

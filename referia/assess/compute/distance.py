@@ -212,6 +212,20 @@ def cosine_ground_cost(topic_means) -> np.ndarray:
     return np.clip(M, 0.0, None)
 
 
+def _distance_matrix_for_seriation(M, n: int):
+    """Square distance matrix with a positive off-diagonal, else None.
+
+    All-zero EMD (POT missing) must not replace barycenter row order.
+    """
+    arr = np.asarray(M, float)
+    if arr.ndim != 2 or arr.shape != (n, n) or n == 0:
+        return None
+    off = arr - np.diag(np.diag(arr))
+    if not np.any(np.nan_to_num(off, nan=0.0) > 0):
+        return None
+    return arr
+
+
 def emd_distance_matrix(P, ground_cost) -> np.ndarray:
     """Pairwise Earth Mover's Distance between rows of *P* under *ground_cost*."""
     ot = _require_ot()
@@ -574,6 +588,7 @@ def run_document_distance_analysis(
         chapter_lens_radar_spec,
         doc_mds_plotly_spec,
         emd_heatmap_spec,
+        ground_cost_heatmap_spec,
         topic_document_heatmap_spec,
     )
 
@@ -584,13 +599,27 @@ def run_document_distance_analysis(
         topic_labels=topic_labels,
         doc_labels=display,
     )
+    n_docs, n_topics = int(P.shape[0]), int(P.shape[1])
+    row_distances = _distance_matrix_for_seriation(D, n_docs)
+    col_distances = _distance_matrix_for_seriation(cost, n_topics)
     heat_spec = topic_document_heatmap_spec(
-        P, docs, topic_labels=topic_labels, doc_labels=display
+        P,
+        docs,
+        topic_labels=topic_labels,
+        doc_labels=display,
+        row_distances=row_distances,
+        col_distances=col_distances,
     )
     radar_spec = chapter_lens_radar_spec(
-        P, docs, topic_labels=topic_labels, doc_labels=display
+        P,
+        docs,
+        topic_labels=topic_labels,
+        doc_labels=display,
+        row_distances=row_distances,
+        col_distances=col_distances,
     )
     emd_spec = emd_heatmap_spec(D, docs, doc_labels=display)
+    cost_spec = ground_cost_heatmap_spec(cost, topic_labels=topic_labels)
     bars_spec = axis_correlate_bars_spec(correlates)
 
     return (
@@ -611,4 +640,5 @@ def run_document_distance_analysis(
         _jsonable(emd_spec),
         _jsonable(bars_spec),
         _jsonable(radar_spec),
+        _jsonable(cost_spec),
     )

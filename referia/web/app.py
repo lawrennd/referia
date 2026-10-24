@@ -61,6 +61,19 @@ def create_app(
     app.state.templates = templates
     app.state.start_time = int(time.time())  # cache-buster for static assets
 
+    @app.middleware("http")
+    async def _capture_inherit_view_query(request, call_next):
+        """Per-request view options (CIP-0018). WebReviewer is shared across requests."""
+        from referia.config.inherit_view import set_request_query
+
+        token = set_request_query(request.query_params)
+        try:
+            return await call_next(request)
+        finally:
+            from referia.config.inherit_view import reset_request_query
+
+            reset_request_query(token)
+
     # reviewer_cache stores (mtime, WebReviewer) pairs keyed by resolved config path.
     # Used in root-server mode; populated lazily on first request for each path.
     app.state.reviewer_cache: dict[str, tuple[float, Any]] = {}

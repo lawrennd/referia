@@ -685,6 +685,31 @@ class Reviewer(DisplaySystem):
         for count, view in enumerate(views):
             label = "_viewer_label" + str(count)
             view_dict = view if isinstance(view, dict) else {"liquid": str(view)}
+            if view_dict.get("type") == "Section":
+                title = str(view_dict.get("title") or "").strip()
+                if title:
+                    heading = {
+                        "liquid": (
+                            title
+                            if title.lstrip().startswith("#")
+                            else f"### {title}"
+                        )
+                    }
+                    widgets.add(
+                        **{
+                            label: Markdown(
+                                description=" ",
+                                field_name=label,
+                                column_name=label,
+                                parent=self,
+                                **heading,
+                            )
+                        }
+                    )
+                sub = view_dict.get("entries") or view_dict.get("children") or []
+                if isinstance(sub, list) and sub:
+                    widgets.add(cluster=self._create_viewer(sub))
+                continue
             vtype = viewer_entry_type(view_dict)
             if vtype == "PlotlyFigure":
                 widgets.add(
@@ -798,16 +823,35 @@ class Reviewer(DisplaySystem):
         if "scored" in self._interface:
             self._widgets.add(cluster=self._create_progress_bar(label="_progress_label"))
 
+        from referia.config.inherit_view import (
+            compose_viewer_review,
+            view_options_for_interface,
+        )
+
+        # Jupyter has no query string: YAML inherit.compose or today's link
+        # (CIP-0018). Web honour allowlisted ?compose= params.
+        opts = view_options_for_interface(self._interface, query=None)
+        composed = compose_viewer_review(self._interface, opts)
+        if composed is not None:
+            viewer_entries, review_entries = composed
+        else:
+            viewer_entries = (
+                self._interface["viewer"] if "viewer" in self._interface else []
+            )
+            review_entries = (
+                self._interface["review"] if "review" in self._interface else []
+            )
+
         # Process the viewer from the interface file.
-        if "viewer" in self._interface:
-            self._widgets.add(cluster=self._create_viewer(self._interface["viewer"]))
+        if viewer_entries:
+            self._widgets.add(cluster=self._create_viewer(viewer_entries))
 
         self._widgets.add(self._create_reload_button(self._interface))
         # Process the reviewer from the interface file.
 
         # Process the review from the interface file.
-        if "review" in self._interface:
-            self._widgets.add(self._create_review(self._interface["review"]))
+        if review_entries:
+            self._widgets.add(self._create_review(review_entries))
             
         # Process the document creators from the interface file.
         if "documents" in self._interface:

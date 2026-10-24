@@ -1,10 +1,10 @@
 ---
 id: "0012"
 title: "Reviewers see inherited interface sections on the same page as the child"
-status: "Proposed"
+status: "Implemented"
 priority: "High"
 created: "2026-10-22"
-last_updated: "2026-10-22"
+last_updated: "2026-10-23"
 related_tenets:
 - template-driven-composition
 - user-oriented-convenience
@@ -57,6 +57,10 @@ Distinct from REQ-000E named layouts: stacking inherited *content* is orthogonal
 - Related: [REQ-0006](./req0006_template-driven-interfaces.md), [REQ-0008](./req0008_web-review-without-jupyter.md), [REQ-0009](./req0009_multi-config-web-hosting.md), [REQ-000E](./req000E_named-layout-compositions.md)
 
 ## Progress Updates
+
+### 2026-10-23
+
+CIP-0018 Accepted. Backlog tasks created. Status In Progress.
 
 ### 2026-10-22
 

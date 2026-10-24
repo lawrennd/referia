@@ -36,6 +36,9 @@
                 hx-target="#review-panel"
                 hx-swap="innerHTML focus-scroll:false"
                 hx-disabled-elt="this">Reload</button>
+        {% if inherit_view_toggle_html %}
+            {{ inherit_view_toggle_html | safe }}
+        {% endif %}
     </div>
 </div>
 

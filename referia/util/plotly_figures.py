@@ -26,6 +26,7 @@ __all__ = [
     "topic_document_heatmap_spec",
     "chapter_lens_radar_spec",
     "emd_heatmap_spec",
+    "ground_cost_heatmap_spec",
     "axis_correlate_bars_spec",
     "cluster_pca_plotly_spec",
     "cluster_dendrogram_plotly_spec",
@@ -630,21 +631,39 @@ def _pdist_or_empty(arr: np.ndarray, metric: str):
     return np.nan_to_num(y, nan=1.0, posinf=1.0, neginf=1.0)
 
 
-def _leaf_order(X: np.ndarray) -> np.ndarray:
-    """Optimal leaf order of rows under average-linkage clustering.
+def _condensed_from_distances(distances) -> tuple[int, np.ndarray | None]:
+    """Square or condensed distances → (n, condensed) for average linkage.
 
-    Microarray seriation: cluster the profile vectors, then Bar-Joseph
-    leaf order so adjacent leaves are as similar as the dendrogram allows.
-    Pearson correlation is the gene-expression metric (similar *response*
-    across conditions). Cosine is the fallback when correlation is
-    undefined (constant rows). n ≤ 2 keeps the given order.
+    Non-square or empty input returns ``(0, None)``. Degenerate distances
+    (all zero / non-finite) return ``(n, None)`` so the caller keeps the
+    given order. *n* ≤ 2 is always degenerate: Bar-Joseph needs a tree.
     """
-    arr = np.asarray(X, float)
-    if arr.ndim != 2:
-        return np.arange(0)
-    n = int(arr.shape[0])
-    if n <= 2:
-        return np.arange(n)
+    D = np.asarray(distances, float)
+    if D.ndim == 1:
+        m = int(D.size)
+        n = int(round((1.0 + np.sqrt(1.0 + 8.0 * m)) / 2.0))
+        if n * (n - 1) // 2 != m or n == 0:
+            return 0, None
+        y = np.clip(np.nan_to_num(D, nan=1.0, posinf=1.0, neginf=1.0), 0.0, None)
+    elif D.ndim == 2:
+        n = int(D.shape[0])
+        if D.shape != (n, n) or n == 0:
+            return 0, None
+        if n <= 2:
+            return n, None
+        M = 0.5 * (D + D.T)
+        np.fill_diagonal(M, 0.0)
+        M = np.clip(np.nan_to_num(M, nan=1.0, posinf=1.0, neginf=1.0), 0.0, None)
+        y = M[np.triu_indices(n, k=1)]
+    else:
+        return 0, None
+    finite = y[np.isfinite(y)]
+    if finite.size == 0 or not np.any(finite > 0):
+        return n, None
+    return n, np.asarray(y, float)
+
+
+def _olo_leaves(n: int, y: np.ndarray) -> np.ndarray:
     try:
         from scipy.cluster.hierarchy import (
             leaves_list,
@@ -653,17 +672,55 @@ def _leaf_order(X: np.ndarray) -> np.ndarray:
         )
     except ImportError:
         return np.arange(n)
-    y = _pdist_or_empty(arr, "correlation")
-    if y is None:
-        y = _pdist_or_empty(arr, "cosine")
-    if y is None:
-        return np.arange(n)
     Z = linkage(y, method="average")
     try:
         Z = optimal_leaf_ordering(Z, y)
     except (ValueError, FloatingPointError):
         pass
     return np.asarray(leaves_list(Z), dtype=int)
+
+
+def _usable_square(distances, n: int):
+    if distances is None or n <= 0:
+        return None
+    D = np.asarray(distances, float)
+    if D.ndim != 2 or D.shape != (n, n):
+        return None
+    return D
+
+
+def _leaf_order(X: np.ndarray | None = None, *, distances=None) -> np.ndarray:
+    """Optimal leaf order under average-linkage clustering.
+
+    Pass ``distances=`` (square or condensed) to cluster with a geometry
+    that already exists — EMD between documents, cosine ground cost
+    between lenses. That is the option that stays consistent with the
+    share simplex. Without it, rows of *X* are clustered by Pearson of
+    the profile vectors (cosine if correlation is undefined): the
+    microarray default, which treats axes as orthonormal.
+
+    *n* ≤ 2 and degenerate distances keep the given order.
+    """
+    if distances is not None:
+        n, y = _condensed_from_distances(distances)
+        if y is not None:
+            return _olo_leaves(n, y)
+        if n > 0:
+            return np.arange(n)
+        if X is None:
+            return np.arange(0)
+    arr = np.asarray(X if X is not None else np.zeros((0, 0)), float)
+    if arr.ndim != 2:
+        return np.arange(0)
+    n = int(arr.shape[0])
+    if n <= 2:
+        return np.arange(n)
+    y = _pdist_or_empty(arr, "correlation")
+    if y is None:
+        y = _pdist_or_empty(arr, "cosine")
+    if y is None:
+        return np.arange(n)
+    return _olo_leaves(n, y)
 
 
 def _barycenter_row_order(arr: np.ndarray, col_ord: np.ndarray) -> np.ndarray:
@@ -739,26 +796,36 @@ def _seriate_share_matrix(
     topic_labels=None,
     doc_labels: Sequence[Any] | None = None,
     reorder: bool = True,
+    row_distances=None,
+    col_distances=None,
 ) -> tuple[np.ndarray, list[str], list[str], list[str]]:
-    """Reorder so similar lenses sit together and chapter mass tracks them.
+    """Reorder rows and columns to match an explicit geometry when given.
 
-    Columns: average-linkage leaf order of lens share *profiles* (similar
-    usage across chapters is adjacent). Rows: barycenter of that column
-    order, so a chapter dominated by the left-hand lens is drawn at the
-    top and mass walks toward the right. Independent row clustering
-    cannot do that — it will sandwich two mixed chapters whose peaks
-    sit at opposite ends of the lens axis. A final root flip puts the
-    high-mass cells toward the diagonal.
+    ``col_distances`` (k × k) leaf-orders lenses — typically the cosine
+    ground cost EMD already uses. ``row_distances`` (n × n) leaf-orders
+    documents — typically pairwise EMD under that cost. Missing matrices
+    keep the microarray defaults: Pearson of lens share profiles for
+    columns, barycenter of that axis for rows. A final root flip puts
+    high-mass cells toward the diagonal. Shapes that do not match *P*
+    are ignored.
     """
     arr = np.asarray(P, float)
     docs, labels = _display_docs(doc_ids, doc_labels)
     if arr.ndim != 2:
         return arr, docs, labels, []
-    k = int(arr.shape[1])
+    n, k = int(arr.shape[0]), int(arr.shape[1])
     col_ids = list(range(k))
-    if reorder and arr.shape[0] == len(docs) and k > 0:
-        col_ord = _leaf_order(arr.T)
-        row_ord = _barycenter_row_order(arr, col_ord)
+    if reorder and n == len(docs) and k > 0:
+        cost = _usable_square(col_distances, k)
+        col_ord = (
+            _leaf_order(distances=cost) if cost is not None else _leaf_order(arr.T)
+        )
+        emd = _usable_square(row_distances, n)
+        row_ord = (
+            _leaf_order(distances=emd)
+            if emd is not None
+            else _barycenter_row_order(arr, col_ord)
+        )
         row_ord, col_ord = _orient_leaf_orders(arr, row_ord, col_ord)
         arr = arr[np.ix_(row_ord, col_ord)]
         docs = [docs[i] for i in row_ord]
@@ -865,12 +932,15 @@ def topic_document_heatmap_spec(
     title: str | None = None,
     doc_labels: Sequence[Any] | None = None,
     reorder: bool = True,
+    row_distances=None,
+    col_distances=None,
 ) -> dict[str, Any]:
     """Heatmap of chapter × lens soft histograms.
 
-    Lenses are leaf-ordered so similar share profiles sit next to each
-    other; chapters are then sorted by barycenter on that axis so mass
-    tracks left to right. Pass ``reorder=False`` to keep pack order.
+    Pass ``col_distances`` / ``row_distances`` to leaf-order with the
+    same geometry as EMD (cosine ground cost, pairwise EMD). Without
+    them, lenses cluster by Pearson of share profiles and rows follow
+    the barycenter of that axis. ``reorder=False`` keeps pack order.
     """
     arr, docs, labels, x = _seriate_share_matrix(
         P,
@@ -878,6 +948,8 @@ def topic_document_heatmap_spec(
         topic_labels=topic_labels,
         doc_labels=doc_labels,
         reorder=reorder,
+        row_distances=row_distances,
+        col_distances=col_distances,
     )
     return {
         "data": [
@@ -928,6 +1000,8 @@ def chapter_lens_radar_spec(
     title: str | None = None,
     doc_labels: Sequence[Any] | None = None,
     reorder: bool = True,
+    row_distances=None,
+    col_distances=None,
 ) -> dict[str, Any]:
     """One polar trace per chapter: lens shares, matching pub-dialogue radar.
 
@@ -939,6 +1013,8 @@ def chapter_lens_radar_spec(
         topic_labels=topic_labels,
         doc_labels=doc_labels,
         reorder=reorder,
+        row_distances=row_distances,
+        col_distances=col_distances,
     )
     if arr.ndim != 2 or arr.shape[0] != len(docs) or arr.shape[1] == 0:
         return {
@@ -983,45 +1059,122 @@ def chapter_lens_radar_spec(
     }
 
 
-def emd_heatmap_spec(
-    emd_matrix,
-    doc_ids: Sequence[Any],
+def _square_distance_heatmap_spec(
+    distances,
+    ids: Sequence[Any],
     *,
-    title: str | None = None,
-    doc_labels: Sequence[Any] | None = None,
+    title: str,
+    labels: Sequence[Any] | None = None,
+    axis_title: str = "Document",
+    tickangle: int | None = None,
+    reorder: bool = True,
 ) -> dict[str, Any]:
-    """Pairwise EMD heatmap."""
-    arr = np.asarray(emd_matrix, float)
-    docs, labels = _display_docs(doc_ids, doc_labels)
-    labels_x = list(labels)
-    labels_y = list(labels)
+    """Square distance heatmap; both axes share one Bar-Joseph leaf order."""
+    arr = np.asarray(distances, float)
+    docs, disp = _display_docs(ids, labels)
+    n = int(arr.shape[0]) if arr.ndim == 2 else 0
+    if (
+        reorder
+        and arr.ndim == 2
+        and arr.shape[0] == arr.shape[1] == len(docs)
+        and n > 2
+    ):
+        order = _leaf_order(distances=arr)
+        arr = arr[np.ix_(order, order)]
+        docs = [docs[i] for i in order]
+        disp = [disp[i] for i in order]
+    xaxis_extra: dict[str, Any] = {"title": axis_title, "automargin": True}
+    yaxis_extra: dict[str, Any] = {
+        "title": axis_title,
+        "autorange": "reversed",
+        "automargin": True,
+    }
+    if tickangle is not None:
+        xaxis_extra["tickangle"] = tickangle
+        xaxis_extra["tickfont"] = {"size": 11}
+        yaxis_extra["tickfont"] = {"size": 11}
     return {
         "data": [
             {
                 "type": "heatmap",
                 "z": arr.tolist() if arr.ndim == 2 else [],
-                "x": labels_x,
-                "y": labels_y,
+                "x": list(disp),
+                "y": list(disp),
                 "hovertemplate": "%{y} → %{x}: %{z:.3f}<extra></extra>",
                 "customdata": [[{"doc": d} for d in docs] for _ in docs],
             }
         ],
         "layout": {
             "title": {
-                "text": title or "Pairwise EMD",
+                "text": title,
                 "x": 0.0,
                 "xanchor": "left",
                 "font": {"size": 14, "color": "#0b0b0b"},
             },
-            "xaxis": _category_axis(labels_x, title="Document"),
-            "yaxis": _category_axis(
-                labels_y, title="Document", autorange="reversed"
-            ),
+            "xaxis": _category_axis(disp, **xaxis_extra),
+            "yaxis": _category_axis(disp, **yaxis_extra),
             "plot_bgcolor": "white",
             "paper_bgcolor": "white",
-            "margin": {"l": 80, "r": 20, "t": 50, "b": 80},
+            "margin": {
+                "l": 80,
+                "r": 20,
+                "t": 50,
+                "b": 200 if tickangle is not None else 80,
+            },
         },
     }
+
+
+def emd_heatmap_spec(
+    emd_matrix,
+    doc_ids: Sequence[Any],
+    *,
+    title: str | None = None,
+    doc_labels: Sequence[Any] | None = None,
+    reorder: bool = True,
+) -> dict[str, Any]:
+    """Pairwise EMD heatmap.
+
+    When ``reorder`` is true (default), both axes use the Bar-Joseph
+    leaf order of the EMD matrix itself, so adjacent documents are
+    cheap to transport into each other.
+    """
+    return _square_distance_heatmap_spec(
+        emd_matrix,
+        doc_ids,
+        title=title or "Pairwise EMD",
+        labels=doc_labels,
+        axis_title="Document",
+        reorder=reorder,
+    )
+
+
+def ground_cost_heatmap_spec(
+    ground_cost,
+    *,
+    topic_labels=None,
+    title: str | None = None,
+    reorder: bool = True,
+) -> dict[str, Any]:
+    """Pairwise cosine ground-cost heatmap between lenses.
+
+    When ``reorder`` is true (default), both axes use the Bar-Joseph
+    leaf order of this matrix, so adjacent lenses are cheap to move
+    mass between. That is the ground metric EMD already uses.
+    """
+    arr = np.asarray(ground_cost, float)
+    k = int(arr.shape[0]) if arr.ndim == 2 and arr.shape[0] == arr.shape[1] else 0
+    ids = [f"T{j}" for j in range(k)]
+    labels = [_topic_label(j, topic_labels) for j in range(k)]
+    return _square_distance_heatmap_spec(
+        arr if k else ground_cost,
+        ids,
+        title=title or "Pairwise ground cost",
+        labels=labels,
+        axis_title="Lens",
+        tickangle=-90,
+        reorder=reorder,
+    )
 
 
 def axis_correlate_bars_spec(

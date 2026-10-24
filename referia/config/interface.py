@@ -18,6 +18,10 @@ from referia.config.dialect import (
     enforce_config_version,
     normalise_referia_config,
 )
+from referia.config.inherit_view import (
+    PARENT_ASSESSOR_LINK_KEY,
+    collect_interface_layers,
+)
 
 
 ctxt = Context()
@@ -206,6 +210,24 @@ class Interface(lynguine.config.interface.Interface):
         for key, value in kwargs.items():
             if key in parent_params:
                 parent_kwargs[key] = value
+
+        # Snapshot this node's own viewer/review before lynguine inherit
+        # deletes ignored keys from *parent* ``_data`` (CIP-0018).
+        viewer = data.get("viewer")
+        if viewer is None:
+            self._layer_viewer = []
+        elif isinstance(viewer, list):
+            self._layer_viewer = list(viewer)
+        else:
+            self._layer_viewer = [viewer]
+        review = data.get("review")
+        if review is None:
+            self._layer_review = []
+        elif isinstance(review, list):
+            self._layer_review = list(review)
+        else:
+            self._layer_review = [review]
+        self._layer_title = data.get("title")
 
         super().__init__(**parent_kwargs)
 
@@ -550,7 +572,17 @@ class Interface(lynguine.config.interface.Interface):
         
             
 
-        viewelem = {"display": 'Parent assesser available <a href="' + os.path.relpath(os.path.expandvars(self._parent._directory), self._directory) + '" target="_blank">here</a>.'}
+        viewelem = {
+            "display": (
+                'Parent assesser available <a href="'
+                + os.path.relpath(
+                    os.path.expandvars(self._parent._directory),
+                    self._directory,
+                )
+                + '" target="_blank">here</a>.'
+            ),
+            PARENT_ASSESSOR_LINK_KEY: True,
+        }
 
         # Add links to parent assessment by placing in viewer.
         if "viewer" in self._data:
@@ -562,6 +594,17 @@ class Interface(lynguine.config.interface.Interface):
             self._data["viewer"] = [viewelem]
 
         super()._process_parent()
+
+    def interface_layers(self):
+        """Root-first inherit layers from each node's own ``_data``.
+
+        Returns a list of :class:`~referia.config.inherit_view.InterfaceLayer`
+        (title, directory, viewer, review, writable, is_self).  Does not use
+        lynguine ``__getitem__`` for ``viewer`` / ``review`` (those lists are
+        already merged and drop provenance). CIP-0018.
+        """
+        return collect_interface_layers(self)
+
             
 def expand_load_review(details):
     """
