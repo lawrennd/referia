@@ -317,6 +317,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get"><code class="docutils literal notranslate"><span class="pre">Interface.get()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get_cache_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_cache_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get_output_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_output_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.interface_layers"><code class="docutils literal notranslate"><span class="pre">Interface.interface_layers()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.items"><code class="docutils literal notranslate"><span class="pre">Interface.items()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.keys"><code class="docutils literal notranslate"><span class="pre">Interface.keys()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.to_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.to_yaml()</span></code></a></li>
@@ -1527,6 +1528,31 @@
         <span class="k">for</span> <span class="n">count</span><span class="p">,</span> <span class="n">view</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">views</span><span class="p">):</span>
             <span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;_viewer_label&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">count</span><span class="p">)</span>
             <span class="n">view_dict</span> <span class="o">=</span> <span class="n">view</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">view</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{</span><span class="s2">&quot;liquid&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">view</span><span class="p">)}</span>
+            <span class="k">if</span> <span class="n">view_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;Section&quot;</span><span class="p">:</span>
+                <span class="n">title</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">view_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">title</span><span class="p">:</span>
+                    <span class="n">heading</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;liquid&quot;</span><span class="p">:</span> <span class="p">(</span>
+                            <span class="n">title</span>
+                            <span class="k">if</span> <span class="n">title</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)</span>
+                            <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;### </span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+                    <span class="p">}</span>
+                    <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
+                        <span class="o">**</span><span class="p">{</span>
+                            <span class="n">label</span><span class="p">:</span> <span class="n">Markdown</span><span class="p">(</span>
+                                <span class="n">description</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">,</span>
+                                <span class="n">field_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                                <span class="n">column_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                                <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                                <span class="o">**</span><span class="n">heading</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="p">}</span>
+                    <span class="p">)</span>
+                <span class="n">sub</span> <span class="o">=</span> <span class="n">view_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entries&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">view_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;children&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sub</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="n">sub</span><span class="p">:</span>
+                    <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">cluster</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_viewer</span><span class="p">(</span><span class="n">sub</span><span class="p">))</span>
+                <span class="k">continue</span>
             <span class="n">vtype</span> <span class="o">=</span> <span class="n">viewer_entry_type</span><span class="p">(</span><span class="n">view_dict</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">vtype</span> <span class="o">==</span> <span class="s2">&quot;PlotlyFigure&quot;</span><span class="p">:</span>
                 <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
@@ -1640,16 +1666,35 @@
         <span class="k">if</span> <span class="s2">&quot;scored&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">cluster</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_progress_bar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;_progress_label&quot;</span><span class="p">))</span>
 
+        <span class="kn">from</span><span class="w"> </span><span class="nn">referia.config.inherit_view</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+            <span class="n">compose_viewer_review</span><span class="p">,</span>
+            <span class="n">view_options_for_interface</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Jupyter has no query string: YAML inherit.compose or today&#39;s link</span>
+        <span class="c1"># (CIP-0018). Web honour allowlisted ?compose= params.</span>
+        <span class="n">opts</span> <span class="o">=</span> <span class="n">view_options_for_interface</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">,</span> <span class="n">query</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">composed</span> <span class="o">=</span> <span class="n">compose_viewer_review</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">,</span> <span class="n">opts</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">composed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">viewer_entries</span><span class="p">,</span> <span class="n">review_entries</span> <span class="o">=</span> <span class="n">composed</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">viewer_entries</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;viewer&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span> <span class="k">else</span> <span class="p">[]</span>
+            <span class="p">)</span>
+            <span class="n">review_entries</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;review&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span> <span class="k">else</span> <span class="p">[]</span>
+            <span class="p">)</span>
+
         <span class="c1"># Process the viewer from the interface file.</span>
-        <span class="k">if</span> <span class="s2">&quot;viewer&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">cluster</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_viewer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">viewer_entries</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">cluster</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_viewer</span><span class="p">(</span><span class="n">viewer_entries</span><span class="p">))</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_reload_button</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">))</span>
         <span class="c1"># Process the reviewer from the interface file.</span>
 
         <span class="c1"># Process the review from the interface file.</span>
-        <span class="k">if</span> <span class="s2">&quot;review&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_review</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">review_entries</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_review</span><span class="p">(</span><span class="n">review_entries</span><span class="p">))</span>
             
         <span class="c1"># Process the document creators from the interface file.</span>
         <span class="k">if</span> <span class="s2">&quot;documents&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="p">:</span>

@@ -320,6 +320,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.get"><code class="docutils literal notranslate"><span class="pre">Interface.get()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.get_cache_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_cache_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.get_output_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_output_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.interface_layers"><code class="docutils literal notranslate"><span class="pre">Interface.interface_layers()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.items"><code class="docutils literal notranslate"><span class="pre">Interface.items()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.keys"><code class="docutils literal notranslate"><span class="pre">Interface.keys()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.config.interface.Interface.to_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.to_yaml()</span></code></a></li>
@@ -1020,6 +1021,16 @@ or if the YAML cannot be parsed, or if a specified field is not found.</p></li>
 <dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#list" title="(in Python v3.15)">list</a></p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="referia.config.interface.Interface.interface_layers">
+<span class="sig-name descname"><span class="pre">interface_layers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/referia/config/interface.html#Interface.interface_layers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#referia.config.interface.Interface.interface_layers" title="Link to this definition"></a></dt>
+<dd><p>Root-first inherit layers from each node’s own <code class="docutils literal notranslate"><span class="pre">_data</span></code>.</p>
+<p>Returns a list of <code class="xref py py-class docutils literal notranslate"><span class="pre">InterfaceLayer</span></code>
+(title, directory, viewer, review, writable, is_self).  Does not use
+lynguine <code class="docutils literal notranslate"><span class="pre">__getitem__</span></code> for <code class="docutils literal notranslate"><span class="pre">viewer</span></code> / <code class="docutils literal notranslate"><span class="pre">review</span></code> (those lists are
+already merged and drop provenance). CIP-0018.</p>
 </dd></dl>
 
 <dl class="py method">

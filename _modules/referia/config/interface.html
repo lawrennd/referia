@@ -317,6 +317,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get"><code class="docutils literal notranslate"><span class="pre">Interface.get()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get_cache_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_cache_columns()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get_output_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_output_columns()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.interface_layers"><code class="docutils literal notranslate"><span class="pre">Interface.interface_layers()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.items"><code class="docutils literal notranslate"><span class="pre">Interface.items()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.keys"><code class="docutils literal notranslate"><span class="pre">Interface.keys()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.to_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.to_yaml()</span></code></a></li>
@@ -852,6 +853,10 @@
     <span class="n">enforce_config_version</span><span class="p">,</span>
     <span class="n">normalise_referia_config</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">referia.config.inherit_view</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PARENT_ASSESSOR_LINK_KEY</span><span class="p">,</span>
+    <span class="n">collect_interface_layers</span><span class="p">,</span>
+<span class="p">)</span>
 
 
 <span class="n">ctxt</span> <span class="o">=</span> <span class="n">Context</span><span class="p">()</span>
@@ -1045,6 +1050,24 @@
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">parent_params</span><span class="p">:</span>
                 <span class="n">parent_kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="c1"># Snapshot this node&#39;s own viewer/review before lynguine inherit</span>
+        <span class="c1"># deletes ignored keys from *parent* ``_data`` (CIP-0018).</span>
+        <span class="n">viewer</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;viewer&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">viewer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_layer_viewer</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">viewer</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_layer_viewer</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">viewer</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_layer_viewer</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewer</span><span class="p">]</span>
+        <span class="n">review</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;review&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">review</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_layer_review</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">review</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_layer_review</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">review</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_layer_review</span> <span class="o">=</span> <span class="p">[</span><span class="n">review</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layer_title</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">parent_kwargs</span><span class="p">)</span>
 
@@ -1389,7 +1412,17 @@
         
             
 
-        <span class="n">viewelem</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;display&quot;</span><span class="p">:</span> <span class="s1">&#39;Parent assesser available &lt;a href=&quot;&#39;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="o">.</span><span class="n">_directory</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;&quot; target=&quot;_blank&quot;&gt;here&lt;/a&gt;.&#39;</span><span class="p">}</span>
+        <span class="n">viewelem</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;display&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s1">&#39;Parent assesser available &lt;a href=&quot;&#39;</span>
+                <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="o">.</span><span class="n">_directory</span><span class="p">),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="o">+</span> <span class="s1">&#39;&quot; target=&quot;_blank&quot;&gt;here&lt;/a&gt;.&#39;</span>
+            <span class="p">),</span>
+            <span class="n">PARENT_ASSESSOR_LINK_KEY</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="p">}</span>
 
         <span class="c1"># Add links to parent assessment by placing in viewer.</span>
         <span class="k">if</span> <span class="s2">&quot;viewer&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">:</span>
@@ -1400,7 +1433,21 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">]</span>
 
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_process_parent</span><span class="p">()</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_process_parent</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Interface.interface_layers">
+<a class="viewcode-back" href="../../../modules/config.html#referia.config.interface.Interface.interface_layers">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">interface_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Root-first inherit layers from each node&#39;s own ``_data``.</span>
+
+<span class="sd">        Returns a list of :class:`~referia.config.inherit_view.InterfaceLayer`</span>
+<span class="sd">        (title, directory, viewer, review, writable, is_self).  Does not use</span>
+<span class="sd">        lynguine ``__getitem__`` for ``viewer`` / ``review`` (those lists are</span>
+<span class="sd">        already merged and drop provenance). CIP-0018.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">collect_interface_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+</div>
+
 
             
 <span class="k">def</span><span class="w"> </span><span class="nf">expand_load_review</span><span class="p">(</span><span class="n">details</span><span class="p">):</span>
