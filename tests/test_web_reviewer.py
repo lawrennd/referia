@@ -1869,6 +1869,213 @@ class TestRowsAndFilters:
         reviewer._apply_field_defaults()
         assert storage[("a", "Start")] is None
 
+    def test_args_default_string_remains_literal(self):
+        """Only top-level ``default:`` strings are sources; args.default is a value."""
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"Start": None, "Interview Time": "15:00"},
+            review=[
+                {
+                    "type": "Text",
+                    "field": "Start",
+                    "args": {"default": "Interview Time"},
+                }
+            ],
+        )
+        data.ismutable.return_value = True
+        storage[("a", "Start")] = None
+        reviewer.set_index("a")
+        assert reviewer._field_defaults["Start"] == "Interview Time"
+        assert "Start" not in reviewer._field_default_sources
+        assert reviewer.get_value("Start") == "Interview Time"
+
+    def test_numeric_and_false_defaults_are_literals(self):
+        reviewer, _, _ = _build_reviewer(
+            review=[
+                {"type": "BoundedFloatText", "field": "sigma2", "default": 0},
+                {"type": "Text", "field": "flagged", "default": False},
+                {"type": "Flag", "field": "done"},
+                {"type": "Markdown", "liquid": "no field"},
+            ]
+        )
+        assert reviewer._field_defaults["sigma2"] == 0
+        assert reviewer._field_defaults["flagged"] is False
+        assert reviewer._field_defaults["done"] is False
+        assert "no field" not in reviewer._field_defaults
+        assert reviewer._field_default_sources == {}
+
+    def test_dict_source_and_value_together_prefers_literal(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"Start": None, "Interview Time": "15:00"},
+            review=[
+                {
+                    "type": "Text",
+                    "field": "Start",
+                    "default": {"value": "fallback", "source": "Interview Time"},
+                }
+            ],
+        )
+        data.ismutable.return_value = True
+        storage[("a", "Start")] = None
+        reviewer.set_index("a")
+        assert reviewer._field_defaults["Start"] == "fallback"
+        assert reviewer._field_default_sources["Start"] == "Interview Time"
+        assert reviewer.get_value("Start") == "fallback"
+        reviewer._apply_field_defaults()
+        assert storage[("a", "Start")] == "fallback"
+
+    def test_empty_dict_source_is_ignored(self):
+        reviewer, _, _ = _build_reviewer(
+            review=[
+                {
+                    "type": "Text",
+                    "field": "Start",
+                    "default": {"source": ""},
+                }
+            ]
+        )
+        assert reviewer._field_default_sources == {}
+        assert "Start" not in reviewer._field_defaults
+
+    def test_source_via_interface_mapping(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"Start": None, "Interview Time": "15:00"},
+            review=[
+                {
+                    "type": "Text",
+                    "field": "Start",
+                    "default": {"source": "scheduledStartTime"},
+                }
+            ],
+            extra={"input": {"mapping": {"scheduledStartTime": "Interview Time"}}},
+        )
+        data.ismutable.return_value = True
+        storage[("a", "Start")] = None
+        reviewer.set_index("a")
+        assert reviewer.get_value("Start") == "15:00"
+
+    def test_source_nested_in_section(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"Start": None, "Interview Time": "15:00"},
+            review=[
+                {
+                    "type": "Section",
+                    "title": "Times",
+                    "entries": [
+                        {"type": "Text", "field": "Start", "default": "Interview Time"}
+                    ],
+                }
+            ],
+        )
+        data.ismutable.return_value = True
+        storage[("a", "Start")] = None
+        reviewer.set_index("a")
+        assert reviewer.get_value("Start") == "15:00"
+
+    def test_present_value_not_overwritten_by_source(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"Start": "already", "Interview Time": "15:00"},
+            review=[{"type": "Text", "field": "Start", "default": "Interview Time"}],
+        )
+        data.ismutable.return_value = True
+        storage[("a", "Start")] = "already"
+        reviewer.set_index("a")
+        assert reviewer.get_value("Start") == "already"
+        reviewer._apply_field_defaults()
+        assert storage[("a", "Start")] == "already"
+
+    def test_nan_source_does_not_write(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"Start": None, "Interview Time": float("nan")},
+            review=[{"type": "Text", "field": "Start", "default": "Interview Time"}],
+        )
+        data.ismutable.return_value = True
+        storage[("a", "Start")] = None
+        storage[("a", "Interview Time")] = float("nan")
+        reviewer.set_index("a")
+        assert reviewer.get_value("Start") is None
+        reviewer._apply_field_defaults()
+        assert storage[("a", "Start")] is None
+
+    def test_mapped_column_identity_and_missing_alias_target(self):
+        reviewer, data, _ = _build_reviewer(
+            col_vals={"Interview Time": "15:00"},
+        )
+        assert reviewer._mapped_column("Interview Time") == "Interview Time"
+        data._name_column_map = {"scheduledStartTime": "Missing Col"}
+        assert reviewer._mapped_column("scheduledStartTime") == "scheduledStartTime"
+
+    def test_mapped_column_when_columns_unreadable(self):
+        reviewer, data, _ = _build_reviewer(col_vals={"Interview Time": "15:00"})
+
+        class Boom:
+            def __iter__(self):
+                raise RuntimeError("no columns")
+
+        data.columns = Boom()
+        assert reviewer._mapped_column("Interview Time") == "Interview Time"
+
+    def test_source_default_from_index_name(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["Verma_Salonee"],
+            col_vals={"Start": None},
+            review=[{"type": "Text", "field": "Start", "default": "Name"}],
+        )
+        type(data).index = PropertyMock(
+            return_value=pd.Index(["Verma_Salonee"], name="Name")
+        )
+        data.ismutable.return_value = True
+        storage[("Verma_Salonee", "Start")] = None
+        reviewer.set_index("Verma_Salonee")
+        assert reviewer._source_default_value("Name") == "Verma_Salonee"
+        assert reviewer.get_value("Start") == "Verma_Salonee"
+        assert reviewer.get_value("Name") == "Verma_Salonee"
+
+    def test_source_default_get_index_failure_is_none(self):
+        reviewer, data, _ = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"Start": None},
+            review=[{"type": "Text", "field": "Start", "default": "Name"}],
+        )
+        type(data).index = PropertyMock(return_value=pd.Index(["a"], name="Name"))
+        data.get_index.side_effect = RuntimeError("gone")
+        assert reviewer._source_default_value("Name") is None
+        assert reviewer.get_value("Name") is None
+
+    def test_source_default_unknown_when_columns_probe_fails(self):
+        reviewer, data, _ = _build_reviewer(
+            col_vals={"Interview Time": "15:00"},
+            review=[{"type": "Text", "field": "Start", "default": "Interview Time"}],
+        )
+
+        class Boom:
+            def __contains__(self, item):
+                raise RuntimeError("no columns")
+
+            def __iter__(self):
+                raise RuntimeError("no columns")
+
+        data.columns = Boom()
+        assert reviewer._source_default_value("Interview Time") is None
+
+    def test_fallback_default_missing_maps_is_none(self):
+        reviewer, _, _ = _build_reviewer()
+        del reviewer._field_defaults
+        del reviewer._field_default_sources
+        assert reviewer._fallback_default("Start") is None
+
+    def test_get_value_uses_mapped_column(self):
+        reviewer, data, _ = _build_reviewer(
+            col_vals={"Interview Time": "15:00"},
+        )
+        data._name_column_map = {"scheduledStartTime": "Interview Time"}
+        assert reviewer.get_value("scheduledStartTime") == "15:00"
+
     def test_sort_orders_working_indices(self):
         reviewer, _, storage = _build_reviewer(
             index_vals=["a", "b", "c"],

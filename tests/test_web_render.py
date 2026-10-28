@@ -4,8 +4,18 @@ Covers render_widget() for every supported widget type, render_viewer(),
 render_form(), visible_if conditions, and HTML escaping.
 """
 
+import logging
+import math
+
 import pytest
-from referia.web.render import render_widget, render_viewer, render_form
+from referia.web.render import (
+    _evaluate_liquid,
+    _liquid_environment,
+    _markdown_widget_content,
+    render_form,
+    render_viewer,
+    render_widget,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -1084,6 +1094,19 @@ class TestCriterionWidget:
         assert "{% if" not in html
         assert "scheduledStartTime" not in html
 
+    def test_elsif_used_when_interview_time_missing(self):
+        spec = {
+            "type": "Criterion",
+            "liquid": (
+                "{% if interviewTime %}{{interviewTime}}"
+                "{% elsif scheduledStartTime %}{{scheduledStartTime}}{% endif %}"
+            ),
+        }
+        html = render_widget(spec, None, data={"scheduledStartTime": "09:30"})
+        assert "09:30" in html
+        assert "{% if" not in html
+        assert "interviewTime" not in html
+
 
 # ---------------------------------------------------------------------------
 # Markdown widget top-level liquid: key
@@ -1194,6 +1217,112 @@ class TestMarkdownTopLevelLiquid:
         html = render_widget(spec, None, data={})
         assert "{% if %}" not in html
         assert "broken" not in html
+
+    def test_elsif_else_chain_matches_interview_start_widget(self):
+        spec = {
+            "type": "Markdown",
+            "liquid": (
+                "{% if interviewTime %}{{interviewTime}}"
+                "{% elsif scheduledStartTime %}{{scheduledStartTime}}"
+                "{% elsif scheduledStart %}{{scheduledStart}}"
+                "{% else %}unscheduled{% endif %}"
+            ),
+        }
+        html = render_widget(spec, None, data={"scheduledStart": "16:00"})
+        assert "16:00" in html
+        assert "unscheduled" not in html
+        html = render_widget(spec, None, data={})
+        assert "unscheduled" in html
+        assert "{% else %}" not in html
+
+    def test_unless_and_for_tags(self):
+        spec = {
+            "type": "Markdown",
+            "liquid": (
+                "{% unless withdrawn %}Active{% endunless %}\n"
+                "{% for item in items %}- {{item}}\n{% endfor %}"
+            ),
+        }
+        html = render_widget(
+            spec, None, data={"withdrawn": "", "items": ["one", "two"]}
+        )
+        assert "Active" in html
+        assert "one" in html
+        assert "two" in html
+        html = render_widget(spec, None, data={"withdrawn": "yes", "items": []})
+        assert "Active" not in html
+        assert "{% for" not in html
+
+    def test_nan_and_empty_values_are_stripped_before_if(self):
+        spec = {
+            "type": "Markdown",
+            "liquid": "{% if candidateEmail %}Email: {{candidateEmail}}{% endif %}",
+        }
+        html = render_widget(spec, None, data={"candidateEmail": float("nan")})
+        assert "Email:" not in html
+        html = render_widget(spec, None, data={"candidateEmail": ""})
+        assert "Email:" not in html
+        assert math.isnan(float("nan"))
+
+    def test_empty_top_level_liquid_falls_through_to_args(self):
+        spec = {
+            "type": "Markdown",
+            "liquid": "",
+            "args": {"liquid": "From args.liquid"},
+        }
+        html = render_widget(spec, None, data={})
+        assert "From args.liquid" in html
+
+    def test_markdown_content_skips_evaluation_without_row_data(self):
+        spec = {
+            "type": "Markdown",
+            "liquid": "{% if interviewTime %}{{interviewTime}}{% endif %}",
+        }
+        assert "{% if" in _markdown_widget_content(spec, None, data=None)
+
+
+class TestEvaluateLiquid:
+    """Direct coverage of python-liquid evaluation and registered filters."""
+
+    def test_empty_or_missing_template_is_empty_string(self):
+        assert _evaluate_liquid("", {"a": 1}) == ""
+        assert _evaluate_liquid(None, {"a": 1}) == ""
+
+    def test_none_data_renders_against_empty_context(self):
+        assert _evaluate_liquid("static", None) == "static"
+        assert "{{x}}" not in _evaluate_liquid("{{x}}", None)
+
+    def test_environment_is_cached(self):
+        assert _liquid_environment() is _liquid_environment()
+
+    def test_registered_filters(self):
+        assert "%20" in _evaluate_liquid("{{ path | url_escape }}", {"path": "a b"})
+        html = _evaluate_liquid("{{ text | markdownify }}", {"text": "**bold**"})
+        assert "bold" in html
+        assert "<" in html
+        assert _evaluate_liquid("{{ n | to_i }}", {"n": "3.9"}) == "3"
+        assert "/notebooks/foo" in _evaluate_liquid(
+            "{{ path | relative_url }}", {"path": "foo"}
+        )
+        abs_url = _evaluate_liquid("{{ path | absolute_url }}", {"path": "foo"})
+        assert abs_url.startswith("http://")
+        assert abs_url.endswith("foo")
+
+    def test_evaluation_exception_logs_and_returns_empty(self, caplog, monkeypatch):
+        def boom(_template):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(_liquid_environment(), "from_string", boom)
+        with caplog.at_level(logging.ERROR, logger="referia.web.render"):
+            assert _evaluate_liquid("{{x}}", {"x": 1}) == ""
+        assert "Liquid evaluation failed" in caplog.text
+        assert "boom" in caplog.text
+
+    def test_unknown_filter_does_not_dump_source(self):
+        rendered = _evaluate_liquid("{{ x | no_such_filter }}", {"x": "keep"})
+        assert rendered == ""
+        assert "no_such_filter" not in rendered
+        assert "keep" not in rendered
 
 
 class TestRenderDocumentPanel:
