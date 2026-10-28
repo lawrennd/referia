@@ -179,7 +179,11 @@ def _serve(args):
     from referia.web.app import create_app
 
     if args.root is not None:
-        app = create_app(root=args.root)
+        try:
+            app = create_app(root=args.root)
+        except (FileNotFoundError, NotADirectoryError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            sys.exit(1)
         print(f"Starting referia root-server at http://{args.host}:{args.port}")
         print(f"  Root:   {args.root}")
         print("  Any _referia.yml under the root is served at its relative path.")
