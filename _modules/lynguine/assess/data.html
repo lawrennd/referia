@@ -1924,9 +1924,10 @@
                 <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">typ</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="k">try</span><span class="p">:</span>
-                        <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_frame_for_store</span><span class="p">(</span><span class="n">typ</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
+                        <span class="n">write_details</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">details</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="n">details</span>
+                        <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_frame_for_store</span><span class="p">(</span><span class="n">typ</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">write_details</span><span class="p">)</span>
                         
-                        <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write_data</span><span class="p">(</span><span class="n">write_df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
+                        <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write_data</span><span class="p">(</span><span class="n">write_df</span><span class="p">,</span> <span class="n">write_details</span><span class="p">)</span>
                         <span class="n">data_written</span> <span class="o">=</span> <span class="kc">True</span>
                         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data for type &#39;</span><span class="si">{</span><span class="n">typ</span><span class="si">}</span><span class="s2">&#39; written successfully.&quot;</span><span class="p">)</span>
                     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
@@ -2294,11 +2295,40 @@
             <span class="n">out</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">idx_col</span><span class="p">,</span> <span class="n">idx_val</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_merge_output_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tall</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Copy output-only columns (e.g. embedding) onto exploded phrase rows.</span>
+
+<span class="sd">        Embed writes vectors on the tall output partition, not back into the</span>
+<span class="sd">        cache list. Re-exploding cache for pack/Save would otherwise drop</span>
+<span class="sd">        them. Join is by index (phrase_id); unmatched rows stay without the</span>
+<span class="sd">        extra columns so drop_incomplete can skip them.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">tall</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tall</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">or</span> <span class="n">tall</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tall</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">src</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tall</span>
+        <span class="n">src_df</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="s2">&quot;to_pandas&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">src</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">src_df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">or</span> <span class="n">src_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tall</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">src_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tall</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">extra</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">tall</span>
+        <span class="n">aligned</span> <span class="o">=</span> <span class="n">src_df</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">tall</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="n">work</span> <span class="o">=</span> <span class="n">tall</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">extra</span><span class="p">:</span>
+            <span class="n">series</span> <span class="o">=</span> <span class="n">aligned</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">series</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="n">work</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">series</span>
+        <span class="k">return</span> <span class="n">work</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_explode_output_for_pack</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Turn parent-grain rows into tall phrase rows using ``output.explode``.</span>
 
 <span class="sd">        Pack needs phrase/embedding/doc_id, which exist only after explode.</span>
-<span class="sd">        Chunk-grain parent tables do not have those columns.</span>
+<span class="sd">        Chunk-grain parent tables do not have those columns. Embedding is</span>
+<span class="sd">        merged from the tall output partition when extract has not written</span>
+<span class="sd">        it back onto the cache list.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="n">Interface</span><span class="p">)):</span>
             <span class="k">return</span> <span class="n">frame</span>
@@ -2318,12 +2348,13 @@
                 <span class="sa">f</span><span class="s2">&quot;(have </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">work</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">); writing an empty pack.&quot;</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">explode_list_field</span><span class="p">(</span>
+        <span class="n">tall</span> <span class="o">=</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">explode_list_field</span><span class="p">(</span>
             <span class="n">work</span><span class="p">,</span>
             <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
             <span class="n">inherit</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inherit&quot;</span><span class="p">),</span>
             <span class="n">index</span><span class="o">=</span><span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">_store_index_name</span><span class="p">(</span><span class="n">output_details</span><span class="p">)</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">),</span>
         <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_merge_output_columns</span><span class="p">(</span><span class="n">tall</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_write_frame_for_store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">typ</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Parent-grain frame when the store explodes or packs; else *df*.&quot;&quot;&quot;</span>
@@ -2331,11 +2362,35 @@
             <span class="n">combined</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_explode_source_frame</span><span class="p">()</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">combined</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
                 <span class="n">df</span> <span class="o">=</span> <span class="n">combined</span>
+            <span class="n">spec</span> <span class="o">=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;explode&quot;</span><span class="p">)</span>
+            <span class="n">field</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;field&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">work</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s2">&quot;to_pandas&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">df</span>
+            <span class="k">if</span> <span class="n">field</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">work</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">and</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">work</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">explode_list_field</span><span class="p">(</span>
+                    <span class="n">work</span><span class="p">,</span>
+                    <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+                    <span class="n">inherit</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;inherit&quot;</span><span class="p">),</span>
+                    <span class="n">index</span><span class="o">=</span><span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">_store_index_name</span><span class="p">(</span><span class="n">details</span><span class="p">)</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_merge_output_columns</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+                <span class="n">details</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;explode&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;pack&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
             <span class="n">combined</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_grain_frame</span><span class="p">()</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">combined</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
                 <span class="n">df</span> <span class="o">=</span> <span class="n">combined</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataframe_for_output_write</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pack_has_complete_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;True when at least one row has the pack incomplete_field (embedding).&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">frame</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="ow">or</span> <span class="n">frame</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">check</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;incomplete_field&quot;</span><span class="p">,</span> <span class="s2">&quot;embedding&quot;</span><span class="p">)</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;columns&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">check</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">columns</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="ow">not</span> <span class="n">frame</span><span class="o">.</span><span class="n">empty</span>
+        <span class="k">if</span> <span class="n">check</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="n">check</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">())</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_write_pack_store</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Write CIP-0014 pack store from the tall source frame.</span>
@@ -2343,11 +2398,14 @@
 <span class="sd">        ``source`` selects a loaded partition. When omitted, explode the</span>
 <span class="sd">        chunk-grain table using ``output.explode`` so phrase/embedding</span>
 <span class="sd">        columns exist, then pack. Empty tall frames write empty arrays.</span>
+<span class="sd">        With ``drop_incomplete``, Save after extract (no embeddings yet)</span>
+<span class="sd">        keeps an existing pack rather than aborting or wiping it.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pack_details</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">details</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pack&quot;</span><span class="p">),</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pack&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s1">&#39;Top-level pack store must include a nested pack: mapping (columns, ...).&#39;</span>
             <span class="p">)</span>
@@ -2363,6 +2421,15 @@
             <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_explode_output_for_pack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_explode_source_frame</span><span class="p">())</span>
         <span class="k">if</span> <span class="n">frame</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">frame</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drop_incomplete&quot;</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pack_has_complete_rows</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">spec</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">data_exists</span><span class="p">(</span><span class="n">details</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;Skipping pack write: no complete rows; keeping existing pack.&quot;</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
             <span class="s1">&#39;Saving packed store&#39;</span>
             <span class="o">+</span> <span class="p">(</span><span class="sa">f</span><span class="s1">&#39; from &quot;</span><span class="si">{</span><span class="n">source_key</span><span class="si">}</span><span class="s1">&quot;&#39;</span> <span class="k">if</span> <span class="n">source_key</span> <span class="k">else</span> <span class="s2">&quot; from parent grain&quot;</span><span class="p">)</span>
@@ -2394,9 +2461,10 @@
             <span class="n">details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">[</span><span class="n">typ</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">details</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">continue</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">details</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">details</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">typ</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
                 <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parameter_series_for_write</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
-                <span class="n">details</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">details</span><span class="p">)</span>
                 <span class="n">details</span><span class="p">[</span><span class="s2">&quot;keep_nulls&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_frame_for_store</span><span class="p">(</span><span class="n">typ</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
