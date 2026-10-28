@@ -1,10 +1,10 @@
 ---
 id: "2026-10-22_web-markdown-liquid-if-tags"
 title: "Web review Markdown only substitutes {{var}}; {% if %} tags appear raw"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-10-22"
-last_updated: "2026-10-22"
+last_updated: "2026-10-28"
 category: "bugs"
 related_cips: ["000B"]
 owner: "Neil D. Lawrence"
@@ -52,14 +52,14 @@ static Markdown widget, which `_visibility_style` already understands.
 
 ## Acceptance Criteria
 
-- [ ] Review `type: Markdown` (and Criterion) `liquid:` templates are
-      evaluated with `data.liquid_to_value` / python-liquid, same as viewer.
-- [ ] `{% if column == "Yes" %}` hides or shows the inner Markdown.
-- [ ] `{{column}}` substitution still works, including mapped names from
+- [x] Review `type: Markdown` (and Criterion) `liquid:` templates are
+      evaluated with python-liquid (LAX), same family as viewer.
+- [x] `{% if column %}` / `{% if column == "Yes" %}` hides or shows the inner Markdown.
+- [x] `{{column}}` substitution still works, including mapped names from
       `_name_column_map`.
-- [ ] Invalid Liquid raises a logged error and does not dump the raw template
+- [x] Invalid Liquid raises a logged error and does not dump the raw template
       into the form.
-- [ ] Unit tests cover `{% if %}`, `{{var}}`, and a mapped alias.
+- [x] Unit tests cover `{% if %}`, `{{var}}`, and a mapped alias.
 
 ## Implementation Notes
 
@@ -81,3 +81,10 @@ already feeds python-liquid in lynguine; reuse that path.
 
 Task created. Config workaround: `visible_if` on the priority banner in the
 XN51107 review widgets; viewer `{% if %}` left as real Liquid.
+
+### 2026-10-28
+
+`_evaluate_liquid` now uses python-liquid. Observed on live MPhil ACS
+interviews (Application Markdown dumping `{% if candidateEmail %}`).
+Web `default:` string / `default.source` now copies the source column
+(Interview Time) instead of writing the field name into Start.

@@ -515,18 +515,50 @@ def _render_html(spec: dict, value: Any) -> str:
     return f'<div class="widget-html">{content}</div>'
 
 
+_LIQUID_ENV = None
+
+
+def _liquid_environment():
+    """Shared python-liquid env (LAX), matching lynguine Compute filters."""
+    global _LIQUID_ENV
+    if _LIQUID_ENV is None:
+        import liquid as lq
+        from lynguine.util.liquid import (
+            absolute_url,
+            markdownify,
+            relative_url,
+            to_i,
+            url_escape,
+        )
+
+        env = lq.Environment(tolerance=lq.Mode.LAX)
+        env.add_filter("url_escape", url_escape)
+        env.add_filter("markdownify", markdownify)
+        env.add_filter("relative_url", relative_url)
+        env.add_filter("absolute_url", absolute_url)
+        env.add_filter("to_i", to_i)
+        _LIQUID_ENV = env
+    return _LIQUID_ENV
+
+
 def _evaluate_liquid(template: str, data: dict) -> str:
-    """Substitute ``{{key}}`` Liquid-style references with values from *data*.
+    """Evaluate a Liquid template against the current row dict.
 
-    Only handles simple column references (``{{columnName}}``).  More complex
-    Liquid constructs are left as-is so they do not silently break.
+    Viewer HTML already uses ``CustomDataFrame.view_to_value`` / python-liquid.
+    Review Markdown and Criterion widgets must do the same so ``{% if %}``
+    tags are executed rather than shown as text.  Invalid templates are
+    logged and render as empty rather than dumping the source into the form.
     """
-    def _sub(match: re.Match) -> str:
-        key = match.group(1).strip()
-        val = data.get(key)
-        return str(val) if val is not None else ""
+    if not template:
+        return ""
+    from lynguine.util.misc import remove_nan
 
-    return re.sub(r"\{\{\s*(\w+)\s*\}\}", _sub, template)
+    try:
+        context = remove_nan(dict(data or {}))
+        return _liquid_environment().from_string(template).render(**context)
+    except Exception as exc:
+        log.error("Liquid evaluation failed: %s", exc)
+        return ""
 
 
 def _markdown_widget_content(
