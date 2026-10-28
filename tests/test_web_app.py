@@ -336,6 +336,45 @@ class TestInlineListGroup:
         assert _inline_list_group_by({"_group": "version"}) == "version"
         assert _inline_list_group_by({}) == "directory"
         assert _inline_list_group_by({"_group": "nope"}) == "directory"
+        assert _inline_list_group_by({"_group": "month"}) == "month"
+        assert _inline_list_group_by({"_group": "none"}) == "none"
+
+    def test_group_by_month_from_when(self, tmp_path):
+        from referia.web.routes import _inline_list_group, _month_group_from_when
+
+        reviewer = MagicMock()
+        reviewer._directory = str(tmp_path)
+        assert (
+            _inline_list_group(
+                reviewer, {"when": "20261028"}, group_by="month"
+            )
+            == "2026-10"
+        )
+        assert (
+            _inline_list_group(
+                reviewer, {"when": "2026-11-01"}, group_by="month"
+            )
+            == "2026-11"
+        )
+        assert (
+            _inline_list_group(reviewer, {"when": ""}, group_by="month") == ""
+        )
+        assert _month_group_from_when("not-a-date") == ""
+        assert _month_group_from_when(None) == ""
+
+    def test_group_by_none_is_flat(self, tmp_path):
+        from referia.web.routes import _inline_list_group
+
+        reviewer = MagicMock()
+        reviewer._directory = str(tmp_path)
+        assert (
+            _inline_list_group(
+                reviewer,
+                {"sourceDirectory": "applications/foo", "when": "20261028"},
+                group_by="none",
+            )
+            == ""
+        )
 
     def test_inline_list_href_keeps_index_query(self):
         from referia.web.routes import _inline_list_href

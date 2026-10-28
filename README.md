@@ -49,7 +49,7 @@ To serve every `_referia.yml` found under a root directory at once, use root-ser
 referia serve --root ~/referia/
 ```
 
-Each config is then reachable at its relative path (e.g. `http://127.0.0.1:8000/reports/review/`).
+Each config is then reachable at its relative path (e.g. `http://127.0.0.1:8000/reports/review/`). A catalog root can own `due` / `event` / `notes` in tall scores and expose sibling **Today** (`/today/`) and **Year** (`/year/`) views; see the Sphinx guide *Catalog schedule, Today, and Year*.
 
 ### Jupyter notebook interface
 
@@ -115,6 +115,10 @@ review:
     type: Textarea
     description: "Reviewer comments"
 ```
+
+### `inherit`
+
+Optional parent config. Referia always ignores parent `compute` and `review` unless the child lists them in `inherit.reuse` (catalog Today/Year views). `ignore: [viewer]` keeps child chrome. Directory discovery bind and `exclude` are lynguine (inherited glob sources, `today/**`).
 
 ### `compute`
 

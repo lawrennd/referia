@@ -1,0 +1,25 @@
+# Sibling Today view (CIP-001C). Shares discovery, scores, widgets.
+referia_config_version: 2
+title: "Today"
+description: "Catalog rows whose event or due is today."
+writable: true
+
+inherit:
+  directory: ../
+  filename: _referia.yml
+  writable: true
+  reuse: [input, output, compute, review, filters, sort]
+  ignore: [viewer]
+
+display:
+  layout: inline_list
+  filter_defaults:
+    complete: false
+    on_today: true
+    _sort: when:asc
+    _group: none
+
+viewer:
+  - liquid: |
+      Rows where **event** or **due** is today. Scores write to the parent
+      `info/overview-scores.yml`. Back to [seasonal](/) or [year](/year/).

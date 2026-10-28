@@ -765,6 +765,39 @@ class WebReviewer:
                 column, self._source_default_value(source), ismutable
             )
 
+    @staticmethod
+    def _schedule_date_digits(val: Any) -> str:
+        """Normalise DatePicker YYYYMMDD, ISO, or date objects to YYYYMMDD digits."""
+        if val is None:
+            return ""
+        strftime = getattr(val, "strftime", None)
+        if callable(strftime):
+            try:
+                return strftime("%Y%m%d")
+            except Exception:
+                pass
+        text = str(val).strip()
+        if not text or text.lower() in {"nan", "nat", "none", "<na>"}:
+            return ""
+        digits = "".join(ch for ch in text if ch.isdigit())
+        return digits[:8] if len(digits) >= 8 else digits
+
+    def _schedule_view_value(self, column: str) -> Any:
+        """CIP-001C view: ``when`` = event else due; ``on_today`` is OR-today.
+
+        ``event`` / ``due`` live on the output partition. ``input.compute``
+        runs before that join, so these are derived here, not stored.
+        """
+        event = self._schedule_date_digits(self.get_value("event"))
+        due = self._schedule_date_digits(self.get_value("due"))
+        today = self._schedule_date_digits(self.get_value("today"))
+        when = event or due
+        if column == "when":
+            return when or None
+        if today and ((event and event == today) or (due and due == today)):
+            return "true"
+        return "false"
+
     def get_value(self, column: str) -> Any:
         """Return the current value of *column* for the active record.
 
@@ -780,6 +813,8 @@ class WebReviewer:
         :param column: Name of the data column.
         :return: The stored value, with NaN replaced by ``None`` (or default).
         """
+        if column in ("when", "on_today"):
+            return self._schedule_view_value(column)
         resolved = self._mapped_column(column)
         try:
             known = resolved in self._data.columns or resolved == getattr(
@@ -840,6 +875,13 @@ class WebReviewer:
                 result[col] = self.get_value(col)
             except Exception:
                 result[col] = None
+
+        for derived in ("when", "on_today"):
+            if derived not in result:
+                try:
+                    result[derived] = self.get_value(derived)
+                except Exception:
+                    result[derived] = None
 
         try:
             idx_name = getattr(self._data.index, "name", None)

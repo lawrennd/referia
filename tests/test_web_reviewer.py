@@ -254,6 +254,33 @@ class TestGetValue:
         assert reviewer.get_value("nonexistent") is None
         data.set_column.assert_not_called()
 
+    def test_when_is_event_else_due(self):
+        reviewer, _, _ = _build_reviewer(
+            col_vals={
+                "event": "20261028",
+                "due": "20261101",
+                "today": "2026-10-28",
+            }
+        )
+        assert reviewer.get_value("when") == "20261028"
+        assert reviewer.get_value("on_today") == "true"
+
+    def test_when_falls_back_to_due(self):
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"due": "20261115", "today": "2026-10-28"}
+        )
+        assert reviewer.get_value("when") == "20261115"
+        assert reviewer.get_value("on_today") == "false"
+
+    def test_on_today_due_matches_iso_today(self):
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"due": "20261028", "today": "2026-10-28"}
+        )
+        assert reviewer.get_value("on_today") == "true"
+        row = reviewer.get_row_data()
+        assert row["when"] == "20261028"
+        assert row["on_today"] == "true"
+
 
 class TestSetValue:
     def test_set_value_updates_storage(self):

@@ -1,0 +1,5 @@
+# Example tall scores (CIP-001C). DatePicker stores YYYYMMDD.
+- sourceDirectory: spring
+  event: '20260301'
+- sourceDirectory: autumn
+  due: '20261115'

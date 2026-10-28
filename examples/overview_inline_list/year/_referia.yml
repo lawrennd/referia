@@ -1,0 +1,27 @@
+# Sibling Year view (CIP-001C). Cambridge academic year: 1 Oct–30 Sep.
+referia_config_version: 2
+title: "Year"
+description: "Catalog rows in the current academic year, grouped by month."
+writable: true
+
+inherit:
+  directory: ../
+  filename: _referia.yml
+  writable: true
+  reuse: [input, output, compute, review, filters, sort]
+  ignore: [viewer]
+
+display:
+  layout: inline_list
+  filter_defaults:
+    complete: false
+    when:
+      after: "2026-10-01"
+      before: "2027-09-30"
+    _sort: when:asc
+    _group: month
+
+viewer:
+  - liquid: |
+      Academic year 1 Oct 2026 – 30 Sep 2027, grouped by month of `when`.
+      Edit the ISO bounds here once a year. Back to [seasonal](/) or [today](/today/).

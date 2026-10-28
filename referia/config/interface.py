@@ -554,44 +554,50 @@ class Interface(lynguine.config.interface.Interface):
         
         default_append = ["viewer"]
         default_ignore = ["compute", "review"]
+        inherit = self._data["inherit"]
 
-        
-        if "append" not in self._data["inherit"]:
-            self._data["inherit"]["append"] = default_append
+        if "append" not in inherit:
+            inherit["append"] = default_append
 
-        if "ignore" not in self._data["inherit"]:
-            self._data["inherit"]["ignore"] = default_ignore
+        if "ignore" not in inherit:
+            inherit["ignore"] = default_ignore
 
         for ignore in default_ignore:
-            if ignore not in self._data["inherit"]["ignore"]:
-                self._data["inherit"]["ignore"].append(ignore)
-                
+            if ignore not in inherit["ignore"]:
+                inherit["ignore"].append(ignore)
+
         for append in default_append:
-            if append not in self._data["inherit"]["ignore"] and append not in self._data["inherit"]["append"]:
-                self._data["inherit"]["append"].append(append)
-        
-            
+            if append not in inherit["ignore"] and append not in inherit["append"]:
+                inherit["append"].append(append)
 
-        viewelem = {
-            "display": (
-                'Parent assesser available <a href="'
-                + os.path.relpath(
-                    os.path.expandvars(self._parent._directory),
-                    self._directory,
-                )
-                + '" target="_blank">here</a>.'
-            ),
-            PARENT_ASSESSOR_LINK_KEY: True,
-        }
+        reuse = inherit.get("reuse") or []
+        if isinstance(reuse, str):
+            reuse = [reuse]
+        for key in reuse:
+            while key in inherit["ignore"]:
+                inherit["ignore"].remove(key)
 
-        # Add links to parent assessment by placing in viewer.
-        if "viewer" in self._data:
-            if type(self._data["viewer"]) is list:
-                self._data["viewer"] = [viewelem] + self._data["viewer"]
+        # Add links to parent assessment by placing in viewer, unless the
+        # child owns chrome (`inherit.ignore` includes `viewer`; CIP-001C).
+        if "viewer" not in inherit["ignore"]:
+            viewelem = {
+                "display": (
+                    'Parent assesser available <a href="'
+                    + os.path.relpath(
+                        os.path.expandvars(self._parent._directory),
+                        self._directory,
+                    )
+                    + '" target="_blank">here</a>.'
+                ),
+                PARENT_ASSESSOR_LINK_KEY: True,
+            }
+            if "viewer" in self._data:
+                if type(self._data["viewer"]) is list:
+                    self._data["viewer"] = [viewelem] + self._data["viewer"]
+                else:
+                    self._data["viewer"] = [viewelem, self._data["viewer"]]
             else:
-                self._data["viewer"] = [viewelem, self._data["viewer"]]
-        else:
-            self._data["viewer"] = [viewelem]
+                self._data["viewer"] = [viewelem]
 
         super()._process_parent()
 

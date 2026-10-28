@@ -43,6 +43,11 @@ The configuration system in referia inherits from and extends lynguine's approac
 The configuration system uses the Context class from lynguine directly, while extending the
 Interface class to add referia-specific functionality.
 
+``inherit.reuse`` (CIP-001C) is a referia opt-in list. After the usual
+forced ignore of parent ``compute`` and ``review``, each listed key is
+removed from ``inherit.ignore`` so a child catalog view can share those
+sections. See :doc:`../usage/catalog_schedule`.
+
 Configuration File Format
 ----------------------
 
