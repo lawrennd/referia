@@ -1768,7 +1768,13 @@ class TestRowsAndFilters:
     def test_get_value_unknown_when_columns_probe_fails(self):
         reviewer, data, _ = _build_reviewer(
             col_vals={"title": "x"},
-            review=[{"type": "Text", "field": "label_model", "default": "gpt"}],
+            review=[
+                {
+                    "type": "Text",
+                    "field": "label_model",
+                    "default": {"value": "gpt"},
+                }
+            ],
         )
 
         class Boom:
@@ -1786,7 +1792,11 @@ class TestRowsAndFilters:
                     "type": "Section",
                     "title": "Via children",
                     "children": [
-                        {"type": "Text", "field": "a", "default": "from-children"},
+                        {
+                            "type": "Text",
+                            "field": "a",
+                            "default": {"value": "from-children"},
+                        },
                     ],
                 },
                 {
@@ -1799,6 +1809,65 @@ class TestRowsAndFilters:
         )
         assert reviewer._field_defaults["a"] == "from-children"
         assert reviewer._field_defaults["b"] == "from-specs"
+
+    def test_string_default_is_source_column_not_literal(self):
+        """Jupyter treats ``default: scheduledStartTime`` as a column source."""
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["Verma_Salonee"],
+            col_vals={"Start": None, "Interview Time": "15:00"},
+            review=[
+                {
+                    "type": "Text",
+                    "field": "Start",
+                    "default": "Interview Time",
+                }
+            ],
+        )
+        data.ismutable.return_value = True
+        storage[("Verma_Salonee", "Start")] = None
+        reviewer.set_index("Verma_Salonee")
+        assert reviewer._field_default_sources["Start"] == "Interview Time"
+        assert "Start" not in reviewer._field_defaults
+        assert reviewer.get_value("Start") == "15:00"
+        reviewer._apply_field_defaults()
+        assert storage[("Verma_Salonee", "Start")] == "15:00"
+
+    def test_default_source_dict_resolves_mapping_alias(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"Start": None, "Interview Time": "15:00"},
+            review=[
+                {
+                    "type": "Text",
+                    "field": "Start",
+                    "default": {"source": "scheduledStartTime"},
+                }
+            ],
+        )
+        data._name_column_map = {"scheduledStartTime": "Interview Time"}
+        data.ismutable.return_value = True
+        storage[("a", "Start")] = None
+        reviewer.set_index("a")
+        assert reviewer.get_value("Start") == "15:00"
+
+    def test_missing_default_source_does_not_write_field_name(self):
+        reviewer, data, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"Start": None},
+            review=[
+                {
+                    "type": "Text",
+                    "field": "Start",
+                    "default": "scheduledStartTime",
+                }
+            ],
+        )
+        data.ismutable.return_value = True
+        storage[("a", "Start")] = None
+        reviewer.set_index("a")
+        assert reviewer.get_value("Start") is None
+        reviewer._apply_field_defaults()
+        assert storage[("a", "Start")] is None
 
     def test_sort_orders_working_indices(self):
         reviewer, _, storage = _build_reviewer(

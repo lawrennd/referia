@@ -626,8 +626,14 @@ class WebReviewer:
         parity), including widgets nested in ``Section``. Checkbox and Flag
         widgets default to ``False`` when unset so incomplete work is an
         explicit boolean rather than missing/NaN.
+
+        A string (or ``default.source``) is a *column source*, not a literal:
+        Jupyter copies that column into the widget when the output cell is
+        empty.  Storing the source name as the value made Start show
+        ``scheduledStartTime`` instead of the interview-setup time.
         """
         defaults: dict[str, Any] = {}
+        sources: dict[str, str] = {}
         for spec in self._iter_review_widget_specs():
             if not isinstance(spec, dict):
                 continue
@@ -640,6 +646,11 @@ class WebReviewer:
                 if isinstance(detail, dict):
                     if "value" in detail:
                         defaults[field] = detail["value"]
+                    source = detail.get("source")
+                    if isinstance(source, str) and source:
+                        sources[field] = source
+                elif isinstance(detail, str):
+                    sources[field] = detail
                 else:
                     defaults[field] = detail
                 continue
@@ -652,6 +663,7 @@ class WebReviewer:
                 continue
             if spec.get("type") in {"Checkbox", "Flag"}:
                 defaults[field] = False
+        self._field_default_sources = sources
         return defaults
 
     def _cell_is_missing(self, val: Any) -> bool:
@@ -673,6 +685,68 @@ class WebReviewer:
             return False
         return False
 
+    def _mapped_column(self, name: str) -> str:
+        """Resolve a Liquid/widget name to a store column via mapping aliases."""
+        try:
+            columns = list(self._data.columns)
+        except Exception:
+            columns = []
+        if name in columns:
+            return name
+        mapped = self._row_mapping_aliases().get(name)
+        if mapped and mapped in columns:
+            return mapped
+        return name
+
+    def _source_default_value(self, source: str) -> Any:
+        """Return the current row's value for a default source column."""
+        resolved = self._mapped_column(source)
+        try:
+            known = resolved in self._data.columns or resolved == getattr(
+                self._data.index, "name", None
+            )
+        except Exception:
+            known = False
+        if not known:
+            return None
+        if resolved == getattr(self._data.index, "name", None):
+            try:
+                return self.get_index()
+            except Exception:
+                return None
+        self._data.set_column(resolved)
+        val = self._data.get_value()
+        if self._cell_is_missing(val):
+            return None
+        return val
+
+    def _fallback_default(self, column: str) -> Any:
+        """Literal widget default, or the value of a configured source column."""
+        defaults = getattr(self, "_field_defaults", None) or {}
+        if column in defaults:
+            return defaults[column]
+        sources = getattr(self, "_field_default_sources", None) or {}
+        if column in sources:
+            return self._source_default_value(sources[column])
+        return None
+
+    def _write_default_if_missing(
+        self, column: str, value: Any, ismutable
+    ) -> None:
+        try:
+            if column not in self._data.columns:
+                return
+            if callable(ismutable) and ismutable(column) is False:
+                return
+            self._data.set_column(column)
+            if not self._cell_is_missing(self._data.get_value()):
+                return
+            if value is None or self._cell_is_missing(value):
+                return
+            self.set_value(column, value)
+        except Exception as exc:
+            log.debug("Could not apply default for %r: %s", column, exc)
+
     def _apply_field_defaults(self) -> None:
         """Write widget defaults into empty output cells on the current row.
 
@@ -680,19 +754,16 @@ class WebReviewer:
         display-only defaults would leave Propose/Name seeing ``None``.
         """
         defaults = getattr(self, "_field_defaults", None) or {}
+        sources = getattr(self, "_field_default_sources", None) or {}
         ismutable = getattr(self._data, "ismutable", None)
         for column, value in defaults.items():
-            try:
-                if column not in self._data.columns:
-                    continue
-                if callable(ismutable) and ismutable(column) is False:
-                    continue
-                self._data.set_column(column)
-                if not self._cell_is_missing(self._data.get_value()):
-                    continue
-                self.set_value(column, value)
-            except Exception as exc:
-                log.debug("Could not apply default for %r: %s", column, exc)
+            self._write_default_if_missing(column, value, ismutable)
+        for column, source in sources.items():
+            if column in defaults:
+                continue
+            self._write_default_if_missing(
+                column, self._source_default_value(source), ismutable
+            )
 
     def get_value(self, column: str) -> Any:
         """Return the current value of *column* for the active record.
@@ -709,42 +780,29 @@ class WebReviewer:
         :param column: Name of the data column.
         :return: The stored value, with NaN replaced by ``None`` (or default).
         """
-        import math
-        import numpy as np
-        import pandas as pd
-
+        resolved = self._mapped_column(column)
         try:
-            known = column in self._data.columns or column == getattr(
+            known = resolved in self._data.columns or resolved == getattr(
                 self._data.index, "name", None
             )
         except Exception:
             known = False
         if not known:
-            defaults = getattr(self, "_field_defaults", None) or {}
-            if column in defaults:
-                return defaults[column]
-            return None
-        self._data.set_column(column)
-        val = self._data.get_value()
-        # Normalise all NaN-like sentinels to None.
-        missing = False
-        try:
-            if val is None:
-                missing = True
-            elif isinstance(val, float) and math.isnan(val):
-                missing = True
-            elif isinstance(val, (np.floating,)) and np.isnan(val):
-                missing = True
-            elif isinstance(val, np.datetime64) and np.isnat(val):
-                missing = True
-            elif pd.api.types.is_scalar(val) and pd.isnull(val):
-                missing = True
-        except (TypeError, ValueError):
-            pass
-        if missing:
-            defaults = getattr(self, "_field_defaults", None) or {}
-            if column in defaults:
-                return defaults[column]
+            return self._fallback_default(column)
+        if resolved == getattr(self._data.index, "name", None) and resolved not in getattr(
+            self._data, "columns", []
+        ):
+            try:
+                val = self.get_index()
+            except Exception:
+                val = None
+        else:
+            self._data.set_column(resolved)
+            val = self._data.get_value()
+        if self._cell_is_missing(val):
+            fallback = self._fallback_default(column)
+            if fallback is not None:
+                return fallback
             return None
         return val
 

@@ -1071,6 +1071,19 @@ class TestCriterionWidget:
         # Should render as an <h3>
         assert "<h3>" in html
 
+    def test_if_tag_in_criterion_liquid(self):
+        spec = {
+            "type": "Criterion",
+            "liquid": (
+                "**Scheduled:** {% if interviewTime %}{{interviewTime}}"
+                "{% elsif scheduledStartTime %}{{scheduledStartTime}}{% endif %}"
+            ),
+        }
+        html = render_widget(spec, None, data={"interviewTime": "15:00"})
+        assert "15:00" in html
+        assert "{% if" not in html
+        assert "scheduledStartTime" not in html
+
 
 # ---------------------------------------------------------------------------
 # Markdown widget top-level liquid: key
@@ -1137,6 +1150,50 @@ class TestMarkdownTopLevelLiquid:
         spec = {"type": "Markdown", "liquid": "Question 1\n{{q1Question}}\n"}
         html = render_widget(spec, None, data={})
         assert "{{q1Question}}" not in html
+
+    def test_if_tag_shows_section_when_value_present(self):
+        spec = {
+            "type": "Markdown",
+            "liquid": (
+                "### Application\n"
+                "{% if candidateEmail %}Email: {{candidateEmail}}{% endif %}\n"
+            ),
+        }
+        html = render_widget(
+            spec, None, data={"candidateEmail": "salonee.verma.05@gmail.com"}
+        )
+        assert "salonee.verma.05@gmail.com" in html
+        assert "{% if" not in html
+        assert "{% endif %}" not in html
+
+    def test_if_tag_hides_section_when_value_missing(self):
+        spec = {
+            "type": "Markdown",
+            "liquid": (
+                "{% if preliminaryResearchComment %}"
+                "Preliminary Research Comment\n"
+                "{{preliminaryResearchComment}}"
+                "{% endif %}"
+            ),
+        }
+        html = render_widget(spec, None, data={})
+        assert "Preliminary Research Comment" not in html
+        assert "{% if" not in html
+
+    def test_mapped_alias_substitutes_in_if(self):
+        spec = {
+            "type": "Markdown",
+            "liquid": "{% if Title %}**{{Title}}**{% endif %}",
+        }
+        html = render_widget(spec, None, data={"Title": "Toolkit for misuse"})
+        assert "Toolkit for misuse" in html
+        assert "{% if" not in html
+
+    def test_invalid_liquid_does_not_dump_template(self):
+        spec = {"type": "Markdown", "liquid": "{% if %}broken{% endif %}"}
+        html = render_widget(spec, None, data={})
+        assert "{% if %}" not in html
+        assert "broken" not in html
 
 
 class TestRenderDocumentPanel:
