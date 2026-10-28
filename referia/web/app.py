@@ -18,6 +18,25 @@ _TEMPLATES_DIR = _WEB_DIR / "templates"
 _STATIC_DIR = _WEB_DIR / "static"
 
 
+def resolve_serve_root(root: str) -> Path:
+    """Expand ``~``, resolve, and require *root* to be an existing directory.
+
+    Raises:
+        FileNotFoundError: *root* does not exist.
+        NotADirectoryError: *root* exists but is not a directory.
+    """
+    resolved = Path(root).expanduser().resolve()
+    if not resolved.exists():
+        raise FileNotFoundError(
+            f"Serve root does not exist: {root!r} (resolved to {resolved})"
+        )
+    if not resolved.is_dir():
+        raise NotADirectoryError(
+            f"Serve root is not a directory: {root!r} (resolved to {resolved})"
+        )
+    return resolved
+
+
 def create_app(
     user_file: str = "_referia.yml",
     directory: str = ".",
@@ -80,7 +99,7 @@ def create_app(
 
     if root is not None:
         # ── Root-server mode ──────────────────────────────────────────────────
-        resolved_root = str(Path(root).resolve())
+        resolved_root = str(resolve_serve_root(root))
         app.state.root = resolved_root
         app.state.reviewer = None   # no single pre-loaded reviewer
         app.state.user_file = None
@@ -92,13 +111,24 @@ def create_app(
         # Write WARNING+ messages from all referia/lynguine loggers to a
         # single file at the root so errors are easy to find.
         _log_path = Path(resolved_root) / "referia-server.log"
-        _file_handler = logging.FileHandler(str(_log_path), encoding="utf-8")
-        _file_handler.setLevel(logging.WARNING)
-        _file_handler.setFormatter(
-            logging.Formatter("%(asctime)s %(levelname)-8s %(name)s: %(message)s")
-        )
-        for _logger_name in ("referia", "lynguine", ""):
-            logging.getLogger(_logger_name).addHandler(_file_handler)
+        try:
+            _file_handler = logging.FileHandler(str(_log_path), encoding="utf-8")
+            _file_handler.setLevel(logging.WARNING)
+            _file_handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
+                )
+            )
+            for _logger_name in ("referia", "lynguine", ""):
+                logging.getLogger(_logger_name).addHandler(_file_handler)
+        except OSError as exc:
+            log.warning(
+                "Could not open server log %s (%s: %s); "
+                "continuing without a file log.",
+                _log_path,
+                type(exc).__name__,
+                exc,
+            )
 
         @app.on_event("startup")
         async def _startup_root() -> None:

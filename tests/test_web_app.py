@@ -1004,6 +1004,19 @@ class TestRootRouterRoutes:
             pass
         assert (tmp_path / "referia-server.log").exists()
 
+    def test_missing_root_raises_filenotfound(self, tmp_path):
+        """A non-existent --root fails before FileHandler can traceback."""
+        missing = tmp_path / "no-such-serve-root"
+        with pytest.raises(FileNotFoundError, match="does not exist"):
+            create_app(root=str(missing))
+        assert not missing.exists()
+
+    def test_root_that_is_a_file_raises(self, tmp_path):
+        not_a_dir = tmp_path / "a-file"
+        not_a_dir.write_text("not a directory\n")
+        with pytest.raises(NotADirectoryError, match="not a directory"):
+            create_app(root=str(not_a_dir))
+
     def test_health_not_swallowed_by_root_catchall(self, tmp_path):
         app = create_app(root=str(tmp_path))
         with TestClient(app) as client:
@@ -1053,3 +1066,19 @@ class TestCLIArgumentParsing:
         with pytest.raises(SystemExit) as exc_info:
             _serve(args)
         assert exc_info.value.code == 1
+
+    def test_missing_root_exits_with_clear_error(self, tmp_path, capsys):
+        """_serve() exits 1 with the resolved path when --root does not exist."""
+        from referia.cli import _serve
+        import argparse
+        missing = tmp_path / "personal"
+        args = argparse.Namespace(
+            root=str(missing), directory=None, config="_referia.yml",
+            host="127.0.0.1", port=8000,
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            _serve(args)
+        assert exc_info.value.code == 1
+        err = capsys.readouterr().err
+        assert "does not exist" in err
+        assert str(missing) in err
