@@ -636,7 +636,8 @@ class TestRootRouterRoutes:
                 resp = client.post("/reviews/intro/populate-all/_segment")
         assert resp.status_code == 200
         assert reviewer.run_populate.call_count == 2
-        assert "Segment document all filtered" in resp.text
+        assert "Segment document 2/2" in resp.text
+        assert "Segment document all filtered" not in resp.text
 
     def test_root_populate_all_unknown_field_warns(self, tmp_path):
         reviewer = self._listing_populate_reviewer()

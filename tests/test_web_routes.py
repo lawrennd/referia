@@ -1157,7 +1157,10 @@ class TestPostPopulateAll:
         assert response.status_code == 200
         assert reviewer.run_populate.call_count == 2
         assert seen[:2] == ["a", "b"]
-        assert "Segment document all filtered" in response.text
+        assert "Segment document 2/2" in response.text
+        assert "Save when ready." in response.text
+        assert "Segment document all filtered" not in response.text
+        assert 'class="inline-listing"' not in response.text
 
     def test_continues_after_one_failure(self):
         reviewer = self._listing_reviewer()
@@ -1182,7 +1185,10 @@ class TestPostPopulateAll:
         assert reviewer.run_populate.call_count == 2
         assert "missing pdf" not in response.text
         assert "/secret" not in response.text
-        assert 'class="inline-listing"' in response.text
+        assert "Segment document 1/2" in response.text
+        assert "1 failed" in response.text
+        assert 'hx-trigger="load delay:50ms"' in response.text
+        assert 'class="inline-listing"' not in response.text
 
     def test_all_failures_report_generic_error(self):
         reviewer = self._listing_reviewer()
@@ -1250,6 +1256,92 @@ class TestPostPopulateAll:
                 response = client.post("/populate-all/_segment")
         assert response.status_code == 200
         assert reviewer.run_populate.call_count == 2
+
+    def _rolling_reviewer(self, n=25, batch=10):
+        reviewer = self._listing_reviewer()
+        btn = {
+            "type": "PopulateButton",
+            "field": "_segment",
+            "args": {
+                "description": "Segment document",
+                "target": "units",
+                "batch": batch,
+                "compute": {"field": "units", "function": "document_segment"},
+            },
+        }
+        reviewer.get_widget_specs.return_value = [btn]
+        reviewer.get_review_specs.return_value = [btn]
+        indices = [f"r{i}" for i in range(n)]
+        reviewer.working_indices.return_value = indices
+        filled = set()
+        current = {"idx": None}
+
+        def _set_index(idx):
+            current["idx"] = idx
+
+        def _get_value(_col):
+            return "done" if current["idx"] in filled else ""
+
+        def _run(_spec):
+            filled.add(current["idx"])
+
+        reviewer.set_index.side_effect = _set_index
+        reviewer.get_value.side_effect = _get_value
+        reviewer.run_populate.side_effect = _run
+        reviewer._filled = filled
+        return reviewer
+
+    def test_batch_of_ten_chains_until_remaining(self):
+        reviewer = self._rolling_reviewer(n=25, batch=10)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 10
+        assert "Segment document 10/25" in response.text
+        assert 'hx-trigger="load delay:50ms"' in response.text
+        assert "secret phrase" not in response.text
+
+    def test_pause_stops_chain_without_more_compute(self):
+        reviewer = self._rolling_reviewer(n=25, batch=10)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                first = client.post("/populate-all/_segment")
+                paused = client.post("/populate-all/_segment/pause")
+        assert first.status_code == 200
+        assert paused.status_code == 200
+        assert reviewer.run_populate.call_count == 10
+        assert "Resume" in paused.text
+        assert 'hx-trigger="load' not in paused.text
+        assert "Segment document 10/25" in paused.text
+
+    def test_resume_skips_filled_and_computes_next_batch(self):
+        reviewer = self._rolling_reviewer(n=25, batch=10)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                client.post("/populate-all/_segment")
+                client.post("/populate-all/_segment/pause")
+                resumed = client.post("/populate-all/_segment")
+                last = client.post("/populate-all/_segment")
+        assert reviewer.run_populate.call_count == 25
+        assert "Segment document 20/25" in resumed.text
+        assert 'hx-trigger="load delay:50ms"' in resumed.text
+        assert "Segment document 25/25" in last.text
+        assert 'hx-trigger="load' not in last.text
+        assert "Save when ready." in last.text
+
+    def test_batch_zero_unbounded_this_request(self):
+        reviewer = self._rolling_reviewer(n=5, batch=0)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert reviewer.run_populate.call_count == 5
+        assert "Segment document 5/5" in response.text
+        assert 'hx-trigger="load' not in response.text
 
 
 # ---------------------------------------------------------------------------

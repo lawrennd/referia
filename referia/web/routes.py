@@ -37,8 +37,11 @@ All routes share a ``WebReviewer`` instance stored in ``app.state.reviewer``.
     review panel.
 
 ``POST /populate-all/{field}``
-    Run that PopulateButton on every index in the current filtered working
-    set; return a refreshed review panel.
+    Run that PopulateButton on a batch of unfilled working-set rows
+    (``args.batch``, default 10); return a progress chip in ``#status-bar``.
+
+``POST /populate-all/{field}/pause``
+    Stop the rolling HTMX chain at a batch boundary; chip shows Resume.
 
 ``POST /generate-document/{n}`` / ``POST /generate-summary-document/{n}``
     Run ``documents:`` / ``summary_documents:`` generation; return status
@@ -116,6 +119,7 @@ from referia.web.render import (
     render_viewer_tree,
     iter_spec_leaves,
     populate_all_chrome_html,
+    render_populate_progress_chip,
 )
 from referia.config.inherit_view import (
     inherited_readonly_fields,
@@ -1310,9 +1314,28 @@ async def populate_field(request: Request, field: str):
     )
 
 
+@router.post("/populate-all/{field}/pause", response_class=HTMLResponse)
+async def pause_populate_all(request: Request, field: str):
+    """CIP-0021: stop the rolling chain at a batch boundary."""
+    reviewer = _reviewer(request)
+    btn_spec = _find_populate_spec(reviewer, field)
+    if btn_spec is None:
+        return HTMLResponse(
+            f'<span class="status-warning">&#9888; No PopulateButton found for field {_esc(field)}</span>'
+        )
+    return _run_populate_all_and_respond(
+        reviewer,
+        field,
+        btn_spec,
+        request=request,
+        templates=_templates(request),
+        paused=True,
+    )
+
+
 @router.post("/populate-all/{field}", response_class=HTMLResponse)
 async def populate_all_field(request: Request, field: str):
-    """Run a PopulateButton on every filtered working-set row; refresh the panel."""
+    """Run a PopulateButton batch on the filtered working set; return a chip."""
     reviewer = _reviewer(request)
     btn_spec = _find_populate_spec(reviewer, field)
     if btn_spec is None:
@@ -2085,6 +2108,86 @@ def _populate_status_html(
     return '<span class="status-ok">&#10003; Populated</span>'
 
 
+def _populate_batch_size(spec: dict) -> int:
+    """Return ``args.batch`` (default 10). ``0`` is unbounded this request."""
+    raw = (spec.get("args") or {}).get("batch")
+    if raw is None or raw == "":
+        return 10
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        return 10
+    return n if n >= 0 else 10
+
+
+def _value_is_filled(value: Any) -> bool:
+    """True when a populate target already has a usable value (CIP-001D skip)."""
+    if value is None:
+        return False
+    if isinstance(value, float) and value != value:
+        return False
+    if isinstance(value, str) and value.strip() == "":
+        return False
+    if isinstance(value, (list, dict, tuple)) and len(value) == 0:
+        return False
+    return True
+
+
+def _populate_paused_fields(reviewer) -> set:
+    paused = getattr(reviewer, "_populate_paused_fields", None)
+    if paused is None:
+        paused = set()
+        try:
+            reviewer._populate_paused_fields = paused
+        except Exception:
+            pass
+    return paused if isinstance(paused, set) else set()
+
+
+def _set_populate_paused(reviewer, field: str, paused: bool) -> None:
+    fields = _populate_paused_fields(reviewer)
+    key = str(field)
+    if paused:
+        fields.add(key)
+    else:
+        fields.discard(key)
+    try:
+        reviewer._populate_paused_fields = fields
+    except Exception:
+        pass
+
+
+def _populate_progress(reviewer) -> dict:
+    store = getattr(reviewer, "_populate_progress", None)
+    if store is None:
+        store = {}
+        try:
+            reviewer._populate_progress = store
+        except Exception:
+            return {}
+    return store if isinstance(store, dict) else {}
+
+
+def _remember_populate_progress(reviewer, field: str, counts: dict) -> None:
+    store = _populate_progress(reviewer)
+    store[str(field)] = dict(counts)
+    try:
+        reviewer._populate_progress = store
+    except Exception:
+        pass
+
+
+def _flush_after_populate_batch(reviewer) -> None:
+    """Best-effort CIP-001D flush so a batch is on disk before the next POST."""
+    flush = getattr(reviewer, "save_flows", None)
+    if not callable(flush):
+        return
+    try:
+        flush()
+    except Exception as exc:
+        log.debug("populate-all batch flush failed: %s", exc)
+
+
 def _run_populate_all_and_respond(
     reviewer,
     field: str,
@@ -2092,13 +2195,23 @@ def _run_populate_all_and_respond(
     request: Request,
     templates,
     path_prefix: str = "",
+    *,
+    paused: bool = False,
 ) -> HTMLResponse:
-    """Run one PopulateButton on every ``working_indices()`` row."""
+    """Run at most ``args.batch`` unfilled rows; return a progress chip."""
     compute_spec = _build_populate_compute_spec(btn_spec, field)
     if compute_spec is None:
         return HTMLResponse(
             '<span class="status-warning">&#9888; PopulateButton has no compute spec</span>'
         )
+
+    label = str((btn_spec.get("args") or {}).get("description") or "Populate")
+    target = _populate_button_target(btn_spec)
+    batch = _populate_batch_size(btn_spec)
+    if paused:
+        _set_populate_paused(reviewer, field, True)
+    else:
+        _set_populate_paused(reviewer, field, False)
 
     saved = None
     try:
@@ -2106,17 +2219,43 @@ def _run_populate_all_and_respond(
     except Exception:
         pass
 
+    try:
+        working = list(reviewer.working_indices())
+    except Exception:
+        working = list(reviewer.index_list())
+    n_total = len(working)
     n_ok = 0
     n_fail = 0
+    n_skipped = 0
+    n_attempted = 0
     try:
-        for idx in reviewer.working_indices():
-            try:
-                reviewer.set_index(idx)
-                reviewer.run_populate({"compute": compute_spec})
-                n_ok += 1
-            except Exception as exc:
-                n_fail += 1
-                _log_route_error("Populate all", exc, field=field, index=idx)
+        if not paused:
+            for idx in working:
+                try:
+                    reviewer.set_index(idx)
+                    current = reviewer.get_value(target)
+                except Exception:
+                    current = None
+                if _value_is_filled(current):
+                    n_skipped += 1
+                    continue
+                if batch and n_attempted >= batch:
+                    break
+                try:
+                    reviewer.run_populate({"compute": compute_spec})
+                    n_ok += 1
+                except Exception as exc:
+                    n_fail += 1
+                    _log_route_error("Populate all", exc, field=field, index=idx)
+                n_attempted += 1
+            if n_ok or n_skipped:
+                _flush_after_populate_batch(reviewer)
+        else:
+            remembered = _populate_progress(reviewer).get(str(field)) or {}
+            n_ok = int(remembered.get("n_ok", 0) or 0)
+            n_fail = int(remembered.get("n_fail", 0) or 0)
+            n_skipped = int(remembered.get("n_skipped", 0) or 0)
+            n_total = int(remembered.get("n_total", n_total) or n_total)
     finally:
         if saved is not None:
             try:
@@ -2124,11 +2263,34 @@ def _run_populate_all_and_respond(
             except Exception:
                 pass
 
-    if n_ok == 0 and n_fail > 0:
+    if n_ok == 0 and n_fail > 0 and n_skipped == 0:
         return HTMLResponse(_user_error_html("Populate all"))
 
-    ctx = _panel_response_context(reviewer, path_prefix)
-    return templates.TemplateResponse(request, "review_panel.html", ctx)
+    n_done = n_skipped + n_ok
+    remaining = n_total - n_done
+    chain = (not paused) and remaining > 0 and not (n_ok == 0 and n_fail > 0)
+    _remember_populate_progress(
+        reviewer,
+        field,
+        {
+            "n_ok": n_ok,
+            "n_fail": n_fail,
+            "n_skipped": n_skipped,
+            "n_total": n_total,
+        },
+    )
+    return HTMLResponse(
+        render_populate_progress_chip(
+            label=label,
+            field=field,
+            n_done=n_done,
+            n_total=n_total,
+            n_fail=n_fail,
+            n_skipped=n_skipped,
+            paused=paused,
+            chain=chain,
+        )
+    )
 
 
 def _run_populate_and_respond(
@@ -2520,6 +2682,27 @@ async def root_populate(request: Request, config_path: str, field: str):
         request=request,
         templates=_templates(request),
         path_prefix=_config_path_prefix(config_path),
+    )
+
+
+@root_router.post(
+    "/{config_path:path}/populate-all/{field}/pause", response_class=HTMLResponse
+)
+async def root_pause_populate_all(request: Request, config_path: str, field: str):
+    reviewer = _root_reviewer(request, config_path)
+    btn_spec = _find_populate_spec(reviewer, field)
+    if btn_spec is None:
+        return HTMLResponse(
+            f'<span class="status-warning">&#9888; No PopulateButton for {_esc(field)}</span>'
+        )
+    return _run_populate_all_and_respond(
+        reviewer,
+        field,
+        btn_spec,
+        request=request,
+        templates=_templates(request),
+        path_prefix=_config_path_prefix(config_path),
+        paused=True,
     )
 
 
