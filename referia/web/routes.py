@@ -2279,10 +2279,11 @@ def _run_populate_all_and_respond(
             "n_total": n_total,
         },
     )
+    # Escape at the HTML sink so CodeQL sees html.escape (CIP-000E).
     return HTMLResponse(
         render_populate_progress_chip(
-            label=label,
-            field=field,
+            label=html.escape(str(label)),
+            field=html.escape(str(field), quote=True),
             n_done=n_done,
             n_total=n_total,
             n_fail=n_fail,

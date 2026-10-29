@@ -1595,9 +1595,12 @@ def render_populate_progress_chip(
 
     Phrase text and paths stay out (CIP-000E). ``chain`` adds
     ``hx-trigger="load delay:50ms"`` so HTMX POSTs the next batch.
+
+    ``html.escape`` (not the ``_escape`` wrapper) is the CodeQL-recognised
+    sanitizer at this HTML sink.
     """
-    col_url = _url_path_segment(field)
-    title = _escape(label)
+    col_url = _html.escape(_url_path_segment(field), quote=True)
+    title = _html.escape(str(label))
     body = (
         f"{title} {int(n_done)}/{int(n_total)} "
         f"({int(n_fail)} failed, {int(n_skipped)} skipped)."

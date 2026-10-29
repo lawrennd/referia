@@ -2395,3 +2395,30 @@ class TestPopulateProgressChip:
         assert "Pause" not in html
         assert "Resume" not in html
         assert 'hx-trigger="load' not in html
+
+    def test_label_and_field_are_html_escaped(self):
+        from referia.web.render import render_populate_progress_chip
+
+        html = render_populate_progress_chip(
+            label='<img alt="x" onerror="alert(1)">',
+            field='"><script>alert(1)</script>',
+            n_done=1,
+            n_total=2,
+            chain=True,
+        )
+        assert "<img" not in html
+        assert "<script>" not in html
+        assert "&lt;img" in html or "&amp;lt;img" in html
+        assert "%3Cscript%3E" in html
+        assert 'hx-post="/populate-all/' in html
+
+    def test_empty_total_omits_progress_bar(self):
+        from referia.web.render import render_populate_progress_chip
+
+        html = render_populate_progress_chip(
+            label="Extract",
+            field="_extract",
+            n_done=0,
+            n_total=0,
+        )
+        assert "<progress" not in html
