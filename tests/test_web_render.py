@@ -887,6 +887,49 @@ class TestRenderViewer:
         assert "0.25" in html
         assert "1.0" in html or "1" in html
 
+    def test_visible_if_hides_markdown_viewer(self):
+        html = render_viewer(
+            {"type": "Markdown", "visible_if": "ch8Present"},
+            "Chapter 8",
+            data={"ch8Present": False},
+        )
+        assert "display:none" in html
+        assert "Chapter 8" in html
+
+    def test_visible_if_shows_markdown_viewer(self):
+        html = render_viewer(
+            {"type": "Markdown", "visible_if": "ch8Present"},
+            "Chapter 8",
+            data={"ch8Present": True},
+        )
+        assert "display:none" not in html
+        assert "Chapter 8" in html
+
+    def test_visible_if_equals_and_not(self):
+        hidden = render_viewer(
+            {
+                "type": "Markdown",
+                "visible_if": {"field": "Status", "equals": "yes"},
+            },
+            "gated",
+            data={"Status": "no"},
+        )
+        shown = render_viewer(
+            {
+                "type": "Markdown",
+                "visible_if": {"field": "pending_proposal", "not": True},
+            },
+            "ready",
+            data={"pending_proposal": False},
+        )
+        assert "display:none" in hidden
+        assert "display:none" not in shown
+
+    def test_without_visible_if_unchanged(self):
+        html = render_viewer({"type": "Markdown"}, "**bold**")
+        assert "display:none" not in html
+        assert "viewer-markdown" in html
+
 
 # ---------------------------------------------------------------------------
 # render_form

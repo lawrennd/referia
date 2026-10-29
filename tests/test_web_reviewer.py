@@ -2205,6 +2205,24 @@ class TestRowsAndFilters:
         assert captured["local"]["rows"][0]["title"] == "Alpha"
         assert "list" in html or "viewer" in html
 
+    def test_render_viewer_html_visible_if_inherited_input_column(self):
+        """Present flags on the child row gate viewer Liquid (no review widget)."""
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"ch8Present": False, "title": "Chapter 8"},
+        )
+        spec = {
+            "type": "Markdown",
+            "liquid": "Chapter 8 notes",
+            "visible_if": "ch8Present",
+        }
+        hidden = reviewer.render_viewer_html(spec, viewer_index=0)
+        assert "display:none" in hidden
+        storage[("a", "ch8Present")] = True
+        storage["ch8Present"] = True
+        shown = reviewer.render_viewer_html(spec, viewer_index=0)
+        assert "display:none" not in shown
+
 
 class TestInteractiveViewerHtml:
     """CIP-0011: typed PlotlyFigure / StaticImage under viewer:."""

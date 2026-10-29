@@ -477,6 +477,36 @@ class TestViewerOobHelpers:
         ignored = _viewer_highlight_oobs(reviewer, "notes")
         assert ignored == []
 
+    def test_viewer_highlight_oobs_refreshes_visible_if(self):
+        from referia.web.routes import _viewer_highlight_oobs
+
+        reviewer = MagicMock()
+        reviewer.get_viewer_specs.return_value = [
+            {"liquid": "always"},
+            {
+                "type": "Markdown",
+                "liquid": "Chapter 8",
+                "visible_if": "ch8Present",
+            },
+            {
+                "type": "Markdown",
+                "liquid": "equals form",
+                "visible_if": {"field": "ch8Present", "equals": True},
+            },
+        ]
+        reviewer.render_viewer_html.side_effect = (
+            lambda spec, viewer_index=0: (
+                f'<div class="viewer viewer-markdown" '
+                f'id="viewer-markdown-{viewer_index}">n={viewer_index}</div>'
+            )
+        )
+        parts = _viewer_highlight_oobs(reviewer, "ch8Present")
+        assert len(parts) == 2
+        assert 'id="viewer-markdown-1"' in parts[0]
+        assert 'id="viewer-markdown-2"' in parts[1]
+        assert all('hx-swap-oob="true"' in part for part in parts)
+        assert _viewer_highlight_oobs(reviewer, "notes") == []
+
     def test_viewer_source_without_trigger_spec_skips_widget_oob(
         self, client, mock_reviewer
     ):

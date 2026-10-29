@@ -329,6 +329,10 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
     view_options = view_options_for_interface(getattr(reviewer, "_interface", None))
     viewer_specs = reviewer.get_viewer_specs(view_options=view_options)
     viewer_index = 0
+    try:
+        viewer_row = _current_data(reviewer)
+    except Exception:
+        viewer_row = {}
 
     def _viewer_leaf(spec: dict) -> str:
         nonlocal viewer_index
@@ -336,7 +340,9 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         viewer_index += 1
         return html_block
 
-    viewer_blocks = render_viewer_tree(viewer_specs, _viewer_leaf)
+    viewer_blocks = render_viewer_tree(
+        viewer_specs, _viewer_leaf, data=viewer_row
+    )
     needs_plotly = any(
         (spec.get("type") if isinstance(spec, dict) else None) == "PlotlyFigure"
         for spec in iter_spec_leaves(viewer_specs)
@@ -754,6 +760,8 @@ def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
     Liquid intro blocks re-render when topic catalogue columns change so
     named labels replace raw ``T0`` keys without a full page reload, and
     when the entry declares ``watch:`` / ``field:`` (e.g. Segment → units).
+    ``visible_if`` dependents re-render the whole viewer container so
+    ``display:none`` can toggle after a Present-flag write.
     """
     from referia.assess.viewer_bindings import (
         apply_highlight,
@@ -767,10 +775,15 @@ def _viewer_highlight_oobs(reviewer, column: str) -> list[str]:
         resolve_figure_payload,
         viewer_entry_type,
     )
+    from referia.assess.web_review import _visible_if_depends_on
     from referia.web.render import render_plotly_spec_oob
 
     parts: list[str] = []
     for i, spec in enumerate(iter_spec_leaves(reviewer.get_viewer_specs())):
+        if _visible_if_depends_on(spec.get("visible_if"), column):
+            html = reviewer.render_viewer_html(spec, viewer_index=i)
+            parts.append(_make_viewer_oob(html))
+            continue
         if is_viewer_chrome_type(spec):
             field = spec.get("field")
             args = spec.get("args") or {}

@@ -657,6 +657,8 @@ class Reviewer(DisplaySystem):
         if type(views) is not list:
             views = [views]
 
+        from referia.assess.review import _apply_jupyter_visible_if
+
         for count, view in enumerate(views):
             label = "_viewer_label" + str(count)
             view_dict = view if isinstance(view, dict) else {"liquid": str(view)}
@@ -670,45 +672,37 @@ class Reviewer(DisplaySystem):
                             else f"### {title}"
                         )
                     }
-                    widgets.add(
-                        **{
-                            label: Markdown(
-                                description=" ",
-                                field_name=label,
-                                column_name=label,
-                                parent=self,
-                                **heading,
-                            )
-                        }
+                    heading_widget = Markdown(
+                        description=" ",
+                        field_name=label,
+                        column_name=label,
+                        parent=self,
+                        **heading,
                     )
+                    _apply_jupyter_visible_if(
+                        heading_widget, view_dict.get("visible_if"), self
+                    )
+                    widgets.add(**{label: heading_widget})
                 sub = view_dict.get("entries") or view_dict.get("children") or []
                 if isinstance(sub, list) and sub:
                     widgets.add(cluster=self._create_viewer(sub))
                 continue
             vtype = viewer_entry_type(view_dict)
             if vtype == "PlotlyFigure":
-                widgets.add(
-                    **{
-                        label: PlotlyFigureViewer(
-                            description=" ",
-                            field_name=label,
-                            column_name=label,
-                            parent=self,
-                            viewer_spec=view_dict,
-                        )
-                    }
+                widget = PlotlyFigureViewer(
+                    description=" ",
+                    field_name=label,
+                    column_name=label,
+                    parent=self,
+                    viewer_spec=view_dict,
                 )
             elif vtype == "StaticImage":
-                widgets.add(
-                    **{
-                        label: StaticImageViewer(
-                            description=" ",
-                            field_name=label,
-                            column_name=label,
-                            parent=self,
-                            viewer_spec=view_dict,
-                        )
-                    }
+                widget = StaticImageViewer(
+                    description=" ",
+                    field_name=label,
+                    column_name=label,
+                    parent=self,
+                    viewer_spec=view_dict,
                 )
             else:
                 args = {
@@ -718,9 +712,11 @@ class Reviewer(DisplaySystem):
                     **view_dict,
                     "parent": self,
                 }
-                for key in ("on", "highlight", "type"):
+                for key in ("on", "highlight", "type", "visible_if"):
                     args.pop(key, None)
-                widgets.add(**{label: Markdown(**args)})
+                widget = Markdown(**args)
+            _apply_jupyter_visible_if(widget, view_dict.get("visible_if"), self)
+            widgets.add(**{label: widget})
         return widgets
 
     def _create_review(self, reviewers):

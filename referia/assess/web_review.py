@@ -1225,7 +1225,10 @@ class WebReviewer:
             log.debug("Could not evaluate viewer spec %r: %s", viewer_spec, exc)
             content = ""
         return _render_viewer_html(
-            viewer_spec, content, viewer_index=viewer_index
+            viewer_spec,
+            content,
+            viewer_index=viewer_index,
+            data=self._viewer_visibility_data(),
         )
 
     def _render_interactive_viewer_html(
@@ -1280,8 +1283,11 @@ class WebReviewer:
                         data[str(dep)] = None
             val = data.get(field) if field else None
             inner = _render_widget_html(viewer_spec, val, data)
+            from referia.web.render import _visibility_style
+
+            vis = _visibility_style(viewer_spec, data)
             return (
-                f'<div class="viewer viewer-chrome" '
+                f'<div class="viewer viewer-chrome"{vis} '
                 f'id="viewer-chrome-{viewer_index}">{inner}</div>'
             )
 
@@ -1294,6 +1300,7 @@ class WebReviewer:
                 figure=figure,
                 highlight_value=highlight_value,
                 viewer_index=viewer_index,
+                data=self._viewer_visibility_data(),
             )
 
         # StaticImage: field value or liquid-evaluated URL/path
@@ -1310,8 +1317,18 @@ class WebReviewer:
             except Exception as exc:
                 log.debug("StaticImage liquid: %s", exc)
         return _render_viewer_html(
-            viewer_spec, content, viewer_index=viewer_index
+            viewer_spec,
+            content,
+            viewer_index=viewer_index,
+            data=self._viewer_visibility_data(),
         )
+
+    def _viewer_visibility_data(self) -> dict:
+        """Current row for ``visible_if`` on ``viewer:`` entries."""
+        try:
+            return dict(self.get_row_data() or {})
+        except Exception:
+            return {}
 
     def _viewer_raw(self) -> list:
         viewer = self._interface.get("viewer", []) or []

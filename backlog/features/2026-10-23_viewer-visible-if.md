@@ -1,7 +1,7 @@
 ---
 id: "2026-10-23_viewer-visible-if"
 title: "Honor visible_if on viewer: entries (web and Jupyter)"
-status: "In Progress"
+status: "Completed"
 priority: "Medium"
 created: "2026-10-23"
 last_updated: "2026-10-29"
@@ -32,13 +32,13 @@ Typical use: hide chapter-specific viewer markdown (or inherited ancestor viewer
 
 ## Acceptance Criteria
 
-- [ ] `visible_if` on a `viewer:` entry uses the same rules as review widgets (string field name and `{field, equals}` / `{field, not}`)
-- [ ] False / missing condition omits or hides that viewer block on the web (including stacked inherit ancestor viewers)
-- [ ] True condition shows the block
-- [ ] Jupyter `_create_viewer` honours the same condition
-- [ ] Field updates that change a Present flag refresh viewer visibility (web OOB or equivalent), not only on full page load
-- [ ] Entries without `visible_if` are unchanged
-- [ ] Tests cover a viewer Liquid block gated on an inherited input column
+- [x] `visible_if` on a `viewer:` entry uses the same rules as review widgets (string field name and `{field, equals}` / `{field, not}`)
+- [x] False / missing condition omits or hides that viewer block on the web (including stacked inherit ancestor viewers)
+- [x] True condition shows the block
+- [x] Jupyter `_create_viewer` honours the same condition
+- [x] Field updates that change a Present flag refresh viewer visibility (web OOB or equivalent), not only on full page load
+- [x] Entries without `visible_if` are unchanged
+- [x] Tests cover a viewer Liquid block gated on an inherited input column
 
 ## Implementation Notes
 
@@ -63,3 +63,5 @@ Task created with Proposed status after introduction stacked inherit: review `vi
 ### 2026-10-29
 
 Accepted for implementation. Branch `backlog-2026-10-23-viewer-visible-if` from origin/main.
+
+Implemented: `render_viewer` / `render_viewer_tree` apply `_visibility_style`; hidden viewers stay in the DOM with `display:none` so HTMX can reveal them. Field updates that match a viewer `visible_if` OOB-swap that viewer. Jupyter `_create_viewer` binds the same condition.
