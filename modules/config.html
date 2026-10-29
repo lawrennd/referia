@@ -79,6 +79,13 @@
 <li class="toctree-l2"><a class="reference internal" href="../usage/config_dialect.html#library-api">Library API</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../usage/catalog_schedule.html">Catalog schedule, Today, and Year</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../usage/catalog_schedule.html#store-vs-view">Store vs view</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/catalog_schedule.html#sibling-today-and-year">Sibling Today and Year</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/catalog_schedule.html#grouping">Grouping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../usage/catalog_schedule.html#example">Example</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="assess.html">Assess Module</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="assess.html#compute-class">Compute Class</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="assess.html#referia.assess.compute.Compute"><code class="docutils literal notranslate"><span class="pre">Compute</span></code></a><ul>
@@ -1130,6 +1137,10 @@ lynguine.config.context.Context
 </div>
 <p>The configuration system uses the Context class from lynguine directly, while extending the
 Interface class to add referia-specific functionality.</p>
+<p><code class="docutils literal notranslate"><span class="pre">inherit.reuse</span></code> (CIP-001C) is a referia opt-in list. After the usual
+forced ignore of parent <code class="docutils literal notranslate"><span class="pre">compute</span></code> and <code class="docutils literal notranslate"><span class="pre">review</span></code>, each listed key is
+removed from <code class="docutils literal notranslate"><span class="pre">inherit.ignore</span></code> so a child catalog view can share those
+sections. See <a class="reference internal" href="../usage/catalog_schedule.html"><span class="doc">Catalog schedule, Today, and Year</span></a>.</p>
 </section>
 <section id="configuration-file-format">
 <h2><a class="toc-backref" href="#id3" role="doc-backlink">Configuration File Format</a><a class="headerlink" href="#configuration-file-format" title="Link to this heading"></a></h2>

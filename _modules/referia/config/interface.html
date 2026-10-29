@@ -76,6 +76,13 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../usage/config_dialect.html#library-api">Library API</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage/catalog_schedule.html">Catalog schedule, Today, and Year</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../usage/catalog_schedule.html#store-vs-view">Store vs view</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../usage/catalog_schedule.html#sibling-today-and-year">Sibling Today and Year</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../usage/catalog_schedule.html#grouping">Grouping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../usage/catalog_schedule.html#example">Example</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules/assess.html">Assess Module</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/assess.html#compute-class">Compute Class</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/assess.html#referia.assess.compute.Compute"><code class="docutils literal notranslate"><span class="pre">Compute</span></code></a><ul>
@@ -1394,44 +1401,50 @@
         
         <span class="n">default_append</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span>
         <span class="n">default_ignore</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;compute&quot;</span><span class="p">,</span> <span class="s2">&quot;review&quot;</span><span class="p">]</span>
+        <span class="n">inherit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">]</span>
 
-        
-        <span class="k">if</span> <span class="s2">&quot;append&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">]:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">][</span><span class="s2">&quot;append&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_append</span>
+        <span class="k">if</span> <span class="s2">&quot;append&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">:</span>
+            <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;append&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_append</span>
 
-        <span class="k">if</span> <span class="s2">&quot;ignore&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">]:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">][</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_ignore</span>
+        <span class="k">if</span> <span class="s2">&quot;ignore&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">:</span>
+            <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_ignore</span>
 
         <span class="k">for</span> <span class="n">ignore</span> <span class="ow">in</span> <span class="n">default_ignore</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">ignore</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">][</span><span class="s2">&quot;ignore&quot;</span><span class="p">]:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">][</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ignore</span><span class="p">)</span>
-                
+            <span class="k">if</span> <span class="n">ignore</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]:</span>
+                <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ignore</span><span class="p">)</span>
+
         <span class="k">for</span> <span class="n">append</span> <span class="ow">in</span> <span class="n">default_append</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">append</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">][</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">append</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">][</span><span class="s2">&quot;append&quot;</span><span class="p">]:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">][</span><span class="s2">&quot;append&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">append</span><span class="p">)</span>
-        
-            
+            <span class="k">if</span> <span class="n">append</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">append</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;append&quot;</span><span class="p">]:</span>
+                <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;append&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">append</span><span class="p">)</span>
 
-        <span class="n">viewelem</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;display&quot;</span><span class="p">:</span> <span class="p">(</span>
-                <span class="s1">&#39;Parent assesser available &lt;a href=&quot;&#39;</span>
-                <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span>
-                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="o">.</span><span class="n">_directory</span><span class="p">),</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">,</span>
-                <span class="p">)</span>
-                <span class="o">+</span> <span class="s1">&#39;&quot; target=&quot;_blank&quot;&gt;here&lt;/a&gt;.&#39;</span>
-            <span class="p">),</span>
-            <span class="n">PARENT_ASSESSOR_LINK_KEY</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="p">}</span>
+        <span class="n">reuse</span> <span class="o">=</span> <span class="n">inherit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;reuse&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reuse</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">reuse</span> <span class="o">=</span> <span class="p">[</span><span class="n">reuse</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">reuse</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]:</span>
+                <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
-        <span class="c1"># Add links to parent assessment by placing in viewer.</span>
-        <span class="k">if</span> <span class="s2">&quot;viewer&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span>
+        <span class="c1"># Add links to parent assessment by placing in viewer, unless the</span>
+        <span class="c1"># child owns chrome (`inherit.ignore` includes `viewer`; CIP-001C).</span>
+        <span class="k">if</span> <span class="s2">&quot;viewer&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]:</span>
+            <span class="n">viewelem</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;display&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s1">&#39;Parent assesser available &lt;a href=&quot;&#39;</span>
+                    <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="o">.</span><span class="n">_directory</span><span class="p">),</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="o">+</span> <span class="s1">&#39;&quot; target=&quot;_blank&quot;&gt;here&lt;/a&gt;.&#39;</span>
+                <span class="p">),</span>
+                <span class="n">PARENT_ASSESSOR_LINK_KEY</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="k">if</span> <span class="s2">&quot;viewer&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]]</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">]</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_process_parent</span><span class="p">()</span>
 
