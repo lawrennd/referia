@@ -1157,7 +1157,10 @@ class TestPostPopulateAll:
         assert response.status_code == 200
         assert reviewer.run_populate.call_count == 2
         assert seen[:2] == ["a", "b"]
-        assert "Segment document all filtered" in response.text
+        assert "Segment document 2/2" in response.text
+        assert "Save when ready." in response.text
+        assert "Segment document all filtered" not in response.text
+        assert 'class="inline-listing"' not in response.text
 
     def test_continues_after_one_failure(self):
         reviewer = self._listing_reviewer()
@@ -1182,7 +1185,10 @@ class TestPostPopulateAll:
         assert reviewer.run_populate.call_count == 2
         assert "missing pdf" not in response.text
         assert "/secret" not in response.text
-        assert 'class="inline-listing"' in response.text
+        assert "Segment document 1/2" in response.text
+        assert "1 failed" in response.text
+        assert 'hx-trigger="load delay:50ms"' in response.text
+        assert 'class="inline-listing"' not in response.text
 
     def test_all_failures_report_generic_error(self):
         reviewer = self._listing_reviewer()
@@ -1250,6 +1256,259 @@ class TestPostPopulateAll:
                 response = client.post("/populate-all/_segment")
         assert response.status_code == 200
         assert reviewer.run_populate.call_count == 2
+
+    def _rolling_reviewer(self, n=25, batch=10):
+        reviewer = self._listing_reviewer()
+        btn = {
+            "type": "PopulateButton",
+            "field": "_segment",
+            "args": {
+                "description": "Segment document",
+                "target": "units",
+                "batch": batch,
+                "compute": {"field": "units", "function": "document_segment"},
+            },
+        }
+        reviewer.get_widget_specs.return_value = [btn]
+        reviewer.get_review_specs.return_value = [btn]
+        indices = [f"r{i}" for i in range(n)]
+        reviewer.working_indices.return_value = indices
+        filled = set()
+        current = {"idx": None}
+
+        def _set_index(idx):
+            current["idx"] = idx
+
+        def _get_value(_col):
+            return "done" if current["idx"] in filled else ""
+
+        def _run(_spec):
+            filled.add(current["idx"])
+
+        reviewer.set_index.side_effect = _set_index
+        reviewer.get_value.side_effect = _get_value
+        reviewer.run_populate.side_effect = _run
+        reviewer._filled = filled
+        return reviewer
+
+    def test_batch_of_ten_chains_until_remaining(self):
+        reviewer = self._rolling_reviewer(n=25, batch=10)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 10
+        assert "Segment document 10/25" in response.text
+        assert 'hx-trigger="load delay:50ms"' in response.text
+        assert "secret phrase" not in response.text
+
+    def test_pause_stops_chain_without_more_compute(self):
+        reviewer = self._rolling_reviewer(n=25, batch=10)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                first = client.post("/populate-all/_segment")
+                paused = client.post("/populate-all/_segment/pause")
+        assert first.status_code == 200
+        assert paused.status_code == 200
+        assert reviewer.run_populate.call_count == 10
+        assert "Resume" in paused.text
+        assert 'hx-trigger="load' not in paused.text
+        assert "Segment document 10/25" in paused.text
+
+    def test_resume_skips_filled_and_computes_next_batch(self):
+        reviewer = self._rolling_reviewer(n=25, batch=10)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                client.post("/populate-all/_segment")
+                client.post("/populate-all/_segment/pause")
+                resumed = client.post("/populate-all/_segment")
+                last = client.post("/populate-all/_segment")
+        assert reviewer.run_populate.call_count == 25
+        assert "Segment document 20/25" in resumed.text
+        assert 'hx-trigger="load delay:50ms"' in resumed.text
+        assert "Segment document 25/25" in last.text
+        assert 'hx-trigger="load' not in last.text
+        assert "Save when ready." in last.text
+
+    def test_batch_zero_unbounded_this_request(self):
+        reviewer = self._rolling_reviewer(n=5, batch=0)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert reviewer.run_populate.call_count == 5
+        assert "Segment document 5/5" in response.text
+        assert 'hx-trigger="load' not in response.text
+
+    def test_invalid_and_negative_batch_default_to_ten(self):
+        reviewer = self._rolling_reviewer(n=12, batch="nope")
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert reviewer.run_populate.call_count == 10
+        assert "12" in response.text
+        reviewer.run_populate.reset_mock()
+        reviewer = self._rolling_reviewer(n=12, batch=-3)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                client.post("/populate-all/_segment")
+        assert reviewer.run_populate.call_count == 10
+
+    def test_working_indices_failure_falls_back_to_index_list(self):
+        reviewer = self._listing_reviewer()
+        reviewer.working_indices.side_effect = RuntimeError("no working set")
+        reviewer.index_list.return_value = ["alice"]
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 1
+        reviewer.set_index.assert_any_call("alice")
+
+    def test_get_value_error_treats_row_as_unfilled(self):
+        reviewer = self._listing_reviewer()
+        reviewer.get_value.side_effect = RuntimeError("missing column")
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 2
+
+    def test_empty_list_and_nan_count_as_unfilled(self):
+        reviewer = self._listing_reviewer()
+        reviewer.working_indices.return_value = ["a", "b"]
+        current = {"idx": None}
+
+        def _set_index(idx):
+            current["idx"] = idx
+
+        def _get_value(_col):
+            return [] if current["idx"] == "a" else float("nan")
+
+        reviewer.set_index.side_effect = _set_index
+        reviewer.get_value.side_effect = _get_value
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert reviewer.run_populate.call_count == 2
+        assert "2/2" in response.text
+
+    def test_pause_without_prior_progress_uses_working_total(self):
+        reviewer = self._listing_reviewer()
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                paused = client.post("/populate-all/_segment/pause")
+        assert paused.status_code == 200
+        reviewer.run_populate.assert_not_called()
+        assert "Resume" in paused.text
+        assert "0/2" in paused.text
+
+    def test_flush_failure_still_returns_chip(self):
+        reviewer = self._listing_reviewer()
+        reviewer.save_flows.side_effect = OSError("disk full")
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert "populate-progress" in response.text
+        assert "disk full" not in response.text
+
+    def test_flush_skipped_when_save_flows_missing(self):
+        reviewer = self._listing_reviewer()
+        reviewer.save_flows = None
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert "2/2" in response.text
+
+    def test_description_is_escaped_in_chip(self):
+        reviewer = self._listing_reviewer()
+        btn = reviewer.get_widget_specs.return_value[0]
+        btn["args"]["description"] = '<img alt="x" onerror="alert(1)">'
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert "<img" not in response.text
+        assert "<script" not in response.text
+        assert "&lt;img" in response.text or "&amp;lt;img" in response.text
+
+
+class TestPopulateAllHelpers:
+    def test_batch_size_empty_and_non_int(self):
+        from referia.web.routes import _populate_batch_size
+
+        assert _populate_batch_size({}) == 10
+        assert _populate_batch_size({"args": {}}) == 10
+        assert _populate_batch_size({"args": {"batch": ""}}) == 10
+        assert _populate_batch_size({"args": {"batch": None}}) == 10
+        assert _populate_batch_size({"args": {"batch": "x"}}) == 10
+        assert _populate_batch_size({"args": {"batch": -1}}) == 10
+        assert _populate_batch_size({"args": {"batch": 0}}) == 0
+        assert _populate_batch_size({"args": {"batch": 3}}) == 3
+
+    def test_value_is_filled_edges(self):
+        from referia.web.routes import _value_is_filled
+
+        assert _value_is_filled(None) is False
+        assert _value_is_filled(float("nan")) is False
+        assert _value_is_filled("  ") is False
+        assert _value_is_filled("") is False
+        assert _value_is_filled([]) is False
+        assert _value_is_filled({}) is False
+        assert _value_is_filled(()) is False
+        assert _value_is_filled("done") is True
+        assert _value_is_filled(0) is True
+        assert _value_is_filled(["x"]) is True
+
+    def test_paused_store_setattr_failures_are_swallowed(self):
+        from referia.web.routes import (
+            _flush_after_populate_batch,
+            _populate_paused_fields,
+            _populate_progress,
+            _remember_populate_progress,
+            _set_populate_paused,
+        )
+
+        class BlockSet:
+            def __setattr__(self, name, value):
+                raise RuntimeError("blocked")
+
+        blocked = BlockSet()
+        fields = _populate_paused_fields(blocked)
+        assert fields == set()
+        _set_populate_paused(blocked, "_extract", True)
+        assert _populate_progress(blocked) == {}
+        _remember_populate_progress(blocked, "_extract", {"n_ok": 1})
+
+        class Bag:
+            pass
+
+        bag = Bag()
+        bag._populate_paused_fields = ["not-a-set"]
+        assert _populate_paused_fields(bag) == set()
+        bag._populate_progress = ["not-a-dict"]
+        assert _populate_progress(bag) == {}
+        _flush_after_populate_batch(Bag())
+
+        class Flusher:
+            def save_flows(self):
+                raise OSError("disk")
+
+        _flush_after_populate_batch(Flusher())
 
 
 # ---------------------------------------------------------------------------

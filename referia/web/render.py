@@ -850,7 +850,7 @@ def _render_populate_button(spec: dict, value: Any, data: dict | None = None) ->
     if _listing_chrome_ctx.get():
         return (
             f'<button type="button" class="widget-button populate-button" '
-            f'hx-post="/populate-all/{col_url}" hx-target="#review-panel" '
+            f'hx-post="/populate-all/{col_url}" hx-target="#status-bar" '
             f'hx-swap="innerHTML" hx-disabled-elt="this">'
             f"{_escape(label)}</button>"
         )
@@ -1562,7 +1562,7 @@ def render_populate_all_button(
         else (
             f'<button type="button" class="widget-button populate-button" '
             f'hx-post="/populate-all/{col_url}" '
-            f'hx-target="#review-panel" hx-swap="innerHTML" '
+            f'hx-target="#status-bar" hx-swap="innerHTML" '
             f'hx-disabled-elt="this" '
             f'title="{reason}">'
             f"{_escape(label)} all</button>"
@@ -1576,6 +1576,68 @@ def render_populate_all_button(
         f'<span class="entry-title">{_escape(label)} all filtered</span>'
         f'<span class="badge-meta">{n} {noun}</span>'
         f'<span class="desc">{desc}</span>'
+        f"</div>"
+    )
+
+
+def render_populate_progress_chip(
+    *,
+    label: str,
+    field: str,
+    n_done: int,
+    n_total: int,
+    n_fail: int = 0,
+    n_skipped: int = 0,
+    paused: bool = False,
+    chain: bool = False,
+) -> str:
+    """Status-bar chip for CIP-0021 rolling populate-all.
+
+    Phrase text and paths stay out (CIP-000E). ``chain`` adds
+    ``hx-trigger="load delay:50ms"`` so HTMX POSTs the next batch.
+
+    ``html.escape`` (not the ``_escape`` wrapper) is the CodeQL-recognised
+    sanitizer at this HTML sink.
+    """
+    col_url = _html.escape(_url_path_segment(field), quote=True)
+    title = _html.escape(str(label))
+    body = (
+        f"{title} {int(n_done)}/{int(n_total)} "
+        f"({int(n_fail)} failed, {int(n_skipped)} skipped)."
+    )
+    pause_or_resume = (
+        f'<button type="button" class="populate-resume" '
+        f'hx-post="/populate-all/{col_url}" '
+        f'hx-target="#status-bar" hx-swap="innerHTML">Resume</button>'
+        if paused
+        else (
+            f'<button type="button" class="populate-pause" '
+            f'hx-post="/populate-all/{col_url}/pause" '
+            f'hx-target="#status-bar" hx-swap="innerHTML">Pause</button>'
+        )
+    )
+    save_hint = ""
+    if int(n_done) >= int(n_total) and int(n_total) > 0:
+        save_hint = ' <span class="populate-save-hint">Save when ready.</span>'
+        pause_or_resume = ""
+        chain = False
+    chain_attrs = ""
+    if chain and not paused:
+        chain_attrs = (
+            f' hx-post="/populate-all/{col_url}"'
+            f' hx-trigger="load delay:50ms"'
+            f' hx-target="#status-bar"'
+            f' hx-swap="innerHTML"'
+            f' hx-sync="this:replace"'
+        )
+    bar = (
+        f'<progress max="{int(n_total)}" value="{int(n_done)}"></progress>'
+        if n_total
+        else ""
+    )
+    return (
+        f'<div id="populate-all-progress" class="populate-progress"{chain_attrs}>'
+        f"<span>{body}</span>{pause_or_resume}{save_hint}{bar}"
         f"</div>"
     )
 

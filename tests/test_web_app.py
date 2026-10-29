@@ -688,7 +688,8 @@ class TestRootRouterRoutes:
                 resp = client.post("/reviews/intro/populate-all/_segment")
         assert resp.status_code == 200
         assert reviewer.run_populate.call_count == 2
-        assert "Segment document all filtered" in resp.text
+        assert "Segment document 2/2" in resp.text
+        assert "Segment document all filtered" not in resp.text
 
     def test_root_populate_all_unknown_field_warns(self, tmp_path):
         reviewer = self._listing_populate_reviewer()
@@ -699,6 +700,25 @@ class TestRootRouterRoutes:
         assert resp.status_code == 200
         assert "No PopulateButton" in resp.text
         reviewer.run_populate.assert_not_called()
+
+    def test_root_pause_populate_all_stops_without_compute(self, tmp_path):
+        reviewer = self._listing_populate_reviewer()
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                resp = client.post("/reviews/intro/populate-all/_segment/pause")
+        assert resp.status_code == 200
+        reviewer.run_populate.assert_not_called()
+        assert "Resume" in resp.text
+
+    def test_root_pause_unknown_field_warns(self, tmp_path):
+        reviewer = self._listing_populate_reviewer()
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                resp = client.post("/reviews/intro/populate-all/missing/pause")
+        assert resp.status_code == 200
+        assert "No PopulateButton" in resp.text
 
     def test_root_populate_honours_form_index(self, tmp_path):
         reviewer = self._listing_populate_reviewer()

@@ -2076,6 +2076,7 @@ class TestInlineListing:
         )
         assert "Segment document all filtered" in html
         assert 'hx-post="/populate-all/_segment"' in html
+        assert 'hx-target="#status-bar"' in html
         assert 'hx-post="/populate/_segment"' in html
         assert "placeholder-report" in html
         assert "placeholder.pdf" in html
@@ -2216,6 +2217,7 @@ class TestInlineListing:
         html = populate_all_chrome_html(specs, count=2013)
         assert "Classify all filtered" in html
         assert 'hx-post="/populate-all/_classify"' in html
+        assert 'hx-target="#status-bar"' in html
         assert "2013 rows" in html
         assert populate_all_chrome_html(
             [{"type": "PopulateButton", "field": "_x", "args": {}}],
@@ -2473,3 +2475,83 @@ class TestInlineListing:
         assert "listing-chrome" in empty
         assert "No rows match the current filters." in empty
         assert "review-section-static" in empty
+
+
+class TestPopulateProgressChip:
+    def test_chain_and_pause_when_remaining(self):
+        from referia.web.render import render_populate_progress_chip
+
+        html = render_populate_progress_chip(
+            label="Extract",
+            field="_extract",
+            n_done=10,
+            n_total=25,
+            n_fail=0,
+            n_skipped=0,
+            chain=True,
+        )
+        assert "Extract 10/25" in html
+        assert "(0 failed, 0 skipped)." in html
+        assert 'hx-trigger="load delay:50ms"' in html
+        assert 'hx-post="/populate-all/_extract/pause"' in html
+        assert "Pause" in html
+        assert "<progress max=\"25\" value=\"10\">" in html
+        assert "secret phrase" not in html
+
+    def test_paused_shows_resume_without_chain(self):
+        from referia.web.render import render_populate_progress_chip
+
+        html = render_populate_progress_chip(
+            label="Extract",
+            field="_extract",
+            n_done=10,
+            n_total=25,
+            paused=True,
+            chain=True,
+        )
+        assert "Resume" in html
+        assert "Pause" not in html
+        assert 'hx-trigger="load' not in html
+        assert 'hx-post="/populate-all/_extract"' in html
+
+    def test_complete_omits_pause_and_hints_save(self):
+        from referia.web.render import render_populate_progress_chip
+
+        html = render_populate_progress_chip(
+            label="Extract",
+            field="_extract",
+            n_done=25,
+            n_total=25,
+            chain=True,
+        )
+        assert "Save when ready." in html
+        assert "Pause" not in html
+        assert "Resume" not in html
+        assert 'hx-trigger="load' not in html
+
+    def test_label_and_field_are_html_escaped(self):
+        from referia.web.render import render_populate_progress_chip
+
+        html = render_populate_progress_chip(
+            label='<img alt="x" onerror="alert(1)">',
+            field='"><script>alert(1)</script>',
+            n_done=1,
+            n_total=2,
+            chain=True,
+        )
+        assert "<img" not in html
+        assert "<script>" not in html
+        assert "&lt;img" in html or "&amp;lt;img" in html
+        assert "%3Cscript%3E" in html
+        assert 'hx-post="/populate-all/' in html
+
+    def test_empty_total_omits_progress_bar(self):
+        from referia.web.render import render_populate_progress_chip
+
+        html = render_populate_progress_chip(
+            label="Extract",
+            field="_extract",
+            n_done=0,
+            n_total=0,
+        )
+        assert "<progress" not in html
