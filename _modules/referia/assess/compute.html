@@ -874,6 +874,12 @@
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.phrases</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_extract_phrases</span><span class="p">,</span> <span class="n">segment_dialogue_units</span><span class="p">,</span> <span class="n">stamp_dialogue_doc_ids</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.embed</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_embed</span><span class="p">,</span> <span class="n">llm_embed_extraction_phrases</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.compare</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">jsd</span><span class="p">,</span>
+    <span class="n">run_format_share_compare</span><span class="p">,</span>
+    <span class="n">run_question_type_stress</span><span class="p">,</span>
+    <span class="n">run_wordlist_floor</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.distance</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">axis_correlates</span><span class="p">,</span>
     <span class="n">classical_mds</span><span class="p">,</span>
@@ -887,6 +893,7 @@
     <span class="n">run_document_distance_analysis</span><span class="p">,</span>
     <span class="n">topic_means_from_responsibilities</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.grounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_classify_grounds</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.stores</span><span class="w"> </span><span class="kn">import</span> <span class="n">named_store_status</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.topic_naming</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">subject_grain_apply_focus_label</span><span class="p">,</span>
@@ -1050,6 +1057,204 @@
         <span class="k">return</span> <span class="n">run_document_distance_analysis</span><span class="p">(</span>
             <span class="n">cluster_ids</span><span class="o">=</span><span class="n">cluster_ids</span><span class="p">,</span> <span class="n">doc_titles</span><span class="o">=</span><span class="n">doc_titles</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
         <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_info_yaml_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_info_dir</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">info</span> <span class="o">/</span> <span class="n">filename</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">cached</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_info_yaml_cache&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cached</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cached</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_info_yaml_cache</span> <span class="o">=</span> <span class="n">cached</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">cached</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cached</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">yaml</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSafeLoader</span> <span class="k">as</span> <span class="n">SafeLoader</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">yaml</span><span class="w"> </span><span class="kn">import</span> <span class="n">SafeLoader</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">Loader</span><span class="o">=</span><span class="n">SafeLoader</span><span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">data</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">cached</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">rows</span>
+        <span class="k">return</span> <span class="n">rows</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_format_share_compare</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">cluster_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kinds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fill VQ ``cluster_ids`` and phrase ``kinds`` from sibling info.&quot;&quot;&quot;</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_info_dir</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">cluster_ids_missing</span><span class="p">(</span><span class="n">cluster_ids</span><span class="p">)</span> <span class="ow">and</span> <span class="n">info</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">codebook</span> <span class="o">=</span> <span class="n">info</span> <span class="o">/</span> <span class="s2">&quot;codebook.parquet&quot;</span>
+            <span class="k">if</span> <span class="n">codebook</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">frame</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">codebook</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="s2">&quot;cluster_ids&quot;</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame</span><span class="p">):</span>
+                        <span class="n">cluster_ids</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;cluster_ids&quot;</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">pass</span>
+        <span class="k">if</span> <span class="n">kinds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">phrases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;phrases.yml&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">phrases</span><span class="p">:</span>
+                <span class="n">kinds</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kind&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span><span class="p">]</span>
+                <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+                    <span class="s2">&quot;groups&quot;</span><span class="p">,</span>
+                    <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;groups&quot;</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;group&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span><span class="p">],</span>
+                <span class="p">)</span>
+                <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+                    <span class="s2">&quot;doc_ids&quot;</span><span class="p">,</span>
+                    <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doc_ids&quot;</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doc_id&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span><span class="p">],</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="n">run_format_share_compare</span><span class="p">(</span>
+            <span class="n">cluster_ids</span><span class="o">=</span><span class="n">cluster_ids</span><span class="p">,</span> <span class="n">kinds</span><span class="o">=</span><span class="n">kinds</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_question_type_stress</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contexts</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">formats</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">contexts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">chunks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;chunks.yml&quot;</span><span class="p">)</span>
+            <span class="n">contexts</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;context&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">chunks</span><span class="p">]</span>
+            <span class="n">formats</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;group&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">chunks</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">run_question_type_stress</span><span class="p">(</span>
+            <span class="n">contexts</span><span class="p">,</span> <span class="n">formats</span><span class="o">=</span><span class="n">formats</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_wordlist_floor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quotes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bases</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">quotes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">phrases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;phrases.yml&quot;</span><span class="p">)</span>
+            <span class="n">quotes</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;quote&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span><span class="p">]</span>
+            <span class="n">groups</span> <span class="o">=</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[</span>
+                <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;group&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span>
+            <span class="p">]</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+                <span class="s2">&quot;doc_ids&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doc_id&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">bases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">grounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;grounds.yml&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">grounds</span><span class="p">:</span>
+                <span class="n">by_id</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">):</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;basis&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grounds</span>
+                <span class="p">}</span>
+                <span class="n">phrases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;phrases.yml&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">phrases</span><span class="p">:</span>
+                    <span class="n">bases</span> <span class="o">=</span> <span class="p">[</span><span class="n">by_id</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">))</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">bases</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;basis&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grounds</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">run_wordlist_floor</span><span class="p">(</span>
+            <span class="n">quotes</span><span class="p">,</span> <span class="n">bases</span><span class="o">=</span><span class="n">bases</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_phrase_siding_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;phrases.yml&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+            <span class="s2">&quot;groups&quot;</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;group&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;doc_ids&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doc_id&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">])</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;verified&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;verified&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">])</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+            <span class="s2">&quot;phrase_ids&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">rows</span><span class="p">,</span> <span class="n">kwargs</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_kind_reconstruction</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">phrases</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kinds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;label_name&quot;</span><span class="p">,</span> <span class="s2">&quot;kind&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;missing_hint&quot;</span><span class="p">,</span> <span class="s2">&quot;Run 02_embed first.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">phrases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rows</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_phrase_siding_rows</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">phrases</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+            <span class="n">kinds</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kind&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.verify</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_kind_reconstruction</span> <span class="k">as</span> <span class="n">_run</span>
+
+        <span class="k">return</span> <span class="n">_run</span><span class="p">(</span><span class="n">phrases</span><span class="p">,</span> <span class="n">kinds</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_basis_reconstruction</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">phrases</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kinds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;label_name&quot;</span><span class="p">,</span> <span class="s2">&quot;basis&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+            <span class="s2">&quot;missing_hint&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Run 07_grounds Classify all + Save first.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">phrases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rows</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_phrase_siding_rows</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">grounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;grounds.yml&quot;</span><span class="p">)</span>
+            <span class="n">by_id</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">)):</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;basis&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grounds</span>
+            <span class="p">}</span>
+            <span class="n">phrases</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+            <span class="n">kinds</span> <span class="o">=</span> <span class="p">[</span><span class="n">by_id</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">)))</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.verify</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_kind_reconstruction</span> <span class="k">as</span> <span class="n">_run</span>
+
+        <span class="k">return</span> <span class="n">_run</span><span class="p">(</span><span class="n">phrases</span><span class="p">,</span> <span class="n">kinds</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_lens_reconstruction</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">phrases</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kinds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;label_name&quot;</span><span class="p">,</span> <span class="s2">&quot;lens&quot;</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;missing_hint&quot;</span><span class="p">,</span> <span class="s2">&quot;Run 03_vq and 04_grain first.&quot;</span><span class="p">)</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.verify</span><span class="w"> </span><span class="kn">import</span> <span class="n">hard_lens_labels</span><span class="p">,</span> <span class="n">run_kind_reconstruction</span> <span class="k">as</span> <span class="n">_run</span>
+
+        <span class="k">if</span> <span class="n">phrases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rows</span><span class="p">,</span> <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_phrase_siding_rows</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">phrases</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;scores.yml&quot;</span><span class="p">)</span>
+            <span class="n">rec</span> <span class="o">=</span> <span class="n">scores</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">scores</span> <span class="k">else</span> <span class="p">{}</span>
+            <span class="n">cluster_ids</span> <span class="o">=</span> <span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cluster_ids&quot;</span><span class="p">)</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_info_dir</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">cluster_ids_missing</span><span class="p">(</span><span class="n">cluster_ids</span><span class="p">)</span> <span class="ow">and</span> <span class="n">info</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">codebook</span> <span class="o">=</span> <span class="n">info</span> <span class="o">/</span> <span class="s2">&quot;codebook.parquet&quot;</span>
+                <span class="k">if</span> <span class="n">codebook</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">frame</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_parquet</span><span class="p">(</span><span class="n">codebook</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="s2">&quot;cluster_ids&quot;</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">frame</span><span class="p">):</span>
+                            <span class="n">cluster_ids</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;cluster_ids&quot;</span><span class="p">]</span>
+                    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                        <span class="n">cluster_ids</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">kinds</span> <span class="o">=</span> <span class="n">hard_lens_labels</span><span class="p">(</span>
+                    <span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;responsibilities&quot;</span><span class="p">),</span>
+                    <span class="n">cluster_ids</span><span class="p">,</span>
+                    <span class="n">rec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;topic_labels&quot;</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">md</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s2">&quot;Could not build hard lens labels from scores / codebook &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">). Run 03_vq and 04_grain, then Save.&quot;</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="p">{},</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="n">md</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kinds</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">phrases</span><span class="p">):</span>
+                <span class="n">md</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Hard lens length </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">kinds</span><span class="p">)</span><span class="si">}</span><span class="s2"> != </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">phrases</span><span class="p">)</span><span class="si">}</span><span class="s2"> phrases. &quot;</span>
+                    <span class="s2">&quot;Re-Save 02_embed so pack order matches phrases.yml, &quot;</span>
+                    <span class="s2">&quot;then refit 03_vq.&quot;</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="p">{},</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="n">md</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">_run</span><span class="p">(</span><span class="n">phrases</span><span class="p">,</span> <span class="n">kinds</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_llm_classify_grounds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">unit_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">points</span> <span class="ow">and</span> <span class="n">unit_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">phrases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;phrases.yml&quot;</span><span class="p">)</span>
+            <span class="n">uid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">unit_id</span><span class="p">)</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;phrase_id&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;phrase&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;quote&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;quote&quot;</span><span class="p">),</span>
+                    <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kind&quot;</span><span class="p">),</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span>
+                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;unit_id&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="n">uid</span>
+            <span class="p">]</span>
+        <span class="k">return</span> <span class="n">llm_classify_grounds</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Compute.prep_all">
@@ -1782,6 +1987,107 @@
                 <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
                     <span class="s2">&quot;Façade: P, topic means, EMD, MDS, tests, and Plotly &quot;</span>
                     <span class="s2">&quot;specs on a packed corpus row (CIP-0016).&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_format_share_compare&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_format_share_compare</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;min_mass&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+                    <span class="s2">&quot;n_boot&quot;</span><span class="p">:</span> <span class="mi">2000</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span>
+                    <span class="s2">&quot;min_gap&quot;</span><span class="p">:</span> <span class="mf">3.0</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Document-weighted type mix, lens shares, and JSD &quot;</span>
+                    <span class="s2">&quot;(CIP-001E). Paper Part A analogue on the current grain.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;llm_classify_grounds&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_llm_classify_grounds</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;gpt-4.1-mini&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Classify the basis of each extracted point on a unit &quot;</span>
+                    <span class="s2">&quot;(CIP-001E Part B). Writes payload and a grounds list.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_question_type_stress&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_question_type_stress</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Share of chatbot units whose context matches each &quot;</span>
+                    <span class="s2">&quot;question-type pattern (CIP-001E).&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_wordlist_floor&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_wordlist_floor</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Word-list experience floor on each point&#39;s own quote &quot;</span>
+                    <span class="s2">&quot;(CIP-001E). No model call.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_kind_reconstruction&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_kind_reconstruction</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;n_folds&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;logreg&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;ngram_min&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s2">&quot;ngram_max&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="s2">&quot;min_df&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="s2">&quot;max_features&quot;</span><span class="p">:</span> <span class="mi">4000</span><span class="p">,</span>
+                    <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+                    <span class="s2">&quot;verified_only&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Siding: 5-fold bag-of-words reconstruction of extract &quot;</span>
+                    <span class="s2">&quot;kind labels (CIP-001F). Not a pipeline stage.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_basis_reconstruction&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_basis_reconstruction</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;n_folds&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;logreg&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;ngram_min&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s2">&quot;ngram_max&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="s2">&quot;min_df&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="s2">&quot;max_features&quot;</span><span class="p">:</span> <span class="mi">4000</span><span class="p">,</span>
+                    <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+                    <span class="s2">&quot;verified_only&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Siding: 5-fold bag-of-words reconstruction of Part B &quot;</span>
+                    <span class="s2">&quot;basis labels (CIP-001F).&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_lens_reconstruction&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_lens_reconstruction</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;n_folds&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="s2">&quot;logreg&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;ngram_min&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="s2">&quot;ngram_max&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="s2">&quot;min_df&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                    <span class="s2">&quot;max_features&quot;</span><span class="p">:</span> <span class="mi">4000</span><span class="p">,</span>
+                    <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
+                    <span class="s2">&quot;verified_only&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Siding: 5-fold bag-of-words reconstruction of hard &quot;</span>
+                    <span class="s2">&quot;grain lens (CIP-001F). Not a check of Name strings.&quot;</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
