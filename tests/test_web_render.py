@@ -9,6 +9,7 @@ import math
 
 import pytest
 from referia.web.render import (
+    _combine_html_styles,
     _evaluate_liquid,
     _liquid_environment,
     _markdown_widget_content,
@@ -929,6 +930,75 @@ class TestRenderViewer:
         html = render_viewer({"type": "Markdown"}, "**bold**")
         assert "display:none" not in html
         assert "viewer-markdown" in html
+
+    def test_visible_if_hides_html_and_image_viewers(self):
+        html = render_viewer(
+            {"type": "HTML", "visible_if": "ch8Present"},
+            "<p>Chapter 8</p>",
+            viewer_index=2,
+            data={"ch8Present": False},
+        )
+        assert "display:none" in html
+        assert 'id="viewer-html-2"' in html
+        assert "<p>Chapter 8</p>" in html
+
+        image = render_viewer(
+            {"type": "StaticImage", "visible_if": "ch8Present"},
+            "https://example.com/ch8.png",
+            viewer_index=3,
+            data={"ch8Present": "False"},
+        )
+        assert "display:none" in image
+        assert 'id="viewer-image-3"' in image
+        assert "https://example.com/ch8.png" in image
+
+    def test_visible_if_shows_htmlmath_viewer(self):
+        html = render_viewer(
+            {"type": "HTMLMath", "visible_if": "ch8Present"},
+            "$x^2$",
+            viewer_index=1,
+            data={"ch8Present": True},
+        )
+        assert "display:none" not in html
+        assert 'id="viewer-markdown-1"' in html
+
+    def test_visible_if_merges_plotly_aspect_style(self):
+        html = render_viewer(
+            {
+                "type": "PlotlyFigure",
+                "visible_if": "ch8Present",
+                "size": {"mode": "container", "aspect_ratio": "16/9"},
+            },
+            figure={"data": [], "layout": {}},
+            viewer_index=4,
+            data={"ch8Present": False},
+        )
+        assert html.count(" style=") == 1
+        assert "display:none" in html
+        assert "--plotly-aspect: 16/9" in html
+        assert 'id="viewer-plotly-4"' in html
+        assert "plotly-spec" in html
+
+    def test_visible_if_without_row_data_hides(self):
+        html = render_viewer(
+            {"type": "Markdown", "visible_if": "ch8Present"},
+            "Chapter 8",
+        )
+        assert "display:none" in html
+        assert "Chapter 8" in html
+
+
+class TestCombineHtmlStyles:
+    def test_merges_style_fragments(self):
+        combined = _combine_html_styles(
+            ' style="--plotly-aspect: 16/9"',
+            ' style="display:none"',
+        )
+        assert combined == ' style="--plotly-aspect: 16/9; display:none"'
+
+    def test_skips_empty_and_bare_values(self):
+        assert _combine_html_styles("", None) == ""
+        assert _combine_html_styles("display:none") == ' style="display:none"'
 
 
 # ---------------------------------------------------------------------------

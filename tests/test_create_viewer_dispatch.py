@@ -105,3 +105,122 @@ def test_create_viewer_binds_visible_if(reviewer_stub):
     assert widget._visible_if_condition == "ch8Present"
     inner = widget.widget
     assert inner.layout.display == "none"
+
+
+def test_create_viewer_binds_visible_if_in_review_new():
+    from referia.assess.review_new import Reviewer
+
+    r = Reviewer.__new__(Reviewer)
+    r._widgets = MagicMock()
+    r.get_index = lambda: "a"
+    r._data = MagicMock()
+    r._data.at.__getitem__ = lambda _self, key: False
+
+    widget = MagicMock()
+    with patch("referia.assess.review_new.WidgetCluster") as WC, patch(
+        "referia.assess.review_new.Markdown"
+    ) as MD:
+        cluster = MagicMock()
+        WC.return_value = cluster
+        MD.return_value = widget
+        Reviewer._create_viewer(
+            r, [{"liquid": "## Ch8", "visible_if": "ch8Present"}]
+        )
+
+    assert "visible_if" not in MD.call_args.kwargs
+    assert widget._visible_if_condition == "ch8Present"
+    assert widget.widget.layout.display == "none"
+
+
+def test_create_viewer_binds_visible_if_on_plotly_image_and_section(reviewer_stub):
+    from referia.assess.review import Reviewer
+
+    reviewer_stub.get_index = lambda: "a"
+    reviewer_stub._data = MagicMock()
+    reviewer_stub._data.at.__getitem__ = lambda _self, key: False
+
+    heading = MagicMock()
+    plotly = MagicMock()
+    image = MagicMock()
+    md_calls = []
+
+    def fake_markdown(**kwargs):
+        widget = MagicMock()
+        md_calls.append((kwargs, widget))
+        if kwargs.get("liquid") == "### Chapter 8":
+            return heading
+        return widget
+
+    with patch("referia.assess.review.WidgetCluster") as WC, patch(
+        "referia.assess.review.PlotlyFigureViewer"
+    ) as PF, patch(
+        "referia.assess.review.StaticImageViewer"
+    ) as SI, patch(
+        "referia.assess.review.Markdown", side_effect=fake_markdown
+    ):
+        cluster = MagicMock()
+        WC.return_value = cluster
+        PF.return_value = plotly
+        SI.return_value = image
+        Reviewer._create_viewer(
+            reviewer_stub,
+            [
+                {
+                    "type": "Section",
+                    "title": "Chapter 8",
+                    "visible_if": "ch8Present",
+                    "entries": [{"liquid": "notes"}],
+                },
+                {
+                    "type": "PlotlyFigure",
+                    "field": "fig",
+                    "visible_if": "ch8Present",
+                },
+                {
+                    "type": "StaticImage",
+                    "field": "photo",
+                    "visible_if": "ch8Present",
+                },
+            ],
+        )
+
+    assert PF.call_args.kwargs.get("visible_if") is None
+    assert SI.call_args.kwargs.get("visible_if") is None
+    assert heading._visible_if_condition == "ch8Present"
+    assert heading.widget.layout.display == "none"
+    assert plotly._visible_if_condition == "ch8Present"
+    assert image._visible_if_condition == "ch8Present"
+    assert plotly.widget.layout.display == "none"
+    assert image.widget.layout.display == "none"
+
+
+def test_apply_jupyter_visible_if_none_and_refresh():
+    from referia.assess.review import _apply_jupyter_visible_if
+
+    class Bare:
+        pass
+
+    reviewer = MagicMock()
+    reviewer.get_index.return_value = "a"
+    reviewer._data.at.__getitem__ = lambda _self, key: False
+
+    untouched = Bare()
+    _apply_jupyter_visible_if(untouched, None, reviewer)
+    assert not hasattr(untouched, "_visible_if_condition")
+
+    missing_layout = Bare()
+    missing_layout.widget = Bare()
+    _apply_jupyter_visible_if(missing_layout, "ch8Present", reviewer)
+    assert missing_layout._visible_if_condition == "ch8Present"
+
+    widget = MagicMock()
+    widget.widget.layout.display = ""
+    widget.widget.layout.height = ""
+    widget.widget.layout.margin = ""
+    widget.widget.layout.padding = ""
+    _apply_jupyter_visible_if(widget, "ch8Present", reviewer)
+    assert widget.widget.layout.display == "none"
+
+    reviewer._data.at.__getitem__ = lambda _self, key: True
+    _apply_jupyter_visible_if(widget, widget._visible_if_condition, reviewer)
+    assert widget.widget.layout.display == ""

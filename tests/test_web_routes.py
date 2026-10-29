@@ -507,6 +507,45 @@ class TestViewerOobHelpers:
         assert all('hx-swap-oob="true"' in part for part in parts)
         assert _viewer_highlight_oobs(reviewer, "notes") == []
 
+    def test_viewer_highlight_oobs_refreshes_not_form(self):
+        from referia.web.routes import _viewer_highlight_oobs
+
+        reviewer = MagicMock()
+        reviewer.get_viewer_specs.return_value = [
+            {
+                "type": "Markdown",
+                "visible_if": {"field": "pending_proposal", "not": True},
+            },
+            {
+                "type": "StaticImage",
+                "field": "photo",
+                "visible_if": "ch8Present",
+            },
+        ]
+        reviewer.render_viewer_html.side_effect = (
+            lambda spec, viewer_index=0: (
+                f'<div class="viewer viewer-markdown" '
+                f'id="viewer-markdown-{viewer_index}" style="display:none">'
+                f"n={viewer_index}</div>"
+                if spec.get("type") == "Markdown"
+                else (
+                    f'<div class="viewer viewer-image" '
+                    f'id="viewer-image-{viewer_index}" style="display:none">'
+                    f'<img src="x.png" alt="viewer image" /></div>'
+                )
+            )
+        )
+        pending = _viewer_highlight_oobs(reviewer, "pending_proposal")
+        assert len(pending) == 1
+        assert 'id="viewer-markdown-0"' in pending[0]
+        assert 'hx-swap-oob="true"' in pending[0]
+        assert "display:none" in pending[0]
+
+        photo = _viewer_highlight_oobs(reviewer, "ch8Present")
+        assert len(photo) == 1
+        assert 'id="viewer-image-1"' in photo[0]
+        assert 'hx-swap-oob="true"' in photo[0]
+
     def test_viewer_source_without_trigger_spec_skips_widget_oob(
         self, client, mock_reviewer
     ):
@@ -1409,6 +1448,65 @@ class TestCurrentDataIncludesVisibleIfFields:
         assert response.status_code == 200
         # Widget should have display:none because forewordPresent is missing/falsy
         assert 'style="display:none"' in response.text
+
+    def test_panel_hides_gated_viewer_but_keeps_it_in_dom(
+        self, mock_reviewer, client
+    ):
+        from referia.web.render import render_viewer
+
+        mock_reviewer.get_viewer_specs.return_value = [
+            {
+                "type": "Section",
+                "title": "Chapter 8",
+                "inherited": True,
+                "visible_if": "ch8Present",
+                "entries": [
+                    {
+                        "type": "Markdown",
+                        "liquid": "Chapter 8 notes",
+                        "visible_if": "ch8Present",
+                    }
+                ],
+            }
+        ]
+        mock_reviewer.get_row_data.return_value = {"ch8Present": False}
+        mock_reviewer.render_viewer_html.side_effect = (
+            lambda spec, viewer_index=0: render_viewer(
+                spec,
+                "Chapter 8 notes",
+                viewer_index=viewer_index,
+                data=mock_reviewer.get_row_data(),
+            )
+        )
+
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "Chapter 8 notes" in response.text
+        assert 'class="review-section viewer-section inherited-section"' in response.text
+        assert response.text.count('style="display:none"') >= 2
+
+    def test_field_update_oob_swaps_gated_viewer(self, client, mock_reviewer):
+        mock_reviewer.affected_widgets.return_value = set()
+        mock_reviewer.get_viewer_specs.return_value = [
+            {
+                "type": "Markdown",
+                "liquid": "Chapter 8 notes",
+                "visible_if": "ch8Present",
+            }
+        ]
+        mock_reviewer.render_viewer_html.side_effect = (
+            lambda spec, viewer_index=0: (
+                f'<div class="viewer viewer-markdown" '
+                f'id="viewer-markdown-{viewer_index}" style="display:none">'
+                f"Chapter 8 notes</div>"
+            )
+        )
+        response = client.post("/field/ch8Present", data={"ch8Present": "true"})
+        assert response.status_code == 200
+        assert 'id="viewer-markdown-0"' in response.text
+        assert 'hx-swap-oob="true"' in response.text
+        assert "Chapter 8 notes" in response.text
+        assert "display:none" in response.text
 
     def test_string_false_hides_visible_if_widget(self, mock_reviewer, client):
         """Soft-fill \"False\" must hide dependents in the full panel render."""
