@@ -143,3 +143,54 @@ def test_reuse_string_is_accepted(tmp_path):
     iface = _load(child)
     assert "review" not in iface._data["inherit"]["ignore"]
     assert iface["review"][0]["field"] == "complete"
+
+
+def test_scalar_viewer_prepends_parent_link(tmp_path):
+    parent = tmp_path / "parent"
+    child = tmp_path / "child"
+    parent.mkdir()
+    child.mkdir()
+    (parent / "_referia.yml").write_text(_catalog_cfg())
+    (child / "_referia.yml").write_text(
+        "referia_config_version: 2\n"
+        "title: Candidate\n"
+        "strict_columns: false\n"
+        "allocation:\n"
+        "  type: fake\n"
+        "  index: name\n"
+        "  nrows: 1\n"
+        "  cols:\n"
+        "    - name\n"
+        "inherit:\n"
+        "  directory: ../parent\n"
+        "viewer: Child chrome\n"
+    )
+    iface = _load(child)
+    viewer = iface["viewer"]
+    assert isinstance(viewer, list)
+    assert viewer[1] == "Child chrome"
+    assert isinstance(viewer[0], dict) and viewer[0].get(PARENT_ASSESSOR_LINK_KEY)
+
+
+def test_empty_append_still_adds_viewer(tmp_path):
+    parent = tmp_path / "parent"
+    child = tmp_path / "child"
+    parent.mkdir()
+    child.mkdir()
+    (parent / "_referia.yml").write_text(_catalog_cfg())
+    (child / "_referia.yml").write_text(
+        "referia_config_version: 2\n"
+        "title: Candidate\n"
+        "strict_columns: false\n"
+        "allocation:\n"
+        "  type: fake\n"
+        "  index: name\n"
+        "  nrows: 1\n"
+        "  cols:\n"
+        "    - name\n"
+        "inherit:\n"
+        "  directory: ../parent\n"
+        "  append: []\n"
+    )
+    iface = _load(child)
+    assert "viewer" in iface._data["inherit"]["append"]
