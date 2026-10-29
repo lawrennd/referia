@@ -30,7 +30,7 @@ from .mppca import (
     subject_grain_seed_fit,
     subject_grain_undo_split,
 )
-from .phrases import llm_extract_phrases
+from .phrases import llm_extract_phrases, segment_dialogue_units, stamp_dialogue_doc_ids
 from .embed import llm_embed, llm_embed_extraction_phrases
 from .distance import (
     axis_correlates,
@@ -732,11 +732,33 @@ class Compute(lynguine.assess.compute.Compute):
                     "max_words": 10,
                     "max_items": 8,
                     "temperature": 0.2,
+                    "quote_support_threshold": 0.0,
                 },
                 "docstr": (
                     "Extract short concern/benefit/condition phrases from "
                     "chunk text. Writes extraction_payload and a list of "
-                    "phrase dicts for explode (CIP-0015)."
+                    "phrase dicts for explode (CIP-0015). Optional "
+                    "quote_support_threshold drops unverified quotes and "
+                    "quotes taken from the bot question / facilitator."
+                ),
+            },
+            {
+                "name": "stamp_dialogue_doc_ids",
+                "function": stamp_dialogue_doc_ids,
+                "default_args": {},
+                "docstr": (
+                    "Stamp conversation doc_id on unit dicts: "
+                    "{round}::{participant_id} for chatbot, filename for "
+                    "workshops. Optionally drop units under min_unit_words."
+                ),
+            },
+            {
+                "name": "segment_dialogue_units",
+                "function": segment_dialogue_units,
+                "default_args": {},
+                "docstr": (
+                    "document_segment then stamp_dialogue_doc_ids so pack "
+                    "weights chatbot conversations, not Recollective dumps."
                 ),
             },
             {

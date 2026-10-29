@@ -4,8 +4,11 @@ import pytest
 
 from referia.assess.compute import Compute
 from referia.assess.compute.phrases import (
+    dialogue_doc_id,
     llm_extract_phrases,
     parse_extraction_payload,
+    quote_support,
+    stamp_dialogue_doc_ids,
     word_count_phrase,
 )
 from referia.exceptions import ComputeError
@@ -152,6 +155,8 @@ def test_llm_extract_phrases_registered():
     names = {e["name"] for e in Compute({"input": {}})._compute_functions_list()}
     assert "llm_extract_phrases" in names
     assert "llm_extract" in names
+    assert "segment_dialogue_units" in names
+    assert "stamp_dialogue_doc_ids" in names
 
 
 def test_parse_json_object_list_and_invalid_json():
@@ -249,6 +254,70 @@ def test_llm_extract_client_must_have_call():
             kinds=["concern"],
             client=object(),
         )
+
+
+def test_quote_support_verbatim_and_empty():
+    src = "the computer will make mistakes if nobody checks it"
+    assert quote_support("the computer will make mistakes", src) == 1.0
+    assert quote_support("", src) == 0.0
+    assert quote_support("the robot will make errors", src) < 0.8
+
+
+def test_dialogue_doc_id_chatbot_vs_workshop():
+    assert (
+        dialogue_doc_id(
+            participant_id="001", round="autumn_2025", filename="chatbot/dump.docx"
+        )
+        == "autumn_2025::001"
+    )
+    assert (
+        dialogue_doc_id(filename="workshops/session.docx", format="workshop")
+        == "workshops/session.docx"
+    )
+
+
+def test_stamp_dialogue_doc_ids_drops_short_chatbot_units():
+    units = [
+        {
+            "text": "yes",
+            "word_count": 1,
+            "participant_id": "001",
+        },
+        {
+            "text": "I worry about records leaking",
+            "word_count": 6,
+            "participant_id": "001",
+        },
+        {
+            "text": "workshop chunk of public talk",
+            "word_count": 6,
+            "filename": "workshops/a.docx",
+        },
+    ]
+    out = stamp_dialogue_doc_ids(units, round="spring_2026", min_unit_words=4)
+    assert len(out) == 2
+    assert out[0]["doc_id"] == "spring_2026::001"
+    assert out[1]["doc_id"] == "workshops/a.docx"
+
+
+def test_parse_drops_unverified_and_context_quotes():
+    extract = "I worry that records will leak to contractors"
+    context = "Bot: what concerns do you have about the computer making mistakes?"
+    kept = parse_extraction_payload(
+        "records leaking to contractors || I worry that records will leak to contractors\n"
+        "computer making mistakes || what concerns do you have about the computer making mistakes",
+        kind="concern",
+        sentinel="NO_CONCERN",
+        min_words=3,
+        max_words=10,
+        extract_text=extract,
+        context=context,
+        unit_text=extract,
+        quote_support_threshold=0.8,
+    )
+    assert [row["phrase"] for row in kept] == ["records leaking to contractors"]
+    assert kept[0]["quote_support"] == 1.0
+    assert kept[0]["verified"] is True
 
 
 def test_llm_extract_uses_injected_manager(monkeypatch):

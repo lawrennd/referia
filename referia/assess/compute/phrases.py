@@ -6,8 +6,12 @@ nested closure on ``Compute`` and does not read ``self.interface``.
 
 from __future__ import annotations
 
+import difflib
 import json
+import re
 from typing import Any, Mapping, Sequence
+
+from lynguine.access.documents.segment import document_segment
 
 from ...exceptions import ComputeError
 
@@ -15,12 +19,133 @@ __all__ = [
     "parse_extraction_payload",
     "llm_extract_phrases",
     "word_count_phrase",
+    "quote_support",
+    "dialogue_doc_id",
+    "stamp_dialogue_doc_ids",
+    "segment_dialogue_units",
 ]
 
 
 def word_count_phrase(text: str) -> int:
     """Count whitespace-separated tokens in a phrase."""
     return len(str(text).split())
+
+
+def _blank(value: Any) -> bool:
+    if value is None:
+        return True
+    try:
+        if value != value:  # NaN
+            return True
+    except Exception:
+        pass
+    return str(value).strip() in ("", "nan", "None")
+
+
+def _qnorm(value: Any) -> str:
+    return re.sub(
+        r"\s+",
+        " ",
+        re.sub(r"[^a-z0-9' ]+", " ", str(value).lower().replace("’", "'")),
+    ).strip()
+
+
+def quote_support(quote: Any, source: Any) -> float:
+    """1.0 = verbatim. Otherwise the share of the quote's words found, in order, in the source.
+
+    Quotes joined with ' … ' are checked part by part. Same contract as
+    ``multilogue.text.quote_support`` (CIP-0015 optional quote threshold).
+    """
+    parts = [p for p in re.split(r"\s*(?:…|\.\.\.)\s*", str(quote or "")) if _qnorm(p)]
+    if not parts:
+        return 0.0
+    src = _qnorm(source)
+    src_t = src.split()
+    total = matched = 0
+    for part in parts:
+        q = _qnorm(part)
+        qt = q.split()
+        total += len(qt)
+        if f" {q} " in f" {src} ":
+            matched += len(qt)
+        else:
+            matched += sum(
+                block.size
+                for block in difflib.SequenceMatcher(
+                    None, qt, src_t, autojunk=False
+                ).get_matching_blocks()
+            )
+    return round(matched / total, 3) if total else 0.0
+
+
+def dialogue_doc_id(
+    *,
+    doc_id: Any = None,
+    participant_id: Any = None,
+    round: Any = None,
+    filename: Any = None,
+    format: Any = None,
+    **_: Any,
+) -> Any:
+    """Paper document grain: ``{round}::{participant_id}`` for chatbot, filename for workshops.
+
+    Recollective dumps are two files covering many conversations. Packing
+    ``filename`` would weight 2 chatbot documents against 38 workshops.
+    """
+    if not _blank(participant_id):
+        pid = str(participant_id).strip()
+        rnd = str(round).strip() if not _blank(round) else ""
+        return f"{rnd}::{pid}" if rnd else pid
+    if not _blank(doc_id):
+        return doc_id
+    return None if _blank(filename) else filename
+
+
+def stamp_dialogue_doc_ids(
+    units: Sequence[Mapping[str, Any]] | None,
+    *,
+    round: Any = None,
+    filename: Any = None,
+    format: Any = None,
+    min_unit_words: int | None = None,
+    **_: Any,
+) -> list[dict[str, Any]]:
+    """Stamp ``doc_id`` on each unit dict. Optionally drop units under ``min_unit_words``."""
+    out: list[dict[str, Any]] = []
+    min_words = int(min_unit_words) if min_unit_words not in (None, "") else None
+    for item in units or []:
+        if hasattr(item, "to_dict"):
+            item = item.to_dict()
+        if not isinstance(item, Mapping):
+            continue
+        row = dict(item)
+        if min_words is not None:
+            n = row.get("word_count")
+            if n is None:
+                n = word_count_phrase(row.get("text") or row.get("extract_text") or "")
+            if int(n) < min_words:
+                continue
+        row["doc_id"] = dialogue_doc_id(
+            doc_id=row.get("doc_id"),
+            participant_id=row.get("participant_id"),
+            round=round if not _blank(round) else row.get("round"),
+            filename=filename if not _blank(filename) else row.get("filename") or row.get("source_path"),
+            format=format if not _blank(format) else row.get("format"),
+        )
+        out.append(row)
+    return out
+
+
+def segment_dialogue_units(path: str, **kwargs: Any) -> list[dict[str, Any]]:
+    """``document_segment`` then stamp conversation ``doc_id`` (chatbot vs workshop grain)."""
+    units = document_segment(path, **kwargs)
+    return stamp_dialogue_doc_ids(
+        units,
+        round=kwargs.get("round"),
+        filename=kwargs.get("filename"),
+        format=kwargs.get("format"),
+        min_unit_words=kwargs.get("min_unit_words"),
+    )
 
 
 def _as_kinds(kinds: Any) -> list[str]:
@@ -98,12 +223,21 @@ def parse_extraction_payload(
     max_items: int = 8,
     chunk_id: Any = None,
     doc_id: Any = None,
+    extract_text: Any = None,
+    context: Any = None,
+    unit_text: Any = None,
+    quote_support_threshold: float = 0.0,
 ) -> list[dict[str, Any]]:
     """Parse one kind's LLM reply into phrase dicts, applying drop rules.
 
     Accepts JSON (list, ``{\"phrases\": [...]}``) or newline text, including
     ``phrase || quote`` lines. Drops sentinels, empty lines, and phrases
     outside ``min_words``/``max_words``. Caps at ``max_items``.
+
+    When ``quote_support_threshold`` > 0, keep only verified quotes
+    (support ≥ threshold against ``extract_text`` or ``unit_text``) and
+    drop quotes that match the bot question / facilitator context but not
+    the extractable speaker text.
     """
     raw: list[tuple[str, str | None]] = []
     parsed = None
@@ -126,6 +260,8 @@ def parse_extraction_payload(
         parsed = []
 
     sentinel_folded = str(sentinel).strip().upper()
+    thr = float(quote_support_threshold or 0.0)
+    source = extract_text if not _blank(extract_text) else unit_text
     kept: list[dict[str, Any]] = []
     for phrase, quote in parsed or []:
         if not phrase:
@@ -134,6 +270,16 @@ def parse_extraction_payload(
             continue
         n_words = word_count_phrase(phrase)
         if n_words < int(min_words) or n_words > int(max_words):
+            continue
+        sup = quote_support(quote, source) if quote else 0.0
+        if quote and thr > 0 and sup < thr:
+            combined = " ".join(
+                str(part)
+                for part in (context, unit_text if not _blank(unit_text) else source)
+                if not _blank(part)
+            )
+            if combined and quote_support(quote, combined) >= thr:
+                continue
             continue
         idx = len(kept)
         phrase_id_parts = [str(p) for p in (chunk_id, kind, idx) if p not in (None, "")]
@@ -144,6 +290,8 @@ def parse_extraction_payload(
                 "chunk_id": chunk_id,
                 "doc_id": doc_id,
                 "quote": quote,
+                "quote_support": sup,
+                "verified": bool(quote) and sup >= thr if thr > 0 else True,
                 "phrase_id": ":".join(phrase_id_parts) if phrase_id_parts else str(idx),
             }
         )
@@ -171,6 +319,13 @@ def llm_extract_phrases(
     kinds: Sequence[str] | str,
     chunk_id: Any = None,
     doc_id: Any = None,
+    participant_id: Any = None,
+    round: Any = None,
+    filename: Any = None,
+    format: Any = None,
+    extract_text: Any = None,
+    context: Any = None,
+    quote_support_threshold: float = 0.0,
     model: str = "gpt-4o-mini",
     min_words: int = 3,
     max_words: int = 10,
@@ -197,6 +352,13 @@ def llm_extract_phrases(
     kind_list = _as_kinds(kinds)
     payload: dict[str, str] = {}
     phrases: list[dict[str, Any]] = []
+    packed_doc_id = dialogue_doc_id(
+        doc_id=doc_id,
+        participant_id=participant_id,
+        round=round,
+        filename=filename,
+        format=format,
+    )
     default_system = (
         system_prompt
         or "Extract short public-dialogue phrases. Reply with one phrase per "
@@ -224,7 +386,11 @@ def llm_extract_phrases(
                 max_words=max_words,
                 max_items=max_items,
                 chunk_id=chunk_id,
-                doc_id=doc_id,
+                doc_id=packed_doc_id,
+                extract_text=extract_text,
+                context=context,
+                unit_text=text,
+                quote_support_threshold=quote_support_threshold,
             )
         )
     return payload, phrases
