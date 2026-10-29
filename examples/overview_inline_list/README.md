@@ -1,17 +1,21 @@
-# Overview `inline_list` example (CIP-0010)
+# Overview `inline_list` example (CIP-0010 / CIP-001C)
 
 Minimal root `_referia.yml` that discovers nested configs with lynguine
-`yaml_directory` (`recursive` + `include_start_directory: false`) and shows
-them with referia `display.layout: inline_list`.
+`yaml_directory` (`recursive` + `include_start_directory: false` +
+`exclude: [today/**, year/**]`) and shows them with referia
+`display.layout: inline_list`. Schedule lives in tall scores (`due`,
+`event`, `notes`); sibling `today/` and `year/` inherit that catalog.
 
 ## Layout
 
 ```
 overview_inline_list/
-├── _referia.yml          # overview (not listed as a row)
+├── _referia.yml          # seasonal overview (not listed as a row)
+├── today/_referia.yml    # Today view (excluded from discovery)
+├── year/_referia.yml     # Year view (excluded from discovery)
 ├── spring/_referia.yml   # discovered
-├── autumn/_referia.yml   # discovered
-└── info/                 # tall scores (overview-scores.yml after Save)
+├── autumn/_referia.yml   # discovered (leaf due: is a seed, not the store)
+└── info/                 # tall scores (overview-scores.yml)
 ```
 
 ## Run

@@ -254,6 +254,102 @@ class TestGetValue:
         assert reviewer.get_value("nonexistent") is None
         data.set_column.assert_not_called()
 
+    def test_when_is_event_else_due(self):
+        reviewer, _, _ = _build_reviewer(
+            col_vals={
+                "event": "20261028",
+                "due": "20261101",
+                "today": "2026-10-28",
+            }
+        )
+        assert reviewer.get_value("when") == "20261028"
+        assert reviewer.get_value("on_today") == "true"
+
+    def test_when_falls_back_to_due(self):
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"due": "20261115", "today": "2026-10-28"}
+        )
+        assert reviewer.get_value("when") == "20261115"
+        assert reviewer.get_value("on_today") == "false"
+
+    def test_on_today_due_matches_iso_today(self):
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"due": "20261028", "today": "2026-10-28"}
+        )
+        assert reviewer.get_value("on_today") == "true"
+        row = reviewer.get_row_data()
+        assert row["when"] == "20261028"
+        assert row["on_today"] == "true"
+
+    def test_schedule_digits_helper_covers_sentinels(self):
+        from datetime import date
+
+        from referia.assess.web_review import WebReviewer
+
+        digits = WebReviewer._schedule_date_digits
+        assert digits(None) == ""
+        assert digits("   ") == ""
+        assert digits("NaT") == ""
+        assert digits(date(2026, 10, 28)) == "20261028"
+        assert digits("2026") == "2026"
+
+        class BadDate:
+            def strftime(self, fmt):
+                raise ValueError("cannot format")
+
+            def __str__(self):
+                return "2026-11-15"
+
+        assert digits(BadDate()) == "20261115"
+
+    def test_schedule_digits_from_date_object(self):
+        from datetime import date
+
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"event": date(2026, 10, 28), "today": date(2026, 10, 28)}
+        )
+        assert reviewer.get_value("when") == "20261028"
+        assert reviewer.get_value("on_today") == "true"
+
+    def test_schedule_digits_strftime_failure_falls_back_to_text(self):
+        class BadDate:
+            def strftime(self, fmt):
+                raise ValueError("cannot format")
+
+            def __str__(self):
+                return "2026-11-15"
+
+        reviewer, _, _ = _build_reviewer(col_vals={"due": BadDate()})
+        assert reviewer.get_value("when") == "20261115"
+
+    def test_schedule_digits_treats_null_tokens_as_empty(self):
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"event": "NaN", "due": "none", "today": "<NA>"}
+        )
+        assert reviewer.get_value("when") is None
+        assert reviewer.get_value("on_today") == "false"
+
+    def test_schedule_digits_keeps_short_values(self):
+        reviewer, _, _ = _build_reviewer(
+            col_vals={"due": "2026", "today": "2026"}
+        )
+        assert reviewer.get_value("when") == "2026"
+        assert reviewer.get_value("on_today") == "true"
+
+    def test_row_data_derived_failure_is_none(self):
+        reviewer, _, _ = _build_reviewer(col_vals={"score": 1})
+        orig = reviewer.get_value
+
+        def _boom(column):
+            if column in ("when", "on_today"):
+                raise RuntimeError("view failed")
+            return orig(column)
+
+        reviewer.get_value = _boom
+        row = reviewer.get_row_data()
+        assert row["when"] is None
+        assert row["on_today"] is None
+
 
 class TestSetValue:
     def test_set_value_updates_storage(self):

@@ -1362,7 +1362,7 @@ def render_filter_bar(
         parts.append("</select></label>")
 
     group_current = str(state.get("_group") or "directory").lower()
-    if group_current not in {"directory", "version"}:
+    if group_current not in {"directory", "version", "month", "none"}:
         group_current = "directory"
     parts.append(
         '<label>Group by&nbsp;'
@@ -1371,6 +1371,8 @@ def render_filter_bar(
     for key, label in (
         ("directory", "Directory"),
         ("version", "Version"),
+        ("month", "Month"),
+        ("none", "None"),
     ):
         sel = " selected" if group_current == key else ""
         parts.append(f'<option value="{key}"{sel}>{label}</option>')

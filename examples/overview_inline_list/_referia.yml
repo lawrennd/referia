@@ -3,6 +3,7 @@
 # Nested child configs below are discovered via yaml_directory; this file itself
 # is omitted by include_start_directory: false.
 referia_config_version: 2
+writable: true
 title: "Referia — overview (inline_list example)"
 description: "Tall discovery of nested _referia.yml plus same-page Done marking."
 date: 2026-10-11
@@ -11,10 +12,10 @@ display:
   layout: inline_list
   filter_defaults:
     complete: false
-    date:
+    when:
       after: today-30d
       before: today+30d
-    _sort: date:asc
+    _sort: when:asc
     _group: directory
 
 # Programme manager contact — from people markdown (not hardcoded in templates).
@@ -43,6 +44,9 @@ input:
       glob: "**/_referia.yml"
       recursive: true
       include_start_directory: false
+      exclude:
+        - today/**
+        - year/**
   fields:
     - title
     - description
@@ -62,6 +66,8 @@ input:
         sourceDirectory: sourceDirectory
     - field: today
       function: today
+    # when / on_today are views over output event/due (WebReviewer.get_value).
+    # They cannot be input.compute: that runs before scores join.
 
 output:
   type: yaml
@@ -70,6 +76,9 @@ output:
   directory: ./info
   columns:
     - complete
+    - due
+    - event
+    - notes
 
 review:
   - type: Checkbox
@@ -77,12 +86,30 @@ review:
     default: false
     args:
       description: Complete
+  - type: DatePicker
+    field: event
+    args:
+      description: Event (happens-on)
+  - type: DatePicker
+    field: due
+    args:
+      description: Due (complete-by)
+  - type: Text
+    field: notes
+    args:
+      description: Progress
   - type: SaveButton
 
 filters:
   - field: complete
     type: boolean
     label: Complete
+  - field: on_today
+    type: boolean
+    label: Today
+  - field: when
+    type: date_range
+    label: When
   - field: referia_config_version
     type: categorical
     label: Version
@@ -92,16 +119,20 @@ filters:
     label: Title
   - field: date
     type: date_range
-    label: Date
+    label: Opened
 
 sort:
-  - field: date
+  - field: when
+    order: asc
+  - field: title
     order: asc
 
 viewer:
   - liquid: |
       Tick **Done** on each row, or use Select all filtered at the top.
-      Clear restores incomplete + today±30 days, directory groups, oldest first.
+      Default view: incomplete items with `when` in today±30 days, grouped by directory.
+      [Today](/today/) lists rows due or happening today. [Year](/year/) is the academic year.
+      DatePicker stores YYYYMMDD; `today` is ISO. Clear restores the seasonal window.
 
 summary_documents:
   - type: docx

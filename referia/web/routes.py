@@ -480,7 +480,7 @@ def _inline_list_href(reviewer, data: dict, prefix: str = "") -> str | None:
     return f"/{rel_url}/"
 
 
-_INLINE_LIST_GROUP_BY = frozenset({"directory", "version"})
+_INLINE_LIST_GROUP_BY = frozenset({"directory", "version", "month", "none"})
 
 
 def _inline_list_group_by(filter_state: dict | None) -> str:
@@ -497,8 +497,14 @@ def _inline_list_group(
 
     ``directory`` (default): top-level path under the review root (CIP-000C).
     ``version``: ``referia_config_version`` as ``v1`` / ``v2`` / ``unknown``.
+    ``month``: ``YYYY-MM`` from ``when`` (ISO or YYYYMMDD); empty if unparseable.
+    ``none``: flat listing (empty group label).
     """
     mode = group_by if group_by in _INLINE_LIST_GROUP_BY else "directory"
+    if mode == "none":
+        return ""
+    if mode == "month":
+        return _month_group_from_when(data.get("when"))
     if mode == "version":
         raw = data.get("referia_config_version")
         if raw is None or raw == "":
@@ -532,6 +538,24 @@ def _inline_list_group(
     if len(parts) <= 1:
         return ""
     return str(parts[0])
+
+
+def _month_group_from_when(value) -> str:
+    """Return ``YYYY-MM`` from a catalog ``when`` cell, or ``""`` if unparseable.
+
+    DatePicker stores ``YYYYMMDD``; compute ``today`` is ISO ``YYYY-MM-DD``.
+    """
+    if value is None:
+        return ""
+    text = str(value).strip()
+    if not text or text.lower() in {"nan", "nat", "none"}:
+        return ""
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if len(digits) >= 6:
+        year, month = digits[:4], digits[4:6]
+        if year.isdigit() and month.isdigit() and 1 <= int(month) <= 12:
+            return f"{year}-{month}"
+    return ""
 
 
 def _render_panel(reviewer, request: Request, prefix: str = "") -> str:

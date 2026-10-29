@@ -1554,6 +1554,8 @@ class TestInlineListRecordIndex:
         assert "Group by" in bar
         assert 'value="directory"' in bar
         assert 'value="version"' in bar
+        assert 'value="month"' in bar
+        assert 'value="none"' in bar
         assert 'name="filter__title__query"' in bar
         assert 'value="admissions"' in bar
         assert 'name="filter__title__mode"' in bar
@@ -1561,6 +1563,10 @@ class TestInlineListRecordIndex:
 
         bar_ver = render_filter_bar([], [], {"_group": "version"})
         assert 'value="version" selected' in bar_ver
+        bar_month = render_filter_bar([], [], {"_group": "month"})
+        assert 'value="month" selected' in bar_month
+        bar_none = render_filter_bar([], [], {"_group": "none"})
+        assert 'value="none" selected' in bar_none
 
     def test_boolean_filter_invalid_value_falls_back_to_any(self):
         """Unknown boolean filter state must select Any, not a blank option."""
@@ -1671,6 +1677,19 @@ class TestInlineListing:
         )
         assert "<h2>v2</h2>" in by_ver
         assert "<h2>v2/</h2>" not in by_ver
+        by_month = render_inline_listing(
+            [{"index": "a", "group": "2026-10", "data": {"title": "A", "complete": False}}],
+            specs,
+            group_by="month",
+        )
+        assert "<h2>2026-10</h2>" in by_month
+        assert "<h2>2026-10/</h2>" not in by_month
+        by_none = render_inline_listing(
+            [{"index": "a", "group": "", "data": {"title": "A", "complete": False}}],
+            specs,
+            group_by="none",
+        )
+        assert "<h2>" not in by_none
 
     def test_detail_field_renders_collapsible_when_present(self):
         from referia.web.render import render_inline_listing

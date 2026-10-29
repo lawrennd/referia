@@ -19,6 +19,7 @@ Contents
    installation
    quickstart
    usage/config_dialect
+   usage/catalog_schedule
    modules/assess
    modules/config
    modules/util
