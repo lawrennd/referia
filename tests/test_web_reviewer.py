@@ -1605,6 +1605,97 @@ class TestDisplayLayout:
         assert len(small["page_indices"]) == 20
         assert small["remaining"] == 0
 
+    def test_listing_window_fails_closed_on_bad_inputs(self):
+        from referia.assess.web_review import DEFAULT_LIST_PAGE_SIZE, listing_window
+
+        ids = [f"r{i}" for i in range(10)]
+        unknown = listing_window(ids, page_size=3, paging="scroll")
+        assert unknown["paging"] == "append"
+        assert len(unknown["page_indices"]) == 3
+        bad_size = listing_window(ids, page_size="huge")
+        assert bad_size["page_size"] == DEFAULT_LIST_PAGE_SIZE
+        negative = listing_window(ids, page_size=-4)
+        assert negative["page_size"] == DEFAULT_LIST_PAGE_SIZE
+        bad_page = listing_window(ids, page_size=3, page="nope", paging="page")
+        assert bad_page["page"] == 1
+        assert bad_page["page_indices"][0] == "r0"
+        zero_page = listing_window(ids, page_size=3, page=0, paging="page")
+        assert zero_page["page"] == 1
+        bad_offset = listing_window(ids, page_size=3, offset="x")
+        assert bad_offset["offset"] == 0
+        negative_offset = listing_window(ids, page_size=3, offset=-9)
+        assert negative_offset["offset"] == 0
+        past_end = listing_window(ids, page_size=3, offset=99)
+        assert past_end["page_indices"][0] == "r9"
+        assert past_end["page"] == 4
+        empty = listing_window([], page_size=10)
+        assert empty["pages"] == 1
+        assert empty["page_indices"] == []
+        unbounded_empty = listing_window([], page_size=0, paging="weird")
+        assert unbounded_empty["paging"] == "append"
+        assert unbounded_empty["page_indices"] == []
+
+    def test_list_page_size_override_and_invalid_yaml(self):
+        from referia.assess.web_review import DEFAULT_LIST_PAGE_SIZE
+
+        reviewer, _, _ = _build_reviewer(
+            extra={"display": {"layout": "inline_list", "list_page_size": "nope"}}
+        )
+        assert reviewer.get_list_page_size() == DEFAULT_LIST_PAGE_SIZE
+        assert reviewer.get_list_page_size(override="also-nope") == DEFAULT_LIST_PAGE_SIZE
+        assert reviewer.get_list_page_size(override=-2) == DEFAULT_LIST_PAGE_SIZE
+        negative, _, _ = _build_reviewer(
+            extra={"display": {"layout": "inline_list", "list_page_size": -8}}
+        )
+        assert negative.get_list_page_size() == DEFAULT_LIST_PAGE_SIZE
+        empty, _, _ = _build_reviewer(
+            extra={"display": {"layout": "inline_list", "list_page_size": ""}}
+        )
+        assert empty.get_list_page_size() == DEFAULT_LIST_PAGE_SIZE
+
+    def test_list_paging_invalid_falls_back_to_append(self):
+        reviewer, _, _ = _build_reviewer(
+            extra={"display": {"layout": "inline_list", "list_paging": "infinite"}}
+        )
+        assert reviewer.get_list_paging() == "append"
+        blank, _, _ = _build_reviewer(
+            extra={"display": {"layout": "inline_list", "list_paging": ""}}
+        )
+        assert blank.get_list_paging() == "append"
+
+    def test_list_query_remember_and_clear(self):
+        reviewer, _, _ = _build_reviewer(extra={"display": {"layout": "inline_list"}})
+        reviewer.remember_list_query({"offset": 50, "page": 2, "page_size": 25})
+        stored = reviewer.list_query()
+        assert stored["offset"] == 50
+        assert stored["page"] == 2
+        assert stored["page_size"] == 25
+        reviewer.clear_list_window()
+        reset = reviewer.list_query()
+        assert reset == {"offset": 0, "page": None, "page_size": None}
+        reviewer.remember_list_query(None)
+        assert reviewer.list_query()["offset"] == 0
+        reviewer._list_query = "not-a-dict"
+        assert reviewer.list_query() == {"offset": 0, "page": None, "page_size": None}
+
+    def test_working_window_uses_reviewer_paging(self):
+        reviewer, _, _ = _build_reviewer(
+            index_vals=[f"r{i}" for i in range(12)],
+            extra={
+                "display": {
+                    "layout": "inline_list",
+                    "list_page_size": 5,
+                    "list_paging": "page",
+                }
+            },
+        )
+        window = reviewer.working_window(page=2)
+        assert window["paging"] == "page"
+        assert window["page"] == 2
+        assert window["page_indices"][0] == "r5"
+        bounded = reviewer.working_window(page_size=3, page=1)
+        assert len(bounded["page_indices"]) == 3
+
 
 class TestRowsAndFilters:
     def test_get_rows_includes_index_and_columns(self):
