@@ -6,7 +6,7 @@ last_updated: "2026-10-29"
 status: "Proposed"
 compressed: false
 related_requirements: ["0010", "0008", "0009", "000E", "0013"]
-related_cips: ["0010", "0015", "0017", "000B", "000C", "001B"]
+related_cips: ["0010", "0015", "0017", "000B", "000C", "001B", "0020"]
 tags:
 - cip
 - web
@@ -142,7 +142,7 @@ Ship this contract first if 001B is not ready. 001B then restarts a kernel that 
 - Auto-Save of `output:` explode (`phrases.yml`) or `pack:` parquet on every row. Those are still the Save button (CIP-0015: Save after extract must not abort pack). Cache flush is the durability for extract/embed intermediates.
 - Changing PopulateButton compute functions (`llm_extract_phrases`, …). Stateless field-in / field-out stays CIP-0015.
 - Jupyter Populate-all. Web path only unless the Jupyter button shares the same skip/flush helpers.
-- Pagination of `inline_list` catalogs. Out of scope; catalogs are meant to be short.
+- Pagination of `inline_list` GET. That is [CIP-0020](./cip0020.md) (page size + append). This CIP remains the populate-all POST.
 
 ## Implementation Plan
 
@@ -205,4 +205,5 @@ Ship this contract first if 001B is not ready. 001B then restarts a kernel that 
 - [CIP-0015](./cip0015.md) — cache vs output vs pack; no sidecar checkpoints
 - [CIP-0017](./cip0017.md) — named-store status; LLM diskcache is not analysis state
 - [CIP-001B](./cip001B.md) — kernel/server split (complementary)
+- [CIP-0020](./cip0020.md) — windowed `inline_list` GET (listing, not populate-all)
 - Incident: dialogue-analysis `ai-dialogue-formats/02_embed` Extract all, 2013 units, 2026-10-29
