@@ -1564,6 +1564,47 @@ class TestDisplayLayout:
         with pytest.raises(ValueError, match="Unknown display.layout"):
             reviewer.get_display_layout()
 
+    def test_list_page_size_default_and_unbounded(self):
+        from referia.assess.web_review import DEFAULT_LIST_PAGE_SIZE
+
+        reviewer, _, _ = _build_reviewer(extra={"display": {"layout": "inline_list"}})
+        assert reviewer.get_list_page_size() == DEFAULT_LIST_PAGE_SIZE
+        assert reviewer.get_list_paging() == "append"
+        bounded, _, _ = _build_reviewer(
+            extra={"display": {"layout": "inline_list", "list_page_size": 25, "list_paging": "page"}}
+        )
+        assert bounded.get_list_page_size() == 25
+        assert bounded.get_list_paging() == "page"
+        unbounded, _, _ = _build_reviewer(
+            extra={"display": {"layout": "inline_list", "list_page_size": 0}}
+        )
+        assert unbounded.get_list_page_size() == 0
+        assert unbounded.get_list_page_size(override=10) == 10
+
+    def test_working_window_slices_after_filters(self):
+        from referia.assess.web_review import listing_window
+
+        ids = [f"r{i}" for i in range(2013)]
+        window = listing_window(ids, page_size=50, offset=0, paging="append")
+        assert len(window["page_indices"]) == 50
+        assert window["page_indices"][0] == "r0"
+        assert window["remaining"] == 1963
+        assert window["working_count"] == 2013
+        next_w = listing_window(ids, page_size=50, offset=50, paging="append")
+        assert next_w["page_indices"][0] == "r50"
+        assert len(next_w["page_indices"]) == 50
+        paged = listing_window(ids, page_size=25, page=2, paging="page")
+        assert paged["page"] == 2
+        assert paged["pages"] == 81
+        assert paged["page_indices"][0] == "r25"
+        assert len(paged["page_indices"]) == 25
+        unbounded = listing_window(ids, page_size=0)
+        assert len(unbounded["page_indices"]) == 2013
+        assert unbounded["remaining"] == 0
+        small = listing_window(ids[:20], page_size=50)
+        assert len(small["page_indices"]) == 20
+        assert small["remaining"] == 0
+
 
 class TestRowsAndFilters:
     def test_get_rows_includes_index_and_columns(self):

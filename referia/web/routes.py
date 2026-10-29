@@ -104,6 +104,11 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from referia.assess.web_review import (
+    DEFAULT_LIST_PAGE_SIZE,
+    WebReviewer,
+    listing_window,
+)
 from referia.web.path_safety import PathOutsideRootError, safe_path_under_root, is_path_under_any_root
 from referia.web.render import (
     render_widget,
@@ -312,7 +317,112 @@ def _list_document_entries(reviewer, section: str) -> list:
     return result if isinstance(result, list) else []
 
 
-def _panel_response_context(reviewer, prefix: str = "") -> dict:
+def _parse_list_query(request: Request | None) -> dict[str, Any]:
+    """Read CIP-0020 ``list_offset`` / ``list_page`` / ``list_page_size``."""
+    out: dict[str, Any] = {"offset": 0, "page": None, "page_size": None}
+    if request is None:
+        return out
+
+    def _int(name: str) -> int | None:
+        raw = request.query_params.get(name)
+        if raw is None or raw == "":
+            return None
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
+
+    page = _int("list_page")
+    offset = _int("list_offset")
+    size = _int("list_page_size")
+    if offset is not None and offset < 0:
+        offset = 0
+    if size is not None and size < 0:
+        size = None
+    out["page"] = page
+    out["offset"] = offset or 0
+    out["page_size"] = size
+    return out
+
+
+def _window_for_reviewer(
+    reviewer,
+    request: Request | None = None,
+    *,
+    reset: bool = False,
+) -> dict[str, Any]:
+    """Return the CIP-0020 listing window for *reviewer*."""
+    try:
+        working = list(reviewer.working_indices())
+    except Exception:
+        working = list(reviewer.index_list())
+    parsed = {"offset": 0, "page": None, "page_size": None}
+    if reset and isinstance(reviewer, WebReviewer):
+        reviewer.clear_list_window()
+    elif request is not None:
+        parsed = _parse_list_query(request)
+        if isinstance(reviewer, WebReviewer):
+            reviewer.remember_list_query(parsed)
+    elif isinstance(reviewer, WebReviewer):
+        parsed = reviewer.list_query()
+    page_size = DEFAULT_LIST_PAGE_SIZE
+    paging = "append"
+    if isinstance(reviewer, WebReviewer):
+        page_size = reviewer.get_list_page_size(parsed.get("page_size"))
+        paging = reviewer.get_list_paging()
+    else:
+        if parsed.get("page_size") is not None:
+            page_size = int(parsed["page_size"])
+        get_paging = getattr(reviewer, "get_list_paging", None)
+        if callable(get_paging):
+            raw = get_paging()
+            if raw in ("append", "page"):
+                paging = raw
+    return listing_window(
+        working,
+        page_size=page_size,
+        offset=parsed.get("offset") or 0,
+        page=parsed.get("page"),
+        paging=paging,
+    )
+
+
+def _collect_listing_entries(reviewer, indices, prefix: str) -> list[dict]:
+    """Walk *indices* (not the whole working set) into listing row dicts."""
+    filter_state = reviewer.get_filter_state()
+    group_by = _inline_list_group_by(filter_state)
+    listing_entries: list[dict] = []
+    saved = None
+    try:
+        saved = reviewer.get_index()
+    except Exception:
+        saved = None
+    try:
+        for idx in indices:
+            reviewer.set_index(idx)
+            data = _current_data(reviewer)
+            listing_entries.append(
+                {
+                    "index": idx,
+                    "data": data,
+                    "href": _inline_list_href(reviewer, data, prefix),
+                    "group": _inline_list_group(
+                        reviewer, data, group_by=group_by
+                    ),
+                }
+            )
+    finally:
+        if saved is not None:
+            try:
+                reviewer.set_index(saved)
+            except Exception:
+                pass
+    return listing_entries
+
+
+def _panel_response_context(
+    reviewer, prefix: str = "", *, request: Request | None = None
+) -> dict:
     """Build the shared template context dict for ``review_panel.html``.
 
     Used by single-config and root-mode routes so the panel-rendering logic
@@ -361,7 +471,8 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
     working = indices
     row_data: dict = {}
     if layout == "inline_list":
-        working = reviewer.working_indices()
+        window = _window_for_reviewer(reviewer, request)
+        working_count = int(window.get("working_count") or 0)
         filter_state = reviewer.get_filter_state()
         group_by = _inline_list_group_by(filter_state)
         filter_bar_html = render_filter_bar(
@@ -370,39 +481,22 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
             filter_state,
         )
         review_specs = reviewer.get_review_specs(view_options=view_options)
-        listing_entries: list[dict] = []
-        saved = current_index
-        try:
-            for idx in working:
-                reviewer.set_index(idx)
-                data = _current_data(reviewer)
-                listing_entries.append(
-                    {
-                        "index": idx,
-                        "data": data,
-                        "href": _inline_list_href(reviewer, data, prefix),
-                        "group": _inline_list_group(
-                            reviewer, data, group_by=group_by
-                        ),
-                    }
-                )
-        finally:
-            if saved is not None:
-                try:
-                    reviewer.set_index(saved)
-                except Exception:
-                    pass
+        listing_entries = _collect_listing_entries(
+            reviewer, window["page_indices"], prefix
+        )
         listing_html = render_inline_listing(
             listing_entries,
             review_specs,
             group_by=group_by,
             detail_field=reviewer.get_display_detail_field(),
             documents=_list_document_entries(reviewer, "documents"),
+            working_count=working_count,
+            window=window,
         )
         index_selector = ""
         document_html = ""
-        position = len(working)
-        total = len(working)
+        position = working_count
+        total = working_count
         try:
             row_data = _current_data(reviewer)
         except Exception:
@@ -568,7 +662,7 @@ def _month_group_from_when(value) -> str:
 
 def _render_panel(reviewer, request: Request, prefix: str = "") -> str:
     """Render the full review panel as an HTML string."""
-    ctx = _panel_response_context(reviewer, prefix)
+    ctx = _panel_response_context(reviewer, prefix, request=request)
     response = _templates(request).TemplateResponse(request, "review_panel.html", ctx)
     return response.body.decode()
 
@@ -949,7 +1043,7 @@ async def index(
             raise
 
         _apply_index(reviewer, index)
-        ctx = _panel_response_context(reviewer, "")
+        ctx = _panel_response_context(reviewer, "", request=request)
         return _templates(request).TemplateResponse(
             request,
             "base.html",
@@ -969,7 +1063,7 @@ async def index(
 
     reviewer = _reviewer(request)
     _apply_index(reviewer, index)
-    ctx = _panel_response_context(reviewer)
+    ctx = _panel_response_context(reviewer, request=request)
     return _templates(request).TemplateResponse(
         request,
         "base.html",
@@ -1005,8 +1099,34 @@ async def get_record(request: Request, index: str | None = None):
     """
     reviewer = _reviewer(request)
     _apply_index(reviewer, index)
-    ctx = _panel_response_context(reviewer)
+    ctx = _panel_response_context(reviewer, request=request)
     return _templates(request).TemplateResponse(request, "review_panel.html", ctx)
+
+
+@router.get("/listing-page", response_class=HTMLResponse)
+async def listing_page(request: Request):
+    """CIP-0020 fragment: next append chunk or replacement paged rows."""
+    reviewer = _reviewer(request)
+    try:
+        layout = reviewer.get_display_layout()
+    except Exception:
+        layout = "side_by_side"
+    if layout != "inline_list":
+        return HTMLResponse("")
+    window = _window_for_reviewer(reviewer, request)
+    view_options = view_options_for_interface(getattr(reviewer, "_interface", None))
+    filter_state = reviewer.get_filter_state()
+    html = render_inline_listing(
+        _collect_listing_entries(reviewer, window["page_indices"], ""),
+        reviewer.get_review_specs(view_options=view_options),
+        group_by=_inline_list_group_by(filter_state),
+        detail_field=reviewer.get_display_detail_field(),
+        documents=_list_document_entries(reviewer, "documents"),
+        working_count=int(window.get("working_count") or 0),
+        window=window,
+        fragment=True,
+    )
+    return HTMLResponse(html)
 
 
 @router.get("/indices", response_class=HTMLResponse)
@@ -1164,6 +1284,7 @@ async def apply_filters(request: Request):
     except Exception as exc:
         _log_route_error("Filters", exc)
         return HTMLResponse(_user_error_html("Filters"))
+    _window_for_reviewer(reviewer, reset=True)
     ctx = _panel_response_context(reviewer)
     return templates.TemplateResponse(request, "review_panel.html", ctx)
 
@@ -1178,6 +1299,7 @@ async def clear_filters(request: Request):
     except Exception as exc:
         _log_route_error("Filters", exc)
         return HTMLResponse(_user_error_html("Filters"))
+    _window_for_reviewer(reviewer, reset=True)
     ctx = _panel_response_context(reviewer)
     return templates.TemplateResponse(request, "review_panel.html", ctx)
 
@@ -2334,8 +2456,36 @@ root_router = APIRouter()
 async def root_get_record(request: Request, config_path: str, index: str | None = None):
     reviewer = _root_reviewer(request, config_path)
     _apply_index(reviewer, index)
-    ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
+    prefix = _config_path_prefix(config_path)
+    ctx = _panel_response_context(reviewer, prefix, request=request)
     return _templates(request).TemplateResponse(request, "review_panel.html", ctx)
+
+
+@root_router.get("/{config_path:path}/listing-page", response_class=HTMLResponse)
+async def root_listing_page(request: Request, config_path: str):
+    """CIP-0020 fragment for a root-mode config path."""
+    reviewer = _root_reviewer(request, config_path)
+    try:
+        layout = reviewer.get_display_layout()
+    except Exception:
+        layout = "side_by_side"
+    if layout != "inline_list":
+        return HTMLResponse("")
+    prefix = _config_path_prefix(config_path)
+    window = _window_for_reviewer(reviewer, request)
+    view_options = view_options_for_interface(getattr(reviewer, "_interface", None))
+    filter_state = reviewer.get_filter_state()
+    html = render_inline_listing(
+        _collect_listing_entries(reviewer, window["page_indices"], prefix),
+        reviewer.get_review_specs(view_options=view_options),
+        group_by=_inline_list_group_by(filter_state),
+        detail_field=reviewer.get_display_detail_field(),
+        documents=_list_document_entries(reviewer, "documents"),
+        working_count=int(window.get("working_count") or 0),
+        window=window,
+        fragment=True,
+    )
+    return HTMLResponse(html)
 
 
 @root_router.get("/{config_path:path}/indices", response_class=HTMLResponse)
@@ -2425,6 +2575,7 @@ async def root_apply_filters(request: Request, config_path: str):
     except Exception as exc:
         _log_route_error("Filters", exc)
         return HTMLResponse(_user_error_html("Filters"))
+    _window_for_reviewer(reviewer, reset=True)
     ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
     return templates.TemplateResponse(request, "review_panel.html", ctx)
 
@@ -2438,6 +2589,7 @@ async def root_clear_filters(request: Request, config_path: str):
     except Exception as exc:
         _log_route_error("Filters", exc)
         return HTMLResponse(_user_error_html("Filters"))
+    _window_for_reviewer(reviewer, reset=True)
     ctx = _panel_response_context(reviewer, _config_path_prefix(config_path))
     return templates.TemplateResponse(request, "review_panel.html", ctx)
 
@@ -2699,7 +2851,7 @@ async def root_index(
 
     _apply_index(reviewer, index)
     prefix = _config_path_prefix(config_path)
-    ctx = _panel_response_context(reviewer, prefix)
+    ctx = _panel_response_context(reviewer, prefix, request=request)
 
     # Derive a display title: use the last path component as a readable label
     display_title = config_path.strip("/").split("/")[-1] if config_path.strip("/") else "Referia"

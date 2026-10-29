@@ -1625,6 +1625,131 @@ class TestCurrentDataIncludesVisibleIfFields:
         nav = nav.split("</div>", 1)[0]
         assert "Email feedback" not in nav
 
+    def test_inline_list_windows_first_get_and_append_fragment(
+        self, mock_reviewer, client
+    ):
+        ids = [f"r{i}" for i in range(2013)]
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ids
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"},
+            {
+                "type": "PopulateButton",
+                "field": "_extract",
+                "args": {"description": "Extract", "all": True},
+            },
+        ]
+        mock_reviewer.get_widget_specs.return_value = (
+            mock_reviewer.get_review_specs.return_value
+        )
+        mock_reviewer.get_row_data.side_effect = lambda: {
+            "title": str(mock_reviewer.get_index()),
+            "complete": False,
+        }
+        first = client.get("/")
+        assert first.status_code == 200
+        assert first.text.count('data-index="') == 50
+        assert "2013" in first.text
+        assert "Extract all" in first.text
+        assert 'hx-post="/populate-all/_extract"' in first.text
+        assert "Load more" in first.text
+        assert 'id="listing-sentinel"' in first.text
+        frag = client.get(
+            "/listing-page?list_offset=50",
+            headers={"HX-Request": "true"},
+        )
+        assert frag.status_code == 200
+        assert "Select all filtered" not in frag.text
+        assert "Extract all" not in frag.text
+        assert "listing-page-chunk" in frag.text
+        assert 'data-index="r50"' in frag.text
+        assert 'data-index="r0"' not in frag.text
+
+    def test_inline_list_page_mode_replaces_rows(
+        self, mock_reviewer, client
+    ):
+        ids = [f"r{i}" for i in range(2013)]
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ids
+        mock_reviewer.get_list_paging.return_value = "page"
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"}
+        ]
+        mock_reviewer.get_widget_specs.return_value = (
+            mock_reviewer.get_review_specs.return_value
+        )
+        mock_reviewer.get_row_data.side_effect = lambda: {
+            "title": str(mock_reviewer.get_index()),
+            "complete": False,
+        }
+        first = client.get("/?list_page_size=25&list_page=1")
+        assert first.status_code == 200
+        assert first.text.count('data-index="') == 25
+        assert "Page 1 of 81" in first.text
+        assert "Load more" not in first.text
+        page2 = client.get("/listing-page?list_page_size=25&list_page=2")
+        assert "Page 2 of 81" in page2.text
+        assert 'data-index="r25"' in page2.text
+        assert 'data-index="r0"' not in page2.text
+        assert page2.text.count('data-index="') == 25
+
+    def test_inline_list_unbounded_walks_all(self, mock_reviewer, client):
+        ids = [f"r{i}" for i in range(20)]
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ids
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"}
+        ]
+        mock_reviewer.get_widget_specs.return_value = (
+            mock_reviewer.get_review_specs.return_value
+        )
+        mock_reviewer.get_row_data.side_effect = lambda: {
+            "title": str(mock_reviewer.get_index()),
+            "complete": False,
+        }
+        response = client.get("/?list_page_size=0")
+        assert response.status_code == 200
+        assert response.text.count('data-index="') == 20
+        assert "Load more" not in response.text
+        assert "listing-pager" not in response.text
+
+    def test_filter_post_resets_to_first_page(self, mock_reviewer, client):
+        ids = [f"r{i}" for i in range(80)]
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ids
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"}
+        ]
+        mock_reviewer.get_widget_specs.return_value = (
+            mock_reviewer.get_review_specs.return_value
+        )
+        mock_reviewer.get_row_data.side_effect = lambda: {
+            "title": str(mock_reviewer.get_index()),
+            "complete": False,
+        }
+        later = client.get("/?list_offset=50")
+        assert 'data-index="r50"' in later.text
+        reset = client.post("/filters")
+        assert reset.status_code == 200
+        assert 'data-index="r0"' in reset.text
+        assert 'data-index="r50"' not in reset.text
+
     def test_inline_list_field_update_oob_omits_record_documents(
         self, mock_reviewer, client
     ):

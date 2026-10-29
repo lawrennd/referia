@@ -22,7 +22,7 @@ import logging
 import re
 from contextvars import ContextVar
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from lynguine.util.misc import markdown2html
 
@@ -1720,6 +1720,116 @@ def _version_badge(data: dict) -> str:
     return f'<span class="badge-version">v{_escape(raw)}</span>'
 
 
+def _listing_page_href(
+    path: str,
+    *,
+    offset: int | None = None,
+    page: int | None = None,
+    page_size: int | None = None,
+) -> str:
+    """Build ``/listing-page?...`` for CIP-0020 append/page navigation."""
+    query: dict[str, str] = {}
+    if offset:
+        query["list_offset"] = str(int(offset))
+    if page:
+        query["list_page"] = str(int(page))
+    if page_size is not None and int(page_size) not in (50, 0):
+        query["list_page_size"] = str(int(page_size))
+    qs = urlencode(query)
+    return f"{path}?{qs}" if qs else path
+
+
+def _listing_hx_attrs(href: str, *, target: str, swap: str, select: str = "") -> str:
+    extra = f' hx-select="{_escape(select)}"' if select else ""
+    return (
+        f'hx-get="{_escape(href)}" '
+        f'hx-target="{_escape(target)}" '
+        f'hx-swap="{_escape(swap)}"{extra}'
+    )
+
+
+def render_listing_window_nav(
+    window: dict,
+    *,
+    listing_path: str = "/listing-page",
+    htmx: bool = True,
+) -> str:
+    """Sentinel (append) or pager (page) for a CIP-0020 listing window.
+
+    *htmx* False is the Jupyter path: Load more / Prev / Next as plain links.
+    """
+    remaining = int(window.get("remaining") or 0)
+    paging = str(window.get("paging") or "append")
+    page_size = int(window.get("page_size") or 0)
+    offset = int(window.get("offset") or 0)
+    page = int(window.get("page") or 1)
+    pages = int(window.get("pages") or 1)
+    if page_size == 0:
+        return ""
+    if paging == "page":
+        prev_page = page - 1
+        next_page = page + 1
+        prev_href = _listing_page_href(
+            listing_path, page=prev_page, page_size=page_size
+        )
+        next_href = _listing_page_href(
+            listing_path, page=next_page, page_size=page_size
+        )
+        if htmx:
+            prev = (
+                f'<button type="button" class="listing-page-prev" '
+                f'{_listing_hx_attrs(prev_href, target="#inline-listing-region", swap="innerHTML")} '
+                f'{"disabled" if page <= 1 else ""}>Previous</button>'
+            )
+            nxt = (
+                f'<button type="button" class="listing-page-next" '
+                f'{_listing_hx_attrs(next_href, target="#inline-listing-region", swap="innerHTML")} '
+                f'{"disabled" if page >= pages else ""}>Next</button>'
+            )
+        else:
+            prev = (
+                f'<a class="listing-page-prev" href="{_escape(prev_href)}">Previous</a>'
+                if page > 1
+                else '<span class="listing-page-prev is-disabled">Previous</span>'
+            )
+            nxt = (
+                f'<a class="listing-page-next" href="{_escape(next_href)}">Next</a>'
+                if page < pages
+                else '<span class="listing-page-next is-disabled">Next</span>'
+            )
+        return (
+            f'<nav class="listing-pager" aria-label="Listing pages">'
+            f"{prev}"
+            f'<span class="listing-page-status">Page {page} of {pages}</span>'
+            f"{nxt}"
+            f"</nav>"
+        )
+    if remaining <= 0:
+        return ""
+    next_offset = offset + page_size
+    href = _listing_page_href(
+        listing_path, offset=next_offset, page_size=page_size
+    )
+    if htmx:
+        hx = _listing_hx_attrs(
+            href,
+            target="#inline-listing-rows",
+            swap="beforeend",
+            select=".listing-page-chunk > *",
+        )
+        return (
+            f'<div id="listing-sentinel" class="listing-sentinel" '
+            f'{hx} hx-trigger="revealed">'
+            f'<button type="button" class="load-more" {hx}>Load more</button>'
+            f"</div>"
+        )
+    return (
+        f'<div id="listing-sentinel" class="listing-sentinel">'
+        f'<a class="load-more" href="{_escape(href)}">Load more</a>'
+        f"</div>"
+    )
+
+
 def render_inline_listing(
     entries: list[dict],
     review_specs: list[dict],
@@ -1727,6 +1837,11 @@ def render_inline_listing(
     group_by: str = "directory",
     detail_field: str | None = None,
     documents: list[dict] | None = None,
+    working_count: int | None = None,
+    window: dict | None = None,
+    listing_path: str = "/listing-page",
+    fragment: bool = False,
+    htmx: bool = True,
 ) -> str:
     """Directory-listing style list for ``display.layout: inline_list``.
 
@@ -1748,6 +1863,11 @@ def render_inline_listing(
     *documents* are per-row Create-document actions (e.g. Email feedback).
     Each button posts ``index`` so generation uses that listing row, not
     the session's current record.
+
+    CIP-0020: *working_count* is the filtered set size (populate-all /
+    select-all labels). *window* adds append sentinel or pager chrome.
+    *fragment* is the HTMX listing-page response (rows + nav, no filter bar).
+    *htmx* False is Jupyter: Load more / Prev / Next as ordinary links.
     """
     complete_spec, extra_specs = _split_review_specs_for_listing(review_specs)
     populate_specs = [
@@ -1777,7 +1897,7 @@ def render_inline_listing(
         return '<p class="no-rows">No rows match the current filters.</p>'
 
     sections: list[str] = ['<div class="inline-listing">']
-    if chrome_specs:
+    if chrome_specs and not fragment:
         chrome_data = (entries[0].get("data") if entries else {}) or {}
         token = _listing_chrome_ctx.set(True)
         try:
@@ -1791,7 +1911,7 @@ def render_inline_listing(
         sections.append('<p class="no-rows">No rows match the current filters.</p>')
         sections.append("</div>")
         return "\n".join(sections)
-    if complete_spec is not None or populate_specs:
+    if not fragment and (complete_spec is not None or populate_specs):
         sections.append('<section class="select-all-section">')
         sections.append("<ul>")
         if complete_spec is not None:
@@ -1802,7 +1922,11 @@ def render_inline_listing(
             sections.append('<li class="inline-entry select-all-entry">')
             sections.append(
                 render_select_all_checkbox(
-                    all_done, field=complete_field, count=len(entries)
+                    all_done,
+                    field=complete_field,
+                    count=(
+                        working_count if working_count is not None else len(entries)
+                    ),
                 )
             )
             sections.append("</li>")
@@ -1810,23 +1934,28 @@ def render_inline_listing(
             sections.append('<li class="inline-entry select-all-entry">')
             sections.append(
                 render_populate_all_button(
-                    spec, count=len(entries), entries=entries
+                    spec,
+                    count=(
+                        working_count if working_count is not None else len(entries)
+                    ),
+                    entries=entries,
                 )
             )
             sections.append("</li>")
         sections.append("</ul>")
         sections.append("</section>")
 
+    row_sections: list[str] = []
     for group_name, group_entries in groups:
-        sections.append("<section>")
+        row_sections.append("<section>")
         if group_name:
             heading = (
                 f"{_escape(group_name)}/"
                 if group_by == "directory"
                 else _escape(group_name)
             )
-            sections.append(f"<h2>{heading}</h2>")
-        sections.append("<ul>")
+            row_sections.append(f"<h2>{heading}</h2>")
+        row_sections.append("<ul>")
         for entry in group_entries:
             idx = entry.get("index")
             data = entry.get("data") or {}
@@ -1840,43 +1969,44 @@ def render_inline_listing(
             if is_complete:
                 li_class += " is-complete"
 
-            sections.append(f'<li class="{li_class}" data-index="{_escape(idx)}">')
+            row_sections.append(
+                f'<li class="{li_class}" data-index="{_escape(idx)}">'
+            )
             if complete_spec is not None:
-                sections.append(
+                row_sections.append(
                     render_complete_checkbox(
                         complete_val, record_index=idx, field=complete_field
                     )
                 )
-            sections.append('<div class="entry-main">')
+            row_sections.append('<div class="entry-main">')
             if href:
-                sections.append(
+                row_sections.append(
                     f'<a class="entry-title" href="{_escape(href)}" '
                     f'target="_blank" rel="noopener noreferrer">'
                     f"{_escape(title)}</a>"
                 )
             else:
-                sections.append(
+                row_sections.append(
                     f'<span class="entry-title">{_escape(title)}</span>'
                 )
             if is_complete:
-                sections.append(
+                row_sections.append(
                     '<span class="badge-complete">complete</span>'
                 )
             version_html = _version_badge(data)
             if version_html:
-                sections.append(version_html)
+                row_sections.append(version_html)
             if date:
-                sections.append(
+                row_sections.append(
                     f'<span class="date">{_escape(date)}</span>'
                 )
             if desc:
-                sections.append(
+                row_sections.append(
                     f'<span class="desc">{_escape(desc)}</span>'
                 )
             if detail_key:
                 detail_val = data.get(detail_key)
                 if detail_val is None or detail_val == "":
-                    # Case-insensitive fallback (YAML / pandas quirks).
                     for k, v in data.items():
                         if str(k).lower() == detail_key.lower():
                             detail_val = v
@@ -1890,7 +2020,7 @@ def render_inline_listing(
                         detail_key,
                         detail_key.replace("_", " ").strip().title() or "Detail",
                     )
-                    sections.append(
+                    row_sections.append(
                         f'<details class="entry-detail" '
                         f'data-detail-field="{_escape(detail_key)}">'
                         f"<summary>{_escape(label)}</summary>"
@@ -1915,16 +2045,51 @@ def render_inline_listing(
                     ),
                 )
             if extras_html or row_docs:
-                sections.append(
+                row_sections.append(
                     '<div class="entry-extras">'
                     + "\n".join(extras_html)
                     + row_docs
                     + "</div>"
                 )
-            sections.append("</div>")  # entry-main
-            sections.append("</li>")
-        sections.append("</ul>")
-        sections.append("</section>")
+            row_sections.append("</div>")
+            row_sections.append("</li>")
+        row_sections.append("</ul>")
+        row_sections.append("</section>")
+
+    rows_html = "\n".join(row_sections)
+    nav = (
+        render_listing_window_nav(
+            window, listing_path=listing_path, htmx=htmx
+        )
+        if window
+        else ""
+    )
+    if fragment:
+        paging = str((window or {}).get("paging") or "append")
+        if paging == "page":
+            return (
+                f'<div id="inline-listing-rows">{rows_html}</div>\n{nav}'
+            )
+        chunk = f'<div class="listing-page-chunk">{rows_html}</div>'
+        if not htmx:
+            return f"{chunk}\n{nav}" if nav else chunk
+        if nav:
+            sentinel = nav.replace(
+                'id="listing-sentinel"',
+                'id="listing-sentinel" hx-swap-oob="outerHTML"',
+                1,
+            )
+        else:
+            sentinel = (
+                '<div id="listing-sentinel" hx-swap-oob="outerHTML"></div>'
+            )
+        return f"{chunk}\n{sentinel}"
+
+    sections.append('<div id="inline-listing-region">')
+    sections.append(f'<div id="inline-listing-rows">{rows_html}</div>')
+    if nav:
+        sections.append(nav)
+    sections.append("</div>")
     sections.append("</div>")
     return "\n".join(sections)
 

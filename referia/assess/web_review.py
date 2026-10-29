@@ -43,6 +43,7 @@ web_reviewer.affected_widgets(column) -> set[str]
 from __future__ import annotations
 
 import logging
+import math
 import re
 from datetime import date, timedelta
 from typing import Any
@@ -69,6 +70,8 @@ _NON_FIELD_TYPES = frozenset(
 
 # referia CIP-0010 display layouts (viewer/review chrome).
 _VALID_DISPLAY_LAYOUTS = frozenset({"side_by_side", "inline_list"})
+_VALID_LIST_PAGING = frozenset({"append", "page"})
+DEFAULT_LIST_PAGE_SIZE = 50
 
 # Relative calendar tokens for ``display.filter_defaults`` date bounds.
 _RELATIVE_DATE_RE = re.compile(r"^today(?:([+-])(\d+)d)?$", re.IGNORECASE)
@@ -154,6 +157,74 @@ def resolve_filter_defaults(
         else:
             out[name] = value
     return out
+
+
+def listing_window(
+    working: list,
+    *,
+    page_size: int = DEFAULT_LIST_PAGE_SIZE,
+    offset: int = 0,
+    page: int | None = None,
+    paging: str = "append",
+) -> dict[str, Any]:
+    """Slice a working-set into one CIP-0020 listing page.
+
+    ``page_size`` 0 is unbounded (today's walk). Unknown ``paging`` values
+    fail closed to ``append``.
+    """
+    indices = list(working)
+    n = len(indices)
+    paging_key = str(paging or "append").strip().lower()
+    if paging_key not in _VALID_LIST_PAGING:
+        paging_key = "append"
+    try:
+        size = int(page_size)
+    except (TypeError, ValueError):
+        size = DEFAULT_LIST_PAGE_SIZE
+    if size < 0:
+        size = DEFAULT_LIST_PAGE_SIZE
+    if size == 0:
+        return {
+            "page_indices": indices,
+            "remaining": 0,
+            "page": 1,
+            "pages": 1,
+            "offset": 0,
+            "page_size": 0,
+            "working_count": n,
+            "paging": paging_key,
+        }
+    if page is not None:
+        try:
+            p = int(page)
+        except (TypeError, ValueError):
+            p = 1
+        if p < 1:
+            p = 1
+        offset = (p - 1) * size
+    else:
+        try:
+            offset = int(offset)
+        except (TypeError, ValueError):
+            offset = 0
+        if offset < 0:
+            offset = 0
+    pages = max(1, math.ceil(n / size)) if n else 1
+    if n and offset >= n:
+        offset = (pages - 1) * size
+    page_indices = indices[offset : offset + size]
+    remaining = max(0, n - offset - len(page_indices))
+    page_num = (offset // size) + 1
+    return {
+        "page_indices": page_indices,
+        "remaining": remaining,
+        "page": page_num,
+        "pages": pages,
+        "offset": offset,
+        "page_size": size,
+        "working_count": n,
+        "paging": paging_key,
+    }
 
 
 class WebReviewer:
@@ -244,6 +315,12 @@ class WebReviewer:
         # Session filter/sort state for display.layout: inline_list (CIP-0010).
         # Seed from ``display.filter_defaults`` when present (Clear restores it).
         self._filter_state: dict[str, Any] = self.get_filter_defaults()
+        # CIP-0020 listing window (offset / page survive field updates; filters reset).
+        self._list_query: dict[str, Any] = {
+            "offset": 0,
+            "page": None,
+            "page_size": None,
+        }
 
     # ------------------------------------------------------------------
     # Index management
@@ -344,6 +421,73 @@ class WebReviewer:
         if raw is None or raw == "":
             return None
         return str(raw)
+
+    def get_list_page_size(self, override: int | None = None) -> int:
+        """Return ``display.list_page_size`` (default 50). ``0`` is unbounded.
+
+        *override* is a query ``list_page_size`` for this view; it does not
+        write YAML.
+        """
+        if override is not None:
+            try:
+                n = int(override)
+            except (TypeError, ValueError):
+                n = None
+            else:
+                if n >= 0:
+                    return n
+        raw = self._display_config().get("list_page_size")
+        if raw is None or raw == "":
+            return DEFAULT_LIST_PAGE_SIZE
+        try:
+            n = int(raw)
+        except (TypeError, ValueError):
+            return DEFAULT_LIST_PAGE_SIZE
+        return n if n >= 0 else DEFAULT_LIST_PAGE_SIZE
+
+    def get_list_paging(self) -> str:
+        """Return ``display.list_paging`` (``append`` | ``page``). Default append."""
+        raw = self._display_config().get("list_paging")
+        if raw is None or raw == "":
+            return "append"
+        key = str(raw).strip().lower()
+        return key if key in _VALID_LIST_PAGING else "append"
+
+    def remember_list_query(self, query: dict[str, Any] | None) -> None:
+        """Store listing window query so field updates stay on this page."""
+        self._list_query = {
+            "offset": 0,
+            "page": None,
+            "page_size": None,
+            **(query or {}),
+        }
+
+    def list_query(self) -> dict[str, Any]:
+        """Return the remembered CIP-0020 listing window query."""
+        stored = getattr(self, "_list_query", None)
+        if not isinstance(stored, dict):
+            return {"offset": 0, "page": None, "page_size": None}
+        return dict(stored)
+
+    def clear_list_window(self) -> None:
+        """Reset listing window to offset 0 / page 1 (filter/sort POST)."""
+        self._list_query = {"offset": 0, "page": None, "page_size": None}
+
+    def working_window(
+        self,
+        offset: int = 0,
+        *,
+        page: int | None = None,
+        page_size: int | None = None,
+    ) -> dict[str, Any]:
+        """Slice ``working_indices()`` for a CIP-0020 listing GET."""
+        return listing_window(
+            self.working_indices(),
+            page_size=self.get_list_page_size(page_size),
+            offset=offset,
+            page=page,
+            paging=self.get_list_paging(),
+        )
 
     def get_filter_specs(self) -> list:
         """Return ``filters:`` specs from the interface (may be empty)."""
