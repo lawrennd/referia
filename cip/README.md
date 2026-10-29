@@ -54,6 +54,7 @@ Each CIP can have one of the following statuses:
 - [CIP-001A](./cip001A.md): VQ codebook before lens Assess, with a Brownian projection walk (In Progress; REQ-0010)
 - [CIP-001B](./cip001B.md): Jupyter-like kernel/server process split for the web review runtime (Proposed; REQ-0013)
 - [CIP-001C](./cip001C.md): Root-owned schedule with sibling Today and Year overviews (Closed; REQ-0014; compressed into `docs/usage/catalog_schedule.rst`; lynguine CIP-0018 for directory bind/exclude)
+- [CIP-001D](./cip001D.md): Populate-all as a resumable store write, not a long-lived page request (Proposed; REQ-0010)
 
 ## Creating a Good CIP
 
