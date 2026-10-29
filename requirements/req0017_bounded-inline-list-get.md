@@ -27,7 +27,7 @@ tags:
 
 ## Description
 
-Opening a review that lists the working set must stay interactive when that set has hundreds or thousands of rows. The first response shows a bounded window of entries. Further entries arrive on demand (scroll or an explicit next-page control) without rebuilding the whole page. Filter and sort still apply to the full working set; populate-all still means every matching row, not only the rows on screen.
+Opening a review that lists the working set must stay interactive when that set has hundreds or thousands of rows. The first response shows a bounded window of entries. The author sets how many entries that window holds, and whether further entries **append** (scroll) or **replace** (a paged view). Filter and sort still apply to the full working set; populate-all still means every matching row, not only the rows on screen.
 
 REQ-000E already says authors pick a named list composition. It does not say the GET may walk every row before the browser sees HTML. Catalogs survive today because they are thin and usually pre-filtered (CIP-001C’s today window). Unit workbenches with a widget strip per row do not.
 
@@ -38,12 +38,12 @@ REQ-000E already says authors pick a named list composition. It does not say the
 ## Acceptance Criteria
 
 - [ ] A first GET of `inline_list` returns in interactive time when the filtered working set has thousands of rows
-- [ ] Remaining rows can be revealed without a full panel rebuild (scroll and/or a next-page control)
+- [ ] Remaining rows can be revealed without walking the whole working set on GET
+- [ ] Authors can choose append (scroll / load more) or a paged view (prev / next, page k of n) without a new named layout
+- [ ] Authors can set entries per page; omitting it uses a documented default; `0` restores the unbounded walk
 - [ ] Filter and sort still address the full working set; the window is a view of that ordered set
 - [ ] Populate-all still targets every working row, not only the painted page
-- [ ] Authors are not required to invent a new named layout; `inline_list` remains the list composition
-- [ ] Omitting a page size still stays bounded by a documented default; `0` restores the unbounded walk for short catalogs that need it
-- [ ] The same bound applies on Jupyter even if infinite scroll is web-only
+- [ ] The same bound and paging choice apply on Jupyter even if infinite scroll is web-only
 
 ## Notes
 
@@ -60,3 +60,7 @@ This is listing GET cost, not populate-all duration (REQ-0010 / CIP-001D) and no
 ### 2026-10-29
 
 Requirement created (Proposed) after `07_grounds` `inline_list` over 2013 units pegged the 8003 worker on GET.
+
+### 2026-10-29 (paging variant)
+
+Acceptance now includes a paged view and an author-set page size, not only append.
