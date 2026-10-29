@@ -210,3 +210,31 @@ class TestWidgetVisibilityHelper:
         r._update_widget_visibility(cluster)
         assert w_eq.widget.layout.display == ""
         assert w_not.widget.layout.display == ""
+
+    def test_refresh_toggles_viewer_widget(self):
+        data = CustomDataFrame(
+            {"ch8Present": [False]},
+            colspecs={"writedata": ["ch8Present"]},
+        )
+        data.autocache = True
+        data.set_index(data.index[0])
+
+        r = _bare_reviewer(_data=data)
+        r.get_index = MagicMock(return_value=data.index[0])
+
+        cluster = MagicMock()
+        widget = MagicMock()
+        widget._visible_if_condition = "ch8Present"
+        widget.widget.layout.display = ""
+        widget.widget.layout.height = ""
+        widget.widget.layout.margin = ""
+        widget.widget.layout.padding = ""
+        cluster._widget_list = ["_viewer_label0"]
+        cluster._widget_dict = {"_viewer_label0": widget}
+
+        r._update_widget_visibility(cluster)
+        assert widget.widget.layout.display == "none"
+
+        data.at[data.index[0], "ch8Present"] = True
+        r._update_widget_visibility(cluster)
+        assert widget.widget.layout.display == ""

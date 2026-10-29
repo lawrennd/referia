@@ -2205,6 +2205,69 @@ class TestRowsAndFilters:
         assert captured["local"]["rows"][0]["title"] == "Alpha"
         assert "list" in html or "viewer" in html
 
+    def test_render_viewer_html_visible_if_inherited_input_column(self):
+        """Present flags on the child row gate viewer Liquid (no review widget)."""
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"ch8Present": False, "title": "Chapter 8"},
+        )
+        spec = {
+            "type": "Markdown",
+            "liquid": "Chapter 8 notes",
+            "visible_if": "ch8Present",
+        }
+        hidden = reviewer.render_viewer_html(spec, viewer_index=0)
+        assert "display:none" in hidden
+        storage[("a", "ch8Present")] = True
+        storage["ch8Present"] = True
+        shown = reviewer.render_viewer_html(spec, viewer_index=0)
+        assert "display:none" not in shown
+
+    def test_render_viewer_html_visible_if_plotly_image_and_chrome(self):
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["a"],
+            col_vals={
+                "ch8Present": False,
+                "photo": "https://example.com/ch8.png",
+                "focus_topic": "A",
+                "fig": {"data": [], "layout": {}},
+            },
+            viewer=[
+                {
+                    "type": "PlotlyFigure",
+                    "field": "fig",
+                    "visible_if": "ch8Present",
+                },
+                {
+                    "type": "StaticImage",
+                    "field": "photo",
+                    "visible_if": "ch8Present",
+                },
+                {
+                    "type": "Dropdown",
+                    "field": "focus_topic",
+                    "visible_if": "ch8Present",
+                    "args": {"options": ["A", "B"]},
+                },
+            ],
+        )
+        storage[("a", "fig")] = {"data": [], "layout": {}}
+        storage[("a", "photo")] = "https://example.com/ch8.png"
+        storage[("a", "focus_topic")] = "A"
+        specs = reviewer.get_viewer_specs()
+        plotly = reviewer.render_viewer_html(specs[0], viewer_index=0)
+        image = reviewer.render_viewer_html(specs[1], viewer_index=1)
+        chrome = reviewer.render_viewer_html(specs[2], viewer_index=2)
+        assert "viewer-plotly" in plotly and "display:none" in plotly
+        assert "https://example.com/ch8.png" in image and "display:none" in image
+        assert "viewer-chrome" in chrome and "display:none" in chrome
+        assert "focus_topic" in chrome or "<select" in chrome
+
+    def test_viewer_visibility_data_soft_on_row_errors(self):
+        reviewer, _, _ = _build_reviewer(index_vals=["a"], col_vals={"title": "x"})
+        reviewer.get_row_data = MagicMock(side_effect=RuntimeError("boom"))
+        assert reviewer._viewer_visibility_data() == {}
+
 
 class TestInteractiveViewerHtml:
     """CIP-0011: typed PlotlyFigure / StaticImage under viewer:."""

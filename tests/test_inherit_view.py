@@ -344,6 +344,43 @@ class TestRenderInherited:
         assert 'data-section-key="viewer/0/grandparent"' in blocks[0]
         assert blocks[1].startswith("LEAF:")
 
+    def test_viewer_tree_hides_section_when_visible_if_false(self):
+        specs = [
+            {
+                "type": "Section",
+                "title": "Chapter 8",
+                "inherited": True,
+                "visible_if": "ch8Present",
+                "entries": [{"liquid": "ch8 viewer"}],
+            },
+            {"liquid": "Child viewer"},
+        ]
+        blocks = render_viewer_tree(
+            specs,
+            lambda spec: f"LEAF:{spec.get('liquid')}",
+            data={"ch8Present": False},
+        )
+        assert "display:none" in blocks[0]
+        assert "LEAF:ch8 viewer" in blocks[0]
+        assert "display:none" not in blocks[1]
+
+    def test_viewer_tree_shows_section_when_visible_if_true(self):
+        specs = [
+            {
+                "type": "Section",
+                "title": "Chapter 8",
+                "visible_if": "ch8Present",
+                "entries": [{"liquid": "ch8 viewer"}],
+            }
+        ]
+        blocks = render_viewer_tree(
+            specs,
+            lambda spec: f"LEAF:{spec.get('liquid')}",
+            data={"ch8Present": True},
+        )
+        assert "display:none" not in blocks[0]
+        assert "LEAF:ch8 viewer" in blocks[0]
+
     def test_viewer_tree_section_keys_are_stable_and_prefixed(self):
         specs = [
             {

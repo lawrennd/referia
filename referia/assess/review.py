@@ -505,6 +505,47 @@ class LoopWidgetCluster(DynamicWidgetCluster):
     """A widget cluster for loop widgets."""
     pass
 
+
+def _apply_jupyter_visible_if(widget, condition, reviewer):
+    """Bind ``visible_if`` onto a Jupyter widget using web checkbox rules.
+
+    Viewer construction does not go through ``extract_widget()``, so
+    ``_create_viewer`` calls this for the same hide/show layout as review
+    widgets. ``_update_widget_visibility`` reuses it on refresh.
+    """
+    if condition is None:
+        return
+    widget._visible_if_condition = condition
+    from referia.web.render import _visibility_style
+
+    data = {}
+    field_name = None
+    if isinstance(condition, str):
+        field_name = condition
+    elif isinstance(condition, dict):
+        field_name = condition.get("field")
+    if field_name:
+        try:
+            data[field_name] = reviewer._data.at[reviewer.get_index(), field_name]
+        except Exception:
+            data[field_name] = None
+    hidden = bool(_visibility_style({"visible_if": condition}, data))
+    inner = getattr(widget, "widget", widget)
+    layout = getattr(inner, "layout", None)
+    if layout is None:
+        return
+    if hidden:
+        layout.display = "none"
+        layout.height = "0px"
+        layout.margin = "0px"
+        layout.padding = "0px"
+    else:
+        layout.display = ""
+        layout.height = ""
+        layout.margin = ""
+        layout.padding = ""
+
+
 class Reviewer(DisplaySystem):
     """
     Interactive review interface for assessment and data annotation.
@@ -673,6 +714,7 @@ class Reviewer(DisplaySystem):
         """
         Create the viewer.
 
+
         :param views: The views to be displayed.
         :type views: dict
         """
@@ -695,45 +737,37 @@ class Reviewer(DisplaySystem):
                             else f"### {title}"
                         )
                     }
-                    widgets.add(
-                        **{
-                            label: Markdown(
-                                description=" ",
-                                field_name=label,
-                                column_name=label,
-                                parent=self,
-                                **heading,
-                            )
-                        }
+                    heading_widget = Markdown(
+                        description=" ",
+                        field_name=label,
+                        column_name=label,
+                        parent=self,
+                        **heading,
                     )
+                    _apply_jupyter_visible_if(
+                        heading_widget, view_dict.get("visible_if"), self
+                    )
+                    widgets.add(**{label: heading_widget})
                 sub = view_dict.get("entries") or view_dict.get("children") or []
                 if isinstance(sub, list) and sub:
                     widgets.add(cluster=self._create_viewer(sub))
                 continue
             vtype = viewer_entry_type(view_dict)
             if vtype == "PlotlyFigure":
-                widgets.add(
-                    **{
-                        label: PlotlyFigureViewer(
-                            description=" ",
-                            field_name=label,
-                            column_name=label,
-                            parent=self,
-                            viewer_spec=view_dict,
-                        )
-                    }
+                widget = PlotlyFigureViewer(
+                    description=" ",
+                    field_name=label,
+                    column_name=label,
+                    parent=self,
+                    viewer_spec=view_dict,
                 )
             elif vtype == "StaticImage":
-                widgets.add(
-                    **{
-                        label: StaticImageViewer(
-                            description=" ",
-                            field_name=label,
-                            column_name=label,
-                            parent=self,
-                            viewer_spec=view_dict,
-                        )
-                    }
+                widget = StaticImageViewer(
+                    description=" ",
+                    field_name=label,
+                    column_name=label,
+                    parent=self,
+                    viewer_spec=view_dict,
                 )
             else:
                 args = {
@@ -744,9 +778,11 @@ class Reviewer(DisplaySystem):
                     "parent": self,
                 }
                 # Interactive-only keys must not reach Markdown / Liquid path.
-                for key in ("on", "highlight", "type"):
+                for key in ("on", "highlight", "type", "visible_if"):
                     args.pop(key, None)
-                widgets.add(**{label: Markdown(**args)})
+                widget = Markdown(**args)
+            _apply_jupyter_visible_if(widget, view_dict.get("visible_if"), self)
+            widgets.add(**{label: widget})
         return widgets
 
     def _create_review(self, reviewers):
@@ -1397,64 +1433,9 @@ class Reviewer(DisplaySystem):
             elif isinstance(entry, str):
                 widget = widgets._widget_dict[entry]
                 if hasattr(widget, '_visible_if_condition'):
-                    condition = widget._visible_if_condition
-                    
-                    # Parse condition (string = truthy field; dict equals/value/not)
-                    if isinstance(condition, str):
-                        field_name = condition
-                        invert = False
-                        expected_value = True
-                        use_equals = False
-                    elif isinstance(condition, dict):
-                        field_name = condition.get("field")
-                        invert = bool(condition.get("not"))
-                        if "equals" in condition:
-                            expected_value = condition.get("equals")
-                            use_equals = True
-                        elif "value" in condition:
-                            expected_value = condition.get("value")
-                            use_equals = True
-                        else:
-                            expected_value = True
-                            use_equals = False
-                    else:
-                        continue
-                    
-                    # Check condition against current data
-                    try:
-                        current_value = self._data.at[self.get_index(), field_name]
-                        if invert:
-                            # Show when field is falsy (None / False / empty / {}).
-                            is_visible = not bool(current_value)
-                        elif use_equals:
-                            is_visible = current_value == expected_value
-                        else:
-                            is_visible = bool(current_value) == bool(expected_value)
-                        
-                        # Update widget visibility (access inner ipywidget if it's a FieldWidget)
-                        inner_widget = getattr(widget, 'widget', widget)
-                        if is_visible:
-                            # Show: restore to default layout values
-                            inner_widget.layout.display = ''
-                            inner_widget.layout.height = ''
-                            inner_widget.layout.margin = ''
-                            inner_widget.layout.padding = ''
-                        else:
-                            # Hide: set display=none and collapse all spacing
-                            inner_widget.layout.display = 'none'
-                            inner_widget.layout.height = '0px'
-                            inner_widget.layout.margin = '0px'
-                            inner_widget.layout.padding = '0px'
-                        
-                        log.debug(f"Widget \"{entry}\" visibility: {'visible' if is_visible else 'hidden'} ({field_name}={current_value}, expected={expected_value})")
-                    except (KeyError, AttributeError) as e:
-                        # Field doesn't exist or can't be accessed, default to hidden
-                        inner_widget = getattr(widget, 'widget', widget)
-                        inner_widget.layout.display = 'none'
-                        inner_widget.layout.height = '0px'
-                        inner_widget.layout.margin = '0px'
-                        inner_widget.layout.padding = '0px'
-                        log.debug(f"Widget \"{entry}\" hidden (condition field '{field_name}' not accessible: {e})")
+                    _apply_jupyter_visible_if(
+                        widget, widget._visible_if_condition, self
+                    )
     
     def populate_display(self) -> None:
         """

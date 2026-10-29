@@ -209,6 +209,25 @@ def _visibility_style(spec: dict, data: dict) -> str:
     return ' style="display:none"' if hidden else ""
 
 
+def _combine_html_styles(*attrs: str) -> str:
+    """Merge ``style="..."`` attribute fragments into one attribute."""
+    parts: list[str] = []
+    for attr in attrs:
+        if not attr:
+            continue
+        text = str(attr).strip()
+        if text.lower().startswith("style="):
+            text = text.split("=", 1)[1].strip()
+            if len(text) >= 2 and text[0] in {'"', "'"} and text[-1] == text[0]:
+                text = text[1:-1]
+        text = text.strip().rstrip(";")
+        if text:
+            parts.append(text)
+    if not parts:
+        return ""
+    return f' style="{"; ".join(parts)}"'
+
+
 def _label_html(description: str) -> str:
     if not description:
         return ""
@@ -637,12 +656,18 @@ def iter_spec_leaves(specs: list | None):
             yield spec
 
 
-def render_viewer_tree(specs: list, leaf_html) -> list[str]:
+def render_viewer_tree(
+    specs: list, leaf_html, data: dict | None = None
+) -> list[str]:
     """Render viewer specs, wrapping inherited Sections like review details.
 
     *leaf_html(spec)* returns the HTML for one non-Section viewer entry
-    (typically ``WebReviewer.render_viewer_html``).
+    (typically ``WebReviewer.render_viewer_html``).  Optional *data*
+    evaluates ``visible_if`` on Section wrappers (leaves apply it in
+    ``render_viewer``). Hidden blocks stay in the DOM with
+    ``display:none`` so HTMX can reveal them after a field toggle.
     """
+    row = data if data is not None else {}
     section_index = 0
 
     def _walk(items: list) -> list[str]:
@@ -663,9 +688,10 @@ def render_viewer_tree(specs: list, leaf_html) -> list[str]:
                 inner = "\n".join(_walk(spec.get("entries") or []))
                 summary = _section_summary_html(spec, str(title))
                 open_attr = " open" if (spec.get("args") or {}).get("open", True) else ""
+                vis = _visibility_style(spec, row)
                 parts.append(
                     f'<details class="review-section viewer-section{extra}" '
-                    f'data-section-key="viewer/{key}"{open_attr}>\n'
+                    f'data-section-key="viewer/{key}"{open_attr}{vis}>\n'
                     f"<summary>{summary}</summary>\n"
                     f"{inner}\n"
                     f"</details>"
@@ -931,6 +957,7 @@ def render_viewer(
     figure: dict | None = None,
     highlight_value: Any = None,
     viewer_index: int = 0,
+    data: dict | None = None,
 ) -> str:
     """Render a pre-evaluated viewer entry to an HTML string.
 
@@ -946,6 +973,9 @@ def render_viewer(
         figure: Plotly-like ``{data, layout}`` dict for ``PlotlyFigure``.
         highlight_value: Current value of ``highlight.from_field`` (optional).
         viewer_index: Stable index among ``viewer:`` entries (DOM id).
+        data: Current row used to evaluate ``visible_if`` (same rules as
+            review widgets). Hidden viewers stay in the DOM with
+            ``display:none`` so HTMX OOB can reveal them.
 
     Returns:
         HTML string for the viewer block.
@@ -956,6 +986,8 @@ def render_viewer(
         viewer_entry_type,
     )
 
+    row = data if data is not None else {}
+    vis = _visibility_style(view_spec, row)
     view_type = viewer_entry_type(view_spec)
     if view_type == "PlotlyFigure":
         from referia.assess.viewer_bindings import plotly_size_options
@@ -968,11 +1000,13 @@ def render_viewer(
             click_actions=click_point_actions(view_spec),
             highlight=highlight_binding(view_spec),
             size=plotly_size_options(view_spec),
+            vis=vis,
         )
     if view_type == "StaticImage":
         src = _escape(content or "")
         return (
-            f'<div class="viewer viewer-image" id="viewer-image-{viewer_index}">'
+            f'<div class="viewer viewer-image" id="viewer-image-{viewer_index}"'
+            f"{vis}>"
             f'<img src="{src}" alt="viewer image" loading="lazy" />'
             f"</div>"
         )
@@ -981,12 +1015,13 @@ def render_viewer(
         rendered = _collapse_matching_headings(rendered, view_spec)
         return (
             f'<div class="viewer viewer-markdown" '
-            f'id="viewer-markdown-{int(viewer_index)}">{rendered}</div>'
+            f'id="viewer-markdown-{int(viewer_index)}"{vis}>{rendered}</div>'
         )
     html = _ensure_links_new_tab(content)
     html = _collapse_matching_headings(html, view_spec)
     return (
-        f'<div class="viewer viewer-html" id="viewer-html-{int(viewer_index)}">'
+        f'<div class="viewer viewer-html" id="viewer-html-{int(viewer_index)}"'
+        f"{vis}>"
         f"{html}</div>"
     )
 
@@ -1086,6 +1121,7 @@ def _render_plotly_viewer(
     click_actions: list[dict[str, Any]],
     highlight: dict[str, str] | None,
     size: dict[str, Any] | None = None,
+    vis: str = "",
 ) -> str:
     """Emit a Plotly container with JSON spec and click-binding metadata."""
     from referia.assess.viewer_bindings import apply_highlight, apply_plotly_size
@@ -1113,6 +1149,7 @@ def _render_plotly_viewer(
         aspect_safe = _escape(aspect)
         aspect_attr = f' data-size-aspect="{aspect_safe}"'
         aspect_style = f' style="--plotly-aspect: {aspect_safe}"'
+    style_attr = _combine_html_styles(aspect_style, vis)
     vid = f"viewer-plotly-{viewer_index}"
     tid = f"plotly-target-{viewer_index}"
     return (
@@ -1122,7 +1159,7 @@ def _render_plotly_viewer(
         f'data-highlight-mode="{mode_attr}" '
         f'data-size-mode="{size_attr}" '
         f'data-size-observe="{observe_attr}"'
-        f"{aspect_attr}{aspect_style}>"
+        f"{aspect_attr}{style_attr}>"
         f'<div class="plotly-target" id="{tid}"></div>'
         f'<script type="application/json" class="plotly-spec" '
         f'id="plotly-spec-{viewer_index}">'
