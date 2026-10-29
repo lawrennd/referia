@@ -4,10 +4,12 @@ import pytest
 
 from referia.assess.compute import Compute
 from referia.assess.compute.phrases import (
+    _blank,
     dialogue_doc_id,
     llm_extract_phrases,
     parse_extraction_payload,
     quote_support,
+    segment_dialogue_units,
     stamp_dialogue_doc_ids,
     word_count_phrase,
 )
@@ -256,11 +258,28 @@ def test_llm_extract_client_must_have_call():
         )
 
 
+def test_blank_nan_and_eq_error():
+    class _Boom:
+        def __eq__(self, other):
+            raise RuntimeError("no eq")
+
+        def __str__(self):
+            return "ok"
+
+    assert _blank(None) is True
+    assert _blank(float("nan")) is True
+    assert _blank("  nan  ") is True
+    assert _blank(_Boom()) is False
+
+
 def test_quote_support_verbatim_and_empty():
     src = "the computer will make mistakes if nobody checks it"
     assert quote_support("the computer will make mistakes", src) == 1.0
     assert quote_support("", src) == 0.0
     assert quote_support("the robot will make errors", src) < 0.8
+    # Ellipsis splits; SequenceMatcher counts in-order word blocks.
+    assert quote_support("the computer … nobody checks it", src) == 1.0
+    assert quote_support("mistakes computer make", src) > 0.0
 
 
 def test_dialogue_doc_id_chatbot_vs_workshop():
@@ -274,6 +293,9 @@ def test_dialogue_doc_id_chatbot_vs_workshop():
         dialogue_doc_id(filename="workshops/session.docx", format="workshop")
         == "workshops/session.docx"
     )
+    assert dialogue_doc_id(participant_id="001") == "001"
+    assert dialogue_doc_id(doc_id="already-stamped") == "already-stamped"
+    assert dialogue_doc_id() is None
 
 
 def test_stamp_dialogue_doc_ids_drops_short_chatbot_units():
@@ -298,6 +320,21 @@ def test_stamp_dialogue_doc_ids_drops_short_chatbot_units():
     assert len(out) == 2
     assert out[0]["doc_id"] == "spring_2026::001"
     assert out[1]["doc_id"] == "workshops/a.docx"
+    assert stamp_dialogue_doc_ids(None) == []
+
+    class _Row:
+        def to_dict(self):
+            return {"text": "counted from the text field here", "participant_id": "002"}
+
+    mixed = stamp_dialogue_doc_ids(
+        [
+            _Row(),
+            "skip-me",
+            {"text": "also counted from text", "filename": "workshops/a.docx"},
+        ],
+        min_unit_words=3,
+    )
+    assert [row["doc_id"] for row in mixed] == ["002", "workshops/a.docx"]
 
 
 def test_parse_drops_unverified_and_context_quotes():
@@ -318,6 +355,51 @@ def test_parse_drops_unverified_and_context_quotes():
     assert [row["phrase"] for row in kept] == ["records leaking to contractors"]
     assert kept[0]["quote_support"] == 1.0
     assert kept[0]["verified"] is True
+    invented = parse_extraction_payload(
+        "invented harm phrase || this quote is nowhere in extract or question",
+        kind="concern",
+        sentinel="NO_CONCERN",
+        min_words=3,
+        max_words=10,
+        extract_text=extract,
+        context=context,
+        quote_support_threshold=0.8,
+    )
+    assert invented == []
+
+
+def test_segment_dialogue_units_stamps_via_document_segment(monkeypatch):
+    monkeypatch.setattr(
+        "referia.assess.compute.phrases.document_segment",
+        lambda path, **kwargs: [
+            {"text": "I worry about records leaking", "participant_id": "007"}
+        ],
+    )
+    out = segment_dialogue_units(
+        "files/chatbot/dump.docx",
+        round="autumn_2025",
+        format="chatbot",
+        min_unit_words=4,
+    )
+    assert out[0]["doc_id"] == "autumn_2025::007"
+
+
+def test_llm_extract_stamps_packed_doc_id():
+    client = _StubComplete(["privacy risk from scoring"])
+    _payload, phrases = llm_extract_phrases(
+        "People worry about privacy risk from scoring systems.",
+        prompt_template=PROMPT,
+        kinds=["concern"],
+        chunk_id="u1",
+        participant_id="001",
+        round="autumn_2025",
+        extract_text="People worry about privacy risk from scoring systems.",
+        quote_support_threshold=0.0,
+        client=client,
+        min_words=3,
+        max_words=10,
+    )
+    assert phrases[0]["doc_id"] == "autumn_2025::001"
 
 
 def test_llm_extract_uses_injected_manager(monkeypatch):
