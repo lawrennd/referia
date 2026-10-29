@@ -872,7 +872,7 @@
     <span class="n">subject_grain_seed_fit</span><span class="p">,</span>
     <span class="n">subject_grain_undo_split</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.phrases</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_extract_phrases</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.phrases</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_extract_phrases</span><span class="p">,</span> <span class="n">segment_dialogue_units</span><span class="p">,</span> <span class="n">stamp_dialogue_doc_ids</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.embed</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_embed</span><span class="p">,</span> <span class="n">llm_embed_extraction_phrases</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.distance</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">axis_correlates</span><span class="p">,</span>
@@ -1591,11 +1591,33 @@
                     <span class="s2">&quot;max_words&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
                     <span class="s2">&quot;max_items&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
                     <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.2</span><span class="p">,</span>
+                    <span class="s2">&quot;quote_support_threshold&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
                 <span class="p">},</span>
                 <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
                     <span class="s2">&quot;Extract short concern/benefit/condition phrases from &quot;</span>
                     <span class="s2">&quot;chunk text. Writes extraction_payload and a list of &quot;</span>
-                    <span class="s2">&quot;phrase dicts for explode (CIP-0015).&quot;</span>
+                    <span class="s2">&quot;phrase dicts for explode (CIP-0015). Optional &quot;</span>
+                    <span class="s2">&quot;quote_support_threshold drops unverified quotes and &quot;</span>
+                    <span class="s2">&quot;quotes taken from the bot question / facilitator.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;stamp_dialogue_doc_ids&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">stamp_dialogue_doc_ids</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Stamp conversation doc_id on unit dicts: &quot;</span>
+                    <span class="s2">&quot;</span><span class="si">{round}</span><span class="s2">::</span><span class="si">{participant_id}</span><span class="s2"> for chatbot, filename for &quot;</span>
+                    <span class="s2">&quot;workshops. Optionally drop units under min_unit_words.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;segment_dialogue_units&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">segment_dialogue_units</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;document_segment then stamp_dialogue_doc_ids so pack &quot;</span>
+                    <span class="s2">&quot;weights chatbot conversations, not Recollective dumps.&quot;</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
