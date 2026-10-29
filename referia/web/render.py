@@ -1580,6 +1580,39 @@ def render_populate_all_button(
     )
 
 
+def _populate_all_flag(spec: dict) -> bool:
+    """True when a PopulateButton should also emit populate-all chrome."""
+    raw = (spec.get("args") or {}).get("all")
+    if isinstance(raw, bool):
+        return raw
+    return str(raw or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def populate_all_chrome_html(review_specs: list | None, *, count: int) -> str:
+    """``side_by_side`` chrome for PopulateButtons with ``args.all: true``.
+
+    ``inline_list`` already emits this via :func:`render_inline_listing`.
+    Building a 2013-row listing just to get Classify all pegs the worker.
+    """
+    specs = [
+        spec
+        for spec in iter_spec_leaves(review_specs)
+        if spec.get("type") == "PopulateButton" and _populate_all_flag(spec)
+    ]
+    if not specs:
+        return ""
+    items = []
+    for spec in specs:
+        items.append('<li class="inline-entry select-all-entry">')
+        items.append(render_populate_all_button(spec, count=count))
+        items.append("</li>")
+    return (
+        '<section class="select-all-section"><ul>'
+        + "".join(items)
+        + "</ul></section>"
+    )
+
+
 def _listing_row_title(data: dict, idx: Any) -> Any:
     title = data.get("title") or data.get("Title")
     if title:
@@ -1596,6 +1629,8 @@ def _listing_detail_noun(detail_field: str) -> str:
         return "paragraph"
     if "phrase" in key:
         return "phrase"
+    if "ground" in key:
+        return "point"
     return "item"
 
 
@@ -1655,6 +1690,9 @@ def _listing_detail_text(value: Any) -> str:
                     header = f"{i}."
                     if kind:
                         header += f" [{kind}]"
+                    basis = item.get("basis")
+                    if basis not in (None, ""):
+                        header += f" [{basis}]"
                     if item.get("embedding"):
                         header += " embedded"
                     body = str(phrase or "").strip()

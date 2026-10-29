@@ -2022,6 +2022,73 @@ class TestInlineListing:
         assert 'data-detail-field="extraction_phrases"' in html
         assert "is-blocked" not in html
 
+    def test_classify_all_and_grounds_detail(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "unit-0",
+                    "data": {
+                        "filename": "session.docx",
+                        "grounds": [
+                            {
+                                "kind": "benefit",
+                                "phrase": "save staff time",
+                                "basis": "principle",
+                            }
+                        ],
+                    },
+                }
+            ],
+            [
+                {
+                    "type": "PopulateButton",
+                    "field": "_classify",
+                    "args": {
+                        "description": "Classify",
+                        "target": "grounds_payload",
+                    },
+                },
+            ],
+            detail_field="grounds",
+        )
+        assert "Classify all filtered" in html
+        assert 'hx-post="/populate-all/_classify"' in html
+        assert "1 point" in html
+        assert "[principle]" in html
+        assert ">Grounds<" in html
+
+    def test_side_by_side_populate_all_chrome(self):
+        from referia.web.render import populate_all_chrome_html
+
+        specs = [
+            {"type": "precompute", "specifications": []},
+            {
+                "type": "Section",
+                "title": "Grounds parameters",
+                "entries": [
+                    {
+                        "type": "PopulateButton",
+                        "field": "_classify",
+                        "args": {
+                            "description": "Classify",
+                            "all": True,
+                            "target": "grounds_payload",
+                        },
+                    }
+                ],
+            },
+        ]
+        html = populate_all_chrome_html(specs, count=2013)
+        assert "Classify all filtered" in html
+        assert 'hx-post="/populate-all/_classify"' in html
+        assert "2013 rows" in html
+        assert populate_all_chrome_html(
+            [{"type": "PopulateButton", "field": "_x", "args": {}}],
+            count=3,
+        ) == ""
+
     def test_embed_blocked_until_extract(self):
         from referia.web.render import render_inline_listing
 

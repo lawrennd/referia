@@ -115,6 +115,7 @@ from referia.web.render import (
     render_inline_listing,
     render_viewer_tree,
     iter_spec_leaves,
+    populate_all_chrome_html,
 )
 from referia.config.inherit_view import (
     inherited_readonly_fields,
@@ -414,9 +415,10 @@ def _panel_response_context(reviewer, prefix: str = "") -> dict:
         )
     else:
         row_data = _current_data(reviewer)
-        form_html = render_form(
-            reviewer.get_review_specs(view_options=view_options), row_data
-        )
+        review_specs = reviewer.get_review_specs(view_options=view_options)
+        form_html = populate_all_chrome_html(
+            review_specs, count=len(indices)
+        ) + render_form(review_specs, row_data)
         index_selector = _render_index_selector(indices, current_index)
         document_html = render_document_panel(
             reviewer.list_pdf_entries(),

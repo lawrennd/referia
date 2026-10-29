@@ -32,6 +32,12 @@ from .mppca import (
 )
 from .phrases import llm_extract_phrases, segment_dialogue_units, stamp_dialogue_doc_ids
 from .embed import llm_embed, llm_embed_extraction_phrases
+from .compare import (
+    jsd,
+    run_format_share_compare,
+    run_question_type_stress,
+    run_wordlist_floor,
+)
 from .distance import (
     axis_correlates,
     classical_mds,
@@ -45,6 +51,7 @@ from .distance import (
     run_document_distance_analysis,
     topic_means_from_responsibilities,
 )
+from .grounds import llm_classify_grounds
 from .stores import named_store_status
 from .topic_naming import (
     subject_grain_apply_focus_label,
@@ -206,6 +213,204 @@ class Compute(lynguine.assess.compute.Compute):
         return run_document_distance_analysis(
             cluster_ids=cluster_ids, doc_titles=doc_titles, **kwargs
         )
+
+    def _load_info_yaml_rows(self, filename: str) -> list[dict]:
+        info = self._config_info_dir()
+        if info is None:
+            return []
+        path = info / filename
+        if not path.exists():
+            return []
+        cached = getattr(self, "_info_yaml_cache", None)
+        if cached is None:
+            cached = {}
+            self._info_yaml_cache = cached
+        key = str(path)
+        if key in cached:
+            return cached[key]
+        import yaml
+
+        try:
+            from yaml import CSafeLoader as SafeLoader
+        except ImportError:
+            from yaml import SafeLoader
+        with open(path, encoding="utf-8") as handle:
+            data = yaml.load(handle, Loader=SafeLoader)
+        rows = data if isinstance(data, list) else []
+        cached[key] = rows
+        return rows
+
+    def _run_format_share_compare(
+        self, cluster_ids=None, kinds=None, **kwargs
+    ):
+        """Fill VQ ``cluster_ids`` and phrase ``kinds`` from sibling info."""
+        info = self._config_info_dir()
+        if cluster_ids_missing(cluster_ids) and info is not None:
+            codebook = info / "codebook.parquet"
+            if codebook.exists():
+                try:
+                    frame = pd.read_parquet(codebook)
+                    if "cluster_ids" in frame.columns and len(frame):
+                        cluster_ids = frame.iloc[0]["cluster_ids"]
+                except Exception:
+                    pass
+        if kinds is None:
+            phrases = self._load_info_yaml_rows("phrases.yml")
+            if phrases:
+                kinds = [row.get("kind") for row in phrases]
+                kwargs.setdefault(
+                    "groups",
+                    kwargs.get("groups")
+                    or [row.get("format") or row.get("group") for row in phrases],
+                )
+                kwargs.setdefault(
+                    "doc_ids",
+                    kwargs.get("doc_ids")
+                    or [row.get("doc_id") for row in phrases],
+                )
+        return run_format_share_compare(
+            cluster_ids=cluster_ids, kinds=kinds, **kwargs
+        )
+
+    def _run_question_type_stress(self, contexts=None, formats=None, **kwargs):
+        if contexts is None:
+            chunks = self._load_info_yaml_rows("chunks.yml")
+            contexts = [row.get("context") or "" for row in chunks]
+            formats = [row.get("format") or row.get("group") for row in chunks]
+        return run_question_type_stress(
+            contexts, formats=formats, **kwargs
+        )
+
+    def _run_wordlist_floor(self, quotes=None, bases=None, groups=None, **kwargs):
+        if quotes is None:
+            phrases = self._load_info_yaml_rows("phrases.yml")
+            quotes = [row.get("quote") for row in phrases]
+            groups = groups or [
+                row.get("format") or row.get("group") for row in phrases
+            ]
+            kwargs.setdefault(
+                "doc_ids", [row.get("doc_id") for row in phrases]
+            )
+        if bases is None:
+            grounds = self._load_info_yaml_rows("grounds.yml")
+            if grounds:
+                by_id = {
+                    row.get("phrase_id"): row.get("basis") for row in grounds
+                }
+                phrases = self._load_info_yaml_rows("phrases.yml")
+                if phrases:
+                    bases = [by_id.get(row.get("phrase_id")) for row in phrases]
+                else:
+                    bases = [row.get("basis") for row in grounds]
+        return run_wordlist_floor(
+            quotes, bases=bases, groups=groups, **kwargs
+        )
+
+    def _phrase_siding_rows(self, kwargs):
+        rows = self._load_info_yaml_rows("phrases.yml")
+        kwargs.setdefault(
+            "groups",
+            [row.get("format") or row.get("group") for row in rows],
+        )
+        kwargs.setdefault("doc_ids", [row.get("doc_id") for row in rows])
+        kwargs.setdefault("verified", [row.get("verified") for row in rows])
+        kwargs.setdefault(
+            "phrase_ids", [row.get("phrase_id") for row in rows]
+        )
+        return rows, kwargs
+
+    def _run_kind_reconstruction(
+        self, phrases=None, kinds=None, **kwargs
+    ):
+        kwargs.setdefault("label_name", "kind")
+        kwargs.setdefault("missing_hint", "Run 02_embed first.")
+        if phrases is None:
+            rows, kwargs = self._phrase_siding_rows(kwargs)
+            phrases = [row.get("phrase") for row in rows]
+            kinds = [row.get("kind") for row in rows]
+        from .verify import run_kind_reconstruction as _run
+
+        return _run(phrases, kinds, **kwargs)
+
+    def _run_basis_reconstruction(
+        self, phrases=None, kinds=None, **kwargs
+    ):
+        kwargs.setdefault("label_name", "basis")
+        kwargs.setdefault(
+            "missing_hint",
+            "Run 07_grounds Classify all + Save first.",
+        )
+        if phrases is None:
+            rows, kwargs = self._phrase_siding_rows(kwargs)
+            grounds = self._load_info_yaml_rows("grounds.yml")
+            by_id = {
+                str(row.get("phrase_id")): row.get("basis") for row in grounds
+            }
+            phrases = [row.get("phrase") for row in rows]
+            kinds = [by_id.get(str(row.get("phrase_id"))) or "" for row in rows]
+        from .verify import run_kind_reconstruction as _run
+
+        return _run(phrases, kinds, **kwargs)
+
+    def _run_lens_reconstruction(
+        self, phrases=None, kinds=None, **kwargs
+    ):
+        kwargs.setdefault("label_name", "lens")
+        kwargs.setdefault("missing_hint", "Run 03_vq and 04_grain first.")
+        from .verify import hard_lens_labels, run_kind_reconstruction as _run
+
+        if phrases is None:
+            rows, kwargs = self._phrase_siding_rows(kwargs)
+            phrases = [row.get("phrase") for row in rows]
+            scores = self._load_info_yaml_rows("scores.yml")
+            rec = scores[0] if scores else {}
+            cluster_ids = rec.get("cluster_ids")
+            info = self._config_info_dir()
+            if cluster_ids_missing(cluster_ids) and info is not None:
+                codebook = info / "codebook.parquet"
+                if codebook.exists():
+                    try:
+                        frame = pd.read_parquet(codebook)
+                        if "cluster_ids" in frame.columns and len(frame):
+                            cluster_ids = frame.iloc[0]["cluster_ids"]
+                    except Exception:
+                        cluster_ids = None
+            try:
+                kinds = hard_lens_labels(
+                    rec.get("responsibilities"),
+                    cluster_ids,
+                    rec.get("topic_labels"),
+                )
+            except Exception as exc:
+                md = (
+                    "Could not build hard lens labels from scores / codebook "
+                    f"({exc}). Run 03_vq and 04_grain, then Save."
+                )
+                return {}, [], [], [], md, 0
+            if len(kinds) != len(phrases):
+                md = (
+                    f"Hard lens length {len(kinds)} != {len(phrases)} phrases. "
+                    "Re-Save 02_embed so pack order matches phrases.yml, "
+                    "then refit 03_vq."
+                )
+                return {}, [], [], [], md, 0
+        return _run(phrases, kinds, **kwargs)
+
+    def _llm_classify_grounds(self, text, points=None, unit_id=None, **kwargs):
+        if not points and unit_id is not None:
+            phrases = self._load_info_yaml_rows("phrases.yml")
+            uid = str(unit_id)
+            points = [
+                {
+                    "phrase_id": row.get("phrase_id"),
+                    "phrase": row.get("phrase"),
+                    "quote": row.get("quote"),
+                    "kind": row.get("kind"),
+                }
+                for row in phrases
+                if str(row.get("unit_id")) == uid
+            ]
+        return llm_classify_grounds(text, points, **kwargs)
 
 
     def prep_all(self, interface, data):
@@ -923,6 +1128,107 @@ class Compute(lynguine.assess.compute.Compute):
                 "docstr": (
                     "Façade: P, topic means, EMD, MDS, tests, and Plotly "
                     "specs on a packed corpus row (CIP-0016)."
+                ),
+            },
+            {
+                "name": "run_format_share_compare",
+                "function": self._run_format_share_compare,
+                "default_args": {
+                    "min_mass": 1.0,
+                    "n_boot": 2000,
+                    "seed": 42,
+                    "min_gap": 3.0,
+                },
+                "docstr": (
+                    "Document-weighted type mix, lens shares, and JSD "
+                    "(CIP-001E). Paper Part A analogue on the current grain."
+                ),
+            },
+            {
+                "name": "llm_classify_grounds",
+                "function": self._llm_classify_grounds,
+                "default_args": {
+                    "model": "gpt-4.1-mini",
+                    "temperature": 0.1,
+                },
+                "docstr": (
+                    "Classify the basis of each extracted point on a unit "
+                    "(CIP-001E Part B). Writes payload and a grounds list."
+                ),
+            },
+            {
+                "name": "run_question_type_stress",
+                "function": self._run_question_type_stress,
+                "default_args": {},
+                "docstr": (
+                    "Share of chatbot units whose context matches each "
+                    "question-type pattern (CIP-001E)."
+                ),
+            },
+            {
+                "name": "run_wordlist_floor",
+                "function": self._run_wordlist_floor,
+                "default_args": {},
+                "docstr": (
+                    "Word-list experience floor on each point's own quote "
+                    "(CIP-001E). No model call."
+                ),
+            },
+            {
+                "name": "run_kind_reconstruction",
+                "function": self._run_kind_reconstruction,
+                "default_args": {
+                    "n_folds": 5,
+                    "seed": 0,
+                    "model": "logreg",
+                    "ngram_min": 1,
+                    "ngram_max": 2,
+                    "min_df": 2,
+                    "max_features": 4000,
+                    "C": 1.0,
+                    "verified_only": True,
+                },
+                "docstr": (
+                    "Siding: 5-fold bag-of-words reconstruction of extract "
+                    "kind labels (CIP-001F). Not a pipeline stage."
+                ),
+            },
+            {
+                "name": "run_basis_reconstruction",
+                "function": self._run_basis_reconstruction,
+                "default_args": {
+                    "n_folds": 5,
+                    "seed": 0,
+                    "model": "logreg",
+                    "ngram_min": 1,
+                    "ngram_max": 2,
+                    "min_df": 2,
+                    "max_features": 4000,
+                    "C": 1.0,
+                    "verified_only": True,
+                },
+                "docstr": (
+                    "Siding: 5-fold bag-of-words reconstruction of Part B "
+                    "basis labels (CIP-001F)."
+                ),
+            },
+            {
+                "name": "run_lens_reconstruction",
+                "function": self._run_lens_reconstruction,
+                "default_args": {
+                    "n_folds": 5,
+                    "seed": 0,
+                    "model": "logreg",
+                    "ngram_min": 1,
+                    "ngram_max": 2,
+                    "min_df": 2,
+                    "max_features": 4000,
+                    "C": 1.0,
+                    "verified_only": True,
+                },
+                "docstr": (
+                    "Siding: 5-fold bag-of-words reconstruction of hard "
+                    "grain lens (CIP-001F). Not a check of Name strings."
                 ),
             },
             {
