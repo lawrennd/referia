@@ -552,6 +552,58 @@ class TestRootRouterRoutes:
                 resp = client.get("/reviews/intro/record")
         assert resp.status_code == 200
 
+    def test_root_listing_page_returns_window_fragment(self, tmp_path):
+        reviewer = _mock_reviewer()
+        ids = [f"r{i}" for i in range(80)]
+        reviewer.get_display_layout.return_value = "inline_list"
+        reviewer.working_indices.return_value = ids
+        reviewer.index_list.return_value = ids
+        reviewer.get_filter_specs.return_value = []
+        reviewer.get_sort_specs.return_value = []
+        reviewer.get_filter_state.return_value = {}
+        reviewer.get_display_detail_field.return_value = None
+        reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"}
+        ]
+        reviewer.get_widget_specs.return_value = (
+            reviewer.get_review_specs.return_value
+        )
+        reviewer.get_row_data.side_effect = lambda: {
+            "title": str(reviewer.get_index()),
+            "complete": False,
+        }
+        reviewer.list_pdf_entries.return_value = []
+        reviewer.list_url_entries.return_value = []
+        reviewer.list_document_entries.return_value = []
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                frag = client.get("/reviews/intro/listing-page?list_offset=50")
+        assert frag.status_code == 200
+        assert "listing-page-chunk" in frag.text
+        assert 'data-index="r50"' in frag.text
+        assert 'data-index="r0"' not in frag.text
+
+    def test_root_listing_page_empty_when_not_inline_list(self, tmp_path):
+        reviewer = _mock_reviewer()
+        reviewer.get_display_layout.return_value = "side_by_side"
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                resp = client.get("/reviews/intro/listing-page")
+        assert resp.status_code == 200
+        assert resp.text == ""
+
+    def test_root_listing_page_empty_when_layout_raises(self, tmp_path):
+        reviewer = _mock_reviewer()
+        reviewer.get_display_layout.side_effect = RuntimeError("layout boom")
+        app, _ = _make_root_app_with_config(tmp_path, "reviews/intro", reviewer)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            with TestClient(app) as client:
+                resp = client.get("/reviews/intro/listing-page")
+        assert resp.status_code == 200
+        assert resp.text == ""
+
     def test_root_save_returns_ok(self, tmp_path):
         app, _ = _make_root_app_with_config(tmp_path, "reviews/intro")
         with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):

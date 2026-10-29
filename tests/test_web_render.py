@@ -1770,6 +1770,139 @@ class TestInlineListing:
         assert "No rows match" in html
         assert "Select all filtered" not in html
 
+    def test_window_append_sentinel_and_working_count(self):
+        from referia.web.render import render_inline_listing
+
+        entries = [
+            {"index": f"r{i}", "data": {"title": f"R{i}", "complete": False}}
+            for i in range(50)
+        ]
+        window = {
+            "page_indices": [e["index"] for e in entries],
+            "remaining": 1963,
+            "page": 1,
+            "pages": 41,
+            "offset": 0,
+            "page_size": 50,
+            "working_count": 2013,
+            "paging": "append",
+        }
+        html = render_inline_listing(
+            entries,
+            [
+                {"type": "Checkbox", "field": "complete"},
+                {
+                    "type": "PopulateButton",
+                    "field": "_extract",
+                    "args": {"description": "Extract"},
+                },
+            ],
+            working_count=2013,
+            window=window,
+        )
+        assert "2013" in html
+        assert "Extract all" in html
+        assert 'id="listing-sentinel"' in html
+        assert 'hx-trigger="revealed"' in html
+        assert "Load more" in html
+        assert 'id="inline-listing-rows"' in html
+        assert html.count('class="inline-entry"') >= 50
+
+    def test_window_page_replaces_and_jupyter_has_no_htmx(self):
+        from referia.web.render import render_inline_listing, render_listing_window_nav
+
+        entries = [
+            {"index": f"r{i}", "data": {"title": f"R{i}"}} for i in range(25)
+        ]
+        window = {
+            "remaining": 1988,
+            "page": 1,
+            "pages": 81,
+            "offset": 0,
+            "page_size": 25,
+            "working_count": 2013,
+            "paging": "page",
+        }
+        html = render_inline_listing(entries, [], window=window)
+        assert "Page 1 of 81" in html
+        assert "Previous" in html
+        assert "Next" in html
+        assert "Load more" not in html
+        page2 = {
+            **window,
+            "page": 2,
+            "offset": 25,
+            "remaining": 1963,
+        }
+        frag = render_inline_listing(
+            entries, [], window=page2, fragment=True
+        )
+        assert "Select all filtered" not in frag
+        assert "Page 2 of 81" in frag
+        jupyter = render_listing_window_nav(window, htmx=False)
+        assert "hx-get" not in jupyter
+        assert "Load more" not in jupyter
+        assert "Previous" in jupyter
+        assert "is-disabled" in jupyter
+        last = {**window, "page": 81, "remaining": 0}
+        jupyter_last = render_listing_window_nav(last, htmx=False)
+        assert 'class="listing-page-next is-disabled"' in jupyter_last
+        jupyter_mid = render_listing_window_nav(
+            {**window, "page": 2, "offset": 25}, htmx=False
+        )
+        assert "list_page=1" in jupyter_mid
+        assert "list_page=3" in jupyter_mid
+        assert "list_page_size=25" in jupyter_mid
+        jupyter_append = render_listing_window_nav(
+            {
+                "remaining": 10,
+                "page": 1,
+                "pages": 2,
+                "offset": 0,
+                "page_size": 50,
+                "paging": "append",
+            },
+            htmx=False,
+        )
+        assert "<a class=\"load-more\"" in jupyter_append
+        assert "hx-get" not in jupyter_append
+        frag_jupyter = render_inline_listing(
+            entries, [], window=window, fragment=True, htmx=False
+        )
+        assert "listing-page-chunk" not in frag_jupyter
+        assert "Page 1 of 81" in frag_jupyter
+        append_window = {
+            "remaining": 10,
+            "page": 1,
+            "pages": 2,
+            "offset": 0,
+            "page_size": 50,
+            "paging": "append",
+        }
+        frag_jupyter_append = render_inline_listing(
+            entries, [], window=append_window, fragment=True, htmx=False
+        )
+        assert "listing-page-chunk" in frag_jupyter_append
+        assert "load-more" in frag_jupyter_append
+        assert "hx-get" not in frag_jupyter_append
+        exhausted = {
+            "remaining": 0,
+            "page": 1,
+            "pages": 1,
+            "offset": 0,
+            "page_size": 50,
+            "paging": "append",
+        }
+        frag_done = render_inline_listing(
+            entries, [], window=exhausted, fragment=True
+        )
+        assert 'id="listing-sentinel" hx-swap-oob="outerHTML"' in frag_done
+        jupyter_done = render_inline_listing(
+            entries, [], window=exhausted, fragment=True, htmx=False
+        )
+        assert "listing-page-chunk" in jupyter_done
+        assert "listing-sentinel" not in jupyter_done
+
     def test_group_heading_style_by_mode(self):
         from referia.web.render import render_inline_listing
 

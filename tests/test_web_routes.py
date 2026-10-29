@@ -1625,6 +1625,238 @@ class TestCurrentDataIncludesVisibleIfFields:
         nav = nav.split("</div>", 1)[0]
         assert "Email feedback" not in nav
 
+    def test_inline_list_windows_first_get_and_append_fragment(
+        self, mock_reviewer, client
+    ):
+        ids = [f"r{i}" for i in range(2013)]
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ids
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"},
+            {
+                "type": "PopulateButton",
+                "field": "_extract",
+                "args": {"description": "Extract", "all": True},
+            },
+        ]
+        mock_reviewer.get_widget_specs.return_value = (
+            mock_reviewer.get_review_specs.return_value
+        )
+        mock_reviewer.get_row_data.side_effect = lambda: {
+            "title": str(mock_reviewer.get_index()),
+            "complete": False,
+        }
+        first = client.get("/")
+        assert first.status_code == 200
+        assert first.text.count('data-index="') == 50
+        assert "2013" in first.text
+        assert "Extract all" in first.text
+        assert 'hx-post="/populate-all/_extract"' in first.text
+        assert "Load more" in first.text
+        assert 'id="listing-sentinel"' in first.text
+        frag = client.get(
+            "/listing-page?list_offset=50",
+            headers={"HX-Request": "true"},
+        )
+        assert frag.status_code == 200
+        assert "Select all filtered" not in frag.text
+        assert "Extract all" not in frag.text
+        assert "listing-page-chunk" in frag.text
+        assert 'data-index="r50"' in frag.text
+        assert 'data-index="r0"' not in frag.text
+
+    def test_inline_list_page_mode_replaces_rows(
+        self, mock_reviewer, client
+    ):
+        ids = [f"r{i}" for i in range(2013)]
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ids
+        mock_reviewer.get_list_paging.return_value = "page"
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"}
+        ]
+        mock_reviewer.get_widget_specs.return_value = (
+            mock_reviewer.get_review_specs.return_value
+        )
+        mock_reviewer.get_row_data.side_effect = lambda: {
+            "title": str(mock_reviewer.get_index()),
+            "complete": False,
+        }
+        first = client.get("/?list_page_size=25&list_page=1")
+        assert first.status_code == 200
+        assert first.text.count('data-index="') == 25
+        assert "Page 1 of 81" in first.text
+        assert "Load more" not in first.text
+        page2 = client.get("/listing-page?list_page_size=25&list_page=2")
+        assert "Page 2 of 81" in page2.text
+        assert 'data-index="r25"' in page2.text
+        assert 'data-index="r0"' not in page2.text
+        assert page2.text.count('data-index="') == 25
+
+    def test_inline_list_unbounded_walks_all(self, mock_reviewer, client):
+        ids = [f"r{i}" for i in range(20)]
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ids
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"}
+        ]
+        mock_reviewer.get_widget_specs.return_value = (
+            mock_reviewer.get_review_specs.return_value
+        )
+        mock_reviewer.get_row_data.side_effect = lambda: {
+            "title": str(mock_reviewer.get_index()),
+            "complete": False,
+        }
+        response = client.get("/?list_page_size=0")
+        assert response.status_code == 200
+        assert response.text.count('data-index="') == 20
+        assert "Load more" not in response.text
+        assert "listing-pager" not in response.text
+
+    def test_filter_post_resets_to_first_page(self, mock_reviewer, client):
+        ids = [f"r{i}" for i in range(80)]
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ids
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"}
+        ]
+        mock_reviewer.get_widget_specs.return_value = (
+            mock_reviewer.get_review_specs.return_value
+        )
+        mock_reviewer.get_row_data.side_effect = lambda: {
+            "title": str(mock_reviewer.get_index()),
+            "complete": False,
+        }
+        later = client.get("/?list_offset=50")
+        assert 'data-index="r50"' in later.text
+        reset = client.post("/filters")
+        assert reset.status_code == 200
+        assert 'data-index="r0"' in reset.text
+        assert 'data-index="r50"' not in reset.text
+
+    def test_listing_page_empty_when_not_inline_list(self, mock_reviewer, client):
+        mock_reviewer.get_display_layout.return_value = "side_by_side"
+        response = client.get("/listing-page?list_offset=50")
+        assert response.status_code == 200
+        assert response.text == ""
+
+    def test_listing_page_empty_when_layout_raises(self, mock_reviewer, client):
+        mock_reviewer.get_display_layout.side_effect = RuntimeError("layout boom")
+        response = client.get("/listing-page")
+        assert response.status_code == 200
+        assert response.text == ""
+
+    def test_listing_page_invalid_query_fails_closed(self, mock_reviewer, client):
+        ids = [f"r{i}" for i in range(8)]
+        mock_reviewer.get_display_layout.return_value = "inline_list"
+        mock_reviewer.working_indices.return_value = ids
+        mock_reviewer.get_filter_specs.return_value = []
+        mock_reviewer.get_sort_specs.return_value = []
+        mock_reviewer.get_filter_state.return_value = {}
+        mock_reviewer.get_display_detail_field.return_value = None
+        mock_reviewer.get_review_specs.return_value = [
+            {"type": "Checkbox", "field": "complete"}
+        ]
+        mock_reviewer.get_row_data.side_effect = lambda: {
+            "title": str(mock_reviewer.get_index()),
+            "complete": False,
+        }
+        response = client.get(
+            "/listing-page?list_offset=-9&list_page=abc&list_page_size=-2"
+        )
+        assert response.status_code == 200
+        assert 'data-index="r0"' in response.text
+
+    def test_window_helpers_cover_webreviewer_and_restore_edges(self, mock_reviewer):
+        from referia.assess.web_review import WebReviewer
+        from referia.web.routes import (
+            _collect_listing_entries,
+            _parse_list_query,
+            _window_for_reviewer,
+        )
+
+        assert _parse_list_query(None)["offset"] == 0
+        req = MagicMock()
+        req.query_params.get.side_effect = lambda name: {
+            "list_page": "",
+            "list_offset": "-3",
+            "list_page_size": "bad",
+        }.get(name)
+        parsed = _parse_list_query(req)
+        assert parsed["page"] is None
+        assert parsed["offset"] == 0
+        assert parsed["page_size"] is None
+
+        spec = MagicMock(spec=WebReviewer)
+        spec.working_indices.side_effect = RuntimeError("no working")
+        spec.index_list.return_value = ["a", "b"]
+        spec.get_list_page_size.return_value = 50
+        spec.get_list_paging.return_value = "append"
+        spec.list_query.return_value = {
+            "offset": 0,
+            "page": None,
+            "page_size": None,
+        }
+        window = _window_for_reviewer(spec)
+        spec.list_query.assert_called()
+        assert window["page_indices"] == ["a", "b"]
+        _window_for_reviewer(spec, reset=True)
+        spec.clear_list_window.assert_called()
+        remember_req = MagicMock()
+        remember_req.query_params.get.side_effect = lambda name: {
+            "list_offset": "50",
+            "list_page": None,
+            "list_page_size": "25",
+        }.get(name)
+        spec.working_indices.side_effect = None
+        spec.working_indices.return_value = [f"r{i}" for i in range(80)]
+        spec.get_list_page_size.side_effect = lambda override=None: (
+            25 if override is not None else 50
+        )
+        _window_for_reviewer(spec, remember_req)
+        spec.remember_list_query.assert_called()
+
+        mock_reviewer.get_list_paging.return_value = "scroll"
+        mock_reviewer.working_indices.return_value = ["x"]
+        other = _window_for_reviewer(mock_reviewer, remember_req)
+        assert other["paging"] == "append"
+        mock_reviewer.get_list_paging.return_value = "page"
+        paged = _window_for_reviewer(mock_reviewer, remember_req)
+        assert paged["paging"] == "page"
+
+        mock_reviewer.get_index.side_effect = RuntimeError("no current")
+        mock_reviewer.get_row_data.return_value = {}
+        mock_reviewer.get_filter_state.return_value = {}
+        rows = _collect_listing_entries(mock_reviewer, ["bob"], "")
+        assert rows[0]["index"] == "bob"
+
+        mock_reviewer.get_index.side_effect = None
+        mock_reviewer.get_index.return_value = "alice"
+
+        def _set_index(idx):
+            if idx == "alice":
+                raise RuntimeError("restore failed")
+
+        mock_reviewer.set_index.side_effect = _set_index
+        restored = _collect_listing_entries(mock_reviewer, ["bob"], "")
+        assert restored[0]["index"] == "bob"
+
     def test_inline_list_field_update_oob_omits_record_documents(
         self, mock_reviewer, client
     ):
