@@ -1347,6 +1347,47 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A widget cluster for loop widgets.&quot;&quot;&quot;</span>
     <span class="k">pass</span>
 
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_apply_jupyter_visible_if</span><span class="p">(</span><span class="n">widget</span><span class="p">,</span> <span class="n">condition</span><span class="p">,</span> <span class="n">reviewer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Bind ``visible_if`` onto a Jupyter widget using web checkbox rules.</span>
+
+<span class="sd">    Viewer construction does not go through ``extract_widget()``, so</span>
+<span class="sd">    ``_create_viewer`` calls this for the same hide/show layout as review</span>
+<span class="sd">    widgets. ``_update_widget_visibility`` reuses it on refresh.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">condition</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">widget</span><span class="o">.</span><span class="n">_visible_if_condition</span> <span class="o">=</span> <span class="n">condition</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">referia.web.render</span><span class="w"> </span><span class="kn">import</span> <span class="n">_visibility_style</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">field_name</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">field_name</span> <span class="o">=</span> <span class="n">condition</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">field_name</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;field&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">field_name</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">reviewer</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="n">reviewer</span><span class="o">.</span><span class="n">get_index</span><span class="p">(),</span> <span class="n">field_name</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">hidden</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">_visibility_style</span><span class="p">({</span><span class="s2">&quot;visible_if&quot;</span><span class="p">:</span> <span class="n">condition</span><span class="p">},</span> <span class="n">data</span><span class="p">))</span>
+    <span class="n">inner</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">widget</span><span class="p">,</span> <span class="s2">&quot;widget&quot;</span><span class="p">,</span> <span class="n">widget</span><span class="p">)</span>
+    <span class="n">layout</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inner</span><span class="p">,</span> <span class="s2">&quot;layout&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">layout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="k">if</span> <span class="n">hidden</span><span class="p">:</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">display</span> <span class="o">=</span> <span class="s2">&quot;none&quot;</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="s2">&quot;0px&quot;</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">margin</span> <span class="o">=</span> <span class="s2">&quot;0px&quot;</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">padding</span> <span class="o">=</span> <span class="s2">&quot;0px&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">display</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">margin</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">padding</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+
 <div class="viewcode-block" id="Reviewer">
 <a class="viewcode-back" href="../../../modules/assess.html#referia.assess.review.Reviewer">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Reviewer</span><span class="p">(</span><span class="n">DisplaySystem</span><span class="p">):</span>
@@ -1523,6 +1564,7 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create the viewer.</span>
 
+
 <span class="sd">        :param views: The views to be displayed.</span>
 <span class="sd">        :type views: dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1545,45 +1587,37 @@
                             <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;### </span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2">&quot;</span>
                         <span class="p">)</span>
                     <span class="p">}</span>
-                    <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-                        <span class="o">**</span><span class="p">{</span>
-                            <span class="n">label</span><span class="p">:</span> <span class="n">Markdown</span><span class="p">(</span>
-                                <span class="n">description</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">,</span>
-                                <span class="n">field_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
-                                <span class="n">column_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
-                                <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-                                <span class="o">**</span><span class="n">heading</span><span class="p">,</span>
-                            <span class="p">)</span>
-                        <span class="p">}</span>
+                    <span class="n">heading_widget</span> <span class="o">=</span> <span class="n">Markdown</span><span class="p">(</span>
+                        <span class="n">description</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">,</span>
+                        <span class="n">field_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                        <span class="n">column_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                        <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                        <span class="o">**</span><span class="n">heading</span><span class="p">,</span>
                     <span class="p">)</span>
+                    <span class="n">_apply_jupyter_visible_if</span><span class="p">(</span>
+                        <span class="n">heading_widget</span><span class="p">,</span> <span class="n">view_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;visible_if&quot;</span><span class="p">),</span> <span class="bp">self</span>
+                    <span class="p">)</span>
+                    <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">heading_widget</span><span class="p">})</span>
                 <span class="n">sub</span> <span class="o">=</span> <span class="n">view_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;entries&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">view_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;children&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sub</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="n">sub</span><span class="p">:</span>
                     <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">cluster</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_create_viewer</span><span class="p">(</span><span class="n">sub</span><span class="p">))</span>
                 <span class="k">continue</span>
             <span class="n">vtype</span> <span class="o">=</span> <span class="n">viewer_entry_type</span><span class="p">(</span><span class="n">view_dict</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">vtype</span> <span class="o">==</span> <span class="s2">&quot;PlotlyFigure&quot;</span><span class="p">:</span>
-                <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-                    <span class="o">**</span><span class="p">{</span>
-                        <span class="n">label</span><span class="p">:</span> <span class="n">PlotlyFigureViewer</span><span class="p">(</span>
-                            <span class="n">description</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">,</span>
-                            <span class="n">field_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
-                            <span class="n">column_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
-                            <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-                            <span class="n">viewer_spec</span><span class="o">=</span><span class="n">view_dict</span><span class="p">,</span>
-                        <span class="p">)</span>
-                    <span class="p">}</span>
+                <span class="n">widget</span> <span class="o">=</span> <span class="n">PlotlyFigureViewer</span><span class="p">(</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">,</span>
+                    <span class="n">field_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                    <span class="n">column_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                    <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">viewer_spec</span><span class="o">=</span><span class="n">view_dict</span><span class="p">,</span>
                 <span class="p">)</span>
             <span class="k">elif</span> <span class="n">vtype</span> <span class="o">==</span> <span class="s2">&quot;StaticImage&quot;</span><span class="p">:</span>
-                <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span>
-                    <span class="o">**</span><span class="p">{</span>
-                        <span class="n">label</span><span class="p">:</span> <span class="n">StaticImageViewer</span><span class="p">(</span>
-                            <span class="n">description</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">,</span>
-                            <span class="n">field_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
-                            <span class="n">column_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
-                            <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
-                            <span class="n">viewer_spec</span><span class="o">=</span><span class="n">view_dict</span><span class="p">,</span>
-                        <span class="p">)</span>
-                    <span class="p">}</span>
+                <span class="n">widget</span> <span class="o">=</span> <span class="n">StaticImageViewer</span><span class="p">(</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">,</span>
+                    <span class="n">field_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                    <span class="n">column_name</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                    <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">viewer_spec</span><span class="o">=</span><span class="n">view_dict</span><span class="p">,</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">args</span> <span class="o">=</span> <span class="p">{</span>
@@ -1594,9 +1628,11 @@
                     <span class="s2">&quot;parent&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="p">,</span>
                 <span class="p">}</span>
                 <span class="c1"># Interactive-only keys must not reach Markdown / Liquid path.</span>
-                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;on&quot;</span><span class="p">,</span> <span class="s2">&quot;highlight&quot;</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;on&quot;</span><span class="p">,</span> <span class="s2">&quot;highlight&quot;</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;visible_if&quot;</span><span class="p">):</span>
                     <span class="n">args</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-                <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">Markdown</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="p">)})</span>
+                <span class="n">widget</span> <span class="o">=</span> <span class="n">Markdown</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="p">)</span>
+            <span class="n">_apply_jupyter_visible_if</span><span class="p">(</span><span class="n">widget</span><span class="p">,</span> <span class="n">view_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;visible_if&quot;</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="n">widgets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">widget</span><span class="p">})</span>
         <span class="k">return</span> <span class="n">widgets</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_review</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reviewers</span><span class="p">):</span>
@@ -2331,64 +2367,9 @@
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
                 <span class="n">widget</span> <span class="o">=</span> <span class="n">widgets</span><span class="o">.</span><span class="n">_widget_dict</span><span class="p">[</span><span class="n">entry</span><span class="p">]</span>
                 <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">widget</span><span class="p">,</span> <span class="s1">&#39;_visible_if_condition&#39;</span><span class="p">):</span>
-                    <span class="n">condition</span> <span class="o">=</span> <span class="n">widget</span><span class="o">.</span><span class="n">_visible_if_condition</span>
-                    
-                    <span class="c1"># Parse condition (string = truthy field; dict equals/value/not)</span>
-                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-                        <span class="n">field_name</span> <span class="o">=</span> <span class="n">condition</span>
-                        <span class="n">invert</span> <span class="o">=</span> <span class="kc">False</span>
-                        <span class="n">expected_value</span> <span class="o">=</span> <span class="kc">True</span>
-                        <span class="n">use_equals</span> <span class="o">=</span> <span class="kc">False</span>
-                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-                        <span class="n">field_name</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;field&quot;</span><span class="p">)</span>
-                        <span class="n">invert</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;not&quot;</span><span class="p">))</span>
-                        <span class="k">if</span> <span class="s2">&quot;equals&quot;</span> <span class="ow">in</span> <span class="n">condition</span><span class="p">:</span>
-                            <span class="n">expected_value</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;equals&quot;</span><span class="p">)</span>
-                            <span class="n">use_equals</span> <span class="o">=</span> <span class="kc">True</span>
-                        <span class="k">elif</span> <span class="s2">&quot;value&quot;</span> <span class="ow">in</span> <span class="n">condition</span><span class="p">:</span>
-                            <span class="n">expected_value</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;value&quot;</span><span class="p">)</span>
-                            <span class="n">use_equals</span> <span class="o">=</span> <span class="kc">True</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="n">expected_value</span> <span class="o">=</span> <span class="kc">True</span>
-                            <span class="n">use_equals</span> <span class="o">=</span> <span class="kc">False</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="k">continue</span>
-                    
-                    <span class="c1"># Check condition against current data</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="n">current_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">at</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">get_index</span><span class="p">(),</span> <span class="n">field_name</span><span class="p">]</span>
-                        <span class="k">if</span> <span class="n">invert</span><span class="p">:</span>
-                            <span class="c1"># Show when field is falsy (None / False / empty / {}).</span>
-                            <span class="n">is_visible</span> <span class="o">=</span> <span class="ow">not</span> <span class="nb">bool</span><span class="p">(</span><span class="n">current_value</span><span class="p">)</span>
-                        <span class="k">elif</span> <span class="n">use_equals</span><span class="p">:</span>
-                            <span class="n">is_visible</span> <span class="o">=</span> <span class="n">current_value</span> <span class="o">==</span> <span class="n">expected_value</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="n">is_visible</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">current_value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">(</span><span class="n">expected_value</span><span class="p">)</span>
-                        
-                        <span class="c1"># Update widget visibility (access inner ipywidget if it&#39;s a FieldWidget)</span>
-                        <span class="n">inner_widget</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">widget</span><span class="p">,</span> <span class="s1">&#39;widget&#39;</span><span class="p">,</span> <span class="n">widget</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="n">is_visible</span><span class="p">:</span>
-                            <span class="c1"># Show: restore to default layout values</span>
-                            <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">display</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-                            <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-                            <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">margin</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-                            <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">padding</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="c1"># Hide: set display=none and collapse all spacing</span>
-                            <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">display</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>
-                            <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="s1">&#39;0px&#39;</span>
-                            <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">margin</span> <span class="o">=</span> <span class="s1">&#39;0px&#39;</span>
-                            <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">padding</span> <span class="o">=</span> <span class="s1">&#39;0px&#39;</span>
-                        
-                        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Widget </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">entry</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> visibility: </span><span class="si">{</span><span class="s1">&#39;visible&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">is_visible</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;hidden&#39;</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">current_value</span><span class="si">}</span><span class="s2">, expected=</span><span class="si">{</span><span class="n">expected_value</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
-                    <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                        <span class="c1"># Field doesn&#39;t exist or can&#39;t be accessed, default to hidden</span>
-                        <span class="n">inner_widget</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">widget</span><span class="p">,</span> <span class="s1">&#39;widget&#39;</span><span class="p">,</span> <span class="n">widget</span><span class="p">)</span>
-                        <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">display</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>
-                        <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="s1">&#39;0px&#39;</span>
-                        <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">margin</span> <span class="o">=</span> <span class="s1">&#39;0px&#39;</span>
-                        <span class="n">inner_widget</span><span class="o">.</span><span class="n">layout</span><span class="o">.</span><span class="n">padding</span> <span class="o">=</span> <span class="s1">&#39;0px&#39;</span>
-                        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Widget </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">entry</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> hidden (condition field &#39;</span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2">&#39; not accessible: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                    <span class="n">_apply_jupyter_visible_if</span><span class="p">(</span>
+                        <span class="n">widget</span><span class="p">,</span> <span class="n">widget</span><span class="o">.</span><span class="n">_visible_if_condition</span><span class="p">,</span> <span class="bp">self</span>
+                    <span class="p">)</span>
     
 <div class="viewcode-block" id="Reviewer.populate_display">
 <a class="viewcode-back" href="../../../modules/assess.html#referia.assess.review.Reviewer.populate_display">[docs]</a>
