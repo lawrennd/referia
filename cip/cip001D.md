@@ -6,7 +6,7 @@ last_updated: "2026-10-29"
 status: "Proposed"
 compressed: false
 related_requirements: ["0010", "0008", "0009", "000E", "0013"]
-related_cips: ["0010", "0015", "0017", "000B", "000C", "001B", "0020"]
+related_cips: ["0010", "0015", "0017", "000B", "000C", "001B", "0020", "0021"]
 tags:
 - cip
 - web
@@ -92,7 +92,7 @@ Populate-all is a **store writer** that happens to be triggered from the web:
 2. **Flush the named cache.** After each successful row, or every *N* rows with *N* small (default 1 for LLM, larger for local segment), write the config’s `cache:` store the same way Save writes cache columns — not output explode, not pack. CIP-0015’s `omit_nested_keys` still applies (no embeddings in YAML). LLMManager diskcache remains API-cost only (CIP-0017).
 3. **Short HTTP.** The browser must not hold one POST for the corpus.
    - **Minimum (this CIP):** the server may keep looping after client disconnect *because the cache is already on disk*. Reload then shows CIP-0017 status and filled rows. The in-flight request still blocks the worker (CIP-001B’s problem).
-   - **Preferred:** the route processes a **batch** of remaining rows (config or constant, e.g. 10–20 LLM rows; more for local compute), flushes, and returns a **status fragment** (`n_done`, `n_total`, `n_fail`, `n_skipped`). The listing button uses HTMX to re-POST while `n_done < n_total` (or a small progress chip in `#status-bar`). Each request is seconds to a minute, not an hour.
+   - **Rolling interaction:** batch size, HTMX re-POST, progress bar, and pause are [CIP-0021](./cip0021.md). This CIP does not specify that UI.
 4. **Do not rebuild the listing as the success body.** Populate-all swaps `#status-bar` (and, under `side_by_side`, the current row’s widgets if they changed). It does not call `_panel_response_context`’s full `inline_list` walk. A later Reload or filter POST refreshes the list if the author needs it.
 
 ### Layout (config, not a new named composition)
@@ -132,7 +132,7 @@ Ship this contract first if 001B is not ready. 001B then restarts a kernel that 
 |-------------|---------|
 | Job queue (Celery, RQ, a `jobs/` YAML dialect) | Second runtime and a new store. Named cache already exists. |
 | Sidecar `checkpoints/*.jsonl` | REQ-0010 / CIP-0015 forbid undeclared checkpoint directories. |
-| SSE / streaming the listing | Useful later for a progress bar; does not persist; still one long worker task. |
+| SSE / streaming the listing | Still one long worker task. Progress + pause are rolling POSTs in [CIP-0021](./cip0021.md). |
 | Raise gunicorn workers | Masks freeze of *a* worker; does not persist; duplicate `WebReviewer` state. |
 | `hx-timeout` only | The browser would fail faster; the worker would still run and still not flush. |
 | New layout name for “paged extract” | `side_by_side` already is unit review. Do not expand REQ-000E’s set. |
@@ -143,6 +143,7 @@ Ship this contract first if 001B is not ready. 001B then restarts a kernel that 
 - Changing PopulateButton compute functions (`llm_extract_phrases`, …). Stateless field-in / field-out stays CIP-0015.
 - Jupyter Populate-all. Web path only unless the Jupyter button shares the same skip/flush helpers.
 - Pagination of `inline_list` GET. That is [CIP-0020](./cip0020.md) (page size + append). This CIP remains the populate-all POST.
+- Rolling batches, progress bar, and pause. That is [CIP-0021](./cip0021.md). This CIP is skip + flush + no listing rebuild.
 
 ## Implementation Plan
 
@@ -152,15 +153,12 @@ Ship this contract first if 001B is not ready. 001B then restarts a kernel that 
 2. **`_run_populate_all_and_respond`**:
    - Skip filled rows unless this invocation is Refresh (`refresh: true` from that button).
    - Flush on the LLM cadence above.
-   - Cap work per request (batch size); return counts.
    - Respond with status-bar OOB (and current-row widgets under `side_by_side`), never a full `inline_list` listing.
-3. **HTMX listing chrome**:
-   - Extract all / Embed all / Segment all target `#status-bar` (or a dedicated progress node).
-   - Chain re-POST while remaining > 0 (preferred path). Document that Reload shows durable progress via CIP-0017.
-4. **Guidance**:
+   - Batch cap, HTMX chain, progress, pause: [CIP-0021](./cip0021.md).
+3. **Guidance**:
    - Dialogue template `02_embed` / `01_chunk`: `side_by_side`.
    - Note in CIP-0010 examples that populate-all on a large `inline_list` is a catalog anti-pattern.
-5. **Tests**:
+4. **Tests**:
    - Populate-all skip + flush: after a fake extract of 3/10 rows and a new `WebReviewer`, the next populate-all only computes 7.
    - Populate-all response HTML has no per-row Extract textarea copies equal to working-set size.
    - Disconnect: flush happened; cache file row count matches `n_ok`.
@@ -191,8 +189,8 @@ Ship this contract first if 001B is not ready. 001B then restarts a kernel that 
 
 - [ ] Skip filled populate targets unless Refresh cache
 - [ ] Flush named cache during populate-all
-- [ ] Batch and/or survive disconnect; status fragment instead of full panel
-- [ ] HTMX chain or documented Reload-for-progress
+- [ ] Survive disconnect; status fragment instead of full panel
+- [ ] HTMX chain / progress / pause: CIP-0021
 - [ ] Dialogue template layout: `side_by_side` on extract/embed stages
 - [ ] Tests as above
 
@@ -206,4 +204,5 @@ Ship this contract first if 001B is not ready. 001B then restarts a kernel that 
 - [CIP-0017](./cip0017.md) — named-store status; LLM diskcache is not analysis state
 - [CIP-001B](./cip001B.md) — kernel/server split (complementary)
 - [CIP-0020](./cip0020.md) — windowed `inline_list` GET (listing, not populate-all)
+- [CIP-0021](./cip0021.md) — rolling batches, progress bar, pause
 - Incident: dialogue-analysis `ai-dialogue-formats/02_embed` Extract all, 2013 units, 2026-10-29
