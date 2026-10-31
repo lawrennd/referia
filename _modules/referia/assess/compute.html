@@ -316,10 +316,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/config.html#interface">Interface</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface"><code class="docutils literal notranslate"><span class="pre">Interface</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.default_config_file"><code class="docutils literal notranslate"><span class="pre">Interface.default_config_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.directory"><code class="docutils literal notranslate"><span class="pre">Interface.directory</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.user_file"><code class="docutils literal notranslate"><span class="pre">Interface.user_file</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_cwd_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_cwd_file()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.from_yaml()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get"><code class="docutils literal notranslate"><span class="pre">Interface.get()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get_cache_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_cache_columns()</span></code></a></li>
@@ -880,6 +880,13 @@
     <span class="n">run_question_type_stress</span><span class="p">,</span>
     <span class="n">run_wordlist_floor</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.sequence</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">run_rebuild_speaker_turns</span><span class="p">,</span>
+    <span class="n">run_stories_follow_stories</span><span class="p">,</span>
+    <span class="n">turns_for_round</span><span class="p">,</span>
+    <span class="n">workshop_round_points</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.multiverse</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_analysis_multiverse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.distance</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">axis_correlates</span><span class="p">,</span>
     <span class="n">classical_mds</span><span class="p">,</span>
@@ -1070,8 +1077,13 @@
             <span class="n">cached</span> <span class="o">=</span> <span class="p">{}</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_info_yaml_cache</span> <span class="o">=</span> <span class="n">cached</span>
         <span class="n">key</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">cached</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">cached</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mtime</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">stat</span><span class="p">()</span><span class="o">.</span><span class="n">st_mtime</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">hit</span> <span class="o">=</span> <span class="n">cached</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">hit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">hit</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">mtime</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">hit</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
         <span class="k">try</span><span class="p">:</span>
@@ -1081,7 +1093,7 @@
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">Loader</span><span class="o">=</span><span class="n">SafeLoader</span><span class="p">)</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="n">data</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[]</span>
-        <span class="n">cached</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">rows</span>
+        <span class="n">cached</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">mtime</span><span class="p">,</span> <span class="n">rows</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">rows</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_run_format_share_compare</span><span class="p">(</span>
@@ -1150,6 +1162,125 @@
             <span class="n">quotes</span><span class="p">,</span> <span class="n">bases</span><span class="o">=</span><span class="n">bases</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
         <span class="p">)</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_study_files_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_info_dir</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">info</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;..&quot;</span> <span class="o">/</span> <span class="s2">&quot;files&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_coded_phrase_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+        <span class="n">phrases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;phrases.yml&quot;</span><span class="p">)</span>
+        <span class="n">grounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;grounds.yml&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">phrases</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">grounds</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">by_id</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">)):</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;basis&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grounds</span>
+        <span class="p">}</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span><span class="p">:</span>
+            <span class="n">pid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">pid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">by_id</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">rec</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+            <span class="n">rec</span><span class="p">[</span><span class="s2">&quot;basis&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">by_id</span><span class="p">[</span><span class="n">pid</span><span class="p">]</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rec</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_docx_paragraphs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">docx</span><span class="w"> </span><span class="kn">import</span> <span class="n">Document</span> <span class="k">as</span> <span class="n">DocxDocument</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">DocxDocument</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span><span class="o">.</span><span class="n">paragraphs</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_files_root</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">files</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+        <span class="k">if</span> <span class="n">files</span><span class="p">:</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">files</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">root</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+                <span class="n">iface</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_interface&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="n">base</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">iface</span><span class="p">,</span> <span class="s2">&quot;directory&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span class="n">iface</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="n">root</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">base</span><span class="p">)</span> <span class="o">/</span> <span class="n">root</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">base</span>
+                    <span class="k">else</span> <span class="n">root</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="n">root</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_study_files_dir</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_rebuild_speaker_turns</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">documents</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">paragraphs_by_filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+        <span class="n">fac_names</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;facilitator_names&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fac_names</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">fac_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">fac_names</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;facilitator_names&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fac_names</span>
+        <span class="k">if</span> <span class="n">documents</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">documents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;documents.yml&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">paragraphs_by_filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_files_root</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;files_root&quot;</span><span class="p">))</span>
+            <span class="n">paragraphs_by_filename</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">root</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">documents</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;group&quot;</span><span class="p">))</span> <span class="o">!=</span> <span class="s2">&quot;workshop&quot;</span><span class="p">:</span>
+                        <span class="k">continue</span>
+                    <span class="n">rel</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;filename&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                    <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="n">rel</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                        <span class="k">continue</span>
+                    <span class="n">paras</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_docx_paragraphs</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">paras</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">continue</span>
+                    <span class="n">paragraphs_by_filename</span><span class="p">[</span><span class="n">rel</span><span class="p">]</span> <span class="o">=</span> <span class="n">paras</span>
+        <span class="k">return</span> <span class="n">run_rebuild_speaker_turns</span><span class="p">(</span>
+            <span class="n">documents</span><span class="p">,</span>
+            <span class="n">paragraphs_by_filename</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_stories_follow_stories</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">turns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+        <span class="n">labelled_round</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;labelled_round&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;spring_2026&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">turns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">turns</span><span class="p">,</span> <span class="n">hint</span> <span class="o">=</span> <span class="n">turns_for_round</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;turns.yml&quot;</span><span class="p">),</span> <span class="n">labelled_round</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">hint</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;missing_hint&quot;</span><span class="p">,</span> <span class="n">hint</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">points</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">points</span><span class="p">,</span> <span class="n">hint</span> <span class="o">=</span> <span class="n">workshop_round_points</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;grounds.yml&quot;</span><span class="p">),</span> <span class="n">labelled_round</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">hint</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s2">&quot;missing_hint&quot;</span><span class="p">,</span> <span class="n">hint</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">run_stories_follow_stories</span><span class="p">(</span>
+            <span class="n">turns</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_analysis_multiverse</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">points</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coded_phrase_rows</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">points</span><span class="p">:</span>
+                <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
+                    <span class="s2">&quot;missing_hint&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;Run 07_grounds Classify all + Save first.&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="n">run_analysis_multiverse</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_phrase_siding_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">):</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;phrases.yml&quot;</span><span class="p">)</span>
         <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span>
@@ -1190,8 +1321,19 @@
             <span class="n">by_id</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">)):</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;basis&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grounds</span>
             <span class="p">}</span>
-            <span class="n">phrases</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
-            <span class="n">kinds</span> <span class="o">=</span> <span class="p">[</span><span class="n">by_id</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">)))</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">.verify</span><span class="w"> </span><span class="kn">import</span> <span class="n">collapse_basis_labels</span><span class="p">,</span> <span class="n">siding_row_text</span>
+
+            <span class="n">text_source</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;text_source&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;quote_and_phrase&quot;</span>
+            <span class="n">label_mode</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;label_mode&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;experience&quot;</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;text_source&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">text_source</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;label_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">label_mode</span>
+            <span class="n">phrases</span> <span class="o">=</span> <span class="p">[</span><span class="n">siding_row_text</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">text_source</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">]</span>
+            <span class="n">kinds</span> <span class="o">=</span> <span class="n">collapse_basis_labels</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">by_id</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">)))</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">],</span>
+                <span class="n">label_mode</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">label_mode</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;experience&quot;</span><span class="p">,</span> <span class="s2">&quot;binary&quot;</span><span class="p">}:</span>
+                <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;label_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;experience&quot;</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">.verify</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_kind_reconstruction</span> <span class="k">as</span> <span class="n">_run</span>
 
         <span class="k">return</span> <span class="n">_run</span><span class="p">(</span><span class="n">phrases</span><span class="p">,</span> <span class="n">kinds</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
@@ -1240,20 +1382,14 @@
                 <span class="k">return</span> <span class="p">{},</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="n">md</span><span class="p">,</span> <span class="mi">0</span>
         <span class="k">return</span> <span class="n">_run</span><span class="p">(</span><span class="n">phrases</span><span class="p">,</span> <span class="n">kinds</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_llm_classify_grounds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">unit_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">points</span> <span class="ow">and</span> <span class="n">unit_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">phrases</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;phrases.yml&quot;</span><span class="p">)</span>
-            <span class="n">uid</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">unit_id</span><span class="p">)</span>
-            <span class="n">points</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="p">{</span>
-                    <span class="s2">&quot;phrase_id&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase_id&quot;</span><span class="p">),</span>
-                    <span class="s2">&quot;phrase&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phrase&quot;</span><span class="p">),</span>
-                    <span class="s2">&quot;quote&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;quote&quot;</span><span class="p">),</span>
-                    <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kind&quot;</span><span class="p">),</span>
-                <span class="p">}</span>
-                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">phrases</span>
-                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;unit_id&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="n">uid</span>
-            <span class="p">]</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_llm_classify_grounds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">points</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Part B classify. ``points`` is the unit&#39;s ``extraction_phrases``.</span>
+
+<span class="sd">        07 joins 02&#39;s unit-grained extract cache as ``data:`` (same</span>
+<span class="sd">        ``unit_id`` index) and passes that column through ``row_args``.</span>
+<span class="sd">        Do not open ``phrases.yml`` here — that table is phrase grain.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;unit_id&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">llm_classify_grounds</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
 
@@ -2034,6 +2170,47 @@
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_rebuild_speaker_turns&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_rebuild_speaker_turns</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;labelled_min_share&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+                    <span class="s2">&quot;treat_speaker_1_as_facilitator&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Access: rebuild labelled workshop speaker turns &quot;</span>
+                    <span class="s2">&quot;(Jess Labels) into turns.yml (CIP-001E). Counts only &quot;</span>
+                    <span class="s2">&quot;in the markdown.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_stories_follow_stories&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_stories_follow_stories</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;lookbacks&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+                    <span class="s2">&quot;n_shuffles&quot;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;labelled_round&quot;</span><span class="p">:</span> <span class="s2">&quot;spring_2026&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;cross_unit_only&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Stories-follow-stories look-back shuffle test on &quot;</span>
+                    <span class="s2">&quot;01_turns speaker turns + main-run 07 codes &quot;</span>
+                    <span class="s2">&quot;(CIP-001E). No quote text in the output.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_analysis_multiverse&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_analysis_multiverse</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;n_jsd_shuffles&quot;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Experience-gap product over analysis choices on &quot;</span>
+                    <span class="s2">&quot;main-run 07 codes (CIP-001E). Not 1080 LLM jobs.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
                 <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_kind_reconstruction&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_kind_reconstruction</span><span class="p">,</span>
                 <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
@@ -2065,10 +2242,13 @@
                     <span class="s2">&quot;max_features&quot;</span><span class="p">:</span> <span class="mi">4000</span><span class="p">,</span>
                     <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
                     <span class="s2">&quot;verified_only&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;label_mode&quot;</span><span class="p">:</span> <span class="s2">&quot;experience&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;text_source&quot;</span><span class="p">:</span> <span class="s2">&quot;quote_and_phrase&quot;</span><span class="p">,</span>
                 <span class="p">},</span>
                 <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
                     <span class="s2">&quot;Siding: 5-fold bag-of-words reconstruction of Part B &quot;</span>
-                    <span class="s2">&quot;basis labels (CIP-001F).&quot;</span>
+                    <span class="s2">&quot;experience vs rest (CIP-001F). Seven-way bases remain &quot;</span>
+                    <span class="s2">&quot;an option via label_mode.&quot;</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>

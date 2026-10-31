@@ -316,10 +316,10 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../modules/config.html#interface">Interface</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface"><code class="docutils literal notranslate"><span class="pre">Interface</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.default_config_file"><code class="docutils literal notranslate"><span class="pre">Interface.default_config_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.directory"><code class="docutils literal notranslate"><span class="pre">Interface.directory</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.user_file"><code class="docutils literal notranslate"><span class="pre">Interface.user_file</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_cwd_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_cwd_file()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_file"><code class="docutils literal notranslate"><span class="pre">Interface.from_file()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.from_yaml"><code class="docutils literal notranslate"><span class="pre">Interface.from_yaml()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get"><code class="docutils literal notranslate"><span class="pre">Interface.get()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/config.html#referia.config.interface.Interface.get_cache_columns"><code class="docutils literal notranslate"><span class="pre">Interface.get_cache_columns()</span></code></a></li>
@@ -1737,8 +1737,6 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="s2">&quot;_lynguine.yml&quot;</span>
     
-<div class="viewcode-block" id="Interface.from_file">
-<a class="viewcode-back" href="../../../modules/config.html#referia.config.interface.Interface.from_file">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">user_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">raise_error_if_not_found</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">allowed_roots</span><span class="o">=</span><span class="n">DEFAULT_ROOTS</span><span class="p">,</span> <span class="n">unbounded_paths</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -1880,8 +1878,7 @@
             <span class="n">user_file</span><span class="o">=</span><span class="n">ufile</span><span class="p">,</span>
             <span class="n">allowed_roots</span><span class="o">=</span><span class="n">roots</span><span class="p">,</span>
             <span class="n">unbounded_paths</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="p">)</span></div>
-
+        <span class="p">)</span>
 
 <div class="viewcode-block" id="Interface.from_cwd_file">
 <a class="viewcode-back" href="../../../modules/config.html#referia.config.interface.Interface.from_cwd_file">[docs]</a>
