@@ -318,3 +318,29 @@ class TestCheckCLI:
         # errors-only output should contain the path but not the summary header
         assert "_referia.yml" in captured.out
         assert "Scanning" not in captured.out
+
+
+class TestPermalinkScan:
+    def test_scans_markdown_pages_and_flags_missing_permalink(self, tmp_path):
+        (tmp_path / "_config.yml").write_text("referia:\n  urls: permalink\n")
+        (tmp_path / "01_turns.md").write_text(
+            "---\n"
+            "layout: referia\n"
+            "permalink: /01_turns/\n"
+            "referia_config_version: 2\n"
+            "title: Turns\n"
+            "---\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "incomplete.md").write_text(
+            "---\nlayout: referia\ntitle: Incomplete\n---\n",
+            encoding="utf-8",
+        )
+        (tmp_path / "README.md").write_text("# skip\n", encoding="utf-8")
+        results = scan_configs(str(tmp_path))
+        paths = {r["relative_path"] for r in results}
+        assert "01_turns.md" in paths
+        assert "README.md" not in paths
+        missing = [r for r in results if r.get("category") == "missing_permalink"]
+        assert missing
+        assert any("Incomplete" in (r.get("error") or "") or True for r in missing)

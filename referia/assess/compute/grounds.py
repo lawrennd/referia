@@ -71,6 +71,8 @@ def _as_points(points: Any) -> list[dict[str, Any]]:
     for item in list(points):
         if isinstance(item, dict):
             out.append(item)
+        elif hasattr(item, "keys"):
+            out.append(dict(item))
         elif item:
             out.append({"phrase": str(item)})
     return out

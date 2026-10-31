@@ -159,6 +159,94 @@ def resolve_filter_defaults(
     return out
 
 
+# Identity / link columns the listing paints even when they have no widget.
+# Without these, a hub of child configs (Checkbox + Save only) shows the
+# index as a dead title and drops ``config_url``.
+LISTING_CHROME_FIELDS = frozenset(
+    {
+        "title",
+        "Title",
+        "Name",
+        "description",
+        "Description",
+        "filename",
+        "date",
+        "Date",
+        "referia_config_version",
+        "version",
+        "config_url",
+        "configUrl",
+        "url",
+        "sourceDirectory",
+    }
+)
+
+
+def listing_row_fields(reviewer) -> set[str] | None:
+    """Columns one painted ``inline_list`` row needs.
+
+    Populate ``row_args`` still read the full frame (nested
+    ``extraction_phrases``, source ``text``). Listing HTML must not copy
+    those per row — CIP-0020 windows paint, not Access. ``None`` keeps
+    today's full-row walk when the review has no field widgets.
+    """
+    wanted: set[str] = set(LISTING_CHROME_FIELDS)
+
+    def _walk(specs) -> None:
+        for spec in specs or []:
+            if not isinstance(spec, dict):
+                continue
+            field = spec.get("field")
+            if field:
+                wanted.add(str(field))
+            args = spec.get("args") or {}
+            if isinstance(args, dict):
+                for key in ("target", "refresh_if", "skip_empty", "requires"):
+                    raw = args.get(key)
+                    if raw not in (None, False, ""):
+                        wanted.add(str(raw))
+            condition = spec.get("visible_if")
+            if isinstance(condition, str) and condition:
+                wanted.add(condition)
+            elif isinstance(condition, dict):
+                vif = condition.get("field")
+                if vif:
+                    wanted.add(str(vif))
+            _walk(spec.get("entries"))
+
+    try:
+        _walk(reviewer.get_review_specs())
+    except Exception:
+        return None
+    try:
+        detail = reviewer.get_display_detail_field()
+    except Exception:
+        detail = None
+    if isinstance(detail, str) and detail.strip():
+        wanted.add(detail.strip())
+    return wanted or None
+
+
+_LIQUID_ROWS_RE = re.compile(r"(?:\{\{|\{%)[^}]*\brows\b")
+
+
+def _liquid_mentions_rows(spec: dict | None) -> bool:
+    """True when a viewer template actually uses the Liquid ``rows`` local.
+
+    ``inline_list`` used to call :meth:`WebReviewer.get_rows` for every
+    viewer. That walks the full working set × every column — nested
+    ``extraction_phrases`` on 07_grounds is ~40s even after CIP-0020
+    windows the HTML. English copy such as "50 rows" must not trigger it.
+    """
+    if not isinstance(spec, dict):
+        return False
+    for key in ("liquid", "display", "markdown", "html"):
+        src = spec.get(key)
+        if isinstance(src, str) and _LIQUID_ROWS_RE.search(src):
+            return True
+    return False
+
+
 def listing_window(
     working: list,
     *,
@@ -284,6 +372,17 @@ class WebReviewer:
             user_file, self._directory, allowed_roots=_roots
         )
 
+        from referia.config.site import load_site_constants
+
+        _stop = None
+        if allowed_roots:
+            _stop = Path(allowed_roots[-1]).expanduser().resolve()
+        self._site_constants = load_site_constants(
+            _config_dir,
+            config_path=_config_dir / user_file,
+            stop=_stop,
+        )
+
         # Data loading resolves file paths relative to CWD, so temporarily
         # switch to the review directory for the duration of the load.
         _orig = os.getcwd()
@@ -315,6 +414,7 @@ class WebReviewer:
         # Session filter/sort state for display.layout: inline_list (CIP-0010).
         # Seed from ``display.filter_defaults`` when present (Clear restores it).
         self._filter_state: dict[str, Any] = self.get_filter_defaults()
+        self._liquid_rows_cache: list[dict] | None = None
         # CIP-0020 listing window (offset / page survive field updates; filters reset).
         self._list_query: dict[str, Any] = {
             "offset": 0,
@@ -530,10 +630,12 @@ class WebReviewer:
     def set_filter_state(self, state: dict[str, Any] | None) -> None:
         """Replace session filter/sort UI state."""
         self._filter_state = dict(state or {})
+        self._liquid_rows_cache = None
 
     def clear_filters(self) -> None:
         """Restore session filters to ``display.filter_defaults`` (or empty)."""
         self._filter_state = self.get_filter_defaults()
+        self._liquid_rows_cache = None
 
     def working_indices(self) -> list:
         """Indices after applying session filters and sort (tall working set)."""
@@ -967,6 +1069,9 @@ class WebReviewer:
         except Exception:
             known = False
         if not known:
+            site = getattr(self, "_site_constants", None) or {}
+            if resolved in site:
+                return site[resolved]
             return self._fallback_default(column)
         if resolved == getattr(self._data.index, "name", None) and resolved not in getattr(
             self._data, "columns", []
@@ -1013,6 +1118,10 @@ class WebReviewer:
         except Exception:
             return {}
 
+        allow = getattr(self, "_listing_row_fields", None)
+        if allow is not None:
+            columns = [col for col in columns if col in allow]
+
         result: dict = {}
         for col in columns:
             try:
@@ -1035,6 +1144,8 @@ class WebReviewer:
             idx_name = None
 
         for name, column in self._row_mapping_aliases().items():
+            if allow is not None and name not in allow and column not in allow:
+                continue
             if name in result:
                 continue
             if column in result:
@@ -1047,6 +1158,9 @@ class WebReviewer:
                     result[name] = self.get_index()
                 else:
                     result[name] = None
+        site = getattr(self, "_site_constants", None) or {}
+        for key, value in site.items():
+            result.setdefault(key, value)
         return result
 
     def _row_mapping_aliases(self) -> dict:
@@ -1338,7 +1452,8 @@ class WebReviewer:
         load structured field data (CIP-0011).
 
         Under ``display.layout: inline_list``, injects Liquid local ``rows``
-        (filtered+sorted tall working set) so templates can
+        (filtered+sorted tall working set) only when the template mentions
+        ``rows`` inside a Liquid tag, so templates can
         ``{% for row in rows %}``.
 
         :param viewer_spec: A viewer spec dict (``liquid``, ``display``, etc.).
@@ -1355,8 +1470,15 @@ class WebReviewer:
 
         local: dict[str, Any] = {}
         try:
-            if self.get_display_layout() == "inline_list":
-                local["rows"] = self.get_rows()
+            if (
+                self.get_display_layout() == "inline_list"
+                and _liquid_mentions_rows(viewer_spec)
+            ):
+                cached = getattr(self, "_liquid_rows_cache", None)
+                if cached is None:
+                    cached = self.get_rows()
+                    self._liquid_rows_cache = cached
+                local["rows"] = cached
         except ValueError:
             raise
         except Exception as exc:
@@ -1760,6 +1882,10 @@ class WebReviewer:
             if not field or field == column:
                 continue
             if _visible_if_depends_on(spec.get("visible_if"), column):
+                out.add(field)
+            args = spec.get("args") or {}
+            refresh_if = args.get("refresh_if") if isinstance(args, dict) else None
+            if refresh_if and str(refresh_if) == column:
                 out.add(field)
         for view in self._interface.get("combinator") or []:
             if not isinstance(view, dict):

@@ -14,9 +14,60 @@ import numpy as np
 
 from .distance import _jsonable
 
-__all__ = ["hard_lens_labels", "run_kind_reconstruction"]
+__all__ = [
+    "EXPERIENCE_BASES",
+    "collapse_basis_labels",
+    "hard_lens_labels",
+    "run_kind_reconstruction",
+    "siding_row_text",
+]
 
 MODELS = ("logreg", "nb", "linearsvc")
+EXPERIENCE_BASES = ("personal_experience", "others_experience")
+TEXT_SOURCE_LABELS = {
+    "phrase": "phrase text",
+    "quote": "quote text",
+    "quote_and_phrase": "phrase plus quote",
+    "quote_and_unit": "quote plus unit extract_text",
+}
+
+
+def collapse_basis_labels(kinds, mode: str = "seven") -> list[str]:
+    """Map Part B bases to the paper's experience-vs-rest coding.
+
+    ``seven`` keeps the seven-way labels. ``experience`` (alias ``binary``)
+    collapses ``personal_experience`` and ``others_experience`` to
+    ``experience`` and every other non-empty basis to ``other``.
+    """
+    mode = str(mode or "seven").strip().lower()
+    raw = [str(k).strip() if k is not None else "" for k in list(kinds or [])]
+    if mode not in {"experience", "binary"}:
+        return raw
+    out = []
+    for label in raw:
+        if not label:
+            out.append("")
+        elif label in EXPERIENCE_BASES:
+            out.append("experience")
+        else:
+            out.append("other")
+    return out
+
+
+def siding_row_text(row: dict | None, source: str = "phrase") -> str:
+    """Text the reconstruction vectoriser sees for one phrase row."""
+    row = row or {}
+    source = str(source or "phrase").strip().lower()
+    phrase = str(row.get("phrase") or "").strip()
+    quote = str(row.get("quote") or "").strip()
+    unit = str(row.get("extract_text") or row.get("text") or "").strip()
+    if source == "quote":
+        return quote or phrase
+    if source in {"quote_and_phrase", "phrase_and_quote"}:
+        return " ".join(part for part in (phrase, quote) if part)
+    if source in {"quote_and_unit", "unit"}:
+        return " ".join(part for part in (quote, unit) if part) or phrase
+    return phrase
 
 
 def _as_int(value: Any, default: int) -> int:
@@ -126,21 +177,41 @@ def _oof(clf, X, y, splits):
     return y_hat, np.asarray(accs, float), np.asarray(bals, float)
 
 
-def _top_logreg_ngrams(clf, vec, class_names: Sequence[str], k: int = 8) -> list[dict]:
-    if clf is None or vec is None:
-        return []
-    names = np.asarray(vec.get_feature_names_out())
+def _logreg_coef_by_class(clf, class_names: Sequence[str]):
+    """Return ``(coef, labels)`` with one coefficient row per class.
+
+    Binary One-vs-Rest and binary ``LogisticRegression`` store a single
+    coefficient vector for ``classes_[1]``. Mapping that row onto
+    ``classes_[0]`` attributes principle language to experience.
+    """
+    raw_labels = getattr(clf, "classes_", None)
+    if raw_labels is None:
+        labels = list(class_names)
+    else:
+        labels = list(raw_labels)
     if hasattr(clf, "estimators_") and clf.estimators_:
         coef = np.vstack(
             [np.asarray(est.coef_, float).ravel() for est in clf.estimators_]
         )
-        labels = list(getattr(clf, "classes_", class_names))
     elif hasattr(clf, "coef_"):
         coef = np.asarray(clf.coef_, dtype=float)
-        labels = list(getattr(clf, "classes_", class_names))
+        if coef.ndim == 1:
+            coef = coef.reshape(1, -1)
     else:
-        return []
+        return None, []
     if coef.ndim != 2:
+        return None, []
+    if coef.shape[0] == 1 and len(labels) == 2:
+        coef = np.vstack([-coef[0], coef[0]])
+    return coef, labels
+
+
+def _top_logreg_ngrams(clf, vec, class_names: Sequence[str], k: int = 8) -> list[dict]:
+    if clf is None or vec is None:
+        return []
+    names = np.asarray(vec.get_feature_names_out())
+    coef, labels = _logreg_coef_by_class(clf, class_names)
+    if coef is None:
         return []
     rows = []
     for i, label in enumerate(labels):
@@ -199,6 +270,8 @@ def run_kind_reconstruction(
     max_features = max(32, _as_int(max_features, 4000))
     C = max(1e-3, _as_float(C, 1.0))
     verified_only = _as_bool(verified_only, True)
+    text_source = str(_kwargs.get("text_source") or "").strip().lower()
+    label_mode = str(_kwargs.get("label_mode") or "").strip().lower()
 
     raw_phrases = list(phrases or [])
     raw_kinds = [str(k).strip() if k is not None else "" for k in list(kinds or [])]
@@ -363,6 +436,8 @@ def run_kind_reconstruction(
     f1s = [row["f1"] for row in per_class]
 
     flags = []
+    n_classes = max(1, len(class_names))
+    chance = 1.0 / n_classes
     if acc_mean >= 0.95:
         flags.append(
             {
@@ -374,17 +449,31 @@ def run_kind_reconstruction(
                 ),
             }
         )
-    if acc_mean < maj_acc + 0.08:
+    if bal_mean < chance + 0.08:
         flags.append(
             {
                 "code": "near_chance",
                 "level": "warn",
                 "message": (
-                    f"Accuracy {acc_mean:.3f} is within 0.08 of the majority "
-                    f"baseline {maj_acc:.3f}. {label_name} labels are not "
-                    "linearly recoverable from bag-of-words — noisy coding, "
-                    "or a rule that is not lexical (unit context the BoW "
-                    "cannot see)."
+                    f"Balanced accuracy {bal_mean:.3f} is within 0.08 of "
+                    f"chance {chance:.3f} (1/{n_classes}). {label_name} "
+                    "labels are not recoverable from this bag-of-words — "
+                    "noisy coding, or a rule that is not in the text this "
+                    "check can see."
+                ),
+            }
+        )
+    if acc_mean + 0.02 < maj_acc:
+        flags.append(
+            {
+                "code": "below_majority",
+                "level": "info",
+                "message": (
+                    f"Raw accuracy {acc_mean:.3f} is more than two points "
+                    f"below the majority baseline {maj_acc:.3f}. That is "
+                    "expected with class_weight=balanced on a dominant "
+                    "class. Chance for this check is balanced accuracy "
+                    f"versus {chance:.3f}, not accuracy versus majority."
                 ),
             }
         )
@@ -428,16 +517,17 @@ def run_kind_reconstruction(
                     ),
                 }
             )
-    if not flags:
+    if not any(flag.get("level") == "warn" for flag in flags):
         flags.append(
             {
                 "code": "consistent",
                 "level": "ok",
                 "message": (
-                    f"Accuracy {acc_mean:.3f} (5-fold) sits between chance "
-                    f"({perm_acc:.3f} shuffled; {maj_acc:.3f} majority) and "
-                    f"collapse (≥ 0.95). {label_name} labels look lexically "
-                    "consistent."
+                    f"Above chance: balanced accuracy {bal_mean:.3f} versus "
+                    f"{chance:.3f} (1/{n_classes}). Majority {maj_acc:.3f} "
+                    "is not the chance line — class-balanced models are "
+                    f"allowed to sit near it. {label_name} labels look "
+                    "lexically consistent."
                 ),
             }
         )
@@ -467,12 +557,18 @@ def run_kind_reconstruction(
         "error_by_format": error_by_format,
         "n_oof_errors": int((y_hat != y).sum()),
         "oof_error_phrase_ids": error_ids,
+        "chance": round(chance, 4),
     }
+    if text_source:
+        summary["text_source"] = text_source
+    if label_mode:
+        summary["label_mode"] = label_mode
 
     acc_rows = [
         {"measure": f"{folds}-fold accuracy", "value": acc_mean},
         {"measure": "accuracy std", "value": acc_std},
         {"measure": "balanced accuracy", "value": bal_mean},
+        {"measure": "chance (1 / n classes)", "value": chance},
         {"measure": "majority baseline", "value": maj_acc},
         {"measure": "stratified dummy", "value": strat_dummy},
         {"measure": "shuffled-label accuracy", "value": perm_acc},
@@ -494,18 +590,35 @@ def run_kind_reconstruction(
             row[pred] = n
         cm_rows.append(row)
 
+    near_chance = any(f.get("code") == "near_chance" for f in flags)
+    if near_chance:
+        verdict = (
+            f"**Verdict: near chance.** Balanced accuracy {bal_mean:.3f} "
+            f"is within 0.08 of {chance:.3f}."
+        )
+    else:
+        verdict = (
+            f"**Verdict: above chance.** Balanced accuracy {bal_mean:.3f} "
+            f"versus chance {chance:.3f} (1/{n_classes}). Raw accuracy "
+            f"{acc_mean:.3f} next to majority {maj_acc:.3f} is not a "
+            "chance test."
+        )
+
     md_parts = [
         f"## {label_name} reconstruction (siding)",
+        "",
+        verdict,
         "",
         f"`{model}` bag-of-words, {folds}-fold stratified CV on "
         f"**{len(keep)}** phrases ({n_unverified} unverified dropped). "
         f"It asks whether a linear model can reconstruct **{label_name}** "
-        "from the phrase text alone.",
+        f"from {TEXT_SOURCE_LABELS.get(text_source, 'the supplied text')}.",
         "",
         _md_table(acc_rows, [("Measure", "measure"), ("Value", "value")]),
         "",
-        f"Read: shuffled labels should sit near chance (~1 / n {label_name}s). "
-        "Useful consistency is **well above** that and **below** 0.95. "
+        f"Read: the chance line is **balanced accuracy versus "
+        f"{chance:.3f}**, not raw accuracy versus majority "
+        f"({maj_acc:.3f}). Collapse is ≥ 0.95 raw accuracy. "
         "Document-grouped CV holds out whole conversations so we do not "
         "credit the same-chatbot wording twice.",
         "",

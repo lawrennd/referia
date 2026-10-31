@@ -67,7 +67,9 @@
       })();
 
       /* Long save / reload / populate: the bar stays empty until HTMX
-         settles, so show an indeterminate progress state immediately. */
+         settles, so show an indeterminate progress state immediately.
+         CIP-0021 populate-all already owns #status-bar (counts, Pause,
+         <progress>). Keep that chip; busy is the in-flight companion. */
       function longOpLabel(path) {
         if (!path) return null;
         var clean = String(path).split("?")[0].replace(/\/+$/, "");
@@ -82,6 +84,22 @@
         if (prev === "generate-summary-document") return "Creating summary\u2026";
         if (prev === "edit-pdf") return "Preparing PDF\u2026";
         return null;
+      }
+
+      function isPopulateAllPath(path) {
+        var clean = String(path || "").split("?")[0];
+        return clean.indexOf("/populate-all/") !== -1;
+      }
+
+      function populateAllChip(bar) {
+        return bar ? bar.querySelector("#populate-all-progress") : null;
+      }
+
+      function populateAllChipActive(bar) {
+        var chip = populateAllChip(bar);
+        if (!chip) return false;
+        if (chip.querySelector(".populate-save-hint")) return false;
+        return true;
       }
 
       function requestPath(evt) {
@@ -125,12 +143,16 @@
       }
 
       document.addEventListener("htmx:beforeRequest", function (evt) {
-        var label = longOpLabel(requestPath(evt));
+        var path = requestPath(evt);
+        var label = longOpLabel(path);
         if (!label) return;
         var bar = document.getElementById("status-bar");
         if (!bar) return;
         clearTimeout(bar._timer);
         bar.classList.add("visible", "status-busy");
+        if (isPopulateAllPath(path) && populateAllChip(bar)) {
+          return;
+        }
         bar.innerHTML =
           '<span class="status-progress" role="progressbar" aria-busy="true">' +
           label + "</span>";
@@ -152,6 +174,11 @@
       document.addEventListener("htmx:afterSettle", function (evt) {
         var bar = completeLongOpBar(evt);
         if (!bar) return;
+        if (populateAllChipActive(bar)) {
+          bar.classList.add("visible");
+          clearTimeout(bar._timer);
+          return;
+        }
         if (bar.innerHTML.trim() !== "") {
           bar.classList.add("visible");
           clearTimeout(bar._timer);
@@ -754,7 +781,9 @@
 </head>
 <body>
     <header class="site-header">
-        <h1 class="site-title">{{ title }}</h1>
+        <h1 class="site-title">{{ title }}{% if github_edit_url %}
+            <span class="editsection">[<a href="{{ github_edit_url }}" target="_blank" rel="noopener noreferrer" title="Edit this referia on GitHub">edit</a>]</span>
+        {% endif %}</h1>
         <div class="site-meta">
             <span class="meta-label">Config:</span>
             <span class="meta-value">{{ config }}</span>

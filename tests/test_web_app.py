@@ -441,6 +441,47 @@ class TestResolveConfigPath:
         assert file_path == tmp_path / "_referia.yml"
         assert user_file == "_referia.yml"
 
+    def test_directory_path_maps_to_markdown(self, tmp_path):
+        from referia.web.routes import _resolve_config_path
+        cfg = tmp_path / "intro"
+        cfg.mkdir()
+        (cfg / "_referia.md").write_text("---\ntitle: md\n---\n\nBody\n")
+        file_path, user_file = _resolve_config_path(str(tmp_path), "intro")
+        assert file_path == cfg / "_referia.md"
+        assert user_file == "_referia.md"
+
+    def test_markdown_wins_over_yml(self, tmp_path):
+        from referia.web.routes import _resolve_config_path
+        cfg = tmp_path / "intro"
+        cfg.mkdir()
+        (cfg / "_referia.yml").write_text("title: yml")
+        (cfg / "_referia.md").write_text("---\ntitle: md\n---\n")
+        file_path, user_file = _resolve_config_path(str(tmp_path), "intro")
+        assert file_path == cfg / "_referia.md"
+        assert user_file == "_referia.md"
+
+    def test_explicit_md_filename(self, tmp_path):
+        from referia.web.routes import _resolve_config_path
+        cfg = tmp_path / "intro"
+        cfg.mkdir()
+        (cfg / "_draft.md").write_text("---\ntitle: draft\n---\n")
+        file_path, user_file = _resolve_config_path(
+            str(tmp_path), "intro/_draft.md"
+        )
+        assert file_path == cfg / "_draft.md"
+        assert user_file == "_draft.md"
+
+    def test_read_config_meta_from_markdown_frontmatter(self, tmp_path):
+        from referia.web.routes import _read_config_meta
+        path = tmp_path / "_referia.md"
+        path.write_text(
+            "---\ntitle: Markdown Hub\ndescription: A stage.\n---\n\n"
+            "**Access.** Data: sibling `_referia.md` files.\n"
+        )
+        meta = _read_config_meta(path)
+        assert meta["title"] == "Markdown Hub"
+        assert meta["description"] == "A stage."
+
 
 class TestGetCachedReviewer:
     def test_loads_reviewer_on_cache_miss(self, tmp_path):
@@ -1185,7 +1226,7 @@ class TestCLIArgumentParsing:
         missing = tmp_path / "personal"
         args = argparse.Namespace(
             root=str(missing), directory=None, config="_referia.yml",
-            host="127.0.0.1", port=8000,
+            host="127.0.0.1", port=8000, urls=None,
         )
         with pytest.raises(SystemExit) as exc_info:
             _serve(args)
@@ -1193,3 +1234,55 @@ class TestCLIArgumentParsing:
         err = capsys.readouterr().err
         assert "does not exist" in err
         assert str(missing) in err
+
+    def test_urls_flag_parsed(self):
+        from referia.cli import _build_parser
+
+        args = _build_parser().parse_args(
+            ["serve", "--root", "/tmp", "--urls", "permalink"]
+        )
+        assert args.urls == "permalink"
+
+    def test_permalink_collision_exits(self, tmp_path, capsys):
+        from referia.cli import _serve
+        import argparse
+
+        def _page(name, permalink):
+            (tmp_path / name).write_text(
+                "---\nlayout: referia\n"
+                f"permalink: {permalink}\n"
+                "referia_config_version: 2\n"
+                "title: x\n---\n",
+                encoding="utf-8",
+            )
+
+        _page("a.md", "/x/")
+        _page("b.md", "/x/")
+        args = argparse.Namespace(
+            root=str(tmp_path), directory=None, config="_referia.yml",
+            host="127.0.0.1", port=8000, urls="permalink",
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            _serve(args)
+        assert exc_info.value.code == 1
+        assert "Duplicate permalink" in capsys.readouterr().err
+
+    def test_permalink_serve_prints_tree_count(self, tmp_path, capsys):
+        from referia.cli import _serve
+        import argparse
+        from unittest.mock import patch
+
+        (tmp_path / "01_turns.md").write_text(
+            "---\nlayout: referia\npermalink: /01_turns/\n"
+            "referia_config_version: 2\ntitle: Turns\n---\n",
+            encoding="utf-8",
+        )
+        args = argparse.Namespace(
+            root=str(tmp_path), directory=None, config="_referia.yml",
+            host="127.0.0.1", port=8000, urls="permalink",
+        )
+        with patch("uvicorn.run"):
+            _serve(args)
+        out = capsys.readouterr().out
+        assert "permalink" in out.lower()
+        assert "1 page" in out

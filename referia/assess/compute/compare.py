@@ -509,7 +509,7 @@ def run_wordlist_floor(
         "Word-list floor is a transparent lower bound: it misses much real "
         "experience. The **ratio** of workshop to chatbot hits is what the "
         "paper uses, not the absolute level. Own-words recode (format-blind "
-        "LLM) is a later button; it is not this table.\n\n"
+        "LLM) waits on a later coding pass; it is not this table.\n\n"
         + md
     )
     return _jsonable(rows), md

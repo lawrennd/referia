@@ -22,13 +22,14 @@ from referia.config.dialect import (
     normalise_referia_config,
     stamp_version_text,
 )
+from referia.config.files import iter_configs, read_config_mapping
 
 
 def scan_for_stamp(root: str) -> list[dict[str, Any]]:
     """Plan stamp-only actions for every ``_referia.yml`` under *root*."""
     root_path = Path(root).expanduser().resolve()
     results: list[dict[str, Any]] = []
-    for yml in sorted(root_path.rglob("_referia.yml")):
+    for yml in iter_configs(root_path):
         results.append(_plan_stamp(yml, root_path))
     return results
 
@@ -46,7 +47,7 @@ def _plan_stamp(yml_path: Path, root_path: Path) -> dict[str, Any]:
     }
     try:
         text = yml_path.read_text(encoding="utf-8")
-        data = yaml.safe_load(text)
+        data = read_config_mapping(yml_path)
         if data is None:
             data = {}
         if not isinstance(data, dict):
@@ -164,7 +165,7 @@ def scan_for_rewrite(root: str) -> list[dict[str, Any]]:
     root_path = Path(root).expanduser().resolve()
     return [
         _plan_rewrite(yml, root_path)
-        for yml in sorted(root_path.rglob("_referia.yml"))
+        for yml in iter_configs(root_path)
     ]
 
 
@@ -196,7 +197,7 @@ def _plan_rewrite(yml_path: Path, root_path: Path) -> dict[str, Any]:
     }
     try:
         text = yml_path.read_text(encoding="utf-8")
-        data = yaml.safe_load(text)
+        data = read_config_mapping(yml_path)
         if data is None:
             data = {}
         if not isinstance(data, dict):

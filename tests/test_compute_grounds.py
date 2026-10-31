@@ -28,6 +28,18 @@ def test_normalise_basis_aliases():
     assert normalise_basis("nope") == "unclear"
 
 
+def test_as_points_accepts_mapping_rows():
+    import numpy as np
+    from referia.assess.compute.grounds import _as_points
+
+    class _Row(dict):
+        pass
+
+    rows = _as_points(np.array([_Row(phrase_id="p1", phrase="fairness")], dtype=object))
+    assert rows[0]["phrase_id"] == "p1"
+    assert rows[0]["phrase"] == "fairness"
+
+
 def test_empty_points_noop():
     payload, rows = llm_classify_grounds(
         "hello", [], prompt_template=PROMPT, client=_StubComplete("{}")
@@ -72,6 +84,36 @@ def test_missing_point_is_unclear():
     )
     assert rows[0]["basis"] == "principle"
     assert rows[1]["basis"] == "unclear"
+
+
+def test_wrapper_does_not_open_phrases_yml():
+    from referia.assess.compute import Compute
+
+    compute = Compute.__new__(Compute)
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("must not load phrases.yml")
+
+    compute._load_info_yaml_rows = boom
+    payload, rows = compute._llm_classify_grounds(
+        "hello",
+        points=[],
+        unit_id="u1",
+        prompt_template=PROMPT,
+        client=_StubComplete("{}"),
+    )
+    assert payload == ""
+    assert rows == []
+
+    payload, rows = compute._llm_classify_grounds(
+        "hello",
+        points=[{"phrase_id": "p1", "phrase": "fairness"}],
+        unit_id="u1",
+        prompt_template=PROMPT,
+        client=_StubComplete('{"bases": [{"n": 1, "basis": "principle"}]}'),
+    )
+    assert rows[0]["basis"] == "principle"
+    assert rows[0]["phrase_id"] == "p1"
 
 
 def test_context_is_wrapped_not_coded_from():

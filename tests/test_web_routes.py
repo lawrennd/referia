@@ -138,6 +138,18 @@ class TestGetRoot:
         assert "Saving" in response.text
         assert "Reloaded" in response.text
 
+    def test_html_keeps_populate_progress_chip_during_updating_all(self, client):
+        """CIP-0021 chip and the busy 'Updating all…' overlay share the bar.
+
+        Rolling populate-all POSTs must not replace #populate-all-progress
+        with the indeterminate label, and must not 3s-hide while chaining.
+        """
+        html = client.get("/").text
+        assert "isPopulateAllPath" in html
+        assert "populateAllChipActive" in html
+        assert 'querySelector("#populate-all-progress")' in html
+        assert "Updating all" in html
+
     def test_html_includes_htmx_script(self, client):
         response = client.get("/")
         assert "htmx" in response.text
@@ -1121,6 +1133,103 @@ class TestPostPopulate:
         assert 'class="inline-listing"' in response.text
         assert 'id="widget-Summary"' not in response.text
 
+    def test_once_skips_filled_without_refresh_if(self, populate_client):
+        client, reviewer = populate_client
+        specs = [
+            {
+                "type": "PopulateButton",
+                "field": "_classify",
+                "args": {
+                    "description": "Classify",
+                    "once": True,
+                    "refresh_if": "refresh_classification",
+                    "target": "grounds_payload",
+                    "compute": {
+                        "field": ["grounds_payload", "grounds"],
+                        "function": "llm_classify_grounds",
+                    },
+                },
+            },
+            {
+                "type": "Checkbox",
+                "field": "refresh_classification",
+            },
+        ]
+        reviewer.get_review_specs.return_value = specs
+        reviewer.get_widget_specs.return_value = specs
+        row = {
+            "grounds_payload": [{"basis": "principle"}],
+            "refresh_classification": False,
+        }
+        reviewer.get_value.side_effect = lambda c: row.get(c, "")
+        response = client.post("/populate/_classify")
+        assert response.status_code == 200
+        reviewer.run_populate.assert_not_called()
+        assert "Already classified" in response.text
+
+    def test_once_runs_when_refresh_if_checked_then_clears(self, populate_client):
+        client, reviewer = populate_client
+        specs = [
+            {
+                "type": "PopulateButton",
+                "field": "_classify",
+                "args": {
+                    "description": "Classify",
+                    "once": True,
+                    "refresh_if": "refresh_classification",
+                    "target": "grounds_payload",
+                    "compute": {
+                        "field": ["grounds_payload", "grounds"],
+                        "function": "llm_classify_grounds",
+                    },
+                },
+            },
+            {
+                "type": "Checkbox",
+                "field": "refresh_classification",
+            },
+        ]
+        reviewer.get_review_specs.return_value = specs
+        reviewer.get_widget_specs.return_value = specs
+        row = {
+            "grounds_payload": [{"basis": "principle"}],
+            "refresh_classification": True,
+        }
+        reviewer.get_value.side_effect = lambda c: row.get(c, "")
+        reviewer.set_value.side_effect = lambda c, v: row.__setitem__(c, v)
+        response = client.post("/populate/_classify")
+        assert response.status_code == 200
+        reviewer.run_populate.assert_called_once()
+        assert row["refresh_classification"] is False
+
+    def test_skip_empty_refuses_populate_without_points(self, populate_client):
+        client, reviewer = populate_client
+        specs = [
+            {
+                "type": "PopulateButton",
+                "field": "_classify",
+                "args": {
+                    "description": "Classify",
+                    "skip_empty": "extraction_phrases",
+                    "target": "grounds_payload",
+                    "compute": {
+                        "field": ["grounds_payload", "grounds"],
+                        "function": "llm_classify_grounds",
+                    },
+                },
+            },
+        ]
+        reviewer.get_review_specs.return_value = specs
+        reviewer.get_widget_specs.return_value = specs
+        reviewer.get_value.side_effect = lambda c: {
+            "extraction_phrases": [],
+            "grounds_payload": [],
+        }.get(c, "")
+        response = client.post("/populate/_classify")
+        assert response.status_code == 200
+        reviewer.run_populate.assert_not_called()
+        assert "No points to classify" in response.text
+
 
 class TestPostPopulateAll:
     def _listing_reviewer(self):
@@ -1161,6 +1270,22 @@ class TestPostPopulateAll:
         assert "Save when ready." in response.text
         assert "Segment document all filtered" not in response.text
         assert 'class="inline-listing"' not in response.text
+
+    def test_skip_filled_false_overwrites_filled_rows(self):
+        reviewer = self._listing_reviewer()
+        btn = reviewer.get_review_specs.return_value[0]
+        btn["args"]["skip_filled"] = False
+        reviewer.get_value.return_value = "already classified"
+        seen = []
+        reviewer.set_index.side_effect = lambda idx: seen.append(idx)
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_segment")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 2
+        assert seen[:2] == ["a", "b"]
+        assert "Segment document 2/2" in response.text
 
     def test_continues_after_one_failure(self):
         reviewer = self._listing_reviewer()
@@ -1257,7 +1382,7 @@ class TestPostPopulateAll:
         assert response.status_code == 200
         assert reviewer.run_populate.call_count == 2
 
-    def _rolling_reviewer(self, n=25, batch=10):
+    def _rolling_reviewer(self, n=25, batch=10, *, skip_filled=True, prefilled=False):
         reviewer = self._listing_reviewer()
         btn = {
             "type": "PopulateButton",
@@ -1266,6 +1391,7 @@ class TestPostPopulateAll:
                 "description": "Segment document",
                 "target": "units",
                 "batch": batch,
+                "skip_filled": skip_filled,
                 "compute": {"field": "units", "function": "document_segment"},
             },
         }
@@ -1273,7 +1399,7 @@ class TestPostPopulateAll:
         reviewer.get_review_specs.return_value = [btn]
         indices = [f"r{i}" for i in range(n)]
         reviewer.working_indices.return_value = indices
-        filled = set()
+        filled = set(indices) if prefilled else set()
         current = {"idx": None}
 
         def _set_index(idx):
@@ -1332,6 +1458,104 @@ class TestPostPopulateAll:
         assert "Segment document 25/25" in last.text
         assert 'hx-trigger="load' not in last.text
         assert "Save when ready." in last.text
+
+    def test_skip_filled_false_overwrites_in_batches(self):
+        reviewer = self._rolling_reviewer(
+            n=25, batch=10, skip_filled=False, prefilled=True
+        )
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                first = client.post("/populate-all/_segment")
+                second = client.post("/populate-all/_segment")
+                last = client.post("/populate-all/_segment")
+        assert reviewer.run_populate.call_count == 25
+        assert "Segment document 10/25" in first.text
+        assert "Segment document 20/25" in second.text
+        assert "Segment document 25/25" in last.text
+        assert 'hx-trigger="load' not in last.text
+
+    def test_skip_empty_passes_over_rows_without_points(self):
+        reviewer = self._listing_reviewer()
+        btn = {
+            "type": "PopulateButton",
+            "field": "_classify",
+            "args": {
+                "description": "Classify",
+                "target": "grounds_payload",
+                "skip_empty": "extraction_phrases",
+                "batch": 10,
+                "compute": {
+                    "field": ["grounds_payload", "grounds"],
+                    "function": "llm_classify_grounds",
+                },
+            },
+        }
+        reviewer.get_widget_specs.return_value = [btn]
+        reviewer.get_review_specs.return_value = [btn]
+        indices = ["empty-a", "ready-a", "empty-b", "ready-b", "empty-c"]
+        reviewer.working_indices.return_value = indices
+        current = {"idx": None}
+        phrases = {
+            "empty-a": [],
+            "ready-a": [{"phrase": "fairness"}],
+            "empty-b": [],
+            "ready-b": [{"phrase": "trust"}],
+            "empty-c": None,
+        }
+
+        def _set_index(idx):
+            current["idx"] = idx
+
+        def _get_value(col):
+            if col == "extraction_phrases":
+                return phrases.get(current["idx"])
+            return []
+
+        reviewer.set_index.side_effect = _set_index
+        reviewer.get_value.side_effect = _get_value
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_classify")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 2
+        assert "Classify 5/5" in response.text
+        assert "3 complete" in response.text
+        assert "2/5 classified" in response.text
+        assert 'id="populate-filled-_classify"' in response.text
+        assert 'hx-swap-oob="true"' in response.text
+        assert 'hx-trigger="load' not in response.text
+
+    def test_skip_empty_all_empty_completes_without_loop(self):
+        reviewer = self._listing_reviewer()
+        btn = {
+            "type": "PopulateButton",
+            "field": "_classify",
+            "args": {
+                "description": "Classify",
+                "target": "grounds_payload",
+                "skip_empty": "extraction_phrases",
+                "batch": 10,
+                "compute": {
+                    "field": "grounds_payload",
+                    "function": "llm_classify_grounds",
+                },
+            },
+        }
+        reviewer.get_widget_specs.return_value = [btn]
+        reviewer.get_review_specs.return_value = [btn]
+        reviewer.working_indices.return_value = [f"e{i}" for i in range(15)]
+        reviewer.get_value.return_value = []
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_classify")
+        assert response.status_code == 200
+        reviewer.run_populate.assert_not_called()
+        assert "Classify 15/15" in response.text
+        assert "0/15 classified" in response.text
+        assert 'hx-trigger="load' not in response.text
 
     def test_batch_zero_unbounded_this_request(self):
         reviewer = self._rolling_reviewer(n=5, batch=0)
@@ -1509,6 +1733,46 @@ class TestPopulateAllHelpers:
                 raise OSError("disk")
 
         _flush_after_populate_batch(Flusher())
+
+    def test_count_filled_target_reads_cache_partition(self):
+        import pandas as pd
+
+        from referia.web.routes import _count_filled_target, _populate_filled_counts
+
+        class Data:
+            def __init__(self):
+                self._d = {
+                    "cache": pd.DataFrame(
+                        {
+                            "grounds_payload": [
+                                [{"basis": "principle"}],
+                                None,
+                                [],
+                                {"ok": True},
+                            ]
+                        },
+                        index=["a", "b", "c", "d"],
+                    )
+                }
+
+        class Reviewer:
+            _data = Data()
+
+        reviewer = Reviewer()
+        assert _count_filled_target(
+            reviewer, "grounds_payload", ["a", "b", "c", "d"]
+        ) == 2
+        assert _count_filled_target(reviewer, "missing", ["a"]) is None
+        specs = [
+            {
+                "type": "PopulateButton",
+                "field": "_classify",
+                "args": {"target": "grounds_payload"},
+            }
+        ]
+        assert _populate_filled_counts(reviewer, specs, ["a", "b", "c", "d"]) == {
+            "_classify": 2
+        }
 
 
 # ---------------------------------------------------------------------------

@@ -107,9 +107,15 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from referia.config.files import (
+    config_in_directory,
+    is_explicit_config_path,
+    iter_configs,
+)
 from referia.assess.web_review import (
     DEFAULT_LIST_PAGE_SIZE,
     WebReviewer,
+    listing_row_fields,
     listing_window,
 )
 from referia.web.path_safety import PathOutsideRootError, safe_path_under_root, is_path_under_any_root
@@ -125,6 +131,13 @@ from referia.web.render import (
     iter_spec_leaves,
     populate_all_chrome_html,
     render_populate_progress_chip,
+    _populate_once,
+    _populate_skip_filled,
+    _populate_skip_empty_field,
+    _populate_input_nonempty,
+    _populate_refresh_if_field,
+    _populate_target_filled,
+    _checkbox_checked,
 )
 from referia.config.inherit_view import (
     inherited_readonly_fields,
@@ -171,18 +184,26 @@ def _reviewer(request: Request):
     reviewer = request.app.state.reviewer
     if reviewer is not None:
         return reviewer
-    # Root-server: unprefixed routes (``/record``, ``/save``, …) serve
-    # ``{root}/_referia.yml`` when present (CIP-0010).
+    # Root-server: unprefixed routes (``/record``, ``/save``, …) serve the
+    # hub — permalink ``/`` in CIP-0022 mode, else ``{root}/_referia.md``
+    # or ``{root}/_referia.yml`` (CIP-0010).
     root = getattr(request.app.state, "root", None)
-    if root is not None and (Path(root) / "_referia.yml").exists():
-        return _root_reviewer(request, "")
+    if root is not None:
+        tree = getattr(request.app.state, "permalink_tree", None)
+        if tree is not None:
+            from referia.config.permalinks import lookup_permalink
+
+            if lookup_permalink(tree, "/") is not None:
+                return _root_reviewer(request, "")
+        elif config_in_directory(root) is not None:
+            return _root_reviewer(request, "")
     from fastapi import HTTPException
     raise HTTPException(
         status_code=503,
         detail=(
             "Review session could not be initialised. "
             "Check the server log for startup errors — likely a missing or "
-            "malformed _referia.yml, or a data file that could not be loaded."
+            "malformed config, or a data file that could not be loaded."
         ),
     )
 
@@ -397,11 +418,13 @@ def _collect_listing_entries(reviewer, indices, prefix: str) -> list[dict]:
     group_by = _inline_list_group_by(filter_state)
     listing_entries: list[dict] = []
     saved = None
+    previous_allow = getattr(reviewer, "_listing_row_fields", None)
     try:
         saved = reviewer.get_index()
     except Exception:
         saved = None
     try:
+        reviewer._listing_row_fields = listing_row_fields(reviewer)
         for idx in indices:
             reviewer.set_index(idx)
             data = _current_data(reviewer)
@@ -416,12 +439,19 @@ def _collect_listing_entries(reviewer, indices, prefix: str) -> list[dict]:
                 }
             )
     finally:
+        reviewer._listing_row_fields = previous_allow
         if saved is not None:
             try:
                 reviewer.set_index(saved)
             except Exception:
                 pass
     return listing_entries
+
+
+def _chrome_context(reviewer) -> dict:
+    """Site-header fields from Jekyll-style ``_config.yml`` (edit-on-GitHub)."""
+    site = getattr(reviewer, "_site_constants", None) or {}
+    return {"github_edit_url": site.get("github_edit_url")}
 
 
 def _panel_response_context(
@@ -496,6 +526,9 @@ def _panel_response_context(
             documents=_list_document_entries(reviewer, "documents"),
             working_count=working_count,
             window=window,
+            filled_counts=_populate_filled_counts(
+                reviewer, review_specs, _working_index_list(reviewer)
+            ),
         )
         index_selector = ""
         document_html = ""
@@ -515,7 +548,11 @@ def _panel_response_context(
         row_data = _current_data(reviewer)
         review_specs = reviewer.get_review_specs(view_options=view_options)
         form_html = populate_all_chrome_html(
-            review_specs, count=len(indices)
+            review_specs,
+            count=len(indices),
+            filled_counts=_populate_filled_counts(
+                reviewer, review_specs, list(indices)
+            ),
         ) + render_form(review_specs, row_data)
         index_selector = _render_index_selector(indices, current_index)
         document_html = render_document_panel(
@@ -1037,7 +1074,7 @@ async def index(
         except _HTTPException as exc:
             if exc.status_code == 404:
                 current_only = _current_only_from_param(current)
-                configs = _list_sub_configs(request.app.state.root, "")
+                configs = _configs_under(request, "")
                 configs = _filter_configs(
                     configs, after=after, before=before, current_only=current_only
                 )
@@ -1053,7 +1090,10 @@ async def index(
             "base.html",
             {
                 "title": "Referia",
-                "config": "_referia.yml",
+                "config": getattr(
+                    getattr(reviewer, "_interface", None), "user_file", None
+                )
+                or "_referia.yml",
                 "directory": (
                     reviewer._directory
                     if hasattr(reviewer, "_directory")
@@ -1061,6 +1101,7 @@ async def index(
                 ),
                 "cache_bust": request.app.state.start_time,
                 "config_path_prefix": "",
+                **_chrome_context(reviewer),
                 **ctx,
             },
         )
@@ -1077,6 +1118,7 @@ async def index(
             "directory": request.app.state.directory,
             "cache_bust": request.app.state.start_time,
             "config_path_prefix": "",
+            **_chrome_context(reviewer),
             **ctx,
         },
     )
@@ -1571,9 +1613,11 @@ def _resolve_config_path(root: str, url_path: str) -> tuple[Path, str]:
     """Map a URL path to ``(config_file, user_file)`` under *root*.
 
     Handles:
-    - ``"theses/examined/introduction"``              → …/introduction/_referia.yml
+    - ``"theses/examined/introduction"``              → …/introduction/_referia.md or ``_referia.yml``
     - ``"theses/examined/introduction/"``              → same (trailing slash stripped)
-    - ``"theses/examined/introduction/_referia_v2.yml"`` → explicit yml file
+    - ``"theses/examined/introduction/_referia_v2.yml"`` → explicit yml/md file
+
+    A directory prefers ``_referia.md`` when both files exist.
 
     Raises ``HTTPException`` 400 for path traversal, 404 if the config is missing.
     """
@@ -1583,18 +1627,22 @@ def _resolve_config_path(root: str, url_path: str) -> tuple[Path, str]:
     clean = url_path.strip("/")
 
     try:
-        if clean.endswith(".yml"):
+        if clean and is_explicit_config_path(clean):
             candidate = safe_path_under_root(root_p, clean)
             user_file = candidate.name
-            config_dir = candidate.parent
         elif clean:
             config_dir = safe_path_under_root(root_p, clean)
-            user_file = "_referia.yml"
-            candidate = config_dir / user_file
+            found = config_in_directory(config_dir)
+            if found is None:
+                raise HTTPException(status_code=404, detail="Config not found")
+            candidate = found
+            user_file = found.name
         else:
-            config_dir = root_p
-            user_file = "_referia.yml"
-            candidate = config_dir / user_file
+            found = config_in_directory(root_p)
+            if found is None:
+                raise HTTPException(status_code=404, detail="Config not found")
+            candidate = found
+            user_file = found.name
     except PathOutsideRootError:
         raise HTTPException(status_code=400, detail="Path outside root rejected")
 
@@ -1657,6 +1705,17 @@ def _get_cached_reviewer(app_state, config_file: Path, user_file: str):
 
 def _root_reviewer(request: Request, config_path: str):
     """Resolve and return the ``WebReviewer`` for a root-mode request."""
+    tree = getattr(request.app.state, "permalink_tree", None)
+    if tree is not None:
+        from fastapi import HTTPException
+        from referia.config.permalinks import lookup_permalink
+
+        entry = lookup_permalink(tree, config_path or "/")
+        if entry is None:
+            raise HTTPException(status_code=404, detail="Config not found")
+        return _get_cached_reviewer(
+            request.app.state, entry.path, entry.path.name
+        )
     config_file, user_file = _resolve_config_path(
         request.app.state.root, config_path
     )
@@ -1677,9 +1736,9 @@ def _read_config_meta(yml_path: Path) -> dict:
     directory, or ``None`` if no ``inherit`` section is present.
     """
     try:
-        import yaml  # type: ignore[import]
-        with open(yml_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+        from referia.config.files import read_config_mapping
+
+        data = read_config_mapping(yml_path)
         if not isinstance(data, dict):
             return {}
         raw_date = data.get("date")
@@ -1742,7 +1801,7 @@ def _list_sub_configs(root: str, url_path: str) -> list[dict]:
         return []
 
     configs = []
-    for yml in sorted(search_base.rglob("_referia.yml")):
+    for yml in iter_configs(search_base):
         try:
             rel_from_root = yml.parent.relative_to(root_path)
             rel_from_base = yml.parent.relative_to(search_base)
@@ -1804,6 +1863,39 @@ def _list_sub_configs(root: str, url_path: str) -> list[dict]:
         c["inherit_title"] = inherit_title
 
     return configs
+
+
+def _list_permalink_configs(tree) -> list[dict]:
+    """Directory-listing rows from a CIP-0022 permalink tree (hub omitted)."""
+    configs = []
+    for permalink, entry in sorted(tree.items(), key=lambda kv: kv[0]):
+        if permalink == "/":
+            continue
+        path = entry.path
+        meta = _read_config_meta(path)
+        stem = path.stem
+        configs.append({
+            "url": permalink,
+            "label": stem,
+            "title": meta.get("title") or stem,
+            "description": meta.get("description"),
+            "date": meta.get("date"),
+            "current": meta.get("current", False),
+            "group": "",
+            "group_url": "/",
+            "inherit_url": None,
+            "inherit_title": None,
+            "error": bool(meta.get("_error")),
+            "yml_path": str(path),
+        })
+    return configs
+
+
+def _configs_under(request: Request, url_path: str = "") -> list[dict]:
+    tree = getattr(request.app.state, "permalink_tree", None)
+    if tree is not None:
+        return _list_permalink_configs(tree)
+    return _list_sub_configs(request.app.state.root, url_path)
 
 
 def _topo_sort_group(entries: list[dict]) -> list[dict]:
@@ -2244,15 +2336,100 @@ def _populate_batch_size(spec: dict) -> int:
 
 def _value_is_filled(value: Any) -> bool:
     """True when a populate target already has a usable value (CIP-001D skip)."""
-    if value is None:
+    return _populate_target_filled(value)
+
+
+def _column_series(reviewer, column: str):
+    """Return a partition Series for *column* without joining every flow."""
+    data = getattr(reviewer, "_data", None)
+    store = getattr(data, "_d", None)
+    if not isinstance(store, dict):
+        return None
+    for frame in store.values():
+        try:
+            cols = getattr(frame, "columns", [])
+            if column in cols:
+                return frame[column]
+        except Exception:
+            continue
+    return None
+
+
+def _count_filled_target(reviewer, column: str, working: list) -> int | None:
+    """How many working indices already have a filled populate target.
+
+    Reads the cache (or other) partition Series. Does not ``set_index``
+    per row. ``None`` means the column is not on a partition we can see,
+    so listing chrome keeps the row-count badge.
+    """
+    if not column or not working:
+        return 0 if working == [] and column else None
+    series = _column_series(reviewer, column)
+    if series is None:
+        return None
+    try:
+        values = series.reindex(working)
+        iterable = values.tolist()
+    except Exception:
+        iterable = []
+        for idx in working:
+            try:
+                iterable.append(series.loc[idx])
+            except Exception:
+                iterable.append(None)
+    n = 0
+    for val in iterable:
+        if _value_is_filled(val):
+            n += 1
+    return n
+
+
+def _populate_filled_counts(reviewer, specs, working: list) -> dict[str, int]:
+    """``route_key → filled count`` for PopulateButtons in *specs*."""
+    counts: dict[str, int] = {}
+    by_target: dict[str, int | None] = {}
+    for spec in iter_spec_leaves(specs):
+        if not isinstance(spec, dict) or spec.get("type") != "PopulateButton":
+            continue
+        key = _populate_button_route_key(spec)
+        target = _populate_button_target(spec)
+        if not key or not target:
+            continue
+        if target not in by_target:
+            by_target[target] = _count_filled_target(reviewer, target, working)
+        filled = by_target[target]
+        if filled is not None:
+            counts[key] = filled
+    return counts
+
+
+def _working_index_list(reviewer) -> list:
+    try:
+        return list(reviewer.working_indices())
+    except Exception:
+        return list(reviewer.index_list())
+
+
+def _refresh_if_checked(reviewer, spec: dict) -> bool:
+    """True when the per-row Refresh classification checkbox is on."""
+    field = _populate_refresh_if_field(spec)
+    if not field:
         return False
-    if isinstance(value, float) and value != value:
+    try:
+        return _checkbox_checked(reviewer.get_value(field))
+    except Exception:
         return False
-    if isinstance(value, str) and value.strip() == "":
-        return False
-    if isinstance(value, (list, dict, tuple)) and len(value) == 0:
-        return False
-    return True
+
+
+def _clear_refresh_if(reviewer, spec: dict) -> None:
+    """Uncheck the once-button gate after a successful overwrite."""
+    field = _populate_refresh_if_field(spec)
+    if not field:
+        return
+    try:
+        reviewer.set_value(field, False)
+    except Exception:
+        log.debug("Could not clear refresh_if field %s", field)
 
 
 def _populate_paused_fields(reviewer) -> set:
@@ -2330,6 +2507,12 @@ def _run_populate_all_and_respond(
     label = str((btn_spec.get("args") or {}).get("description") or "Populate")
     target = _populate_button_target(btn_spec)
     batch = _populate_batch_size(btn_spec)
+    skip_filled = _populate_skip_filled(btn_spec)
+    skip_empty = _populate_skip_empty_field(btn_spec)
+    remembered = _populate_progress(reviewer).get(str(field)) or {}
+    seen: set[str] = set()
+    if not skip_filled:
+        seen = {str(x) for x in (remembered.get("overwrite_seen") or [])}
     if paused:
         _set_populate_paused(reviewer, field, True)
     else:
@@ -2349,6 +2532,7 @@ def _run_populate_all_and_respond(
     n_ok = 0
     n_fail = 0
     n_skipped = 0
+    n_classified = 0
     n_attempted = 0
     try:
         if not paused:
@@ -2358,9 +2542,24 @@ def _run_populate_all_and_respond(
                     current = reviewer.get_value(target)
                 except Exception:
                     current = None
-                if _value_is_filled(current):
+                idx_key = str(idx)
+                if skip_filled:
+                    if _value_is_filled(current):
+                        n_skipped += 1
+                        n_classified += 1
+                        continue
+                elif idx_key in seen:
                     n_skipped += 1
+                    n_classified += 1
                     continue
+                if skip_empty:
+                    try:
+                        points = reviewer.get_value(skip_empty)
+                    except Exception:
+                        points = None
+                    if not _populate_input_nonempty(points):
+                        n_skipped += 1
+                        continue
                 if batch and n_attempted >= batch:
                     break
                 try:
@@ -2370,14 +2569,20 @@ def _run_populate_all_and_respond(
                     n_fail += 1
                     _log_route_error("Populate all", exc, field=field, index=idx)
                 n_attempted += 1
+                if not skip_filled:
+                    seen.add(idx_key)
+            n_classified += n_ok
             if n_ok or n_skipped:
                 _flush_after_populate_batch(reviewer)
         else:
-            remembered = _populate_progress(reviewer).get(str(field)) or {}
             n_ok = int(remembered.get("n_ok", 0) or 0)
             n_fail = int(remembered.get("n_fail", 0) or 0)
             n_skipped = int(remembered.get("n_skipped", 0) or 0)
             n_total = int(remembered.get("n_total", n_total) or n_total)
+            if "n_classified" in remembered:
+                n_classified = int(remembered.get("n_classified") or 0)
+            else:
+                n_classified = n_ok + n_skipped
     finally:
         if saved is not None:
             try:
@@ -2391,16 +2596,18 @@ def _run_populate_all_and_respond(
     n_done = n_skipped + n_ok
     remaining = n_total - n_done
     chain = (not paused) and remaining > 0 and not (n_ok == 0 and n_fail > 0)
-    _remember_populate_progress(
-        reviewer,
-        field,
-        {
-            "n_ok": n_ok,
-            "n_fail": n_fail,
-            "n_skipped": n_skipped,
-            "n_total": n_total,
-        },
-    )
+    progress_payload = {
+        "n_ok": n_ok,
+        "n_fail": n_fail,
+        "n_skipped": n_skipped,
+        "n_classified": n_classified,
+        "n_total": n_total,
+    }
+    if not skip_filled:
+        progress_payload["overwrite_seen"] = (
+            [] if n_done >= n_total else sorted(seen)
+        )
+    _remember_populate_progress(reviewer, field, progress_payload)
     # Escape at the HTML sink so CodeQL sees html.escape (CIP-000E).
     return HTMLResponse(
         render_populate_progress_chip(
@@ -2410,6 +2617,7 @@ def _run_populate_all_and_respond(
             n_total=n_total,
             n_fail=n_fail,
             n_skipped=n_skipped,
+            n_classified=n_classified,
             paused=paused,
             chain=chain,
         )
@@ -2440,8 +2648,31 @@ def _run_populate_and_respond(
     else:
         updated_cols = [str(compute_fields)] if compute_fields else [str(target)]
 
+    if _populate_once(btn_spec):
+        try:
+            already = _value_is_filled(reviewer.get_value(target))
+        except Exception:
+            already = False
+        if already and not _refresh_if_checked(reviewer, btn_spec):
+            return HTMLResponse(
+                '<span class="status-warning">Already classified. '
+                "Check Refresh classification to run again.</span>"
+            )
+
+    skip_empty = _populate_skip_empty_field(btn_spec)
+    if skip_empty:
+        try:
+            points = reviewer.get_value(skip_empty)
+        except Exception:
+            points = None
+        if not _populate_input_nonempty(points):
+            return HTMLResponse(
+                '<span class="status-warning">No points to classify.</span>'
+            )
+
     try:
         reviewer.run_populate({"compute": compute_spec})
+        _clear_refresh_if(reviewer, btn_spec)
     except Exception as exc:
         _log_route_error("Populate", exc, field=field)
         return HTMLResponse(_user_error_html("Populate"))
@@ -2901,7 +3132,7 @@ async def root_get_document(request: Request, config_path: str, path: str):
 async def list_errors(request: Request):
     """Show all configs that failed to parse (YAML) or load (WebReviewer)."""
     root = request.app.state.root
-    all_configs = _list_sub_configs(root, "")
+    all_configs = _configs_under(request, "")
 
     # ── YAML parse errors found while scanning the tree ──────────────────────
     parse_errors = [c for c in all_configs if c.get("error")]
@@ -3020,7 +3251,11 @@ async def root_index(
         reviewer = _root_reviewer(request, config_path)
     except _HTTPException as exc:
         if exc.status_code == 404:
-            # No _referia.yml here — show a filtered listing of sub-configs.
+            tree = getattr(request.app.state, "permalink_tree", None)
+            if tree is not None:
+                # Permalink miss is 404, not a folder listing (CIP-0022).
+                raise
+            # Path mode: no _referia.yml here — list sub-configs.
             all_configs = _list_sub_configs(request.app.state.root, config_path)
             if all_configs:
                 current_only = _current_only_from_param(current)
@@ -3045,10 +3280,18 @@ async def root_index(
         "base.html",
         {
             "title": display_title,
-            "config": f"{config_path.strip('/')}/_referia.yml",
+            "config": (
+                f"{config_path.strip('/')}/{getattr(getattr(reviewer, '_interface', None), 'user_file', None) or '_referia.yml'}"
+                if config_path.strip("/")
+                else (
+                    getattr(getattr(reviewer, "_interface", None), "user_file", None)
+                    or "_referia.yml"
+                )
+            ),
             "directory": reviewer._directory if hasattr(reviewer, "_directory") else config_path,
             "cache_bust": request.app.state.start_time,
             "config_path_prefix": prefix,
+            **_chrome_context(reviewer),
             **ctx,
         },
     )

@@ -537,6 +537,114 @@ class TestButtons:
         html = render_widget({"type": "SaveButton", "field": "", "args": {"description": "Save & Continue"}})
         assert "Save &amp; Continue" in html
 
+    def test_once_populate_button_greys_when_target_filled(self):
+        spec = {
+            "type": "PopulateButton",
+            "field": "_classify",
+            "args": {
+                "description": "Classify",
+                "once": True,
+                "refresh_if": "refresh_classification",
+                "target": "grounds_payload",
+            },
+        }
+        html = render_widget(
+            spec,
+            None,
+            {"grounds_payload": [{"basis": "principle"}], "refresh_classification": False},
+        )
+        assert "is-blocked" in html
+        assert "hx-post=" not in html
+        assert "Classify" in html
+
+    def test_once_populate_button_enabled_when_refresh_if_checked(self):
+        spec = {
+            "type": "PopulateButton",
+            "field": "_classify",
+            "args": {
+                "description": "Classify",
+                "once": True,
+                "refresh_if": "refresh_classification",
+                "target": "grounds_payload",
+            },
+        }
+        html = render_widget(
+            spec,
+            None,
+            {"grounds_payload": [{"basis": "principle"}], "refresh_classification": True},
+        )
+        assert "is-blocked" not in html
+        assert 'hx-post="/populate/_classify"' in html
+
+    def test_once_populate_button_enabled_when_target_empty(self):
+        spec = {
+            "type": "PopulateButton",
+            "field": "_classify",
+            "args": {
+                "description": "Classify",
+                "once": True,
+                "refresh_if": "refresh_classification",
+                "target": "grounds_payload",
+            },
+        }
+        html = render_widget(spec, None, {"grounds_payload": [], "refresh_classification": False})
+        assert "is-blocked" not in html
+        assert 'hx-post="/populate/_classify"' in html
+
+    def test_skip_empty_greys_classify_when_no_points(self):
+        spec = {
+            "type": "PopulateButton",
+            "field": "_classify",
+            "args": {
+                "description": "Classify",
+                "skip_empty": "extraction_phrases",
+                "target": "grounds_payload",
+            },
+        }
+        html = render_widget(spec, None, {"extraction_phrases": [], "grounds_payload": []})
+        assert "is-blocked" in html
+        assert "hx-post=" not in html
+        assert "No points to classify" in html
+
+    def test_skip_empty_enables_classify_when_points_present(self):
+        spec = {
+            "type": "PopulateButton",
+            "field": "_classify",
+            "args": {
+                "description": "Classify",
+                "skip_empty": "extraction_phrases",
+                "target": "grounds_payload",
+            },
+        }
+        html = render_widget(
+            spec,
+            None,
+            {"extraction_phrases": [{"phrase": "fairness"}], "grounds_payload": []},
+        )
+        assert "is-blocked" not in html
+        assert 'hx-post="/populate/_classify"' in html
+
+    def test_skip_empty_does_not_block_classify_all_chrome(self):
+        from referia.web.render import _listing_chrome_ctx, render_widget
+
+        spec = {
+            "type": "PopulateButton",
+            "field": "_classify",
+            "args": {
+                "description": "Classify",
+                "all": True,
+                "skip_empty": "extraction_phrases",
+                "target": "grounds_payload",
+            },
+        }
+        token = _listing_chrome_ctx.set(True)
+        try:
+            html = render_widget(spec, None, {"extraction_phrases": []})
+        finally:
+            _listing_chrome_ctx.reset(token)
+        assert "is-blocked" not in html
+        assert 'hx-post="/populate-all/_classify"' in html
+
 
 # ---------------------------------------------------------------------------
 # visible_if conditions
@@ -2189,6 +2297,37 @@ class TestInlineListing:
         )
         assert "Classify all filtered" in html
         assert 'hx-post="/populate-all/_classify"' in html
+        counted = render_inline_listing(
+            [
+                {
+                    "index": "u1",
+                    "data": {
+                        "filename": "session.docx",
+                        "grounds": [
+                            {
+                                "kind": "benefit",
+                                "phrase": "save staff time",
+                                "basis": "principle",
+                            }
+                        ],
+                    },
+                }
+            ],
+            [
+                {
+                    "type": "PopulateButton",
+                    "field": "_classify",
+                    "args": {
+                        "description": "Classify",
+                        "target": "grounds_payload",
+                    },
+                },
+            ],
+            working_count=2013,
+            filled_counts={"_classify": 1018},
+        )
+        assert "1018/2013 classified" in counted
+        assert 'id="populate-filled-_classify"' in counted
         assert "1 point" in html
         assert "[principle]" in html
         assert ">Grounds<" in html
@@ -2219,6 +2358,12 @@ class TestInlineListing:
         assert 'hx-post="/populate-all/_classify"' in html
         assert 'hx-target="#status-bar"' in html
         assert "2013 rows" in html
+        counted = populate_all_chrome_html(
+            specs, count=2013, filled_counts={"_classify": 1018}
+        )
+        assert "1018/2013 classified" in counted
+        assert 'id="populate-filled-_classify"' in counted
+        assert "2013 rows" not in counted
         assert populate_all_chrome_html(
             [{"type": "PopulateButton", "field": "_x", "args": {}}],
             count=3,
@@ -2491,7 +2636,7 @@ class TestPopulateProgressChip:
             chain=True,
         )
         assert "Extract 10/25" in html
-        assert "(0 failed, 0 skipped)." in html
+        assert "(0 failed, 0 complete)." in html
         assert 'hx-trigger="load delay:50ms"' in html
         assert 'hx-post="/populate-all/_extract/pause"' in html
         assert "Pause" in html
@@ -2555,3 +2700,57 @@ class TestPopulateProgressChip:
             n_total=0,
         )
         assert "<progress" not in html
+
+    def test_classified_count_swaps_listing_badge_oob(self):
+        from referia.web.render import render_populate_progress_chip
+
+        html = render_populate_progress_chip(
+            label="Classify",
+            field="_classify",
+            n_done=1018,
+            n_total=2013,
+            n_fail=0,
+            n_skipped=1008,
+            n_classified=1018,
+            chain=True,
+        )
+        assert "1018/2013 classified" in html
+        assert 'id="populate-filled-_classify"' in html
+        assert 'hx-swap-oob="true"' in html
+        assert "Classify 1018/2013" in html
+
+
+class TestPopulateHelpers:
+    def test_target_filled_and_arg_flags(self):
+        from referia.web.render import (
+            _arg_flag,
+            _populate_input_nonempty,
+            _populate_once,
+            _populate_refresh_if_field,
+            _populate_skip_empty_field,
+            _populate_skip_filled,
+            _populate_target_filled,
+        )
+
+        assert _populate_target_filled(None) is False
+        assert _populate_target_filled(float("nan")) is False
+        assert _populate_target_filled("  ") is False
+        assert _populate_target_filled([]) is False
+        assert _populate_target_filled({"a": 1}) is True
+        assert _populate_once({"args": {}}) is False
+        assert _populate_once({"args": {"once": "yes"}}) is True
+        assert _populate_skip_filled({"args": {"skip_filled": "off"}}) is False
+        assert _arg_flag({"args": {"once": "maybe"}}, "once", default=False) is False
+        assert _populate_refresh_if_field({"args": {"refresh_if": False}}) == ""
+        assert _populate_refresh_if_field({"args": {"refresh_if": "go"}}) == "go"
+        assert _populate_skip_empty_field({"args": {}}) == ""
+        assert _populate_skip_empty_field({"args": {"skip_empty": "pts"}}) == "pts"
+        assert _populate_input_nonempty(None) is False
+        assert _populate_input_nonempty("  ") is False
+        assert _populate_input_nonempty("hello") is True
+        assert _populate_input_nonempty("[]") is False
+        assert _populate_input_nonempty('[{"a": 1}]') is True
+        assert _populate_input_nonempty("{not json") is True
+        assert _populate_input_nonempty({"a": 1}) is True
+        assert _populate_input_nonempty([{}, 0, "x"]) is True
+        assert _populate_input_nonempty(3) is True

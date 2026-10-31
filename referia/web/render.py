@@ -823,6 +823,101 @@ def _requires_satisfied(value: Any) -> bool:
     return bool(value)
 
 
+def _populate_target_filled(value: Any) -> bool:
+    """True when a populate target already has a usable value (CIP-001D skip)."""
+    if value is None:
+        return False
+    if isinstance(value, float) and value != value:
+        return False
+    if isinstance(value, str) and value.strip() == "":
+        return False
+    if isinstance(value, (list, dict, tuple)) and len(value) == 0:
+        return False
+    return True
+
+
+_ARG_UNSET = object()
+
+
+def _arg_flag(spec: dict, key: str, *, default: bool = False) -> bool:
+    """Read a PopulateButton ``args`` boolean, with YAML-string tolerance."""
+    raw = (spec.get("args") or {}).get(key, _ARG_UNSET)
+    if raw is _ARG_UNSET or raw is None:
+        return default
+    if isinstance(raw, bool):
+        return raw
+    text = str(raw).strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off", ""}:
+        return False
+    return default
+
+
+def _populate_once(spec: dict) -> bool:
+    """Grey the per-row button after a fill unless ``refresh_if`` is checked."""
+    return _arg_flag(spec, "once", default=False)
+
+
+def _populate_skip_filled(spec: dict) -> bool:
+    """Populate-all skips filled rows (CIP-001D). ``false`` is Refresh all."""
+    return _arg_flag(spec, "skip_filled", default=True)
+
+
+def _populate_refresh_if_field(spec: dict) -> str:
+    """Checkbox field that re-enables an ``once`` PopulateButton."""
+    raw = (spec.get("args") or {}).get("refresh_if")
+    if raw is None or raw is False:
+        return ""
+    return str(raw).strip()
+
+
+def _populate_skip_empty_field(spec: dict) -> str:
+    """Column that must hold at least one item before populate can run.
+
+    Classify uses ``skip_empty: extraction_phrases`` so a unit with 0
+    points greys the button and is passed over by populate-all.
+    """
+    raw = (spec.get("args") or {}).get("skip_empty")
+    if raw is None or raw is False:
+        return ""
+    return str(raw).strip()
+
+
+def _populate_input_nonempty(value: Any) -> bool:
+    """True when *value* has at least one classifiable item."""
+    if value is None:
+        return False
+    try:
+        if value != value:
+            return False
+    except Exception:
+        pass
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return False
+        if text[:1] in "[{":
+            try:
+                value = json.loads(text)
+            except Exception:
+                return True
+        else:
+            return True
+    if isinstance(value, dict):
+        return bool(value)
+    try:
+        items = list(value)
+    except TypeError:
+        return bool(value)
+    for item in items:
+        if isinstance(item, dict) and item:
+            return True
+        if item:
+            return True
+    return False
+
+
 def _blocked_populate_button(label: str, reason: str) -> str:
     return (
         f'<button type="button" class="widget-button populate-button is-blocked" '
@@ -847,6 +942,20 @@ def _render_populate_button(spec: dict, value: Any, data: dict | None = None) ->
         row = data or {}
         if not _requires_satisfied(row.get(requires)):
             return _blocked_populate_button(label, "Extract this row first")
+    skip_empty = _populate_skip_empty_field(spec)
+    if skip_empty and not _listing_chrome_ctx.get():
+        row = data or {}
+        if not _populate_input_nonempty(row.get(skip_empty)):
+            return _blocked_populate_button(label, "No points to classify")
+    if _populate_once(spec) and not _listing_chrome_ctx.get():
+        row = data or {}
+        if _populate_target_filled(row.get(target)):
+            refresh_field = _populate_refresh_if_field(spec)
+            if not refresh_field or not _checkbox_checked(row.get(refresh_field)):
+                return _blocked_populate_button(
+                    label,
+                    "Already classified. Check Refresh classification to run again.",
+                )
     if _listing_chrome_ctx.get():
         return (
             f'<button type="button" class="widget-button populate-button" '
@@ -1533,8 +1642,17 @@ def render_select_all_checkbox(
     )
 
 
+def _populate_filled_badge_id(field: str) -> str:
+    """Stable DOM id for the listing chrome classified-so-far badge."""
+    return f"populate-filled-{_url_path_segment(field)}"
+
+
 def render_populate_all_button(
-    spec: dict, *, count: int = 0, entries: list[dict] | None = None
+    spec: dict,
+    *,
+    count: int = 0,
+    entries: list[dict] | None = None,
+    filled: int | None = None,
 ) -> str:
     """Listing chrome that runs a PopulateButton on every filtered index."""
     args = spec.get("args") or {}
@@ -1568,13 +1686,21 @@ def render_populate_all_button(
             f"{_escape(label)} all</button>"
         )
     )
+    badge_id = _html.escape(_populate_filled_badge_id(route_key), quote=True)
+    if filled is None:
+        badge = f'<span class="badge-meta">{n} {noun}</span>'
+    else:
+        badge = (
+            f'<span id="{badge_id}" class="badge-meta">'
+            f"{int(filled)}/{n} classified</span>"
+        )
     return (
         f'<div class="widget-container complete-toggle">'
         f"{button}"
         f"</div>"
         f'<div class="entry-main">'
         f'<span class="entry-title">{_escape(label)} all filtered</span>'
-        f'<span class="badge-meta">{n} {noun}</span>'
+        f"{badge}"
         f'<span class="desc">{desc}</span>'
         f"</div>"
     )
@@ -1588,6 +1714,7 @@ def render_populate_progress_chip(
     n_total: int,
     n_fail: int = 0,
     n_skipped: int = 0,
+    n_classified: int | None = None,
     paused: bool = False,
     chain: bool = False,
 ) -> str:
@@ -1603,7 +1730,7 @@ def render_populate_progress_chip(
     title = _html.escape(str(label))
     body = (
         f"{title} {int(n_done)}/{int(n_total)} "
-        f"({int(n_fail)} failed, {int(n_skipped)} skipped)."
+        f"({int(n_fail)} failed, {int(n_skipped)} complete)."
     )
     pause_or_resume = (
         f'<button type="button" class="populate-resume" '
@@ -1635,22 +1762,33 @@ def render_populate_progress_chip(
         if n_total
         else ""
     )
-    return (
+    chip = (
         f'<div id="populate-all-progress" class="populate-progress"{chain_attrs}>'
         f"<span>{body}</span>{pause_or_resume}{save_hint}{bar}"
         f"</div>"
+    )
+    if n_classified is None:
+        return chip
+    badge_id = _html.escape(_populate_filled_badge_id(field), quote=True)
+    text = _html.escape(f"{int(n_classified)}/{int(n_total)} classified")
+    return (
+        f"{chip}"
+        f'<span id="{badge_id}" class="badge-meta" hx-swap-oob="true">'
+        f"{text}</span>"
     )
 
 
 def _populate_all_flag(spec: dict) -> bool:
     """True when a PopulateButton should also emit populate-all chrome."""
-    raw = (spec.get("args") or {}).get("all")
-    if isinstance(raw, bool):
-        return raw
-    return str(raw or "").strip().lower() in {"1", "true", "yes", "on"}
+    return _arg_flag(spec, "all", default=False)
 
 
-def populate_all_chrome_html(review_specs: list | None, *, count: int) -> str:
+def populate_all_chrome_html(
+    review_specs: list | None,
+    *,
+    count: int,
+    filled_counts: dict | None = None,
+) -> str:
     """``side_by_side`` chrome for PopulateButtons with ``args.all: true``.
 
     ``inline_list`` already emits this via :func:`render_inline_listing`.
@@ -1665,8 +1803,12 @@ def populate_all_chrome_html(review_specs: list | None, *, count: int) -> str:
         return ""
     items = []
     for spec in specs:
+        route_key = _populate_button_route_key(spec)
+        filled = None if not filled_counts else filled_counts.get(route_key)
         items.append('<li class="inline-entry select-all-entry">')
-        items.append(render_populate_all_button(spec, count=count))
+        items.append(
+            render_populate_all_button(spec, count=count, filled=filled)
+        )
         items.append("</li>")
     return (
         '<section class="select-all-section"><ul>'
@@ -1904,6 +2046,7 @@ def render_inline_listing(
     listing_path: str = "/listing-page",
     fragment: bool = False,
     htmx: bool = True,
+    filled_counts: dict | None = None,
 ) -> str:
     """Directory-listing style list for ``display.layout: inline_list``.
 
@@ -1927,7 +2070,9 @@ def render_inline_listing(
     the session's current record.
 
     CIP-0020: *working_count* is the filtered set size (populate-all /
-    select-all labels). *window* adds append sentinel or pager chrome.
+    select-all labels). *filled_counts* maps populate route keys to how
+    many working rows already have a filled target (classified-so-far).
+    *window* adds append sentinel or pager chrome.
     *fragment* is the HTMX listing-page response (rows + nav, no filter bar).
     *htmx* False is Jupyter: Load more / Prev / Next as ordinary links.
     """
@@ -1993,6 +2138,8 @@ def render_inline_listing(
             )
             sections.append("</li>")
         for spec in populate_specs:
+            route_key = _populate_button_route_key(spec)
+            filled = None if not filled_counts else filled_counts.get(route_key)
             sections.append('<li class="inline-entry select-all-entry">')
             sections.append(
                 render_populate_all_button(
@@ -2001,6 +2148,7 @@ def render_inline_listing(
                         working_count if working_count is not None else len(entries)
                     ),
                     entries=entries,
+                    filled=filled,
                 )
             )
             sections.append("</li>")

@@ -182,3 +182,30 @@ def test_section_copies_top_level_chrome_flags_into_args():
     expanded = Interface._expand_review_cluster([section])
     assert expanded[0]["args"]["collapse"] is False
     assert expanded[0]["args"]["open"] is True
+
+
+def test_read_yaml_or_empty_markdown_frontmatter(tmp_path):
+    path = tmp_path / "_referia.md"
+    path.write_text("---\ntitle: Hello\nfoo: 1\n---\nBody\n", encoding="utf-8")
+    data = Interface._read_yaml_or_empty(str(path), None, False)
+    assert data["title"] == "Hello"
+    assert Interface._read_yaml_or_empty(str(path), "title", False) == "Hello"
+    with pytest.raises(ValueError, match="not found"):
+        Interface._read_yaml_or_empty(str(path), "missing", False)
+
+
+def test_from_file_falls_back_to_markdown(tmp_path):
+    (tmp_path / "_referia.md").write_text(
+        "---\ntitle: from md\ninput:\n  type: local\n  index: i\n"
+        "  data:\n    - i: 0\n---\n",
+        encoding="utf-8",
+    )
+    with patch.object(Interface, "from_file", wraps=Interface.from_file) as _wrapped:
+        pass
+    with patch("lynguine.config.interface.Interface.from_file", return_value="ok") as parent:
+        result = Interface.from_file(user_file="_referia.yml", directory=str(tmp_path))
+        assert result == "ok"
+        assert parent.call_args.kwargs["user_file"] == "_referia.md"
+    with patch("lynguine.config.interface.Interface.from_file", return_value="ok") as parent:
+        Interface.from_file(user_file=None, directory=str(tmp_path))
+        assert parent.call_args.kwargs["user_file"] == "_referia.md"
