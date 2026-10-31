@@ -31,6 +31,7 @@ from referia.config.dialect import (
     detect_config_dialect,
     get_version_enforcement,
 )
+from referia.config.files import iter_configs
 
 
 # ---------------------------------------------------------------------------
@@ -123,10 +124,10 @@ def _check_one(
     }
     mode = version_enforcement or get_version_enforcement()
     try:
-        import yaml  # type: ignore[import]
-        with open(yml_path, encoding="utf-8") as fh:
-            content = fh.read()
-        data = yaml.safe_load(content)
+        from referia.config.files import read_config_mapping
+
+        content = yml_path.read_text(encoding="utf-8")
+        data = read_config_mapping(yml_path)
         if data is None:
             data = {}
         if isinstance(data, dict):
@@ -236,7 +237,50 @@ def scan_configs(
     """
     root_path = Path(root).expanduser().resolve()
     results = []
-    for yml in sorted(root_path.rglob("_referia.yml")):
+    from referia.config.permalinks import (
+        URL_MODE_PERMALINK,
+        is_permalink_config,
+        iter_markdown_under,
+        resolve_url_mode,
+        site_exclude_patterns,
+    )
+    from referia.config.files import read_config_mapping
+    from referia.config.site import _read_mapping, find_site_config
+
+    if resolve_url_mode(root_path) == URL_MODE_PERMALINK:
+        found = find_site_config(root_path, stop=root_path)
+        exclude = site_exclude_patterns(_read_mapping(found) if found else {})
+        for md in iter_markdown_under(root_path, exclude):
+            try:
+                mapping = read_config_mapping(md)
+            except Exception:
+                mapping = {}
+            if not isinstance(mapping, dict):
+                mapping = {}
+            layout = str(mapping.get("layout") or "").strip()
+            if layout != "referia" and mapping.get("referia_config_version") is None:
+                continue
+            results.append(
+                _check_one(
+                    md, root_path, version_enforcement=version_enforcement
+                )
+            )
+            if layout == "referia" and not is_permalink_config(mapping):
+                last = results[-1]
+                if last.get("ok"):
+                    last["ok"] = False
+                    last["error"] = (
+                        "layout: referia without referia_config_version "
+                        "and permalink"
+                    )
+                    last["category"] = "missing_permalink"
+                    last["suggested_fix"] = (
+                        "Add permalink: /page/ and referia_config_version "
+                        "to this page, or drop layout: referia."
+                    )
+        return results
+
+    for yml in iter_configs(root_path):
         results.append(
             _check_one(
                 yml, root_path, version_enforcement=version_enforcement

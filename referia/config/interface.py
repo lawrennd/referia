@@ -44,8 +44,9 @@ def nodes(user_file="_referia.yml", directory="."):
     if not os.path.exists(filename):
         return []
     
-    with open(filename) as file:
-        conf = yaml.load(file, Loader=yaml.FullLoader)
+    from referia.config.files import read_config_mapping
+
+    conf = read_config_mapping(filename)
 
     if "title" in conf:
         key = to_valid_var(conf["title"])
@@ -65,6 +66,50 @@ class Interface(lynguine.config.interface.Interface):
         Return the default configuration file name
         """
         return "_referia.yml"
+
+    @classmethod
+    def from_file(cls, user_file=None, directory=".", **kwargs):
+        """Load ``_referia.md`` when the default yml name is missing."""
+        from referia.config.files import REFERIA_CONFIG_FILENAMES, config_filename
+
+        if user_file is None:
+            user_file = config_filename(directory)
+        elif isinstance(user_file, str):
+            path = os.path.join(os.path.expandvars(directory), user_file)
+            if (
+                not os.path.exists(path)
+                and user_file in REFERIA_CONFIG_FILENAMES
+            ):
+                user_file = config_filename(directory)
+        return super().from_file(user_file=user_file, directory=directory, **kwargs)
+
+    @classmethod
+    def _read_yaml_or_empty(cls, fname, field, raise_error_if_not_found):
+        """Read YAML or markdown-frontmatter configs."""
+        from referia.config.files import read_config_mapping
+
+        if os.path.exists(fname):
+            try:
+                data = read_config_mapping(fname)
+            except yaml.YAMLError as exc:
+                errmsg = f'Error reading yaml file "{fname}", error: {exc}'
+                log.error(errmsg)
+                raise ValueError(errmsg) from exc
+            if field is not None:
+                if field in data:
+                    data = data[field]
+                else:
+                    raise ValueError(
+                        f'Field "{field}" specified but not found in file "{fname}"'
+                    )
+            if data == {} and raise_error_if_not_found:
+                errmsg = f'No data found in "{fname}".'
+                log.error(errmsg)
+                raise ValueError(errmsg)
+            return data
+        return super()._read_yaml_or_empty(
+            fname, field, raise_error_if_not_found
+        )
     
     def __init__(
         self,

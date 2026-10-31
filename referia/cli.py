@@ -56,6 +56,17 @@ def _build_parser() -> argparse.ArgumentParser:
              "Cannot be combined with --directory.",
     )
     serve.add_argument(
+        "--urls",
+        choices=["path", "permalink"],
+        default=None,
+        help=(
+            "Root-server URL mode (CIP-0022).  'path' maps a directory "
+            "that holds _referia.yml; 'permalink' maps layout: referia "
+            "markdown via frontmatter permalink.  Default: referia.urls "
+            "in the serve-root _config.yml, or path."
+        ),
+    )
+    serve.add_argument(
         "--host",
         default="127.0.0.1",
         help="Network interface to bind (default: 127.0.0.1)",
@@ -180,13 +191,26 @@ def _serve(args):
 
     if args.root is not None:
         try:
-            app = create_app(root=args.root)
+            app = create_app(root=args.root, urls=getattr(args, "urls", None))
         except (FileNotFoundError, NotADirectoryError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             sys.exit(1)
+        except Exception as exc:
+            from referia.config.permalinks import PermalinkCollisionError
+
+            if isinstance(exc, PermalinkCollisionError):
+                print(f"error: {exc}", file=sys.stderr)
+                sys.exit(1)
+            raise
         print(f"Starting referia root-server at http://{args.host}:{args.port}")
         print(f"  Root:   {args.root}")
-        print("  Any _referia.yml under the root is served at its relative path.")
+        url_mode = getattr(app.state, "url_mode", "path")
+        print(f"  URLs:   {url_mode}")
+        if url_mode == "permalink":
+            n = len(getattr(app.state, "permalink_tree", None) or {})
+            print(f"  Permalink tree: {n} page(s)")
+        else:
+            print("  Any _referia.yml under the root is served at its relative path.")
     else:
         directory = args.directory if args.directory is not None else "."
         app = create_app(user_file=args.config, directory=directory)

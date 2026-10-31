@@ -38,6 +38,13 @@ from .compare import (
     run_question_type_stress,
     run_wordlist_floor,
 )
+from .sequence import (
+    run_rebuild_speaker_turns,
+    run_stories_follow_stories,
+    turns_for_round,
+    workshop_round_points,
+)
+from .multiverse import run_analysis_multiverse
 from .distance import (
     axis_correlates,
     classical_mds,
@@ -226,8 +233,13 @@ class Compute(lynguine.assess.compute.Compute):
             cached = {}
             self._info_yaml_cache = cached
         key = str(path)
-        if key in cached:
-            return cached[key]
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            return []
+        hit = cached.get(key)
+        if hit is not None and hit[0] == mtime:
+            return hit[1]
         import yaml
 
         try:
@@ -237,7 +249,7 @@ class Compute(lynguine.assess.compute.Compute):
         with open(path, encoding="utf-8") as handle:
             data = yaml.load(handle, Loader=SafeLoader)
         rows = data if isinstance(data, list) else []
-        cached[key] = rows
+        cached[key] = (mtime, rows)
         return rows
 
     def _run_format_share_compare(
@@ -306,6 +318,125 @@ class Compute(lynguine.assess.compute.Compute):
             quotes, bases=bases, groups=groups, **kwargs
         )
 
+    def _study_files_dir(self):
+        from pathlib import Path
+
+        info = self._config_info_dir()
+        if info is None:
+            return None
+        return (Path(info) / ".." / "files").resolve()
+
+    def _coded_phrase_rows(self) -> list[dict]:
+        phrases = self._load_info_yaml_rows("phrases.yml")
+        grounds = self._load_info_yaml_rows("grounds.yml")
+        if not phrases or not grounds:
+            return []
+        by_id = {
+            str(row.get("phrase_id")): row.get("basis") for row in grounds
+        }
+        out = []
+        for row in phrases:
+            pid = str(row.get("phrase_id"))
+            if pid not in by_id:
+                continue
+            rec = dict(row)
+            rec["basis"] = by_id[pid]
+            out.append(rec)
+        return out
+
+    def _docx_paragraphs(self, path):
+        try:
+            from docx import Document as DocxDocument
+        except ImportError:
+            return None
+        try:
+            return [p.text for p in DocxDocument(str(path)).paragraphs]
+        except Exception:
+            return None
+
+    def _resolve_files_root(self, files=None):
+        from pathlib import Path
+
+        if files:
+            root = Path(str(files))
+            if not root.is_absolute():
+                iface = getattr(self, "_interface", None)
+                base = getattr(iface, "directory", None) if iface else None
+                root = (
+                    (Path(base) / root).resolve()
+                    if base
+                    else root.resolve()
+                )
+            return root
+        return self._study_files_dir()
+
+    def _run_rebuild_speaker_turns(
+        self,
+        documents=None,
+        paragraphs_by_filename=None,
+        **kwargs,
+    ):
+        from pathlib import Path
+
+        fac_names = kwargs.get("facilitator_names") or []
+        if isinstance(fac_names, str):
+            fac_names = [p.strip() for p in fac_names.split(",") if p.strip()]
+            kwargs["facilitator_names"] = fac_names
+        if documents is None:
+            documents = self._load_info_yaml_rows("documents.yml")
+        if paragraphs_by_filename is None:
+            root = self._resolve_files_root(kwargs.get("files_root"))
+            paragraphs_by_filename = {}
+            if root is not None:
+                for doc in documents:
+                    if str(doc.get("format") or doc.get("group")) != "workshop":
+                        continue
+                    rel = str(doc.get("filename") or "")
+                    path = Path(root) / rel
+                    if not path.exists():
+                        continue
+                    paras = self._docx_paragraphs(path)
+                    if paras is None:
+                        continue
+                    paragraphs_by_filename[rel] = paras
+        return run_rebuild_speaker_turns(
+            documents,
+            paragraphs_by_filename,
+            **kwargs,
+        )
+
+    def _run_stories_follow_stories(
+        self, turns=None, points=None, **kwargs
+    ):
+        labelled_round = str(
+            kwargs.get("labelled_round") or "spring_2026"
+        )
+        if turns is None:
+            turns, hint = turns_for_round(
+                self._load_info_yaml_rows("turns.yml"), labelled_round
+            )
+            if hint:
+                kwargs.setdefault("missing_hint", hint)
+        if points is None:
+            points, hint = workshop_round_points(
+                self._load_info_yaml_rows("grounds.yml"), labelled_round
+            )
+            if hint:
+                kwargs.setdefault("missing_hint", hint)
+        return run_stories_follow_stories(
+            turns, points, **kwargs
+        )
+
+    def _run_analysis_multiverse(self, points=None, **kwargs):
+        if points is None:
+            points = self._coded_phrase_rows()
+            if not points:
+                kwargs.setdefault(
+                    "missing_hint",
+                    "Run 07_grounds Classify all + Save first.",
+                )
+        return run_analysis_multiverse(points, **kwargs)
+
     def _phrase_siding_rows(self, kwargs):
         rows = self._load_info_yaml_rows("phrases.yml")
         kwargs.setdefault(
@@ -346,8 +477,19 @@ class Compute(lynguine.assess.compute.Compute):
             by_id = {
                 str(row.get("phrase_id")): row.get("basis") for row in grounds
             }
-            phrases = [row.get("phrase") for row in rows]
-            kinds = [by_id.get(str(row.get("phrase_id"))) or "" for row in rows]
+            from .verify import collapse_basis_labels, siding_row_text
+
+            text_source = kwargs.get("text_source") or "quote_and_phrase"
+            label_mode = kwargs.get("label_mode") or "experience"
+            kwargs["text_source"] = text_source
+            kwargs["label_mode"] = label_mode
+            phrases = [siding_row_text(row, text_source) for row in rows]
+            kinds = collapse_basis_labels(
+                [by_id.get(str(row.get("phrase_id"))) or "" for row in rows],
+                label_mode,
+            )
+            if str(label_mode).strip().lower() in {"experience", "binary"}:
+                kwargs["label_name"] = "experience"
         from .verify import run_kind_reconstruction as _run
 
         return _run(phrases, kinds, **kwargs)
@@ -396,20 +538,14 @@ class Compute(lynguine.assess.compute.Compute):
                 return {}, [], [], [], md, 0
         return _run(phrases, kinds, **kwargs)
 
-    def _llm_classify_grounds(self, text, points=None, unit_id=None, **kwargs):
-        if not points and unit_id is not None:
-            phrases = self._load_info_yaml_rows("phrases.yml")
-            uid = str(unit_id)
-            points = [
-                {
-                    "phrase_id": row.get("phrase_id"),
-                    "phrase": row.get("phrase"),
-                    "quote": row.get("quote"),
-                    "kind": row.get("kind"),
-                }
-                for row in phrases
-                if str(row.get("unit_id")) == uid
-            ]
+    def _llm_classify_grounds(self, text, points=None, **kwargs):
+        """Part B classify. ``points`` is the unit's ``extraction_phrases``.
+
+        07 joins 02's unit-grained extract cache as ``data:`` (same
+        ``unit_id`` index) and passes that column through ``row_args``.
+        Do not open ``phrases.yml`` here — that table is phrase grain.
+        """
+        kwargs.pop("unit_id", None)
         return llm_classify_grounds(text, points, **kwargs)
 
 
@@ -1175,6 +1311,47 @@ class Compute(lynguine.assess.compute.Compute):
                 ),
             },
             {
+                "name": "run_rebuild_speaker_turns",
+                "function": self._run_rebuild_speaker_turns,
+                "default_args": {
+                    "labelled_min_share": 0.5,
+                    "treat_speaker_1_as_facilitator": True,
+                },
+                "docstr": (
+                    "Access: rebuild labelled workshop speaker turns "
+                    "(Jess Labels) into turns.yml (CIP-001E). Counts only "
+                    "in the markdown."
+                ),
+            },
+            {
+                "name": "run_stories_follow_stories",
+                "function": self._run_stories_follow_stories,
+                "default_args": {
+                    "lookbacks": [1, 2, 3, 5],
+                    "n_shuffles": 500,
+                    "seed": 0,
+                    "labelled_round": "spring_2026",
+                    "cross_unit_only": False,
+                },
+                "docstr": (
+                    "Stories-follow-stories look-back shuffle test on "
+                    "01_turns speaker turns + main-run 07 codes "
+                    "(CIP-001E). No quote text in the output."
+                ),
+            },
+            {
+                "name": "run_analysis_multiverse",
+                "function": self._run_analysis_multiverse,
+                "default_args": {
+                    "n_jsd_shuffles": 100,
+                    "seed": 0,
+                },
+                "docstr": (
+                    "Experience-gap product over analysis choices on "
+                    "main-run 07 codes (CIP-001E). Not 1080 LLM jobs."
+                ),
+            },
+            {
                 "name": "run_kind_reconstruction",
                 "function": self._run_kind_reconstruction,
                 "default_args": {
@@ -1206,10 +1383,13 @@ class Compute(lynguine.assess.compute.Compute):
                     "max_features": 4000,
                     "C": 1.0,
                     "verified_only": True,
+                    "label_mode": "experience",
+                    "text_source": "quote_and_phrase",
                 },
                 "docstr": (
                     "Siding: 5-fold bag-of-words reconstruction of Part B "
-                    "basis labels (CIP-001F)."
+                    "experience vs rest (CIP-001F). Seven-way bases remain "
+                    "an option via label_mode."
                 ),
             },
             {

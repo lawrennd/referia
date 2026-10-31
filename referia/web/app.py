@@ -41,6 +41,7 @@ def create_app(
     user_file: str = "_referia.yml",
     directory: str = ".",
     root: str | None = None,
+    urls: str | None = None,
 ) -> FastAPI:
     """Create and configure a FastAPI application for the given review directory.
 
@@ -55,8 +56,10 @@ def create_app(
     **Root-server mode**
         ``create_app(root="/path/to/referia/root")``
 
-        Serves any ``_referia.yml`` found under *root*, each addressable by its
-        directory path in the URL (e.g. ``/theses/examined/introduction/``).
+        Serves configs under *root*.  Default URL mode is **path** (CIP-000C):
+        a directory that holds ``_referia.yml`` / ``_referia.md`` is addressed
+        at that relative path.  **Permalink** mode (CIP-0022) builds a tree
+        from markdown pages with ``layout: referia`` and ``permalink:``.
         Config loading is deferred to the first request for each path and cached
         thereafter.  ``user_file`` and ``directory`` are ignored when *root* is
         provided.
@@ -66,6 +69,8 @@ def create_app(
         directory: Review directory for single-config mode (default: ``"."``).
         root: Root directory for multi-config mode.  When supplied, ``user_file``
             and ``directory`` are ignored.
+        urls: ``path`` or ``permalink``.  ``None`` reads ``referia.urls`` from
+            the serve-root ``_config.yml`` (default ``path``).
 
     Returns:
         Configured FastAPI application instance.
@@ -100,7 +105,22 @@ def create_app(
     if root is not None:
         # ── Root-server mode ──────────────────────────────────────────────────
         resolved_root = str(resolve_serve_root(root))
+        from referia.config.permalinks import (
+            PermalinkCollisionError,
+            URL_MODE_PERMALINK,
+            build_permalink_tree,
+            resolve_url_mode,
+        )
+
+        url_mode = resolve_url_mode(resolved_root, urls)
         app.state.root = resolved_root
+        app.state.url_mode = url_mode
+        app.state.permalink_tree = None
+        if url_mode == URL_MODE_PERMALINK:
+            try:
+                app.state.permalink_tree = build_permalink_tree(resolved_root)
+            except PermalinkCollisionError:
+                raise
         app.state.reviewer = None   # no single pre-loaded reviewer
         app.state.user_file = None
         app.state.directory = resolved_root
@@ -143,6 +163,13 @@ def create_app(
     else:
         # ── Single-config mode (original behaviour) ───────────────────────────
         resolved_dir = str(Path(directory).resolve())
+        from referia.config.files import REFERIA_CONFIG_FILENAMES, config_filename
+
+        if (
+            not (Path(resolved_dir) / user_file).is_file()
+            and user_file in REFERIA_CONFIG_FILENAMES
+        ):
+            user_file = config_filename(resolved_dir)
         app.state.root = None
         app.state.user_file = user_file
         app.state.directory = resolved_dir
@@ -176,10 +203,13 @@ def create_app(
     @app.get("/health")
     async def health():
         if app.state.root is not None:
+            tree = getattr(app.state, "permalink_tree", None)
             return {
                 "status": "ok",
                 "mode": "root-server",
                 "root": app.state.root,
+                "url_mode": getattr(app.state, "url_mode", "path"),
+                "permalinks": 0 if tree is None else len(tree),
                 "configs_cached": len(app.state.reviewer_cache),
             }
         reviewer_ok = app.state.reviewer is not None

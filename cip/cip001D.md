@@ -2,7 +2,7 @@
 author: "Neil D. Lawrence"
 created: "2026-10-29"
 id: "001D"
-last_updated: "2026-10-29"
+last_updated: "2026-10-30"
 status: "Proposed"
 compressed: false
 related_requirements: ["0010", "0008", "0009", "000E", "0013"]
@@ -114,7 +114,7 @@ Application YAML (template, draghi, l172, ai-dialogue-formats `02_embed`) should
 
 - Per-row compute exceptions stay logged (`_log_route_error`). They increment `n_fail` and **do not** abort the batch (today’s loop already continues).
 - If a batch has `n_ok == 0` and `n_fail > 0`, return the existing generic “Populate all failed. See server log.” plus counts, still 200 HTML for HTMX, not a 503 that looks like WebReviewer load failure.
-- Status text is a fixed catalog plus integers (`Extracted 1840/2013 (12 failed, 0 skipped).`). No paths, no phrase text, no `str(exc)` (CIP-000E).
+- Status text is a fixed catalog plus integers (`Extracted 1840/2013 (12 failed, 0 complete).`). No paths, no phrase text, no `str(exc)` (CIP-000E). Complete is already filled or no points, not deferred work.
 
 ### Relation to CIP-001B
 
@@ -187,7 +187,7 @@ Ship this contract first if 001B is not ready. 001B then restarts a kernel that 
 
 ## Implementation Status
 
-- [ ] Skip filled populate targets unless Refresh cache
+- [x] Skip filled populate targets unless Refresh all (`args.skip_filled: false`; per-row `once` + `refresh_if`)
 - [ ] Flush named cache during populate-all
 - [ ] Survive disconnect; status fragment instead of full panel
 - [ ] HTMX chain / progress / pause: CIP-0021

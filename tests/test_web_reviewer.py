@@ -130,6 +130,7 @@ def _build_reviewer(review=None, viewer=None, index_vals=None, col_vals=None, co
     reviewer._data = data
     reviewer._directory = "/tmp"
     reviewer._filter_state = reviewer.get_filter_defaults()
+    reviewer._liquid_rows_cache = None
     reviewer._field_defaults = reviewer._build_field_defaults()
     return reviewer, data, storage
 
@@ -1071,6 +1072,25 @@ class TestAffectedWidgets:
             "_propose_split",
         }
 
+    def test_refresh_if_populate_button_is_affected(self):
+        specs = [
+            {
+                "type": "Checkbox",
+                "field": "refresh_classification",
+            },
+            {
+                "type": "PopulateButton",
+                "field": "_classify",
+                "args": {
+                    "target": "grounds_payload",
+                    "once": True,
+                    "refresh_if": "refresh_classification",
+                },
+            },
+        ]
+        reviewer, _, _ = _build_reviewer(review=specs)
+        assert reviewer.affected_widgets("refresh_classification") == {"_classify"}
+
 
 # ---------------------------------------------------------------------------
 # Tests: combinator update on set_value
@@ -1580,6 +1600,102 @@ class TestDisplayLayout:
         )
         assert unbounded.get_list_page_size() == 0
         assert unbounded.get_list_page_size(override=10) == 10
+
+    def test_listing_row_fields_skips_auxiliary_join_columns(self):
+        from referia.assess.web_review import listing_row_fields
+
+        class _Rev:
+            def get_review_specs(self):
+                return [
+                    {
+                        "type": "Section",
+                        "entries": [
+                            {
+                                "type": "PopulateButton",
+                                "field": "_classify",
+                                "args": {
+                                    "target": "grounds_payload",
+                                    "refresh_if": "refresh_classification",
+                                },
+                            },
+                            {
+                                "type": "Checkbox",
+                                "field": "refresh_classification",
+                            },
+                            {"type": "Textarea", "field": "notes"},
+                            {
+                                "type": "HTML",
+                                "visible_if": {"field": "grounds_payload"},
+                            },
+                        ],
+                    }
+                ]
+
+            def get_display_detail_field(self):
+                return "grounds"
+
+        fields = listing_row_fields(_Rev())
+        assert fields >= {
+            "_classify",
+            "notes",
+            "grounds_payload",
+            "grounds",
+            "refresh_classification",
+            "title",
+            "config_url",
+            "sourceDirectory",
+            "description",
+        }
+        assert "extraction_phrases" not in fields
+        assert "extract_text" not in fields
+
+    def test_listing_row_fields_includes_skip_empty_column(self):
+        from referia.assess.web_review import listing_row_fields
+
+        class _Rev:
+            def get_review_specs(self):
+                return [
+                    {
+                        "type": "PopulateButton",
+                        "field": "_classify",
+                        "args": {
+                            "target": "grounds_payload",
+                            "skip_empty": "extraction_phrases",
+                        },
+                    }
+                ]
+
+            def get_display_detail_field(self):
+                return None
+
+        fields = listing_row_fields(_Rev())
+        assert "extraction_phrases" in fields
+        assert "grounds_payload" in fields
+        assert "title" in fields
+        assert "config_url" in fields
+
+
+    def test_listing_row_fields_keeps_chrome_when_only_complete(self):
+        from referia.assess.web_review import listing_row_fields
+
+        class _Rev:
+            def get_review_specs(self):
+                return [
+                    {"type": "Checkbox", "field": "complete"},
+                    {"type": "SaveButton"},
+                ]
+
+            def get_display_detail_field(self):
+                return None
+
+        fields = listing_row_fields(_Rev())
+        assert "complete" in fields
+        assert "title" in fields
+        assert "config_url" in fields
+        assert "sourceDirectory" in fields
+        assert "description" in fields
+        assert "date" in fields
+        assert "extraction_phrases" not in fields
 
     def test_working_window_slices_after_filters(self):
         from referia.assess.web_review import listing_window
@@ -2336,6 +2452,30 @@ class TestRowsAndFilters:
         assert "rows" in (captured.get("local") or {})
         assert captured["local"]["rows"][0]["title"] == "Alpha"
         assert "list" in html or "viewer" in html
+
+    def test_render_viewer_html_skips_rows_when_liquid_does_not_use_them(self):
+        reviewer, data, _ = _build_reviewer(
+            index_vals=["a"],
+            col_vals={"title": "Alpha"},
+            extra={"display": {"layout": "inline_list"}},
+        )
+        captured = {}
+        reviewer.get_rows = lambda: (_ for _ in ()).throw(
+            AssertionError("get_rows must not run for copy that says 50 rows")
+        )
+
+        def _capture(view, kwargs=None, local=None):
+            captured["local"] = local
+            return "ok"
+
+        data.view_to_value.side_effect = _capture
+        reviewer.render_viewer_html(
+            {
+                "type": "Markdown",
+                "liquid": "The first paint is 50 rows; {{ store_status.cache.n_rows }}",
+            }
+        )
+        assert "rows" not in (captured.get("local") or {})
 
     def test_render_viewer_html_visible_if_inherited_input_column(self):
         """Present flags on the child row gate viewer Liquid (no review widget)."""

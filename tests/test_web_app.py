@@ -441,6 +441,47 @@ class TestResolveConfigPath:
         assert file_path == tmp_path / "_referia.yml"
         assert user_file == "_referia.yml"
 
+    def test_directory_path_maps_to_markdown(self, tmp_path):
+        from referia.web.routes import _resolve_config_path
+        cfg = tmp_path / "intro"
+        cfg.mkdir()
+        (cfg / "_referia.md").write_text("---\ntitle: md\n---\n\nBody\n")
+        file_path, user_file = _resolve_config_path(str(tmp_path), "intro")
+        assert file_path == cfg / "_referia.md"
+        assert user_file == "_referia.md"
+
+    def test_markdown_wins_over_yml(self, tmp_path):
+        from referia.web.routes import _resolve_config_path
+        cfg = tmp_path / "intro"
+        cfg.mkdir()
+        (cfg / "_referia.yml").write_text("title: yml")
+        (cfg / "_referia.md").write_text("---\ntitle: md\n---\n")
+        file_path, user_file = _resolve_config_path(str(tmp_path), "intro")
+        assert file_path == cfg / "_referia.md"
+        assert user_file == "_referia.md"
+
+    def test_explicit_md_filename(self, tmp_path):
+        from referia.web.routes import _resolve_config_path
+        cfg = tmp_path / "intro"
+        cfg.mkdir()
+        (cfg / "_draft.md").write_text("---\ntitle: draft\n---\n")
+        file_path, user_file = _resolve_config_path(
+            str(tmp_path), "intro/_draft.md"
+        )
+        assert file_path == cfg / "_draft.md"
+        assert user_file == "_draft.md"
+
+    def test_read_config_meta_from_markdown_frontmatter(self, tmp_path):
+        from referia.web.routes import _read_config_meta
+        path = tmp_path / "_referia.md"
+        path.write_text(
+            "---\ntitle: Markdown Hub\ndescription: A stage.\n---\n\n"
+            "**Access.** Data: sibling `_referia.md` files.\n"
+        )
+        meta = _read_config_meta(path)
+        assert meta["title"] == "Markdown Hub"
+        assert meta["description"] == "A stage."
+
 
 class TestGetCachedReviewer:
     def test_loads_reviewer_on_cache_miss(self, tmp_path):
@@ -1185,7 +1226,7 @@ class TestCLIArgumentParsing:
         missing = tmp_path / "personal"
         args = argparse.Namespace(
             root=str(missing), directory=None, config="_referia.yml",
-            host="127.0.0.1", port=8000,
+            host="127.0.0.1", port=8000, urls=None,
         )
         with pytest.raises(SystemExit) as exc_info:
             _serve(args)
