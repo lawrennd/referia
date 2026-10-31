@@ -1234,3 +1234,55 @@ class TestCLIArgumentParsing:
         err = capsys.readouterr().err
         assert "does not exist" in err
         assert str(missing) in err
+
+    def test_urls_flag_parsed(self):
+        from referia.cli import _build_parser
+
+        args = _build_parser().parse_args(
+            ["serve", "--root", "/tmp", "--urls", "permalink"]
+        )
+        assert args.urls == "permalink"
+
+    def test_permalink_collision_exits(self, tmp_path, capsys):
+        from referia.cli import _serve
+        import argparse
+
+        def _page(name, permalink):
+            (tmp_path / name).write_text(
+                "---\nlayout: referia\n"
+                f"permalink: {permalink}\n"
+                "referia_config_version: 2\n"
+                "title: x\n---\n",
+                encoding="utf-8",
+            )
+
+        _page("a.md", "/x/")
+        _page("b.md", "/x/")
+        args = argparse.Namespace(
+            root=str(tmp_path), directory=None, config="_referia.yml",
+            host="127.0.0.1", port=8000, urls="permalink",
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            _serve(args)
+        assert exc_info.value.code == 1
+        assert "Duplicate permalink" in capsys.readouterr().err
+
+    def test_permalink_serve_prints_tree_count(self, tmp_path, capsys):
+        from referia.cli import _serve
+        import argparse
+        from unittest.mock import patch
+
+        (tmp_path / "01_turns.md").write_text(
+            "---\nlayout: referia\npermalink: /01_turns/\n"
+            "referia_config_version: 2\ntitle: Turns\n---\n",
+            encoding="utf-8",
+        )
+        args = argparse.Namespace(
+            root=str(tmp_path), directory=None, config="_referia.yml",
+            host="127.0.0.1", port=8000, urls="permalink",
+        )
+        with patch("uvicorn.run"):
+            _serve(args)
+        out = capsys.readouterr().out
+        assert "permalink" in out.lower()
+        assert "1 page" in out

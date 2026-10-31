@@ -93,3 +93,49 @@ def test_load_site_constants_empty_without_config(tmp_path: Path):
     stage = tmp_path / "01_turns"
     stage.mkdir()
     assert load_site_constants(stage, config_path=stage / "_referia.md") == {}
+
+
+def test_referia_url_mode_invalid_and_ghub_list():
+    from referia.config.site import referia_url_mode
+
+    assert referia_url_mode({"referia": ["not-a-map"]}) == "path"
+    assert referia_url_mode({"referia": {"urls": "tree"}}) == "path"
+    assert referia_url_mode({"referia": {"urls": "permalink"}}) == "permalink"
+    site = flatten_site_config(
+        {"ghub": [{"edit": True, "organization": "o", "repository": "r"}]}
+    )
+    assert site["ghub_organization"] == "o"
+    assert github_edit_url(site, "") is None
+
+
+def test_find_site_config_stops_at_git_and_reads_file_start(tmp_path: Path):
+    repo = tmp_path / "repo"
+    nested = repo / "a" / "b"
+    nested.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    (tmp_path / "_config.yml").write_text("title: above repo\n")
+    assert find_site_config(nested) is None
+    cfg = tmp_path / "study" / "_config.yml"
+    cfg.parent.mkdir()
+    cfg.write_text("title: from file\n", encoding="utf-8")
+    assert find_site_config(cfg) == cfg
+
+
+def test_read_mapping_errors_and_outside_relpath(tmp_path: Path):
+    from referia.config.site import _read_mapping
+
+    missing = tmp_path / "gone.yml"
+    assert _read_mapping(missing) == {}
+    bad = tmp_path / "_config.yml"
+    bad.write_text(":\n  - not yaml", encoding="utf-8")
+    assert _read_mapping(bad) == {}
+    listed = tmp_path / "list.yml"
+    listed.write_text("- a\n", encoding="utf-8")
+    assert _read_mapping(listed) == {}
+    (tmp_path / "_config.yml").write_text(
+        "ghub:\n  edit: true\n  organization: mlatcl\n  repository: r\n",
+        encoding="utf-8",
+    )
+    outside = Path("/tmp/elsewhere.md")
+    site = load_site_constants(tmp_path, config_path=outside, stop=tmp_path)
+    assert site["github_edit_url"].endswith("/elsewhere.md")

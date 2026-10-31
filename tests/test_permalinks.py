@@ -132,3 +132,79 @@ def test_default_path_mode_still_uses_directory_yml(tmp_path):
     assert resp.status_code == 200
     assert app.state.url_mode == "path"
     assert app.state.permalink_tree is None
+
+
+def _mock_reviewer():
+    mock = MagicMock()
+    mock.index_list.return_value = ["row"]
+    mock.get_index.return_value = "row"
+    mock.get_viewer_specs.return_value = []
+    mock.get_review_specs.return_value = []
+    mock.get_widget_specs.return_value = []
+    mock.render_viewer_html.return_value = ""
+    mock.get_value.return_value = ""
+    mock.get_row_data.return_value = {}
+    mock._interface = MagicMock(user_file="01_turns.md")
+    return mock
+
+
+def test_lookup_permalink_and_unknown_urls_override(tmp_path):
+    from referia.config.permalinks import lookup_permalink
+
+    _page(tmp_path / "01_turns.md", "/01_turns/")
+    tree = build_permalink_tree(tmp_path)
+    assert lookup_permalink(tree, "01_turns").path.name == "01_turns.md"
+    assert lookup_permalink(tree, "/missing/") is None
+    assert resolve_url_mode(tmp_path, "weird") == "path"
+
+
+def test_exclude_string_skips_layouts_and_markdown_suffix(tmp_path):
+    from referia.config.permalinks import site_exclude_patterns
+
+    (tmp_path / "_config.yml").write_text("exclude: drafts\n")
+    (tmp_path / "_layouts").mkdir()
+    _page(tmp_path / "_layouts" / "referia.html.md", "/layout/")
+    drafts = tmp_path / "drafts"
+    drafts.mkdir()
+    _page(drafts / "skip.md", "/skip/")
+    _page(tmp_path / "01_turns.markdown", "/01_turns/")
+    tree = build_permalink_tree(tmp_path)
+    assert "/skip/" not in tree
+    assert "/layout/" not in tree
+    assert "/01_turns/" in tree
+    assert site_exclude_patterns({"exclude": "drafts"}) == ("drafts",)
+
+
+def test_unreadable_markdown_is_skipped(tmp_path):
+    bad = tmp_path / "broken.md"
+    bad.write_text("---\nlayout: [unterminated\n", encoding="utf-8")
+    _page(tmp_path / "ok.md", "/ok/")
+    tree = build_permalink_tree(tmp_path)
+    assert set(tree) == {"/ok/"}
+
+
+def test_permalink_listing_health_and_404(tmp_path):
+    _page(tmp_path / "01_turns.md", "/01_turns/", "Turns")
+    with patch("referia.assess.web_review.WebReviewer", return_value=_mock_reviewer()):
+        app = create_app(root=str(tmp_path), urls="permalink")
+        with TestClient(app) as client:
+            health = client.get("/health")
+            listing = client.get("/?current=0")
+            page = client.get("/01_turns/")
+            missing = client.get("/nope/")
+            errors = client.get("/errors")
+    assert health.status_code == 200
+    body = health.json()
+    assert body["url_mode"] == "permalink"
+    assert body["permalinks"] == 1
+    assert listing.status_code == 200
+    assert "01_turns" in listing.text
+    assert page.status_code == 200
+    assert missing.status_code == 404
+    assert errors.status_code == 200
+
+
+def test_permalink_collision_error_str():
+    err = PermalinkCollisionError("/x/", Path("a.md"), Path("b.md"))
+    assert "/x/" in str(err)
+    assert err.first.name == "a.md"

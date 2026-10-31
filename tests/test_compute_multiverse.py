@@ -42,3 +42,48 @@ def test_analysis_multiverse_waits_on_grounds():
     assert summary == []
     assert n == 0
     assert "07_grounds" in md
+
+
+def test_analysis_multiverse_requires_basis_and_both_formats():
+    summary, md, n = run_analysis_multiverse(
+        [{"format": "workshop", "doc_id": "a", "quote_support": 1.0}]
+    )
+    assert n == 0
+    assert "07 basis" in md
+    only_ws = [
+        _point("workshop", "workshops/a.docx", "personal_experience"),
+        _point("workshop", "workshops/b.docx", "principle"),
+    ]
+    summary, md, n = run_analysis_multiverse(only_ws, n_jsd_shuffles=0)
+    assert n == 0
+    assert "both formats" in md
+
+
+def test_analysis_multiverse_exclusions_and_point_weighting():
+    points = [
+        _point("chatbot", "autumn_2025::1", "principle"),
+        _point(
+            "workshop",
+            "workshops/a.docx",
+            "personal_experience",
+            unit="::c0001",
+        ),
+        _point(
+            "workshop",
+            "workshops/carousel.docx",
+            "personal_experience",
+        ),
+        _point("workshop", "workshops/b.docx", "principle"),
+    ]
+    points[2]["session_type"] = "carousel"
+    points[3]["extract_text"] = "Speaker 1: welcome everyone"
+    summary, md, n = run_analysis_multiverse(
+        points, n_jsd_shuffles=0, seed="0"
+    )
+    assert n > 0
+    assert summary[0]["configurations"] == n
+    summary2, md2, n2 = run_analysis_multiverse(
+        points, n_jsd_shuffles="8", seed=0
+    )
+    assert n2 == n
+    assert "JSD" in md2 or "1080" in md2

@@ -2718,3 +2718,39 @@ class TestPopulateProgressChip:
         assert 'id="populate-filled-_classify"' in html
         assert 'hx-swap-oob="true"' in html
         assert "Classify 1018/2013" in html
+
+
+class TestPopulateHelpers:
+    def test_target_filled_and_arg_flags(self):
+        from referia.web.render import (
+            _arg_flag,
+            _populate_input_nonempty,
+            _populate_once,
+            _populate_refresh_if_field,
+            _populate_skip_empty_field,
+            _populate_skip_filled,
+            _populate_target_filled,
+        )
+
+        assert _populate_target_filled(None) is False
+        assert _populate_target_filled(float("nan")) is False
+        assert _populate_target_filled("  ") is False
+        assert _populate_target_filled([]) is False
+        assert _populate_target_filled({"a": 1}) is True
+        assert _populate_once({"args": {}}) is False
+        assert _populate_once({"args": {"once": "yes"}}) is True
+        assert _populate_skip_filled({"args": {"skip_filled": "off"}}) is False
+        assert _arg_flag({"args": {"once": "maybe"}}, "once", default=False) is False
+        assert _populate_refresh_if_field({"args": {"refresh_if": False}}) == ""
+        assert _populate_refresh_if_field({"args": {"refresh_if": "go"}}) == "go"
+        assert _populate_skip_empty_field({"args": {}}) == ""
+        assert _populate_skip_empty_field({"args": {"skip_empty": "pts"}}) == "pts"
+        assert _populate_input_nonempty(None) is False
+        assert _populate_input_nonempty("  ") is False
+        assert _populate_input_nonempty("hello") is True
+        assert _populate_input_nonempty("[]") is False
+        assert _populate_input_nonempty('[{"a": 1}]') is True
+        assert _populate_input_nonempty("{not json") is True
+        assert _populate_input_nonempty({"a": 1}) is True
+        assert _populate_input_nonempty([{}, 0, "x"]) is True
+        assert _populate_input_nonempty(3) is True

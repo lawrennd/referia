@@ -250,3 +250,140 @@ def test_stories_follow_stories_waiting_on_grounds():
     assert rows == []
     assert n == 0
     assert "07_grounds" in md
+
+
+def test_is_labelled_empty_and_inner_speaker_split():
+    assert is_labelled([]) is False
+    assert is_labelled(["", "  "]) is False
+    paragraphs = [
+        "Speaker 2: first Speaker 3: second",
+        "and then more from speaker 3",
+        "Speaker 1: closing",
+    ]
+    turns = build_turns(paragraphs, doc_id="workshops/a.docx")
+    speakers = [t["speaker"] for t in turns]
+    assert "s2" in speakers
+    assert "s3" in speakers
+    assert turns[-1]["facilitator"] is True
+
+
+def test_quote_ellipsis_and_unplaced_points():
+    turns = build_turns(
+        ["Speaker 2: I saw this last year at work"],
+        doc_id="workshops/a.docx",
+    )
+    for turn in turns:
+        turn["round"] = "spring_2026"
+    points = [
+        {
+            "doc_id": "workshops/a.docx",
+            "quote": "I saw this … at work",
+            "basis": "personal_experience",
+            "format": "workshop",
+            "round": "spring_2026",
+            "unit_id": "workshops/a.docx::c0003",
+        },
+        {
+            "doc_id": "workshops/a.docx",
+            "quote": "this quote is not in the turn",
+            "basis": "principle",
+            "format": "workshop",
+            "round": "spring_2026",
+            "unit_id": "workshops/a.docx::c0004",
+        },
+    ]
+    placed = place_points(turns, points)
+    assert placed[0]["turn_i"] is not None
+    assert placed[1]["turn_i"] is None
+    rows, md, n = run_stories_follow_stories(
+        turns, points, n_shuffles=8, seed=0, lookbacks="1,2"
+    )
+    assert n == 1
+    assert rows
+    assert "this quote is not" not in md
+
+
+def test_turns_for_round_wrong_round():
+    turns = [{"doc_id": "x", "round": "autumn_2025", "turn_i": 0}]
+    got, msg = turns_for_round(turns, "spring_2026")
+    assert got == []
+    assert "spring_2026" in msg
+
+
+def test_rebuild_no_workshop_docs_and_zero_examples():
+    turns, md, n = run_rebuild_speaker_turns(
+        documents=[{"filename": "chatbot/x.docx", "format": "chatbot"}],
+        paragraphs_by_filename={},
+    )
+    assert n == 0
+    assert turns == []
+    assert "No workshop" in md or "workshop" in md.lower()
+
+    turns, md, n = run_rebuild_speaker_turns(
+        documents=[
+            {"filename": "workshops/a.docx", "format": "workshop", "round": "spring_2026"}
+        ],
+        paragraphs_by_filename={"workshops/a.docx": ["Speaker 2: hello there"]},
+        example_limit=0,
+    )
+    assert n == 1
+    assert "| — |" in md or "—" in md
+
+
+def test_stories_topic_gap_and_cross_unit():
+    turns = build_turns(
+        [
+            "Speaker 2: I saw this last year",
+            "Speaker 3: in principle this should work",
+            "Speaker 2: I saw this last year again",
+        ],
+        doc_id="workshops/a.docx",
+        treat_speaker_1_as_facilitator=False,
+    )
+    for turn in turns:
+        turn["round"] = "spring_2026"
+    points = [
+        {
+            "doc_id": "workshops/a.docx",
+            "quote": "I saw this last year",
+            "basis": "personal_experience",
+            "format": "workshop",
+            "round": "spring_2026",
+            "unit_id": "workshops/a.docx::c0003",
+            "topic": "T0",
+        },
+        {
+            "doc_id": "workshops/a.docx",
+            "quote": "in principle this should work",
+            "basis": "principle",
+            "format": "workshop",
+            "round": "spring_2026",
+            "unit_id": "workshops/a.docx::c0004",
+            "topic": "T1",
+        },
+        {
+            "doc_id": "workshops/a.docx",
+            "quote": "I saw this last year again",
+            "basis": "personal_experience",
+            "format": "workshop",
+            "round": "spring_2026",
+            "unit_id": "workshops/a.docx::c0005",
+            "topic": "T0",
+        },
+    ]
+    rows, md, n = run_stories_follow_stories(
+        turns,
+        points,
+        n_shuffles=8,
+        seed=0,
+        lookbacks=[1],
+        cross_unit_only=True,
+    )
+    assert n == 3
+    assert rows
+    assert "within-topic" in md or "topic" in md.lower()
+    rows2, md2, n2 = run_stories_follow_stories(
+        turns, [], n_shuffles="8", seed=0, lookbacks=[1]
+    )
+    assert n2 == 0
+    assert rows2 == []
