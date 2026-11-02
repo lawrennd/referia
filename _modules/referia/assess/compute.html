@@ -876,6 +876,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.embed</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_embed</span><span class="p">,</span> <span class="n">llm_embed_extraction_phrases</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.compare</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">jsd</span><span class="p">,</span>
+    <span class="n">run_basis_share_compare</span><span class="p">,</span>
     <span class="n">run_format_share_compare</span><span class="p">,</span>
     <span class="n">run_question_type_stress</span><span class="p">,</span>
     <span class="n">run_wordlist_floor</span><span class="p">,</span>
@@ -1160,6 +1161,22 @@
                     <span class="n">bases</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;basis&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grounds</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">run_wordlist_floor</span><span class="p">(</span>
             <span class="n">quotes</span><span class="p">,</span> <span class="n">bases</span><span class="o">=</span><span class="n">bases</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_run_basis_share_compare</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">bases</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">formats</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">doc_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load coded grounds from sibling ``grounds.yml`` when needed.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">bases</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">grounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;grounds.yml&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">grounds</span><span class="p">:</span>
+                <span class="n">bases</span> <span class="o">=</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;basis&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grounds</span><span class="p">]</span>
+                <span class="n">formats</span> <span class="o">=</span> <span class="n">formats</span> <span class="ow">or</span> <span class="p">[</span>
+                    <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;format&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;group&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grounds</span>
+                <span class="p">]</span>
+                <span class="n">doc_ids</span> <span class="o">=</span> <span class="n">doc_ids</span> <span class="ow">or</span> <span class="p">[</span><span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doc_id&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">grounds</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">run_basis_share_compare</span><span class="p">(</span>
+            <span class="n">bases</span><span class="p">,</span> <span class="n">formats</span><span class="o">=</span><span class="n">formats</span><span class="p">,</span> <span class="n">doc_ids</span><span class="o">=</span><span class="n">doc_ids</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_study_files_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -2137,6 +2154,24 @@
                 <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
                     <span class="s2">&quot;Document-weighted type mix, lens shares, and JSD &quot;</span>
                     <span class="s2">&quot;(CIP-001E). Paper Part A analogue on the current grain.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;run_basis_share_compare&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_basis_share_compare</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;n_boot&quot;</span><span class="p">:</span> <span class="mi">2000</span><span class="p">,</span>
+                    <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span>
+                    <span class="s2">&quot;min_gap&quot;</span><span class="p">:</span> <span class="mf">3.0</span><span class="p">,</span>
+                    <span class="s2">&quot;experience_bases&quot;</span><span class="p">:</span> <span class="p">[</span>
+                        <span class="s2">&quot;personal_experience&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;others_experience&quot;</span><span class="p">,</span>
+                    <span class="p">],</span>
+                    <span class="s2">&quot;professional_basis&quot;</span><span class="p">:</span> <span class="s2">&quot;professional_knowledge&quot;</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Document-weighted Part B basis mix and experience / &quot;</span>
+                    <span class="s2">&quot;professional gaps (CIP-001E). Reads grounds.yml.&quot;</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
