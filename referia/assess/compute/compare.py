@@ -21,9 +21,20 @@ from .vq import expand_vq_responsibilities
 
 __all__ = [
     "jsd",
+    "run_basis_share_compare",
     "run_format_share_compare",
     "run_question_type_stress",
     "run_wordlist_floor",
+]
+
+DEFAULT_BASIS_VALUES = [
+    "personal_experience",
+    "others_experience",
+    "professional_knowledge",
+    "principle",
+    "public_example",
+    "project_materials",
+    "unclear",
 ]
 
 
@@ -158,11 +169,13 @@ def _type_rows(
         g = grp.get(doc, "")
         if g:
             group_docs[g].append(doc)
-    names = list(group_docs)
+    # Sorted names: for chatbot/workshop this yields workshop − chatbot (w−c).
+    names = sorted(group_docs)
     if not names:
         return []
     stats: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]] = {}
-    for g, docs in group_docs.items():
+    for g in names:
+        docs = group_docs[g]
         arr = _doc_kind_matrix(by_doc, docs, values)
         mean, lo, hi = _bootstrap_means(arr, rng, reps)
         idx = rng.integers(0, len(arr), size=(reps, len(arr)))
@@ -171,7 +184,8 @@ def _type_rows(
     rows = []
     for i, val in enumerate(values):
         row: dict[str, Any] = {"value": val}
-        for g, docs in group_docs.items():
+        for g in names:
+            docs = group_docs[g]
             mean, lo, hi, _boot = stats[g]
             row[f"{g}_pct"] = float(mean[i])
             row[f"{g}_lo"] = float(lo[i])
@@ -371,6 +385,177 @@ QUESTION_TYPES = {
 }
 
 EXPERIENCE_BASES = {"personal_experience", "others_experience"}
+
+PROFESSIONAL_BASIS = "professional_knowledge"
+
+
+def run_basis_share_compare(
+    bases,
+    formats=None,
+    doc_ids=None,
+    *,
+    groups=None,
+    experience_bases: Sequence[str] | None = None,
+    professional_basis: str = PROFESSIONAL_BASIS,
+    basis_values: Sequence[str] | None = None,
+    n_boot: int = 2000,
+    seed: int = 42,
+    min_gap: float = 3.0,
+    **_kwargs,
+) -> tuple:
+    """Document-weighted Part B basis shares by format (paper Table 2 analogue).
+
+    ``bases`` / ``formats`` (or ``groups``) / ``doc_ids`` are per-phrase from
+    ``grounds.yml``. Returns B1 basis mix plus experience and professional
+    gaps (workshop − chatbot), with cluster-bootstrap intervals.
+    """
+    bases = list(bases or [])
+    fmts = list(groups if groups is not None else (formats or []))
+    docs = list(doc_ids or [])
+    n = len(bases)
+    if not n or len(fmts) != n or len(docs) != n:
+        empty_md = (
+            "_No coded grounds: run 07_grounds Classify all + Save first._"
+        )
+        return [], [], empty_md, empty_md, {}
+
+    exp_set = {
+        str(b)
+        for b in (
+            experience_bases
+            if experience_bases is not None
+            else EXPERIENCE_BASES
+        )
+    }
+    values = list(basis_values or DEFAULT_BASIS_VALUES)
+    present = sorted({str(b) for b in bases if b is not None and str(b)})
+    for v in present:
+        if v not in values:
+            values.append(v)
+
+    n_boot = max(1, _as_int(n_boot, 2000))
+    seed = _as_int(seed, 42)
+    min_gap = float(min_gap) if min_gap is not None else 3.0
+    rng = np.random.default_rng(seed)
+
+    basis_mix = _type_rows(
+        docs,
+        fmts,
+        [str(b) if b is not None else "" for b in bases],
+        values=values,
+        rng=rng,
+        reps=n_boot,
+        min_gap=min_gap,
+    )
+
+    # Include the complement ("other") so each document's denominator is
+    # all of its points. Passing only the positive class made shares into
+    # presence rates (any hit → 100%).
+    exp_labels = [
+        "experience" if str(b) in exp_set else "other" for b in bases
+    ]
+    prof_labels = [
+        "professional"
+        if str(b) == str(professional_basis)
+        else "other"
+        for b in bases
+    ]
+    exp_rows = [
+        r
+        for r in _type_rows(
+            docs,
+            fmts,
+            exp_labels,
+            values=["experience", "other"],
+            rng=rng,
+            reps=n_boot,
+            min_gap=min_gap,
+        )
+        if r.get("value") == "experience"
+    ]
+    prof_rows = [
+        r
+        for r in _type_rows(
+            docs,
+            fmts,
+            prof_labels,
+            values=["professional", "other"],
+            rng=rng,
+            reps=n_boot,
+            min_gap=min_gap,
+        )
+        if r.get("value") == "professional"
+    ]
+    experience_gap: list[dict] = []
+    for row in exp_rows:
+        experience_gap.append({**row, "measure": "experience"})
+    for row in prof_rows:
+        experience_gap.append({**row, "measure": "professional"})
+
+    unique_g = sorted({str(g) for g in fmts if g is not None and str(g)})
+    basis_cols = [("Basis", "value")]
+    gap_cols = [("Measure", "measure")]
+    for g in unique_g:
+        basis_cols.append((f"{g} %", f"{g}_pct"))
+        gap_cols.append((f"{g} %", f"{g}_pct"))
+    if len(unique_g) == 2:
+        basis_cols += [("w−c", "difference"), ("clear", "clear")]
+        gap_cols += [("w−c", "difference"), ("clear", "clear")]
+
+    basis_mix_md = (
+        _md_table(basis_mix, basis_cols) if basis_mix else "_No basis mix._"
+    )
+    experience_gap_md = (
+        _md_table(experience_gap, gap_cols)
+        if experience_gap
+        else "_No experience / professional gap._"
+    )
+
+    # Headline comparison vs Jess / paper Table 2 when both formats present.
+    exp = next(
+        (r for r in experience_gap if r.get("measure") == "experience"),
+        None,
+    )
+    if exp and "workshop_pct" in exp and "chatbot_pct" in exp:
+        w = float(exp["workshop_pct"])
+        c = float(exp["chatbot_pct"])
+        d = float(exp.get("difference", w - c))
+        dlo = exp.get("diff_lo")
+        dhi = exp.get("diff_hi")
+        ci = (
+            f" (w−c 95% CI {float(dlo):.1f} to {float(dhi):.1f})"
+            if dlo is not None and dhi is not None
+            else ""
+        )
+        experience_gap_md = (
+            "**Headline — document-weighted experience** "
+            "(personal + others), same estimator as paper Table 2.\n\n"
+            "| Source | Workshop % | Chatbot % | w−c |\n"
+            "| --- | ---: | ---: | ---: |\n"
+            f"| **This grain** (`grounds.yml`) | **{w:.1f}** | "
+            f"**{c:.1f}** | **{d:.1f}**{ci} |\n"
+            "| Jess / paper (canonical) | 17.7 | 4.1 | 13.6 |\n\n"
+            "Paper figures are on Jess's extract grain; this row is the "
+            "same *method* on the current coded extract — not a claim "
+            "that the numbers should match.\n\n"
+            + experience_gap_md
+        )
+
+    n_docs: dict[str, int] = {}
+    if basis_mix:
+        for g in unique_g:
+            key = f"docs_{g}"
+            if key in basis_mix[0]:
+                n_docs[g] = int(basis_mix[0][key])
+
+    return (
+        _jsonable(basis_mix),
+        _jsonable(experience_gap),
+        basis_mix_md,
+        experience_gap_md,
+        _jsonable(n_docs),
+    )
+
 
 EXPERIENCE_WORDS = (
     r"(?i)\b(?:when i\b|i was\b|i had\b|i've had|i have had|i used to|"

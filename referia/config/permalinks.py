@@ -37,6 +37,7 @@ _SKIP_DIR_NAMES = {
     "_includes",
     "_site",
     "_sass",
+    "_data",
 }
 
 _MD_SUFFIXES = {".md", ".markdown", ".mmd"}
