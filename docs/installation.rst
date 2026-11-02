@@ -26,9 +26,15 @@ Installation from Source
 
    .. code-block:: bash
 
-       poetry install
+       poetry install --extras llm
 
-   This will install all the required dependencies, including lynguine.
+   This installs the core dependencies (including lynguine) plus the
+   optional ``llm`` extra (LangChain and OpenAI/Anthropic clients). Topic
+   naming, extract, and related populate actions need that extra; without
+   it they fail with ``LangChain is not installed``. Omit ``--extras llm``
+   only for a docs-only or non-LLM checkout. From another venv::
+
+       pip install "referia[llm] @ git+https://github.com/lawrennd/referia.git"
 
 Installation with pip
 ------------------
@@ -60,12 +66,13 @@ For development, you may want to install referia in development mode:
        cd lynguine
        poetry install
 
-3. Install referia in development mode:
+3. Install referia in development mode (include ``llm`` for naming /
+   extract / grain split naming):
 
    .. code-block:: bash
 
        cd ../referia
-       poetry install
+       poetry install --extras llm
 
 Verifying the Installation
 -----------------------
