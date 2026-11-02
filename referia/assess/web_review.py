@@ -522,6 +522,15 @@ class WebReviewer:
             return None
         return str(raw)
 
+    def get_display_detail_markdown(self) -> bool:
+        """True when listing ``display.detail_field`` should render markdown."""
+        raw = self._display_config().get("detail_markdown")
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str):
+            return raw.strip().lower() in {"true", "yes", "1"}
+        return False
+
     def get_list_page_size(self, override: int | None = None) -> int:
         """Return ``display.list_page_size`` (default 50). ``0`` is unbounded.
 
