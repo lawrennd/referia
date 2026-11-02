@@ -17,8 +17,20 @@ pip install referia
 Or, when working from source:
 
 ```bash
-poetry install
+poetry install --extras llm
+# equivalent: poetry install --with llm
 ```
+
+Or, when installing into another project’s venv from GitHub:
+
+```bash
+pip install "referia[llm] @ git+https://github.com/lawrennd/referia.git"
+```
+
+The optional `llm` extra pulls in LangChain and the OpenAI/Anthropic
+clients used by topic naming, extract, and related populate actions. Without
+it, those widgets fail with `LangChain is not installed`. For a docs-only
+or non-LLM checkout, omit the extra (`poetry install` / `pip install referia`).
 
 ## Quick start
 
