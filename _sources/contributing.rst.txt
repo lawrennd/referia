@@ -13,7 +13,8 @@ Development Setup
        git clone https://github.com/lawrennd/lynguine.git
        git clone https://github.com/lawrennd/referia.git
 
-2. Install both packages in development mode:
+2. Install both packages in development mode. For referia, include the
+   ``llm`` group so topic naming and related populate actions work:
 
    .. code-block:: bash
 
@@ -21,7 +22,7 @@ Development Setup
        poetry install
        
        cd ../referia
-       poetry install
+       poetry install --extras llm
 
 3. Run tests to ensure everything is working:
 

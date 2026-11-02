@@ -244,7 +244,7 @@
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="../../../modules/assess.html#referia.assess.data.CustomDataFrame.view_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_value()</span></code></a></li>
@@ -856,6 +856,35 @@
     <span class="n">level</span><span class="o">=</span><span class="n">ctxt</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;logging&quot;</span><span class="p">][</span><span class="s2">&quot;level&quot;</span><span class="p">],</span>
     <span class="n">filename</span><span class="o">=</span><span class="n">ctxt</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;logging&quot;</span><span class="p">][</span><span class="s2">&quot;filename&quot;</span><span class="p">],</span>
 <span class="p">)</span>
+
+<span class="n">_MARKDOWN_CONFIG_EXTS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;.md&quot;</span><span class="p">,</span> <span class="s2">&quot;.markdown&quot;</span><span class="p">,</span> <span class="s2">&quot;.mmd&quot;</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_frontmatter_yaml_block</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the YAML block from a markdown-frontmatter file.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;---</span><span class="se">\r\n</span><span class="s2">&quot;</span><span class="p">):</span>
+        <span class="n">rest</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span>
+    <span class="k">elif</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;---</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">):</span>
+        <span class="n">rest</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">text</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">rest</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">---&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rest</span>
+    <span class="c1"># Strip a dangling CR when the closing fence was ``\r\n---``.</span>
+    <span class="k">return</span> <span class="n">rest</span><span class="p">[:</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">load_yaml_mapping</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a YAML mapping, taking frontmatter from markdown files.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">fname</span><span class="p">))[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">_MARKDOWN_CONFIG_EXTS</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">_frontmatter_yaml_block</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">return</span> <span class="p">{}</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">data</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="p">{}</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">_HConfig</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">_Config</span><span class="p">):</span>
@@ -1842,16 +1871,13 @@
         <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Attempting to open file </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
-                    <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
-                <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                    <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Error reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;, error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
-                    <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
-                    
-                    <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">load_yaml_mapping</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Error reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;, error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
                     <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">field</span><span class="p">]</span>
@@ -1941,14 +1967,13 @@
         <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Attempting to open file </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
-                    <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
-                <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                    <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Error reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;, error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
-                    <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">load_yaml_mapping</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Error reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;, error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
                     <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">field</span><span class="p">]</span>
@@ -1985,16 +2010,13 @@
         <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Attempting to open file </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">stream</span><span class="p">:</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
-                    <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span>
-                <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                    <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Error reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;, error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
-                    <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
-                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
-                    
-                    <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">load_yaml_mapping</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Error reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;, error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
                     <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">field</span><span class="p">]</span>

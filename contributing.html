@@ -246,7 +246,7 @@
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/assess.html#referia.assess.data.CustomDataFrame.view_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_value()</span></code></a></li>
@@ -853,12 +853,13 @@ git<span class="w"> </span>clone<span class="w"> </span>https://github.com/lawre
 </pre></div>
 </div>
 </li>
-<li><p>Install both packages in development mode:</p>
+<li><p>Install both packages in development mode. For referia, include the
+<code class="docutils literal notranslate"><span class="pre">llm</span></code> group so topic naming and related populate actions work:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>lynguine
 poetry<span class="w"> </span>install
 
 <span class="nb">cd</span><span class="w"> </span>../referia
-poetry<span class="w"> </span>install
+poetry<span class="w"> </span>install<span class="w"> </span>--extras<span class="w"> </span>llm
 </pre></div>
 </div>
 </li>

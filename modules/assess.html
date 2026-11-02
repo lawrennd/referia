@@ -247,7 +247,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.transpose"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.transpose()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.types</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.update_from_pandas"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.update_from_pandas()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.valid_data_types"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.valid_data_types()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.values"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.values</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.view_to_tmpname"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_tmpname()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#referia.assess.data.CustomDataFrame.view_to_value"><code class="docutils literal notranslate"><span class="pre">CustomDataFrame.view_to_value()</span></code></a></li>
@@ -2908,10 +2908,14 @@ is returned. The last row is assumed to be the most recent.</p>
 <span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">transpose</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
 <dd></dd></dl>
 
-<dl class="py attribute">
+<dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">valid_data_types</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'cache',</span> <span class="pre">'constants',</span> <span class="pre">'data',</span> <span class="pre">'global_cache',</span> <span class="pre">'global_consts',</span> <span class="pre">'globals',</span> <span class="pre">'input',</span> <span class="pre">'output',</span> <span class="pre">'parameter_cache',</span> <span class="pre">'parameters',</span> <span class="pre">'series',</span> <span class="pre">'series_cache',</span> <span class="pre">'writedata',</span> <span class="pre">'writeseries'}</span></em></dt>
-<dd></dd></dl>
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">valid_data_types</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
+<dd><p>Interface keys that name data slots (input/output/cache/parameters).</p>
+<p>Implemented as a classmethod (not <code class="docutils literal notranslate"><span class="pre">&#64;classmethod</span></code> + <code class="docutils literal notranslate"><span class="pre">&#64;property</span></code>):
+the stacked decorators return a bound method under Python 3.13+, so
+<code class="docutils literal notranslate"><span class="pre">key</span> <span class="pre">in</span> <span class="pre">cls.valid_data_types</span></code> raises TypeError.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py">
@@ -4882,10 +4886,14 @@ columns are still broadcast onto every row via <code class="docutils literal not
 </dl>
 </dd></dl>
 
-<dl class="py attribute">
+<dl class="py method">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.valid_data_types">
-<span class="sig-name descname"><span class="pre">valid_data_types</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'cache',</span> <span class="pre">'constants',</span> <span class="pre">'data',</span> <span class="pre">'global_cache',</span> <span class="pre">'global_consts',</span> <span class="pre">'globals',</span> <span class="pre">'input',</span> <span class="pre">'output',</span> <span class="pre">'parameter_cache',</span> <span class="pre">'parameters',</span> <span class="pre">'series',</span> <span class="pre">'series_cache',</span> <span class="pre">'writedata',</span> <span class="pre">'writeseries'}</span></em><a class="headerlink" href="#referia.assess.data.CustomDataFrame.valid_data_types" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">valid_data_types</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#referia.assess.data.CustomDataFrame.valid_data_types" title="Link to this definition"></a></dt>
+<dd><p>Interface keys that name data slots (input/output/cache/parameters).</p>
+<p>Implemented as a classmethod (not <code class="docutils literal notranslate"><span class="pre">&#64;classmethod</span></code> + <code class="docutils literal notranslate"><span class="pre">&#64;property</span></code>):
+the stacked decorators return a bound method under Python 3.13+, so
+<code class="docutils literal notranslate"><span class="pre">key</span> <span class="pre">in</span> <span class="pre">cls.valid_data_types</span></code> raises TypeError.</p>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.values">
