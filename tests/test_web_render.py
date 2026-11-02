@@ -556,6 +556,7 @@ class TestButtons:
         assert "is-blocked" in html
         assert "hx-post=" not in html
         assert "Classify" in html
+        assert "Already done" in html
 
     def test_once_populate_button_enabled_when_refresh_if_checked(self):
         spec = {
@@ -590,6 +591,59 @@ class TestButtons:
         html = render_widget(spec, None, {"grounds_payload": [], "refresh_classification": False})
         assert "is-blocked" not in html
         assert 'hx-post="/populate/_classify"' in html
+
+    def test_once_populate_button_uses_once_blocked_copy(self):
+        spec = {
+            "type": "PopulateButton",
+            "field": "_extract",
+            "args": {
+                "description": "Extract",
+                "once": True,
+                "refresh_if": "refresh_extract",
+                "once_blocked": "Already extracted. Check Refresh extract to run again.",
+                "target": "extraction_payload",
+            },
+        }
+        html = render_widget(
+            spec,
+            None,
+            {"extraction_payload": {"raw": "ok"}, "refresh_extract": False},
+        )
+        assert "is-blocked" in html
+        assert "Already extracted" in html
+        assert "hx-post=" not in html
+
+    def test_once_populate_button_greys_when_filled_key_present(self):
+        spec = {
+            "type": "PopulateButton",
+            "field": "_embed",
+            "args": {
+                "description": "Embed",
+                "once": True,
+                "refresh_if": "refresh_embed",
+                "once_blocked": "Already embedded. Check Refresh embed to run again.",
+                "filled_key": "embedding",
+                "target": "extraction_phrases",
+                "requires": "extraction_phrases",
+            },
+        }
+        phrases = [{"phrase": "x", "embedding": [0.1, 0.2]}]
+        html = render_widget(
+            spec,
+            None,
+            {"extraction_phrases": phrases, "refresh_embed": False},
+        )
+        assert "is-blocked" in html
+        assert "Already embedded" in html
+        assert "hx-post=" not in html
+
+        pending = render_widget(
+            spec,
+            None,
+            {"extraction_phrases": [{"phrase": "x"}], "refresh_embed": False},
+        )
+        assert "is-blocked" not in pending
+        assert 'hx-post="/populate/_embed"' in pending
 
     def test_skip_empty_greys_classify_when_no_points(self):
         spec = {
@@ -2078,6 +2132,28 @@ class TestInlineListing:
         # Empty abstract: only one details block (talk-a)
         assert html.count('class="entry-detail"') == 1
 
+    def test_detail_markdown_renders_links(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "mail-a",
+                    "data": {
+                        "title": "Mail A",
+                        "body": "See [the site](https://example.com/path).",
+                    },
+                }
+            ],
+            [],
+            detail_field="body",
+            detail_markdown=True,
+        )
+        assert 'class="entry-detail-body widget-markdown"' in html
+        assert 'href="https://example.com/path"' in html
+        assert "target=\"_blank\"" in html
+        assert "[the site]" not in html
+
     def test_detail_field_omitted_by_default(self):
         from referia.web.render import render_inline_listing
 
@@ -2730,6 +2806,8 @@ class TestPopulateHelpers:
             _populate_skip_empty_field,
             _populate_skip_filled,
             _populate_target_filled,
+            _populate_button_filled,
+            _populate_filled_key,
         )
 
         assert _populate_target_filled(None) is False
@@ -2737,6 +2815,14 @@ class TestPopulateHelpers:
         assert _populate_target_filled("  ") is False
         assert _populate_target_filled([]) is False
         assert _populate_target_filled({"a": 1}) is True
+        embed_spec = {"args": {"filled_key": "embedding"}}
+        assert _populate_filled_key(embed_spec) == "embedding"
+        assert _populate_button_filled(
+            embed_spec, [{"phrase": "x", "embedding": [0.1]}]
+        ) is True
+        assert _populate_button_filled(embed_spec, [{"phrase": "x"}]) is False
+        assert _populate_button_filled(embed_spec, []) is False
+        assert _populate_button_filled({"args": {}}, [{"phrase": "x"}]) is True
         assert _populate_once({"args": {}}) is False
         assert _populate_once({"args": {"once": "yes"}}) is True
         assert _populate_skip_filled({"args": {"skip_filled": "off"}}) is False

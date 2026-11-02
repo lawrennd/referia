@@ -132,11 +132,14 @@ from referia.web.render import (
     populate_all_chrome_html,
     render_populate_progress_chip,
     _populate_once,
+    _populate_once_blocked_message,
     _populate_skip_filled,
     _populate_skip_empty_field,
     _populate_input_nonempty,
     _populate_refresh_if_field,
     _populate_target_filled,
+    _populate_button_filled,
+    _populate_filled_key,
     _checkbox_checked,
 )
 from referia.config.inherit_view import (
@@ -523,6 +526,7 @@ def _panel_response_context(
             review_specs,
             group_by=group_by,
             detail_field=reviewer.get_display_detail_field(),
+            detail_markdown=reviewer.get_display_detail_markdown() is True,
             documents=_list_document_entries(reviewer, "documents"),
             working_count=working_count,
             window=window,
@@ -1167,6 +1171,7 @@ async def listing_page(request: Request):
         reviewer.get_review_specs(view_options=view_options),
         group_by=_inline_list_group_by(filter_state),
         detail_field=reviewer.get_display_detail_field(),
+        detail_markdown=reviewer.get_display_detail_markdown() is True,
         documents=_list_document_entries(reviewer, "documents"),
         working_count=int(window.get("working_count") or 0),
         window=window,
@@ -2334,8 +2339,10 @@ def _populate_batch_size(spec: dict) -> int:
     return n if n >= 0 else 10
 
 
-def _value_is_filled(value: Any) -> bool:
+def _value_is_filled(value: Any, spec: dict | None = None) -> bool:
     """True when a populate target already has a usable value (CIP-001D skip)."""
+    if spec:
+        return _populate_button_filled(spec, value)
     return _populate_target_filled(value)
 
 
@@ -2355,7 +2362,9 @@ def _column_series(reviewer, column: str):
     return None
 
 
-def _count_filled_target(reviewer, column: str, working: list) -> int | None:
+def _count_filled_target(
+    reviewer, column: str, working: list, spec: dict | None = None
+) -> int | None:
     """How many working indices already have a filled populate target.
 
     Reads the cache (or other) partition Series. Does not ``set_index``
@@ -2379,7 +2388,7 @@ def _count_filled_target(reviewer, column: str, working: list) -> int | None:
                 iterable.append(None)
     n = 0
     for val in iterable:
-        if _value_is_filled(val):
+        if _value_is_filled(val, spec):
             n += 1
     return n
 
@@ -2387,7 +2396,7 @@ def _count_filled_target(reviewer, column: str, working: list) -> int | None:
 def _populate_filled_counts(reviewer, specs, working: list) -> dict[str, int]:
     """``route_key → filled count`` for PopulateButtons in *specs*."""
     counts: dict[str, int] = {}
-    by_target: dict[str, int | None] = {}
+    by_target: dict[tuple[str, str], int | None] = {}
     for spec in iter_spec_leaves(specs):
         if not isinstance(spec, dict) or spec.get("type") != "PopulateButton":
             continue
@@ -2395,9 +2404,13 @@ def _populate_filled_counts(reviewer, specs, working: list) -> dict[str, int]:
         target = _populate_button_target(spec)
         if not key or not target:
             continue
-        if target not in by_target:
-            by_target[target] = _count_filled_target(reviewer, target, working)
-        filled = by_target[target]
+        filled_key = _populate_filled_key(spec)
+        cache_key = (target, filled_key)
+        if cache_key not in by_target:
+            by_target[cache_key] = _count_filled_target(
+                reviewer, target, working, spec
+            )
+        filled = by_target[cache_key]
         if filled is not None:
             counts[key] = filled
     return counts
@@ -2544,7 +2557,7 @@ def _run_populate_all_and_respond(
                     current = None
                 idx_key = str(idx)
                 if skip_filled:
-                    if _value_is_filled(current):
+                    if _value_is_filled(current, btn_spec):
                         n_skipped += 1
                         n_classified += 1
                         continue
@@ -2650,13 +2663,13 @@ def _run_populate_and_respond(
 
     if _populate_once(btn_spec):
         try:
-            already = _value_is_filled(reviewer.get_value(target))
+            already = _value_is_filled(reviewer.get_value(target), btn_spec)
         except Exception:
             already = False
         if already and not _refresh_if_checked(reviewer, btn_spec):
             return HTMLResponse(
-                '<span class="status-warning">Already classified. '
-                "Check Refresh classification to run again.</span>"
+                '<span class="status-warning">'
+                f"{html.escape(_populate_once_blocked_message(btn_spec))}</span>"
             )
 
     skip_empty = _populate_skip_empty_field(btn_spec)
@@ -2874,6 +2887,7 @@ async def root_listing_page(request: Request, config_path: str):
         reviewer.get_review_specs(view_options=view_options),
         group_by=_inline_list_group_by(filter_state),
         detail_field=reviewer.get_display_detail_field(),
+        detail_markdown=reviewer.get_display_detail_markdown() is True,
         documents=_list_document_entries(reviewer, "documents"),
         working_count=int(window.get("working_count") or 0),
         window=window,

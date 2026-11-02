@@ -557,6 +557,16 @@ span.entry-title {
     white-space: pre-wrap;
     line-height: 1.45;
     color: #444;
+    max-height: 24rem;
+    overflow: auto;
+}
+
+.inline-listing .entry-detail-body.widget-markdown {
+    white-space: normal;
+}
+
+.inline-listing .entry-detail-body.widget-markdown img {
+    display: none;
 }
 
 .entry-extras {

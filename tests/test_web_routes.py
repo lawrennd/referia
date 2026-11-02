@@ -1165,7 +1165,7 @@ class TestPostPopulate:
         response = client.post("/populate/_classify")
         assert response.status_code == 200
         reviewer.run_populate.assert_not_called()
-        assert "Already classified" in response.text
+        assert "Already done" in response.text
 
     def test_once_runs_when_refresh_if_checked_then_clears(self, populate_client):
         client, reviewer = populate_client
@@ -1286,6 +1286,33 @@ class TestPostPopulateAll:
         assert reviewer.run_populate.call_count == 2
         assert seen[:2] == ["a", "b"]
         assert "Segment document 2/2" in response.text
+
+    def test_skip_filled_uses_nested_filled_key(self):
+        reviewer = self._listing_reviewer()
+        btn = reviewer.get_review_specs.return_value[0]
+        btn["field"] = "_embed"
+        btn["args"]["description"] = "Embed"
+        btn["args"]["target"] = "extraction_phrases"
+        btn["args"]["filled_key"] = "embedding"
+        values = {
+            "a": [{"phrase": "x", "embedding": [0.1]}],
+            "b": [{"phrase": "y"}],
+        }
+        current = {"idx": None}
+
+        def _set(idx):
+            current["idx"] = idx
+
+        reviewer.set_index.side_effect = _set
+        reviewer.get_value.side_effect = lambda _col: values.get(current["idx"])
+        with patch("referia.assess.web_review.WebReviewer", return_value=reviewer):
+            app = create_app(user_file="_referia.yml", directory="/tmp")
+            with TestClient(app) as client:
+                response = client.post("/populate-all/_embed")
+        assert response.status_code == 200
+        assert reviewer.run_populate.call_count == 1
+        assert "Embed 2/2" in response.text
+        assert "1 complete" in response.text
 
     def test_continues_after_one_failure(self):
         reviewer = self._listing_reviewer()
@@ -1772,6 +1799,46 @@ class TestPopulateAllHelpers:
         ]
         assert _populate_filled_counts(reviewer, specs, ["a", "b", "c", "d"]) == {
             "_classify": 2
+        }
+
+    def test_count_filled_target_uses_filled_key_on_nested_dicts(self):
+        import pandas as pd
+
+        from referia.web.routes import _count_filled_target, _populate_filled_counts
+
+        class Data:
+            def __init__(self):
+                self._d = {
+                    "input": pd.DataFrame(
+                        {
+                            "extraction_phrases": [
+                                [{"phrase": "x", "embedding": [0.1]}],
+                                [{"phrase": "y"}],
+                                [],
+                                [{"phrase": "z", "embedding": [0.2, 0.3]}],
+                            ]
+                        },
+                        index=["a", "b", "c", "d"],
+                    )
+                }
+
+        class Reviewer:
+            _data = Data()
+
+        reviewer = Reviewer()
+        spec = {
+            "type": "PopulateButton",
+            "field": "_embed",
+            "args": {
+                "target": "extraction_phrases",
+                "filled_key": "embedding",
+            },
+        }
+        assert _count_filled_target(
+            reviewer, "extraction_phrases", ["a", "b", "c", "d"], spec
+        ) == 2
+        assert _populate_filled_counts(reviewer, [spec], ["a", "b", "c", "d"]) == {
+            "_embed": 2
         }
 
 

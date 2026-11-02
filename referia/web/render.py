@@ -836,6 +836,40 @@ def _populate_target_filled(value: Any) -> bool:
     return True
 
 
+def _populate_filled_key(spec: dict) -> str:
+    """Nested dict key that counts as filled (e.g. ``embedding`` on phrases)."""
+    raw = (spec.get("args") or {}).get("filled_key")
+    if raw is None or raw is False:
+        return ""
+    return str(raw).strip()
+
+
+def _nested_key_filled(value: Any, key: str) -> bool:
+    """True when every dict in *value* has a filled *key*."""
+    if isinstance(value, dict):
+        items = [value]
+    elif isinstance(value, (list, tuple)):
+        items = list(value)
+    else:
+        return False
+    if not items:
+        return False
+    for item in items:
+        if not isinstance(item, dict):
+            return False
+        if not _populate_target_filled(item.get(key)):
+            return False
+    return True
+
+
+def _populate_button_filled(spec: dict, value: Any) -> bool:
+    """Whether this PopulateButton's target is already done."""
+    key = _populate_filled_key(spec)
+    if key:
+        return _nested_key_filled(value, key)
+    return _populate_target_filled(value)
+
+
 _ARG_UNSET = object()
 
 
@@ -857,6 +891,16 @@ def _arg_flag(spec: dict, key: str, *, default: bool = False) -> bool:
 def _populate_once(spec: dict) -> bool:
     """Grey the per-row button after a fill unless ``refresh_if`` is checked."""
     return _arg_flag(spec, "once", default=False)
+
+
+def _populate_once_blocked_message(spec: dict) -> str:
+    """Status/tooltip when ``once`` blocks a filled row."""
+    blocked = (spec.get("args") or {}).get("once_blocked")
+    if blocked:
+        return str(blocked)
+    if _populate_refresh_if_field(spec):
+        return "Already done. Check the refresh box to run again."
+    return "Already done."
 
 
 def _populate_skip_filled(spec: dict) -> bool:
@@ -949,12 +993,11 @@ def _render_populate_button(spec: dict, value: Any, data: dict | None = None) ->
             return _blocked_populate_button(label, "No points to classify")
     if _populate_once(spec) and not _listing_chrome_ctx.get():
         row = data or {}
-        if _populate_target_filled(row.get(target)):
+        if _populate_button_filled(spec, row.get(target)):
             refresh_field = _populate_refresh_if_field(spec)
             if not refresh_field or not _checkbox_checked(row.get(refresh_field)):
                 return _blocked_populate_button(
-                    label,
-                    "Already classified. Check Refresh classification to run again.",
+                    label, _populate_once_blocked_message(spec)
                 )
     if _listing_chrome_ctx.get():
         return (
@@ -1878,6 +1921,22 @@ def _listing_extra_widget_html(spec: dict, data: dict, idx: Any) -> str:
     )
 
 
+_UNSAFE_LISTING_HTML = re.compile(
+    r"<(script|style|iframe|object|embed|form|img)\b[^>]*>.*?</\1>|"
+    r"<(script|style|iframe|object|embed|form|img)\b[^>]*/?>",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _listing_detail_inner(text: str, *, markdown: bool) -> tuple[str, str]:
+    """Return (inner HTML, CSS class) for a listing detail body."""
+    if not markdown:
+        return _escape(text), "entry-detail-body"
+    html = _ensure_links_new_tab(markdown2html(text) if text else "")
+    html = _UNSAFE_LISTING_HTML.sub("", html)
+    return html, "entry-detail-body widget-markdown"
+
+
 def _listing_detail_text(value: Any) -> str:
     """Plain text for ``display.detail_field`` (string or list of unit dicts)."""
     if value is None or value == "":
@@ -2040,6 +2099,7 @@ def render_inline_listing(
     *,
     group_by: str = "directory",
     detail_field: str | None = None,
+    detail_markdown: bool = False,
     documents: list[dict] | None = None,
     working_count: int | None = None,
     window: dict | None = None,
@@ -2063,7 +2123,8 @@ def render_inline_listing(
 
     *detail_field* (from ``display.detail_field``) optionally names a tall
     column whose non-empty value is shown in a closed ``<details>`` under
-    the row (e.g. ``abstract``).
+    the row (e.g. ``abstract``). *detail_markdown* (``display.detail_markdown``)
+    renders that text as markdown instead of escaped preformatted text.
 
     *documents* are per-row Create-document actions (e.g. Email feedback).
     Each button posts ``index`` so generation uses that listing row, not
@@ -2230,12 +2291,15 @@ def render_inline_listing(
                         detail_key,
                         detail_key.replace("_", " ").strip().title() or "Detail",
                     )
+                    inner, body_class = _listing_detail_inner(
+                        detail_text, markdown=detail_markdown
+                    )
                     row_sections.append(
                         f'<details class="entry-detail" '
                         f'data-detail-field="{_escape(detail_key)}">'
                         f"<summary>{_escape(label)}</summary>"
-                        f'<div class="entry-detail-body">'
-                        f"{_escape(detail_text)}"
+                        f'<div class="{body_class}">'
+                        f"{inner}"
                         f"</div></details>"
                     )
             extras_html = []
