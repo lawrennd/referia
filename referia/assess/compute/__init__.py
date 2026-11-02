@@ -34,6 +34,7 @@ from .phrases import llm_extract_phrases, segment_dialogue_units, stamp_dialogue
 from .embed import llm_embed, llm_embed_extraction_phrases
 from .compare import (
     jsd,
+    run_basis_share_compare,
     run_format_share_compare,
     run_question_type_stress,
     run_wordlist_floor,
@@ -316,6 +317,22 @@ class Compute(lynguine.assess.compute.Compute):
                     bases = [row.get("basis") for row in grounds]
         return run_wordlist_floor(
             quotes, bases=bases, groups=groups, **kwargs
+        )
+
+    def _run_basis_share_compare(
+        self, bases=None, formats=None, doc_ids=None, **kwargs
+    ):
+        """Load coded grounds from sibling ``grounds.yml`` when needed."""
+        if bases is None:
+            grounds = self._load_info_yaml_rows("grounds.yml")
+            if grounds:
+                bases = [row.get("basis") for row in grounds]
+                formats = formats or [
+                    row.get("format") or row.get("group") for row in grounds
+                ]
+                doc_ids = doc_ids or [row.get("doc_id") for row in grounds]
+        return run_basis_share_compare(
+            bases, formats=formats, doc_ids=doc_ids, **kwargs
         )
 
     def _study_files_dir(self):
@@ -1278,6 +1295,24 @@ class Compute(lynguine.assess.compute.Compute):
                 "docstr": (
                     "Document-weighted type mix, lens shares, and JSD "
                     "(CIP-001E). Paper Part A analogue on the current grain."
+                ),
+            },
+            {
+                "name": "run_basis_share_compare",
+                "function": self._run_basis_share_compare,
+                "default_args": {
+                    "n_boot": 2000,
+                    "seed": 42,
+                    "min_gap": 3.0,
+                    "experience_bases": [
+                        "personal_experience",
+                        "others_experience",
+                    ],
+                    "professional_basis": "professional_knowledge",
+                },
+                "docstr": (
+                    "Document-weighted Part B basis mix and experience / "
+                    "professional gaps (CIP-001E). Reads grounds.yml."
                 ),
             },
             {

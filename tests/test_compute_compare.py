@@ -4,6 +4,7 @@ import numpy as np
 
 from referia.assess.compute.compare import (
     jsd,
+    run_basis_share_compare,
     run_format_share_compare,
     run_question_type_stress,
     run_wordlist_floor,
@@ -98,3 +99,54 @@ def test_wordlist_floor_hits_own_quote():
     assert wl["n_hit"] == 1
     assert "Word-list floor" in md
     assert any("LLM grounds" in r["measure"] for r in rows)
+
+
+def test_basis_share_compare_experience_gap():
+    bases = [
+        "personal_experience",
+        "principle",
+        "personal_experience",
+        "principle",
+        "others_experience",
+        "professional_knowledge",
+    ]
+    formats = [
+        "workshop",
+        "workshop",
+        "workshop",
+        "chatbot",
+        "chatbot",
+        "chatbot",
+    ]
+    doc_ids = ["w1", "w1", "w2", "c1", "c1", "c2"]
+    basis_mix, experience_gap, basis_md, gap_md, n_docs = (
+        run_basis_share_compare(
+            bases,
+            formats=formats,
+            doc_ids=doc_ids,
+            n_boot=40,
+            seed=0,
+        )
+    )
+    assert any(r["value"] == "personal_experience" for r in basis_mix)
+    exp = next(r for r in experience_gap if r["measure"] == "experience")
+    # w1: 1/2 experience; w2: 1/1 → workshop mean 75%.
+    # c1: 1/2 experience; c2: 0/1 → chatbot mean 25%.
+    assert abs(exp["workshop_pct"] - 75.0) < 1e-6
+    assert abs(exp["chatbot_pct"] - 25.0) < 1e-6
+    assert exp["workshop_pct"] > exp["chatbot_pct"]
+    assert n_docs["workshop"] == 2
+    assert n_docs["chatbot"] == 2
+    assert basis_md.startswith("|")
+    assert "17.7" in gap_md
+    assert "This grain" in gap_md
+
+
+def test_basis_share_compare_empty_grounds():
+    basis_mix, experience_gap, basis_md, gap_md, n_docs = (
+        run_basis_share_compare([], formats=[], doc_ids=[])
+    )
+    assert basis_mix == []
+    assert experience_gap == []
+    assert n_docs == {}
+    assert "No coded grounds" in basis_md
