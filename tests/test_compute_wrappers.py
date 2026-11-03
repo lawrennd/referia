@@ -204,3 +204,66 @@ def test_registry_includes_sequence_and_multiverse():
     assert "run_rebuild_speaker_turns" in names
     assert "run_stories_follow_stories" in names
     assert "run_analysis_multiverse" in names
+    assert "pipeline_dag_figure" in names
+    assert "pipeline_stage_params_md" in names
+
+
+def test_pipeline_manifest_path_and_load(tmp_path: Path):
+    compute, info = _compute(tmp_path)
+    assert compute._pipeline_manifest_path() is None
+    assert compute._load_pipeline_manifest() == {"nodes": [], "edges": []}
+
+    (info / "pipeline.yml").write_text(
+        "nodes:\n  - id: a\n    parameters:\n      - key: n_boot\n"
+        "        cost_class: aggregate\n        multiverse_eligible: true\n"
+        "edges: []\n",
+        encoding="utf-8",
+    )
+    path = compute._pipeline_manifest_path()
+    assert path is not None and path.name == "pipeline.yml"
+    loaded = compute._load_pipeline_manifest()
+    assert loaded["nodes"][0]["id"] == "a"
+
+    compute._interface = None
+    assert compute._pipeline_manifest_path() is None
+
+
+def test_pipeline_dag_figure_wrapper_paths(tmp_path: Path):
+    compute, info = _compute(tmp_path)
+    empty = compute._pipeline_dag_figure()
+    assert "No pipeline.yml" in empty["layout"]["title"]
+
+    (info / "pipeline.yml").write_text(
+        "nodes:\n  - id: a\n    title: A\nedges: []\n",
+        encoding="utf-8",
+    )
+    fig = compute._pipeline_dag_figure()
+    assert fig["data"]
+    assert any(t.get("mode") == "markers+text" for t in fig["data"])
+
+    (info / "pipeline.yml").write_text(
+        "nodes: []\nedges: []\n",
+        encoding="utf-8",
+    )
+    failed = compute._pipeline_dag_figure()
+    assert "Pipeline load failed" in failed["layout"]["title"]
+
+
+def test_pipeline_stage_params_md_wrapper_paths(tmp_path: Path):
+    compute, info = _compute(tmp_path)
+    assert "Select a stage" in compute._pipeline_stage_params_md()
+
+    (info / "pipeline.yml").write_text(
+        "nodes:\n  - id: a\n    title: Stage A\n    parameters:\n"
+        "      - key: seed\n        cost_class: display\n"
+        "edges: []\n",
+        encoding="utf-8",
+    )
+    md = compute._pipeline_stage_params_md(focus_stage="a")
+    assert "seed" in md
+    assert "Stage A" in md
+
+    (info / "pipeline.yml").write_text("nodes: []\nedges: []\n", encoding="utf-8")
+    assert "Pipeline load failed" in compute._pipeline_stage_params_md(
+        focus_stage="a"
+    )
