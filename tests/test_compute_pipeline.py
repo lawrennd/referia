@@ -245,3 +245,154 @@ def test_multiverse_definitions_only_smaller_product():
     assert n == 3  # three definitions × canonical others
     assert "definitions" in md
     assert "CIP-0023" in md
+
+
+def test_load_pipeline_requires_path_or_data():
+    with pytest.raises(ValueError, match="path or data"):
+        load_pipeline_manifest()
+
+
+def test_load_pipeline_rejects_non_mapping_root():
+    with pytest.raises(ValueError, match="mapping"):
+        load_pipeline_manifest(data=["not", "a", "map"])
+
+
+def test_load_pipeline_rejects_empty_nodes_and_bad_edges():
+    with pytest.raises(ValueError, match="non-empty"):
+        load_pipeline_manifest(data={"nodes": [], "edges": []})
+    with pytest.raises(ValueError, match="edges must be a list"):
+        load_pipeline_manifest(data={"nodes": [{"id": "a"}], "edges": "nope"})
+
+
+def test_load_pipeline_rejects_bad_nodes_and_edges():
+    with pytest.raises(ValueError, match="each node must be a mapping"):
+        load_pipeline_manifest(data={"nodes": ["a"], "edges": []})
+    with pytest.raises(ValueError, match="node.id is required"):
+        load_pipeline_manifest(data={"nodes": [{"id": "  "}], "edges": []})
+    with pytest.raises(ValueError, match="duplicate node id"):
+        load_pipeline_manifest(
+            data={"nodes": [{"id": "a"}, {"id": "a"}], "edges": []}
+        )
+    with pytest.raises(ValueError, match="parameter entries must be maps"):
+        load_pipeline_manifest(
+            data={
+                "nodes": [{"id": "a", "parameters": [1]}],
+                "edges": [],
+            }
+        )
+    with pytest.raises(ValueError, match="parameter key required"):
+        load_pipeline_manifest(
+            data={
+                "nodes": [{"id": "a", "parameters": [{"key": ""}]}],
+                "edges": [],
+            }
+        )
+    with pytest.raises(ValueError, match="each edge must be a mapping"):
+        load_pipeline_manifest(
+            data={"nodes": [{"id": "a"}], "edges": ["bad"]}
+        )
+    with pytest.raises(ValueError, match="unknown node"):
+        load_pipeline_manifest(
+            data={
+                "nodes": [{"id": "a"}],
+                "edges": [{"from": "a", "to": "missing"}],
+            }
+        )
+
+
+def test_load_pipeline_string_knob_defaults_to_display():
+    m = load_pipeline_manifest(
+        data={
+            "nodes": [{"id": "a", "parameters": ["seed", {"key": "n_boot"}]}],
+            "edges": [],
+        }
+    )
+    knobs = {k["key"]: k for k in m["nodes"][0]["parameters"]}
+    assert knobs["seed"]["cost_class"] == "display"
+    assert knobs["seed"]["multiverse_eligible"] is False
+    assert knobs["n_boot"]["cost_class"] == "display"
+    assert knobs["n_boot"]["label"] == "n_boot"
+    assert m["nodes"][0]["permalink"] == "/a/"
+    assert m["nodes"][0]["title"] == "a"
+
+
+def test_expand_stage_selection_all_eligible_and_skips_unknown():
+    m = load_pipeline_manifest(data=MINI)
+    all_elig = expand_stage_selection(
+        m, ["07_part_b", "07_grounds", "missing"], executable_only=False
+    )
+    keys = {(g["stage"], g["key"]) for g in all_elig}
+    assert ("07_part_b", "n_boot") in keys
+    assert ("07_grounds", "grounds_model") in keys
+    assert ("07_part_b", "seed") not in keys  # not eligible
+
+
+def test_selection_cost_gate_ignores_display_and_non_maps():
+    gate = selection_cost_gate(
+        [
+            "skip-me",
+            {"key": "seed", "cost_class": "display"},
+            {
+                "key": "n_boot",
+                "cost_class": "aggregate",
+                "multiverse_eligible": False,
+            },
+            {"key": "refit_x", "cost_class": "refit"},
+        ]
+    )
+    assert gate["executable"] == []
+    assert len(gate["refused"]) == 1
+    assert gate["ok"] is False
+    assert "refit_x" in gate["message"]
+    empty = selection_cost_gate(
+        [{"key": "n_boot", "cost_class": "aggregate"}]
+    )
+    assert empty["ok"] is True
+    assert empty["message"] == ""
+
+
+def test_resolve_active_paper_axes_strings_and_active_axes():
+    axes = resolve_active_paper_axes(
+        axis_definitions="yes",
+        axis_weightings="0",
+        axis_exclusions="",
+        axis_thresholds=None,
+        axis_rounds="off",
+        active_axes={"weightings": "on", "rounds": False},
+    )
+    assert axes["definitions"] is True
+    assert axes["weightings"] is True
+    assert axes["exclusions"] is True  # blank → default True
+    assert axes["thresholds"] is True
+    assert axes["rounds"] is False
+    all_off = resolve_active_paper_axes(
+        axis_definitions=False,
+        axis_weightings=False,
+        axis_exclusions=False,
+        axis_thresholds=False,
+        axis_rounds=False,
+    )
+    assert not any(all_off.values())
+
+
+def test_pipeline_dag_figure_empty():
+    fig = pipeline_dag_figure({"nodes": [], "edges": []})
+    assert fig["data"] == []
+    assert "Empty" in fig["layout"]["title"]
+
+
+def test_pipeline_stage_params_md_branches():
+    m = load_pipeline_manifest(data=MINI)
+    assert "Select a stage" in pipeline_stage_params_md(m, None)
+    assert "Unknown stage" in pipeline_stage_params_md(m, "nope")
+    bare = load_pipeline_manifest(
+        data={"nodes": [{"id": "bare"}], "edges": []}
+    )
+    assert "No declared parameters" in pipeline_stage_params_md(bare, "bare")
+    md = pipeline_stage_params_md(
+        m,
+        "07_part_b",
+        values={"n_boot": [1, 2], "seed": {"a": 1}},
+    )
+    assert "n_boot" in md
+    assert "[" in md or "1" in md
