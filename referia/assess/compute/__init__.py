@@ -46,6 +46,11 @@ from .sequence import (
     workshop_round_points,
 )
 from .multiverse import run_analysis_multiverse
+from .pipeline import (
+    load_pipeline_manifest,
+    pipeline_dag_figure,
+    pipeline_stage_params_md,
+)
 from .distance import (
     axis_correlates,
     classical_mds,
@@ -453,6 +458,47 @@ class Compute(lynguine.assess.compute.Compute):
                     "Run 07_grounds Classify all + Save first.",
                 )
         return run_analysis_multiverse(points, **kwargs)
+
+    def _pipeline_manifest_path(self):
+        from pathlib import Path
+
+        info = self._config_info_dir()
+        if info is None:
+            return None
+        path = Path(info) / "pipeline.yml"
+        return path if path.is_file() else None
+
+    def _load_pipeline_manifest(self):
+        path = self._pipeline_manifest_path()
+        if path is None:
+            return {"nodes": [], "edges": []}
+        return load_pipeline_manifest(path)
+
+    def _pipeline_dag_figure(self, **_kwargs):
+        """Plotly DAG from ``_data/corpus/pipeline.yml`` (CIP-0023)."""
+        try:
+            manifest = self._load_pipeline_manifest()
+        except Exception as exc:
+            return {
+                "data": [],
+                "layout": {"title": f"Pipeline load failed: {exc}"},
+            }
+        if not manifest.get("nodes"):
+            return {
+                "data": [],
+                "layout": {
+                    "title": "No pipeline.yml — add _data/corpus/pipeline.yml"
+                },
+            }
+        return pipeline_dag_figure(manifest)
+
+    def _pipeline_stage_params_md(self, focus_stage=None, **_kwargs):
+        """Markdown parameter table for the focused pipeline stage."""
+        try:
+            manifest = self._load_pipeline_manifest()
+        except Exception as exc:
+            return f"_Pipeline load failed: {exc}_"
+        return pipeline_stage_params_md(manifest, focus_stage)
 
     def _phrase_siding_rows(self, kwargs):
         rows = self._load_info_yaml_rows("phrases.yml")
@@ -1380,10 +1426,34 @@ class Compute(lynguine.assess.compute.Compute):
                 "default_args": {
                     "n_jsd_shuffles": 100,
                     "seed": 0,
+                    "axis_definitions": True,
+                    "axis_weightings": True,
+                    "axis_exclusions": True,
+                    "axis_thresholds": True,
+                    "axis_rounds": True,
                 },
                 "docstr": (
                     "Experience-gap product over analysis choices on "
-                    "main-run 07 codes (CIP-001E). Not 1080 LLM jobs."
+                    "main-run 07 codes (CIP-001E/0023). Axis checkboxes "
+                    "select the product; not 1080 LLM jobs."
+                ),
+            },
+            {
+                "name": "pipeline_dag_figure",
+                "function": self._pipeline_dag_figure,
+                "default_args": {},
+                "docstr": (
+                    "Plotly DAG of the study pipeline from "
+                    "pipeline.yml (CIP-0023)."
+                ),
+            },
+            {
+                "name": "pipeline_stage_params_md",
+                "function": self._pipeline_stage_params_md,
+                "default_args": {},
+                "docstr": (
+                    "Markdown table of declared parameters for "
+                    "focus_stage (CIP-0023)."
                 ),
             },
             {

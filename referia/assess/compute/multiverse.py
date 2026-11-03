@@ -16,6 +16,7 @@ import numpy as np
 
 from .compare import jsd
 from .distance import _jsonable
+from .pipeline import PAPER_AXES, resolve_active_paper_axes
 
 __all__ = ["run_analysis_multiverse"]
 
@@ -115,9 +116,20 @@ def run_analysis_multiverse(
     n_jsd_shuffles: int = 100,
     seed: int = 0,
     missing_hint: str | None = None,
+    active_axes: Mapping[str, Any] | None = None,
+    axis_definitions: Any = True,
+    axis_weightings: Any = True,
+    axis_exclusions: Any = True,
+    axis_thresholds: Any = True,
+    axis_rounds: Any = True,
     **_kwargs,
 ) -> tuple:
-    """Experience-gap product over analysis choices. Returns summary, markdown, n_configs."""
+    """Experience-gap product over analysis choices. Returns summary, markdown, n_configs.
+
+    Phase 1 (CIP-0023): ``active_axes`` / ``axis_*`` flags select which of
+    the five paper dimensions enter the cartesian product. A dimension
+    that is off contributes only its canonical level.
+    """
     if not points:
         hint = missing_hint or (
             "No coded points. Classify all + Save on 07_grounds first."
@@ -126,6 +138,14 @@ def run_analysis_multiverse(
 
     n_jsd_shuffles = max(0, _as_int(n_jsd_shuffles, 100))
     rng = np.random.default_rng(_as_int(seed, 0))
+    axes = resolve_active_paper_axes(
+        axis_definitions=axis_definitions,
+        axis_weightings=axis_weightings,
+        axis_exclusions=axis_exclusions,
+        axis_thresholds=axis_thresholds,
+        axis_rounds=axis_rounds,
+        active_axes=active_axes,
+    )
 
     recs = []
     for row in points:
@@ -161,9 +181,25 @@ def run_analysis_multiverse(
             out = [r for r in out if not r["speaker1"]]
         return out
 
+    def_levels = (
+        list(DEFINITIONS)
+        if axes["definitions"]
+        else [CANONICAL["definition"]]
+    )
+    weight_levels = (
+        list(WEIGHTINGS) if axes["weightings"] else [CANONICAL["weighting"]]
+    )
+    excl_levels = (
+        list(EXCLUSIONS) if axes["exclusions"] else [CANONICAL["exclusion"]]
+    )
+    thresh_levels = (
+        list(THRESHOLDS) if axes["thresholds"] else [CANONICAL["threshold"]]
+    )
+    round_levels = list(ROUNDS) if axes["rounds"] else [CANONICAL["round"]]
+
     rows_b = []
     for definition, weighting, exclusion, threshold, rnd in product(
-        DEFINITIONS, WEIGHTINGS, EXCLUSIONS, THRESHOLDS, ROUNDS
+        def_levels, weight_levels, excl_levels, thresh_levels, round_levels
     ):
         d = subset(exclusion, threshold, rnd)
         formats = {r["format"] for r in d}
@@ -287,13 +323,20 @@ def run_analysis_multiverse(
                     f"{float(np.mean(null)):.3f} (95th {float(np.percentile(null, 95)):.3f})."
                 )
 
+    active_names = [a for a in PAPER_AXES if axes[a]]
+    axis_phrase = (
+        " × ".join(active_names)
+        if active_names
+        else "canonical levels only (all axis checkboxes off)"
+    )
     md = (
         f"Main-run 07 codes only — **{len(gaps)} configurations** "
-        "(definition × weighting × exclusion × threshold × round). "
+        f"({axis_phrase}). "
         "This is the methodology of the 1080-config table with one coding "
         "(main run), not 1080 populate-all LLM jobs. Own-words coding "
         "variants wait on a format-blind recode; k=25/60 is a refit of "
-        "03_vq then 04_grain then 06_compare, not this page.\n\n"
+        "03_vq then 04_grain then 06_compare, not this page. "
+        "Axis ticks: CIP-0023.\n\n"
         + _md_table(
             summary,
             [
