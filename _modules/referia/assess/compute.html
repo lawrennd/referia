@@ -888,6 +888,11 @@
     <span class="n">workshop_round_points</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.multiverse</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_analysis_multiverse</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">load_pipeline_manifest</span><span class="p">,</span>
+    <span class="n">pipeline_dag_figure</span><span class="p">,</span>
+    <span class="n">pipeline_stage_params_md</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.distance</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">axis_correlates</span><span class="p">,</span>
     <span class="n">classical_mds</span><span class="p">,</span>
@@ -1297,6 +1302,47 @@
                     <span class="s2">&quot;Run 07_grounds Classify all + Save first.&quot;</span><span class="p">,</span>
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">run_analysis_multiverse</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pipeline_manifest_path</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_info_dir</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">info</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;pipeline.yml&quot;</span>
+        <span class="k">return</span> <span class="n">path</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_pipeline_manifest</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_manifest_path</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;edges&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+        <span class="k">return</span> <span class="n">load_pipeline_manifest</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pipeline_dag_figure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">_kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plotly DAG from ``_data/corpus/pipeline.yml`` (CIP-0023).&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">manifest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_pipeline_manifest</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[],</span>
+                <span class="s2">&quot;layout&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Pipeline load failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+            <span class="p">}</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;nodes&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">{</span>
+                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[],</span>
+                <span class="s2">&quot;layout&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;No pipeline.yml — add _data/corpus/pipeline.yml&quot;</span>
+                <span class="p">},</span>
+            <span class="p">}</span>
+        <span class="k">return</span> <span class="n">pipeline_dag_figure</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pipeline_stage_params_md</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">focus_stage</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">_kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Markdown parameter table for the focused pipeline stage.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">manifest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_pipeline_manifest</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;_Pipeline load failed: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">_&quot;</span>
+        <span class="k">return</span> <span class="n">pipeline_stage_params_md</span><span class="p">(</span><span class="n">manifest</span><span class="p">,</span> <span class="n">focus_stage</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_phrase_siding_rows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">):</span>
         <span class="n">rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_info_yaml_rows</span><span class="p">(</span><span class="s2">&quot;phrases.yml&quot;</span><span class="p">)</span>
@@ -2239,10 +2285,34 @@
                 <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
                     <span class="s2">&quot;n_jsd_shuffles&quot;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
                     <span class="s2">&quot;seed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;axis_definitions&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;axis_weightings&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;axis_exclusions&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;axis_thresholds&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;axis_rounds&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
                 <span class="p">},</span>
                 <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
                     <span class="s2">&quot;Experience-gap product over analysis choices on &quot;</span>
-                    <span class="s2">&quot;main-run 07 codes (CIP-001E). Not 1080 LLM jobs.&quot;</span>
+                    <span class="s2">&quot;main-run 07 codes (CIP-001E/0023). Axis checkboxes &quot;</span>
+                    <span class="s2">&quot;select the product; not 1080 LLM jobs.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;pipeline_dag_figure&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_dag_figure</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Plotly DAG of the study pipeline from &quot;</span>
+                    <span class="s2">&quot;pipeline.yml (CIP-0023).&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;pipeline_stage_params_md&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_stage_params_md</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Markdown table of declared parameters for &quot;</span>
+                    <span class="s2">&quot;focus_stage (CIP-0023).&quot;</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
