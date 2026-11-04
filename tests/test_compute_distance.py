@@ -503,7 +503,17 @@ def test_compute_wrapper_loads_codebook_cluster_ids(tmp_path, monkeypatch):
                 "type": "parquet",
                 "filename": "records.parquet",
                 "directory": str(info),
-            }
+            },
+            "codebook": {
+                "type": "parquet",
+                "filename": "codebook.parquet",
+                "directory": str(info),
+            },
+            "roster": {
+                "type": "yaml",
+                "filename": "documents.yml",
+                "directory": str(info),
+            },
         }
     )
     packed = compute._run_document_distance_analysis(
@@ -711,7 +721,17 @@ def test_compute_wrapper_codebook_errors_and_titles(tmp_path, monkeypatch):
                 "type": "parquet",
                 "filename": "records.parquet",
                 "directory": str(info),
-            }
+            },
+            "codebook": {
+                "type": "parquet",
+                "filename": "codebook.parquet",
+                "directory": str(info),
+            },
+            "roster": {
+                "type": "yaml",
+                "filename": "documents.yml",
+                "directory": str(info),
+            },
         }
     )
     with pytest.raises(ValueError, match="pass cluster_ids"):

@@ -55,6 +55,8 @@ Each CIP can have one of the following statuses:
 - [CIP-001B](./cip001B.md): Jupyter-like kernel/server process split for the web review runtime (Proposed; REQ-0013)
 - [CIP-001C](./cip001C.md): Root-owned schedule with sibling Today and Year overviews (Closed; REQ-0014; compressed into `docs/usage/catalog_schedule.rst`; lynguine CIP-0018 for directory bind/exclude)
 - [CIP-001D](./cip001D.md): Populate-all as a resumable store write, not a long-lived page request (Proposed; REQ-0010)
+- [CIP-0023](./cip0023.md): Multiverse axis picker as a pipeline DAG with expandable parameters (In Progress; REQ-0015 / REQ-0010; Phase 1 merged)
+- [CIP-0024](./cip0024.md): Register sidecar product reads as declared interface stores (Proposed; REQ-0003 / REQ-0010 / REQ-0011; enables CIP-0023 Option B)
 
 ## Creating a Good CIP
 

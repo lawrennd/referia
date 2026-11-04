@@ -9,9 +9,30 @@ from __future__ import annotations
 import os
 from typing import Any, Mapping
 
-__all__ = ["size_human", "named_store_status"]
+__all__ = [
+    "PRODUCT_SIDECAR_ROLES",
+    "declared_store_path",
+    "load_declared_yaml_rows",
+    "named_store_status",
+    "size_human",
+]
 
 _STORE_HINTS = ("filename", "type", "directory")
+
+# CIP-0024 Class B: product-named interface keys that are not lynguine
+# valid_data_types (retained on Interface; not joined by from_flow).
+PRODUCT_SIDECAR_ROLES = {
+    "grounds.yml": "grounds",
+    "phrases.yml": "phrases",
+    "turns.yml": "turns",
+    "chunks.yml": "chunks",
+    "codebook.parquet": "codebook",
+    "documents.yml": "roster",
+    "records.parquet": "pack",
+    # Not ``scores:`` — referia dialect remaps that to output. Class A
+    # pages keep scores.yml on ``data:``; Class B sidecars use ``grain:``.
+    "scores.yml": "grain",
+}
 
 
 def size_human(n: int | float | None) -> str:
@@ -140,6 +161,56 @@ def _frame_catalogue(frame: Any) -> dict[str, Any]:
     if index:
         out["index"] = str(index)
     return out
+
+
+def declared_store_path(
+    interface: Mapping | None,
+    role: str,
+    *,
+    base_directory: Any = None,
+) -> str | None:
+    """Absolute path for a named interface store, or ``None`` if absent."""
+    if interface is None or not role:
+        return None
+    details = _store_get(interface, role)
+    if not _is_store(details):
+        return None
+    if base_directory is None:
+        base_directory = _store_get(interface, "base_directory") or getattr(
+            interface, "directory", None
+        )
+    entry = _store_stat(details, base_directory=base_directory)
+    path = entry.get("path")
+    return str(path) if path else None
+
+
+def load_declared_yaml_rows(
+    interface: Mapping | None,
+    role: str,
+    *,
+    base_directory: Any = None,
+) -> list[dict] | None:
+    """Load a YAML list store declared on *interface* under *role*.
+
+    Returns ``None`` when the role is missing or not a store (caller may
+    fall back). Returns ``[]`` when the file is absent or not a list.
+    """
+    path = declared_store_path(
+        interface, role, base_directory=base_directory
+    )
+    if path is None:
+        return None
+    if not os.path.exists(path):
+        return []
+    import yaml
+
+    try:
+        from yaml import CSafeLoader as SafeLoader
+    except ImportError:
+        from yaml import SafeLoader
+    with open(path, encoding="utf-8") as handle:
+        data = yaml.load(handle, Loader=SafeLoader)
+    return data if isinstance(data, list) else []
 
 
 def named_store_status(

@@ -225,6 +225,13 @@ def test_info_yaml_rows_cache_invalidates_on_mtime(tmp_path):
     class _Iface:
         directory = None
         def get(self, key, default=None):
+            if key == "turns":
+                return {
+                    "type": "yaml",
+                    "directory": str(info),
+                    "filename": "turns.yml",
+                    "index": "turn_id",
+                }
             if key == "input":
                 return {"directory": str(info), "filename": "constants.yml"}
             return default

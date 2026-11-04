@@ -7,11 +7,14 @@ from referia.assess.compute import Compute
 
 
 class _Iface:
-    def __init__(self, directory: str, info_dir: str = "info"):
+    def __init__(self, directory: str, info_dir: str = "info", **stores):
         self.directory = directory
         self._info_dir = info_dir
+        self._stores = stores
 
     def get(self, key, default=None):
+        if key in self._stores:
+            return self._stores[key]
         if key == "input":
             return {"directory": self._info_dir, "filename": "constants.yml"}
         return default
@@ -38,6 +41,8 @@ def test_study_files_dir_and_resolve_files_root(tmp_path: Path):
 
 
 def test_coded_phrase_rows_joins_grounds(tmp_path: Path):
+    import pytest
+
     compute, info = _compute(tmp_path)
     (info / "phrases.yml").write_text(
         "- phrase_id: p1\n  phrase: rules\n- phrase_id: p2\n  phrase: skip\n",
@@ -47,10 +52,24 @@ def test_coded_phrase_rows_joins_grounds(tmp_path: Path):
         "- phrase_id: p1\n  basis: personal_experience\n",
         encoding="utf-8",
     )
+    compute._interface = _Iface(
+        str(tmp_path),
+        phrases={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "phrases.yml",
+        },
+        grounds={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "grounds.yml",
+        },
+    )
     rows = compute._coded_phrase_rows()
     assert len(rows) == 1
     assert rows[0]["basis"] == "personal_experience"
-    assert Compute({"input": {}})._coded_phrase_rows() == []
+    with pytest.raises(ValueError, match="refuse undeclared"):
+        Compute({"input": {}})._coded_phrase_rows()
 
 
 def test_docx_paragraphs_import_and_read_errors(tmp_path: Path):
@@ -89,6 +108,14 @@ def test_rebuild_speaker_turns_from_files_root(tmp_path: Path):
     workshops = tmp_path / "files" / "workshops"
     workshops.mkdir(parents=True)
     (workshops / "a.docx").write_bytes(b"fake")
+    compute._interface = _Iface(
+        str(tmp_path),
+        roster={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "documents.yml",
+        },
+    )
 
     def _paras(path):
         if Path(path).name == "a.docx":
@@ -134,6 +161,19 @@ def test_stories_follow_stories_loads_turns_and_grounds(tmp_path: Path):
         "  round: spring_2026\n  unit_id: workshops/a.docx::c0003\n",
         encoding="utf-8",
     )
+    compute._interface = _Iface(
+        str(tmp_path),
+        turns={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "turns.yml",
+        },
+        grounds={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "grounds.yml",
+        },
+    )
     rows, md, n = compute._run_stories_follow_stories(
         n_shuffles=8, seed=0, lookbacks=[1]
     )
@@ -160,6 +200,19 @@ def test_analysis_multiverse_loads_coded_phrases(tmp_path: Path):
         "- phrase_id: p2\n  basis: principle\n",
         encoding="utf-8",
     )
+    compute._interface = _Iface(
+        str(tmp_path),
+        phrases={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "phrases.yml",
+        },
+        grounds={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "grounds.yml",
+        },
+    )
     summary, md, n_cfg = compute._run_analysis_multiverse(n_jsd_shuffles=0)
     assert n_cfg > 0
     assert summary
@@ -168,16 +221,41 @@ def test_analysis_multiverse_loads_coded_phrases(tmp_path: Path):
     empty_root = tmp_path / "empty"
     empty_root.mkdir()
     empty_compute, _ = _compute(empty_root)
+    empty_compute._interface = _Iface(
+        str(empty_root),
+        phrases={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "phrases.yml",
+        },
+        grounds={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "grounds.yml",
+        },
+    )
     _summary, hint, z = empty_compute._run_analysis_multiverse()
     assert z == 0
     assert "07_grounds" in hint
 
 
-def test_load_info_yaml_missing_file_and_stat_error(tmp_path: Path):
+def test_load_info_yaml_requires_declaration_and_caches(tmp_path: Path):
+    import pytest
+
     compute, info = _compute(tmp_path)
-    assert compute._load_info_yaml_rows("nope.yml") == []
+    with pytest.raises(ValueError, match="refuse undeclared"):
+        compute._load_info_yaml_rows("nope.yml")
     path = info / "turns.yml"
     path.write_text("- turn_id: a\n", encoding="utf-8")
+    compute._interface = _Iface(
+        str(tmp_path),
+        turns={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "turns.yml",
+            "index": "turn_id",
+        },
+    )
     first = compute._load_info_yaml_rows("turns.yml")
     assert first[0]["turn_id"] == "a"
     assert compute._load_info_yaml_rows("turns.yml") is first
