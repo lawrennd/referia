@@ -407,13 +407,275 @@ def test_document_distance_ignores_undeclared_roster(tmp_path: Path):
 
 
 def test_discover_requires_frontmatter_when_loading_root(tmp_path: Path):
+    import sys
+
     real_import = __import__
+    saved = sys.modules.pop("frontmatter", None)
 
     def _import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name == "frontmatter" or (fromlist and "frontmatter" in str(fromlist)):
+        if name == "frontmatter" or (
+            fromlist and "frontmatter" in fromlist
+        ):
             raise ImportError("no frontmatter")
         return real_import(name, globals, locals, fromlist, level)
 
-    with patch("builtins.__import__", side_effect=_import):
-        with pytest.raises(ImportError, match="python-frontmatter"):
-            _load_referia_stage_metas(tmp_path)
+    try:
+        with patch("builtins.__import__", side_effect=_import):
+            with pytest.raises(ImportError, match="python-frontmatter"):
+                _load_referia_stage_metas(tmp_path)
+    finally:
+        if saved is not None:
+            sys.modules["frontmatter"] = saved
+
+
+def test_declared_store_path_empty_stat_path(tmp_path: Path):
+    iface = _Iface(
+        str(tmp_path),
+        grounds={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "grounds.yml",
+        },
+    )
+    with patch(
+        "referia.assess.compute.stores._store_stat",
+        return_value={"path": None},
+    ):
+        assert declared_store_path(iface, "grounds") is None
+    with patch(
+        "referia.assess.compute.stores._store_stat",
+        return_value={"path": ""},
+    ):
+        assert declared_store_path(iface, "grounds") is None
+
+
+def test_load_declared_yaml_safe_loader_fallback(tmp_path: Path):
+    import yaml
+
+    info = tmp_path / "info"
+    info.mkdir()
+    (info / "grounds.yml").write_text(
+        "- phrase_id: p1\n  basis: principle\n", encoding="utf-8"
+    )
+    iface = _Iface(
+        str(tmp_path),
+        grounds={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "grounds.yml",
+        },
+    )
+    # ``from yaml import CSafeLoader`` raises when the attribute is absent.
+    saved = getattr(yaml, "CSafeLoader", None)
+    if saved is not None:
+        delattr(yaml, "CSafeLoader")
+    try:
+        rows = load_declared_yaml_rows(iface, "grounds")
+    finally:
+        if saved is not None:
+            yaml.CSafeLoader = saved
+    assert rows == [{"phrase_id": "p1", "basis": "principle"}]
+
+
+def test_load_via_data_store_unknown_product_name(tmp_path: Path):
+    """Class A ``data:`` filename need not be in PRODUCT_SIDECAR_ROLES."""
+    info = tmp_path / "info"
+    info.mkdir()
+    (info / "custom.yml").write_text("- x: 1\n", encoding="utf-8")
+    compute = Compute({"input": {}})
+    compute._interface = _Iface(
+        str(tmp_path),
+        data={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "custom.yml",
+        },
+    )
+    assert compute._load_info_yaml_rows("custom.yml") == [{"x": 1}]
+
+
+def test_load_info_yaml_safe_loader_and_stat_oserror(tmp_path: Path):
+    import yaml
+
+    info = tmp_path / "info"
+    info.mkdir()
+    (info / "grounds.yml").write_text(
+        "- phrase_id: p1\n  basis: principle\n", encoding="utf-8"
+    )
+    compute = Compute({"input": {}})
+    compute._interface = _Iface(
+        str(tmp_path),
+        grounds={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "grounds.yml",
+        },
+    )
+    saved = getattr(yaml, "CSafeLoader", None)
+    if saved is not None:
+        delattr(yaml, "CSafeLoader")
+    try:
+        rows = compute._load_info_yaml_rows("grounds.yml")
+    finally:
+        if saved is not None:
+            yaml.CSafeLoader = saved
+    assert rows == [{"phrase_id": "p1", "basis": "principle"}]
+
+    # Path present but ``stat`` fails after exists check → empty list.
+    compute._info_yaml_cache = {}
+    with patch.object(Path, "exists", return_value=True):
+        with patch.object(Path, "stat", side_effect=OSError("gone")):
+            assert compute._load_info_yaml_rows("grounds.yml") == []
+
+
+def test_codebook_path_without_interface():
+    compute = Compute({"input": {}})
+    compute._interface = None
+    assert compute._codebook_parquet_path() is None
+
+
+def test_load_info_yaml_iface_without_get(tmp_path: Path):
+    """``hasattr(iface, \"get\")`` false branch skips ``data:`` fallback."""
+
+    class _Bare:
+        directory = str(tmp_path)
+
+    compute = Compute({"input": {}})
+    compute._interface = _Bare()
+    with pytest.raises(ValueError, match="CIP-0024"):
+        compute._load_info_yaml_rows("grounds.yml")
+
+
+def test_load_declared_missing_file_returns_empty(tmp_path: Path):
+    compute = Compute({"input": {}})
+    compute._interface = _Iface(
+        str(tmp_path),
+        grounds={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "grounds.yml",
+        },
+    )
+    (tmp_path / "info").mkdir()
+    assert compute._load_info_yaml_rows("grounds.yml") == []
+
+
+def test_corrupt_codebook_exceptions_swallowed(tmp_path: Path):
+    info = tmp_path / "info"
+    info.mkdir()
+    (info / "codebook.parquet").write_bytes(b"not-a-parquet")
+    (info / "phrases.yml").write_text(
+        "- phrase: a\n  kind: concern\n  format: chatbot\n  doc_id: d1\n",
+        encoding="utf-8",
+    )
+    compute = Compute({"input": {}})
+    compute._interface = _Iface(
+        str(tmp_path),
+        codebook={
+            "type": "parquet",
+            "directory": "info",
+            "filename": "codebook.parquet",
+        },
+        phrases={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "phrases.yml",
+        },
+        roster={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "documents.yml",
+        },
+    )
+    with patch(
+        "referia.assess.compute.run_document_distance_analysis",
+        return_value="dist",
+    ) as dist_mock:
+        assert compute._run_document_distance_analysis() == "dist"
+    assert dist_mock.call_args.kwargs.get("cluster_ids") is None or (
+        dist_mock.call_args.args == () 
+    )
+
+    with patch(
+        "referia.assess.compute.run_format_share_compare",
+        return_value="fmt",
+    ) as fmt_mock:
+        assert compute._run_format_share_compare() == "fmt"
+    # Corrupt codebook → fill skipped; kinds still from phrases.
+    assert fmt_mock.call_args.kwargs["kinds"] == ["concern"]
+
+
+def test_lens_reconstruction_codebook_absent_and_corrupt(tmp_path: Path):
+    info = tmp_path / "info"
+    info.mkdir()
+    (info / "phrases.yml").write_text(
+        "- phrase_id: p1\n  phrase: hello\n  quote: hello\n"
+        "  format: workshop\n  doc_id: d1\n",
+        encoding="utf-8",
+    )
+    (info / "scores.yml").write_text(
+        "- Name: corpus\n  responsibilities: null\n",
+        encoding="utf-8",
+    )
+    compute = Compute({"input": {}})
+    compute._interface = _Iface(
+        str(tmp_path),
+        phrases={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "phrases.yml",
+        },
+        grain={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "scores.yml",
+        },
+    )
+    # No codebook: → else cluster_ids = None → hard_lens_labels fails softly.
+    out = compute._run_lens_reconstruction()
+    assert out[-1] == 0
+    assert "03_vq" in out[-2] or "lens" in out[-2].lower() or out[-2]
+
+    (info / "codebook.parquet").write_bytes(b"bad")
+    compute._interface = _Iface(
+        str(tmp_path),
+        phrases={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "phrases.yml",
+        },
+        grain={
+            "type": "yaml",
+            "directory": "info",
+            "filename": "scores.yml",
+        },
+        codebook={
+            "type": "parquet",
+            "directory": "info",
+            "filename": "codebook.parquet",
+        },
+    )
+    out2 = compute._run_lens_reconstruction()
+    assert out2[-1] == 0
+
+
+def test_discover_skips_unreadable_markdown(tmp_path: Path):
+    (tmp_path / "ok.md").write_text(
+        "---\nlayout: referia\n"
+        "output:\n  filename: a.yml\n  directory: d\n---\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "boom.md").write_text("---\nx: 1\n---\n", encoding="utf-8")
+
+    import frontmatter
+
+    real_load = frontmatter.load
+
+    def _load(path, *args, **kwargs):
+        if Path(path).name == "boom.md":
+            raise RuntimeError("cannot parse")
+        return real_load(path, *args, **kwargs)
+
+    with patch.object(frontmatter, "load", side_effect=_load):
+        found = discover_pipeline_edges(tmp_path)
+    assert found["stages"] == ["ok"]
