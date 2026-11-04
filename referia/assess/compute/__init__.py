@@ -69,7 +69,6 @@ from .grounds import llm_classify_grounds
 from .stores import (
     PRODUCT_SIDECAR_ROLES,
     declared_store_path,
-    load_declared_yaml_rows,
     named_store_status,
 )
 from .topic_naming import (
@@ -212,20 +211,17 @@ class Compute(lynguine.assess.compute.Compute):
         return None
 
     def _codebook_parquet_path(self):
-        """Path to the VQ codebook from a declared ``codebook:`` store or sibling."""
+        """Path to the VQ codebook from a declared ``codebook:`` store only."""
         from pathlib import Path
 
         iface = getattr(self, "_interface", None)
         declared = declared_store_path(iface, "codebook") if iface else None
-        if declared:
-            return Path(declared)
-        info = self._config_info_dir()
-        return (info / "codebook.parquet") if info is not None else None
+        return Path(declared) if declared else None
 
     def _run_document_distance_analysis(
         self, cluster_ids=None, doc_titles=None, **kwargs
     ):
-        """Fill VQ ``cluster_ids`` and chapter titles from sibling info files."""
+        """Fill VQ ``cluster_ids`` / titles from declared ``codebook`` / ``roster``."""
         if cluster_ids_missing(cluster_ids):
             codebook = self._codebook_parquet_path()
             if codebook is not None and codebook.exists():
@@ -242,65 +238,50 @@ class Compute(lynguine.assess.compute.Compute):
             roster_path = declared_store_path(iface, "roster") if iface else None
             if roster_path and Path(roster_path).exists():
                 doc_titles = load_document_titles(Path(roster_path))
-            else:
-                info = self._config_info_dir()
-                if info is not None:
-                    documents = info / "documents.yml"
-                    if documents.exists():
-                        doc_titles = load_document_titles(documents)
         return run_document_distance_analysis(
             cluster_ids=cluster_ids, doc_titles=doc_titles, **kwargs
         )
 
     def _load_info_yaml_rows(self, filename: str) -> list[dict]:
-        """Load a corpus YAML product, preferring a CIP-0024 declared store.
+        """Load a corpus YAML product from a CIP-0024 declared store only.
 
-        When the interface declares a product-named sidecar (e.g.
-        ``grounds:`` for ``grounds.yml``), load via that spec. Otherwise
-        fall back to sibling-path open under ``_config_info_dir`` and log
-        once per filename (deprecation path).
+        Refuses sibling-path guesses under ``_config_info_dir``. The product
+        must be declared on this stage's interface (Class B sidecar such as
+        ``grounds:``, or Class A ``data:`` whose filename matches).
         """
-        import logging
+        from pathlib import Path
 
         iface = getattr(self, "_interface", None)
         role = PRODUCT_SIDECAR_ROLES.get(str(filename))
+        path = None
         if iface is not None:
             if role:
-                declared = load_declared_yaml_rows(iface, role)
-                if declared is not None:
-                    return declared
-            # Class A: filename may be the page's ``data:`` store (e.g. scores.yml).
-            data_spec = iface.get("data") if hasattr(iface, "get") else None
-            if isinstance(data_spec, dict) and data_spec.get("filename") == filename:
-                declared = load_declared_yaml_rows(iface, "data")
-                if declared is not None:
-                    return declared
-
-        info = self._config_info_dir()
-        if info is None:
-            return []
-        path = info / filename
-        if not path.exists():
-            return []
-        warned = getattr(self, "_undeclared_sidecar_warned", None)
-        if warned is None:
-            warned = set()
-            self._undeclared_sidecar_warned = warned
-        if filename not in warned:
-            warned.add(filename)
-            logging.getLogger(__name__).warning(
-                "CIP-0024: loading %s via undeclared sibling path; "
-                "declare a %s: store on this stage's interface",
-                filename,
-                role or "sidecar",
+                path = declared_store_path(iface, role)
+            if path is None:
+                data_spec = iface.get("data") if hasattr(iface, "get") else None
+                if (
+                    isinstance(data_spec, dict)
+                    and data_spec.get("filename") == filename
+                ):
+                    path = declared_store_path(iface, "data")
+                    role = role or "data"
+        if path is None:
+            hint = role or "sidecar"
+            raise ValueError(
+                f"CIP-0024: refuse undeclared product {filename!r}; "
+                f"declare a {hint}: store on this referia (produced by "
+                f"another stage), do not Path-open the corpus."
             )
+        path_obj = Path(path)
+        if not path_obj.exists():
+            return []
         cached = getattr(self, "_info_yaml_cache", None)
         if cached is None:
             cached = {}
             self._info_yaml_cache = cached
-        key = str(path)
+        key = str(path_obj)
         try:
-            mtime = path.stat().st_mtime
+            mtime = path_obj.stat().st_mtime
         except OSError:
             return []
         hit = cached.get(key)
@@ -312,7 +293,7 @@ class Compute(lynguine.assess.compute.Compute):
             from yaml import CSafeLoader as SafeLoader
         except ImportError:
             from yaml import SafeLoader
-        with open(path, encoding="utf-8") as handle:
+        with open(path_obj, encoding="utf-8") as handle:
             data = yaml.load(handle, Loader=SafeLoader)
         rows = data if isinstance(data, list) else []
         cached[key] = (mtime, rows)

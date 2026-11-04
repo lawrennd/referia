@@ -130,7 +130,7 @@ def test_compute_loads_scores_via_data_store(tmp_path: Path):
     assert rows[0]["n_vq"] == 25
 
 
-def test_compute_warns_on_undeclared_sibling(tmp_path: Path, caplog):
+def test_compute_blocks_undeclared_sibling(tmp_path: Path):
     info = tmp_path / "info"
     info.mkdir()
     (info / "grounds.yml").write_text(
@@ -145,16 +145,8 @@ def test_compute_warns_on_undeclared_sibling(tmp_path: Path, caplog):
             "filename": "constants.yml",
         },
     )
-    import logging
-
-    with caplog.at_level(logging.WARNING):
-        rows = compute._load_info_yaml_rows("grounds.yml")
-    assert rows[0]["basis"] == "principle"
-    assert any("CIP-0024" in r.message for r in caplog.records)
-    # Second call should not re-warn (same filename).
-    n_warn = sum(1 for r in caplog.records if "CIP-0024" in r.message)
-    compute._load_info_yaml_rows("grounds.yml")
-    assert sum(1 for r in caplog.records if "CIP-0024" in r.message) == n_warn
+    with pytest.raises(ValueError, match="refuse undeclared product"):
+        compute._load_info_yaml_rows("grounds.yml")
 
 
 def test_codebook_parquet_path_declared_and_sibling(tmp_path: Path):
@@ -181,8 +173,7 @@ def test_codebook_parquet_path_declared_and_sibling(tmp_path: Path):
         str(tmp_path),
         input={"type": "yaml", "directory": "info", "filename": "c.yml"},
     )
-    sibling = compute2._codebook_parquet_path()
-    assert sibling is not None and sibling.name == "codebook.parquet"
+    assert compute2._codebook_parquet_path() is None
 
     bare = Compute({"input": {}})
     assert bare._codebook_parquet_path() is None
@@ -396,7 +387,7 @@ def test_run_format_share_fills_from_codebook(tmp_path: Path):
     assert mocked.call_args.kwargs["kinds"] == ["concern"]
 
 
-def test_document_distance_roster_fallback_sibling(tmp_path: Path):
+def test_document_distance_ignores_undeclared_roster(tmp_path: Path):
     info = tmp_path / "info"
     info.mkdir()
     (info / "documents.yml").write_text(
@@ -412,7 +403,7 @@ def test_document_distance_roster_fallback_sibling(tmp_path: Path):
         return_value="ok",
     ) as mocked:
         compute._run_document_distance_analysis(cluster_ids=[0])
-    assert mocked.call_args.kwargs.get("doc_titles") is not None
+    assert mocked.call_args.kwargs.get("doc_titles") is None
 
 
 def test_discover_requires_frontmatter_when_loading_root(tmp_path: Path):
