@@ -7,12 +7,14 @@ import yaml
 
 from referia.assess.compute.multiverse import run_analysis_multiverse
 from referia.assess.compute.pipeline import (
+    compose_pipeline_manifest,
     expand_stage_selection,
     load_pipeline_manifest,
     pipeline_dag_figure,
     pipeline_stage_params_md,
     resolve_active_paper_axes,
     selection_cost_gate,
+    study_root_from_info_dir,
 )
 
 
@@ -379,6 +381,60 @@ def test_pipeline_dag_figure_empty():
     fig = pipeline_dag_figure({"nodes": [], "edges": []})
     assert fig["data"] == []
     assert "Empty" in fig["layout"]["title"]
+
+
+def test_study_root_from_info_dir(tmp_path):
+    corpus = tmp_path / "_data" / "corpus"
+    corpus.mkdir(parents=True)
+    assert study_root_from_info_dir(corpus) == tmp_path
+    assert study_root_from_info_dir(
+        corpus, iface_directory=tmp_path / "study"
+    ) == tmp_path / "study"
+    assert study_root_from_info_dir(None) is None
+
+
+def test_compose_pipeline_manifest_discovers_edges(tmp_path):
+    (tmp_path / "producer.md").write_text(
+        "---\nlayout: referia\ntitle: Producer\npermalink: /producer/\n"
+        "output:\n  directory: _data/corpus\n  filename: grounds.yml\n---\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "consumer.md").write_text(
+        "---\nlayout: referia\ntitle: Consumer\npermalink: /consumer/\n"
+        "grounds:\n  directory: _data/corpus\n  filename: grounds.yml\n---\n",
+        encoding="utf-8",
+    )
+    overlay = {
+        "nodes": [
+            {
+                "id": "consumer",
+                "title": "Part B overlay",
+                "parameters": [
+                    {
+                        "key": "n_boot",
+                        "cost_class": "aggregate",
+                        "multiverse_eligible": True,
+                    }
+                ],
+            }
+        ],
+        "edges": [],
+    }
+    m = compose_pipeline_manifest(tmp_path, overlay=overlay)
+    assert m["source"] == "discovered"
+    assert {n["id"] for n in m["nodes"]} >= {"producer", "consumer"}
+    assert any(
+        e["from"] == "producer" and e["to"] == "consumer" for e in m["edges"]
+    )
+    consumer = next(n for n in m["nodes"] if n["id"] == "consumer")
+    assert consumer["title"] == "Part B overlay"
+    assert consumer["parameters"][0]["key"] == "n_boot"
+
+
+def test_compose_falls_back_to_overlay_when_no_stages(tmp_path):
+    m = compose_pipeline_manifest(tmp_path, overlay=MINI)
+    assert m["source"] == "manifest"
+    assert len(m["edges"]) == 2
 
 
 def test_pipeline_stage_params_md_branches():

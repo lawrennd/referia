@@ -47,10 +47,12 @@ from .sequence import (
 )
 from .multiverse import run_analysis_multiverse
 from .pipeline import (
+    compose_pipeline_manifest,
     discover_pipeline_edges,
     load_pipeline_manifest,
     pipeline_dag_figure,
     pipeline_stage_params_md,
+    study_root_from_info_dir,
 )
 from .distance import (
     axis_correlates,
@@ -508,14 +510,30 @@ class Compute(lynguine.assess.compute.Compute):
         path = Path(info) / "pipeline.yml"
         return path if path.is_file() else None
 
+    def _study_root(self):
+        """Directory of referia stage markdown (study / repo root)."""
+        from pathlib import Path
+
+        iface = getattr(self, "_interface", None)
+        base = getattr(iface, "directory", None) if iface else None
+        return study_root_from_info_dir(
+            self._config_info_dir(),
+            iface_directory=base,
+        )
+
     def _load_pipeline_manifest(self):
-        path = self._pipeline_manifest_path()
-        if path is None:
-            return {"nodes": [], "edges": []}
-        return load_pipeline_manifest(path)
+        """Compose Option B discovery with optional ``pipeline.yml`` overlay."""
+        root = self._study_root()
+        overlay_path = self._pipeline_manifest_path()
+        if root is None and overlay_path is None:
+            return {"nodes": [], "edges": [], "source": "empty"}
+        return compose_pipeline_manifest(
+            root=root,
+            overlay_path=overlay_path,
+        )
 
     def _pipeline_dag_figure(self, **_kwargs):
-        """Plotly DAG from ``_data/corpus/pipeline.yml`` (CIP-0023)."""
+        """Plotly DAG from declared stores (CIP-0024 Option B)."""
         try:
             manifest = self._load_pipeline_manifest()
         except Exception as exc:
@@ -527,10 +545,20 @@ class Compute(lynguine.assess.compute.Compute):
             return {
                 "data": [],
                 "layout": {
-                    "title": "No pipeline.yml — add _data/corpus/pipeline.yml"
+                    "title": (
+                        "No pipeline graph — declare sidecar stores on "
+                        "stage frontmatter (CIP-0024) or add pipeline.yml"
+                    )
                 },
             }
-        return pipeline_dag_figure(manifest)
+        fig = pipeline_dag_figure(manifest)
+        source = manifest.get("source") or ""
+        if source == "discovered":
+            layout = dict(fig.get("layout") or {})
+            layout["title"] = "Analysis pipeline (discovered stores)"
+            fig = dict(fig)
+            fig["layout"] = layout
+        return fig
 
     def _pipeline_stage_params_md(self, focus_stage=None, **_kwargs):
         """Markdown parameter table for the focused pipeline stage."""
