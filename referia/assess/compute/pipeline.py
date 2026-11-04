@@ -15,6 +15,9 @@ import yaml
 __all__ = [
     "COST_CLASSES",
     "PAPER_AXES",
+    "WRITE_STORE_ROLES",
+    "READ_STORE_ROLES",
+    "discover_pipeline_edges",
     "expand_stage_selection",
     "load_pipeline_manifest",
     "pipeline_dag_figure",
@@ -22,6 +25,25 @@ __all__ = [
     "resolve_active_paper_axes",
     "selection_cost_gate",
 ]
+
+# CIP-0024 Option B: interface keys that write / read products.
+WRITE_STORE_ROLES = frozenset({"output", "pack"})
+READ_STORE_ROLES = frozenset(
+    {
+        "input",
+        "data",
+        "constants",
+        "grounds",
+        "phrases",
+        "turns",
+        "chunks",
+        "codebook",
+        "roster",
+        "grain",
+        "scores",
+        "documents",
+    }
+)
 
 COST_CLASSES = frozenset({"aggregate", "refit", "llm", "display"})
 
@@ -388,3 +410,122 @@ def pipeline_stage_params_md(
             f"| `{key}` | {k.get('cost_class')} | {elig} | {val} |"
         )
     return "\n".join(lines)
+
+
+def _store_path_key(block: Any) -> str | None:
+    if not isinstance(block, Mapping):
+        return None
+    filename = block.get("filename")
+    if not filename:
+        return None
+    directory = block.get("directory")
+    if directory:
+        return f"{str(directory).rstrip('/')}/{filename}"
+    return str(filename)
+
+
+def _iter_role_stores(
+    meta: Mapping[str, Any], roles: frozenset[str]
+) -> list[tuple[str, str]]:
+    """Return ``(role, path_key)`` for store-shaped blocks under *roles*."""
+    out: list[tuple[str, str]] = []
+    for role in roles:
+        if role not in meta:
+            continue
+        raw = meta.get(role)
+        blocks = raw if isinstance(raw, list) else [raw]
+        for block in blocks:
+            key = _store_path_key(block)
+            if key:
+                out.append((role, key))
+    return out
+
+
+def discover_pipeline_edges(
+    root: str | Path | None = None,
+    *,
+    stages: Sequence[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Infer producer→consumer edges from declared interface stores (CIP-0024).
+
+    *stages* is a sequence of mappings with ``id`` and ``meta`` (frontmatter
+    dict). When *stages* is omitted, load referia markdown under *root*
+    (``layout: referia``) via ``python-frontmatter`` when available.
+
+    Returns ``{"stages": [...], "edges": [...], "orphans": [...]}`` where
+    edges are ``{"from", "to", "via", "write_role", "read_role"}`` and
+    orphans are reads with no declared writer (external seeds).
+    """
+    from collections import defaultdict
+
+    if stages is None:
+        if root is None:
+            raise ValueError("root or stages is required")
+        stages = _load_referia_stage_metas(Path(root))
+
+    producers: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    consumers: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    stage_ids: list[str] = []
+    for stage in stages:
+        sid = str(stage.get("id") or "")
+        meta = stage.get("meta") or {}
+        if not sid or not isinstance(meta, Mapping):
+            continue
+        stage_ids.append(sid)
+        for role, key in _iter_role_stores(meta, WRITE_STORE_ROLES):
+            producers[key].append((sid, role))
+        for role, key in _iter_role_stores(meta, READ_STORE_ROLES):
+            consumers[key].append((sid, role))
+
+    edges: list[dict[str, str]] = []
+    orphans: list[dict[str, str]] = []
+    for store, cons in sorted(consumers.items()):
+        prods = producers.get(store, [])
+        for cid, read_role in cons:
+            if not prods:
+                orphans.append(
+                    {"to": cid, "via": store, "read_role": read_role}
+                )
+                continue
+            for pid, write_role in prods:
+                if pid == cid:
+                    continue
+                edges.append(
+                    {
+                        "from": pid,
+                        "to": cid,
+                        "via": store,
+                        "write_role": write_role,
+                        "read_role": read_role,
+                    }
+                )
+    return {
+        "stages": stage_ids,
+        "edges": edges,
+        "orphans": orphans,
+        "producers": {k: [p for p, _ in v] for k, v in producers.items()},
+    }
+
+
+def _load_referia_stage_metas(root: Path) -> list[dict[str, Any]]:
+    try:
+        import frontmatter
+    except ImportError as exc:
+        raise ImportError(
+            "discover_pipeline_edges from a study root requires "
+            "python-frontmatter"
+        ) from exc
+
+    out: list[dict[str, Any]] = []
+    for path in sorted(root.glob("*.md")):
+        try:
+            post = frontmatter.load(path)
+        except Exception:
+            continue
+        meta = dict(post)
+        if meta.get("layout") != "referia":
+            continue
+        if path.stem in {"index", "README"}:
+            continue
+        out.append({"id": path.stem, "meta": meta, "path": str(path)})
+    return out

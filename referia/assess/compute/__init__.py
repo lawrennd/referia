@@ -47,6 +47,7 @@ from .sequence import (
 )
 from .multiverse import run_analysis_multiverse
 from .pipeline import (
+    discover_pipeline_edges,
     load_pipeline_manifest,
     pipeline_dag_figure,
     pipeline_stage_params_md,
@@ -65,7 +66,12 @@ from .distance import (
     topic_means_from_responsibilities,
 )
 from .grounds import llm_classify_grounds
-from .stores import named_store_status
+from .stores import (
+    PRODUCT_SIDECAR_ROLES,
+    declared_store_path,
+    load_declared_yaml_rows,
+    named_store_status,
+)
 from .topic_naming import (
     subject_grain_apply_focus_label,
     subject_grain_keys_needing_names,
@@ -205,35 +211,89 @@ class Compute(lynguine.assess.compute.Compute):
             return Path(str(base)) / ".." / "info"
         return None
 
+    def _codebook_parquet_path(self):
+        """Path to the VQ codebook from a declared ``codebook:`` store or sibling."""
+        from pathlib import Path
+
+        iface = getattr(self, "_interface", None)
+        declared = declared_store_path(iface, "codebook") if iface else None
+        if declared:
+            return Path(declared)
+        info = self._config_info_dir()
+        return (info / "codebook.parquet") if info is not None else None
+
     def _run_document_distance_analysis(
         self, cluster_ids=None, doc_titles=None, **kwargs
     ):
         """Fill VQ ``cluster_ids`` and chapter titles from sibling info files."""
-        info = self._config_info_dir()
-        if cluster_ids_missing(cluster_ids) and info is not None:
-            codebook = info / "codebook.parquet"
-            if codebook.exists():
+        if cluster_ids_missing(cluster_ids):
+            codebook = self._codebook_parquet_path()
+            if codebook is not None and codebook.exists():
                 try:
                     frame = pd.read_parquet(codebook)
                     if "cluster_ids" in frame.columns and len(frame):
                         cluster_ids = frame.iloc[0]["cluster_ids"]
                 except Exception:
                     pass
-        if not doc_titles and info is not None:
-            documents = info / "documents.yml"
-            if documents.exists():
-                doc_titles = load_document_titles(documents)
+        if not doc_titles:
+            from pathlib import Path
+
+            iface = getattr(self, "_interface", None)
+            roster_path = declared_store_path(iface, "roster") if iface else None
+            if roster_path and Path(roster_path).exists():
+                doc_titles = load_document_titles(Path(roster_path))
+            else:
+                info = self._config_info_dir()
+                if info is not None:
+                    documents = info / "documents.yml"
+                    if documents.exists():
+                        doc_titles = load_document_titles(documents)
         return run_document_distance_analysis(
             cluster_ids=cluster_ids, doc_titles=doc_titles, **kwargs
         )
 
     def _load_info_yaml_rows(self, filename: str) -> list[dict]:
+        """Load a corpus YAML product, preferring a CIP-0024 declared store.
+
+        When the interface declares a product-named sidecar (e.g.
+        ``grounds:`` for ``grounds.yml``), load via that spec. Otherwise
+        fall back to sibling-path open under ``_config_info_dir`` and log
+        once per filename (deprecation path).
+        """
+        import logging
+
+        iface = getattr(self, "_interface", None)
+        if iface is not None:
+            role = PRODUCT_SIDECAR_ROLES.get(str(filename))
+            if role:
+                declared = load_declared_yaml_rows(iface, role)
+                if declared is not None:
+                    return declared
+            # Class A: filename may be the page's ``data:`` store (e.g. scores.yml).
+            data_spec = iface.get("data") if hasattr(iface, "get") else None
+            if isinstance(data_spec, dict) and data_spec.get("filename") == filename:
+                declared = load_declared_yaml_rows(iface, "data")
+                if declared is not None:
+                    return declared
+
         info = self._config_info_dir()
         if info is None:
             return []
         path = info / filename
         if not path.exists():
             return []
+        warned = getattr(self, "_undeclared_sidecar_warned", None)
+        if warned is None:
+            warned = set()
+            self._undeclared_sidecar_warned = warned
+        if filename not in warned:
+            warned.add(filename)
+            logging.getLogger(__name__).warning(
+                "CIP-0024: loading %s via undeclared sibling path; "
+                "declare a %s: store on this stage's interface",
+                filename,
+                role or "sidecar",
+            )
         cached = getattr(self, "_info_yaml_cache", None)
         if cached is None:
             cached = {}
@@ -262,10 +322,9 @@ class Compute(lynguine.assess.compute.Compute):
         self, cluster_ids=None, kinds=None, **kwargs
     ):
         """Fill VQ ``cluster_ids`` and phrase ``kinds`` from sibling info."""
-        info = self._config_info_dir()
-        if cluster_ids_missing(cluster_ids) and info is not None:
-            codebook = info / "codebook.parquet"
-            if codebook.exists():
+        if cluster_ids_missing(cluster_ids):
+            codebook = self._codebook_parquet_path()
+            if codebook is not None and codebook.exists():
                 try:
                     frame = pd.read_parquet(codebook)
                     if "cluster_ids" in frame.columns and len(frame):
@@ -570,16 +629,17 @@ class Compute(lynguine.assess.compute.Compute):
             scores = self._load_info_yaml_rows("scores.yml")
             rec = scores[0] if scores else {}
             cluster_ids = rec.get("cluster_ids")
-            info = self._config_info_dir()
-            if cluster_ids_missing(cluster_ids) and info is not None:
-                codebook = info / "codebook.parquet"
-                if codebook.exists():
+            if cluster_ids_missing(cluster_ids):
+                codebook = self._codebook_parquet_path()
+                if codebook is not None and codebook.exists():
                     try:
                         frame = pd.read_parquet(codebook)
                         if "cluster_ids" in frame.columns and len(frame):
                             cluster_ids = frame.iloc[0]["cluster_ids"]
                     except Exception:
                         cluster_ids = None
+                else:
+                    cluster_ids = None
             try:
                 kinds = hard_lens_labels(
                     rec.get("responsibilities"),
