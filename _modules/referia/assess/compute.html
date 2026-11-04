@@ -889,10 +889,12 @@
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.multiverse</span><span class="w"> </span><span class="kn">import</span> <span class="n">run_analysis_multiverse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">compose_pipeline_manifest</span><span class="p">,</span>
     <span class="n">discover_pipeline_edges</span><span class="p">,</span>
     <span class="n">load_pipeline_manifest</span><span class="p">,</span>
     <span class="n">pipeline_dag_figure</span><span class="p">,</span>
     <span class="n">pipeline_stage_params_md</span><span class="p">,</span>
+    <span class="n">study_root_from_info_dir</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.distance</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">axis_correlates</span><span class="p">,</span>
@@ -1352,14 +1354,30 @@
         <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">info</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;pipeline.yml&quot;</span>
         <span class="k">return</span> <span class="n">path</span> <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_study_root</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Directory of referia stage markdown (study / repo root).&quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+        <span class="n">iface</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_interface&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">iface</span><span class="p">,</span> <span class="s2">&quot;directory&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span class="n">iface</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">study_root_from_info_dir</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_config_info_dir</span><span class="p">(),</span>
+            <span class="n">iface_directory</span><span class="o">=</span><span class="n">base</span><span class="p">,</span>
+        <span class="p">)</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_pipeline_manifest</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_manifest_path</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;edges&quot;</span><span class="p">:</span> <span class="p">[]}</span>
-        <span class="k">return</span> <span class="n">load_pipeline_manifest</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compose Option B discovery with optional ``pipeline.yml`` overlay.&quot;&quot;&quot;</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_study_root</span><span class="p">()</span>
+        <span class="n">overlay_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_manifest_path</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">root</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">overlay_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;edges&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="s2">&quot;empty&quot;</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">compose_pipeline_manifest</span><span class="p">(</span>
+            <span class="n">root</span><span class="o">=</span><span class="n">root</span><span class="p">,</span>
+            <span class="n">overlay_path</span><span class="o">=</span><span class="n">overlay_path</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_pipeline_dag_figure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">_kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plotly DAG from ``_data/corpus/pipeline.yml`` (CIP-0023).&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plotly DAG from declared stores (CIP-0024 Option B).&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">manifest</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_pipeline_manifest</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
@@ -1371,10 +1389,20 @@
             <span class="k">return</span> <span class="p">{</span>
                 <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[],</span>
                 <span class="s2">&quot;layout&quot;</span><span class="p">:</span> <span class="p">{</span>
-                    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;No pipeline.yml — add _data/corpus/pipeline.yml&quot;</span>
+                    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="p">(</span>
+                        <span class="s2">&quot;No pipeline graph — declare sidecar stores on &quot;</span>
+                        <span class="s2">&quot;stage frontmatter (CIP-0024) or add pipeline.yml&quot;</span>
+                    <span class="p">)</span>
                 <span class="p">},</span>
             <span class="p">}</span>
-        <span class="k">return</span> <span class="n">pipeline_dag_figure</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">pipeline_dag_figure</span><span class="p">(</span><span class="n">manifest</span><span class="p">)</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">manifest</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">source</span> <span class="o">==</span> <span class="s2">&quot;discovered&quot;</span><span class="p">:</span>
+            <span class="n">layout</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">fig</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;layout&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
+            <span class="n">layout</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Analysis pipeline (discovered stores)&quot;</span>
+            <span class="n">fig</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+            <span class="n">fig</span><span class="p">[</span><span class="s2">&quot;layout&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">layout</span>
+        <span class="k">return</span> <span class="n">fig</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_pipeline_stage_params_md</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">focus_stage</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">_kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Markdown parameter table for the focused pipeline stage.&quot;&quot;&quot;</span>
