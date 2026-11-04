@@ -1,8 +1,12 @@
-"""Pipeline manifest + multiverse axis selection helpers (CIP-0023).
+"""Pipeline manifest + multiverse axis selection helpers (CIP-0023 / 0024).
 
-Option A: an explicit study ``pipeline.yml`` lists nodes, edges, and
-per-knob cost classes. The multiverse page uses this to draw a DAG and
-to decide which ticks are executable in Phase 1 (``aggregate`` only).
+Option B (default): discover stages and edges from declared interface
+stores on referia frontmatter (``discover_pipeline_edges``).
+
+Optional ``pipeline.yml`` overlay supplies titles, permalinks, and
+per-knob cost / paper-axis metadata for the multiverse picker — not the
+graph topology. Option A (handwritten edges) remains a fallback when
+discovery finds nothing.
 """
 
 from __future__ import annotations
@@ -17,6 +21,7 @@ __all__ = [
     "PAPER_AXES",
     "WRITE_STORE_ROLES",
     "READ_STORE_ROLES",
+    "compose_pipeline_manifest",
     "discover_pipeline_edges",
     "expand_stage_selection",
     "load_pipeline_manifest",
@@ -24,6 +29,7 @@ __all__ = [
     "pipeline_stage_params_md",
     "resolve_active_paper_axes",
     "selection_cost_gate",
+    "study_root_from_info_dir",
 ]
 
 # CIP-0024 Option B: interface keys that write / read products.
@@ -65,81 +71,76 @@ def _as_mapping(raw: Any) -> dict[str, Any]:
     raise ValueError("pipeline manifest must be a mapping")
 
 
-def load_pipeline_manifest(
-    path: str | Path | None = None,
+def study_root_from_info_dir(
+    info: str | Path | None,
     *,
-    data: Mapping[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Load and validate a pipeline manifest.
+    iface_directory: str | Path | None = None,
+) -> Path | None:
+    """Study root that holds referia ``*.md`` stages.
 
-    Returns a normalised dict with ``nodes`` (list) and ``edges`` (list).
+    Prefer the interface directory (page / repo root). Fall back from a
+    corpus info dir such as ``_data/corpus`` → parent of ``_data``.
     """
-    if data is None:
-        if path is None:
-            raise ValueError("path or data is required")
-        text = Path(path).read_text(encoding="utf-8")
-        data = yaml.safe_load(text)
-    manifest = _as_mapping(data)
-    nodes_raw = manifest.get("nodes") or []
-    edges_raw = manifest.get("edges") or []
-    if not isinstance(nodes_raw, list) or not nodes_raw:
-        raise ValueError("pipeline.nodes must be a non-empty list")
-    if not isinstance(edges_raw, list):
-        raise ValueError("pipeline.edges must be a list")
+    if iface_directory:
+        return Path(str(iface_directory))
+    if info is None:
+        return None
+    path = Path(info)
+    if path.name == "corpus" and path.parent.name == "_data":
+        return path.parent.parent
+    return path.parent
 
-    nodes: list[dict[str, Any]] = []
-    ids: set[str] = set()
-    for item in nodes_raw:
-        if not isinstance(item, Mapping):
-            raise ValueError("each node must be a mapping")
-        nid = str(item.get("id") or "").strip()
-        if not nid:
-            raise ValueError("node.id is required")
-        if nid in ids:
-            raise ValueError(f"duplicate node id {nid!r}")
-        ids.add(nid)
-        knobs = []
-        for knob in item.get("parameters") or []:
-            if isinstance(knob, str):
-                knobs.append(
-                    {
-                        "key": knob,
-                        "cost_class": "display",
-                        "multiverse_eligible": False,
-                    }
-                )
-                continue
-            if not isinstance(knob, Mapping):
-                raise ValueError(f"node {nid}: parameter entries must be maps")
-            key = str(knob.get("key") or "").strip()
-            if not key:
-                raise ValueError(f"node {nid}: parameter key required")
-            cost = str(knob.get("cost_class") or "display").strip()
-            if cost not in COST_CLASSES:
-                raise ValueError(
-                    f"node {nid} key {key}: unknown cost_class {cost!r}"
-                )
+
+def _normalise_node(item: Mapping[str, Any]) -> dict[str, Any]:
+    nid = str(item.get("id") or "").strip()
+    if not nid:
+        raise ValueError("node.id is required")
+    knobs = []
+    for knob in item.get("parameters") or []:
+        if isinstance(knob, str):
             knobs.append(
                 {
-                    "key": key,
-                    "cost_class": cost,
-                    "multiverse_eligible": bool(
-                        knob.get("multiverse_eligible", False)
-                    ),
-                    "paper_axis": knob.get("paper_axis"),
-                    "label": knob.get("label") or key,
+                    "key": knob,
+                    "cost_class": "display",
+                    "multiverse_eligible": False,
                 }
             )
-        nodes.append(
+            continue
+        if not isinstance(knob, Mapping):
+            raise ValueError(f"node {nid}: parameter entries must be maps")
+        key = str(knob.get("key") or "").strip()
+        if not key:
+            raise ValueError(f"node {nid}: parameter key required")
+        cost = str(knob.get("cost_class") or "display").strip()
+        if cost not in COST_CLASSES:
+            raise ValueError(
+                f"node {nid} key {key}: unknown cost_class {cost!r}"
+            )
+        knobs.append(
             {
-                "id": nid,
-                "permalink": str(item.get("permalink") or f"/{nid}/"),
-                "title": str(item.get("title") or nid),
-                "parameters_path": item.get("parameters_path"),
-                "parameters": knobs,
+                "key": key,
+                "cost_class": cost,
+                "multiverse_eligible": bool(
+                    knob.get("multiverse_eligible", False)
+                ),
+                "paper_axis": knob.get("paper_axis"),
+                "label": knob.get("label") or key,
             }
         )
+    return {
+        "id": nid,
+        "permalink": str(item.get("permalink") or f"/{nid}/"),
+        "title": str(item.get("title") or nid),
+        "parameters_path": item.get("parameters_path"),
+        "parameters": knobs,
+    }
 
+
+def _normalise_edges(
+    edges_raw: Any, ids: set[str]
+) -> list[dict[str, str]]:
+    if not isinstance(edges_raw, list):
+        raise ValueError("pipeline.edges must be a list")
     edges: list[dict[str, str]] = []
     for item in edges_raw:
         if not isinstance(item, Mapping):
@@ -155,9 +156,161 @@ def load_pipeline_manifest(
                 "via": str(item.get("via") or ""),
             }
         )
+    return edges
 
+
+def load_pipeline_manifest(
+    path: str | Path | None = None,
+    *,
+    data: Mapping[str, Any] | None = None,
+    allow_empty_nodes: bool = False,
+) -> dict[str, Any]:
+    """Load and validate a pipeline manifest.
+
+    Returns a normalised dict with ``nodes`` (list) and ``edges`` (list).
+    Set *allow_empty_nodes* when loading a parameter-only overlay for
+    ``compose_pipeline_manifest``.
+    """
+    if data is None:
+        if path is None:
+            raise ValueError("path or data is required")
+        text = Path(path).read_text(encoding="utf-8")
+        data = yaml.safe_load(text)
+    manifest = _as_mapping(data)
+    nodes_raw = manifest.get("nodes") or []
+    edges_raw = manifest.get("edges") or []
+    if not isinstance(nodes_raw, list):
+        raise ValueError("pipeline.nodes must be a list")
+    if not nodes_raw and not allow_empty_nodes:
+        raise ValueError("pipeline.nodes must be a non-empty list")
+
+    nodes: list[dict[str, Any]] = []
+    ids: set[str] = set()
+    for item in nodes_raw:
+        if not isinstance(item, Mapping):
+            raise ValueError("each node must be a mapping")
+        node = _normalise_node(item)
+        nid = node["id"]
+        if nid in ids:
+            raise ValueError(f"duplicate node id {nid!r}")
+        ids.add(nid)
+        nodes.append(node)
+
+    edges = _normalise_edges(edges_raw, ids)
     _assert_acyclic(ids, edges)
     return {"nodes": nodes, "edges": edges}
+
+
+def compose_pipeline_manifest(
+    root: str | Path | None = None,
+    *,
+    overlay: Mapping[str, Any] | None = None,
+    overlay_path: str | Path | None = None,
+    stages: Sequence[Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Compose a DAG from declared stores, overlaying optional picker metadata.
+
+    Discovery (CIP-0024 Option B) owns topology. An optional ``pipeline.yml``
+    overlay owns titles / cost classes / paper axes for the multiverse UI.
+    Falls back to a full Option A manifest when discovery finds no stages.
+    """
+    overlay_manifest: dict[str, Any] | None = None
+    if overlay is not None or overlay_path is not None:
+        overlay_manifest = load_pipeline_manifest(
+            path=overlay_path,
+            data=overlay,
+            allow_empty_nodes=True,
+        )
+
+    discovered = None
+    if stages is not None or root is not None:
+        discovered = discover_pipeline_edges(root, stages=stages)
+
+    if not discovered or not discovered.get("stages"):
+        if overlay_manifest and overlay_manifest.get("nodes"):
+            out = dict(overlay_manifest)
+            out["source"] = "manifest"
+            return out
+        return {"nodes": [], "edges": [], "source": "empty"}
+
+    by_id: dict[str, dict[str, Any]] = {}
+    stage_metas = {
+        str(s.get("id")): s
+        for s in (stages or [])
+        if isinstance(s, Mapping) and s.get("id")
+    }
+    if not stage_metas and root is not None:
+        for s in _load_referia_stage_metas(Path(root)):
+            stage_metas[str(s["id"])] = s
+
+    for sid in discovered["stages"]:
+        meta = (stage_metas.get(sid) or {}).get("meta") or {}
+        title = str(meta.get("title") or sid)
+        permalink = str(meta.get("permalink") or f"/{sid}/")
+        by_id[sid] = {
+            "id": sid,
+            "title": title,
+            "permalink": permalink,
+            "parameters_path": None,
+            "parameters": [],
+        }
+
+    if overlay_manifest:
+        for node in overlay_manifest.get("nodes") or []:
+            nid = node["id"]
+            if nid in by_id:
+                merged = dict(by_id[nid])
+                merged.update(
+                    {
+                        "title": node.get("title") or merged["title"],
+                        "permalink": node.get("permalink")
+                        or merged["permalink"],
+                        "parameters_path": node.get("parameters_path"),
+                        "parameters": node.get("parameters") or [],
+                    }
+                )
+                by_id[nid] = merged
+            else:
+                # Overlay-only stage (e.g. documented but no store edges yet).
+                by_id[nid] = dict(node)
+
+    for edge in discovered.get("edges") or []:
+        for endpoint in (edge.get("from"), edge.get("to")):
+            eid = str(endpoint or "")
+            if eid and eid not in by_id:
+                by_id[eid] = {
+                    "id": eid,
+                    "title": eid,
+                    "permalink": f"/{eid}/",
+                    "parameters_path": None,
+                    "parameters": [],
+                }
+
+    ids = set(by_id)
+    edges = _normalise_edges(
+        [
+            {
+                "from": e["from"],
+                "to": e["to"],
+                "via": e.get("via") or "",
+            }
+            for e in discovered.get("edges") or []
+        ],
+        ids,
+    )
+    _assert_acyclic(ids, edges)
+    # Stable order: discovered stage order, then any overlay-only extras.
+    ordered = [by_id[s] for s in discovered["stages"] if s in by_id]
+    seen = {n["id"] for n in ordered}
+    for nid, node in by_id.items():
+        if nid not in seen:
+            ordered.append(node)
+    return {
+        "nodes": ordered,
+        "edges": edges,
+        "source": "discovered",
+        "orphans": list(discovered.get("orphans") or []),
+    }
 
 
 def _assert_acyclic(ids: set[str], edges: Sequence[Mapping[str, str]]) -> None:

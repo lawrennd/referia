@@ -289,7 +289,11 @@ def test_registry_includes_sequence_and_multiverse():
 def test_pipeline_manifest_path_and_load(tmp_path: Path):
     compute, info = _compute(tmp_path)
     assert compute._pipeline_manifest_path() is None
-    assert compute._load_pipeline_manifest() == {"nodes": [], "edges": []}
+    assert compute._load_pipeline_manifest() == {
+        "nodes": [],
+        "edges": [],
+        "source": "empty",
+    }
 
     (info / "pipeline.yml").write_text(
         "nodes:\n  - id: a\n    parameters:\n      - key: n_boot\n"
@@ -309,7 +313,7 @@ def test_pipeline_manifest_path_and_load(tmp_path: Path):
 def test_pipeline_dag_figure_wrapper_paths(tmp_path: Path):
     compute, info = _compute(tmp_path)
     empty = compute._pipeline_dag_figure()
-    assert "No pipeline.yml" in empty["layout"]["title"]
+    assert "No pipeline graph" in empty["layout"]["title"]
 
     (info / "pipeline.yml").write_text(
         "nodes:\n  - id: a\n    title: A\nedges: []\n",
@@ -319,12 +323,40 @@ def test_pipeline_dag_figure_wrapper_paths(tmp_path: Path):
     assert fig["data"]
     assert any(t.get("mode") == "markers+text" for t in fig["data"])
 
+    # Overlay with no nodes and no discovered stages → empty graph.
     (info / "pipeline.yml").write_text(
         "nodes: []\nedges: []\n",
         encoding="utf-8",
     )
-    failed = compute._pipeline_dag_figure()
-    assert "Pipeline load failed" in failed["layout"]["title"]
+    blank = compute._pipeline_dag_figure()
+    assert "No pipeline graph" in blank["layout"]["title"]
+
+
+def test_pipeline_dag_figure_discovers_from_frontmatter(tmp_path: Path):
+    compute, info = _compute(tmp_path)
+    (tmp_path / "producer.md").write_text(
+        "---\nlayout: referia\ntitle: Producer\n"
+        "output:\n  directory: info\n  filename: grounds.yml\n---\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "consumer.md").write_text(
+        "---\nlayout: referia\ntitle: Consumer\n"
+        "grounds:\n  directory: info\n  filename: grounds.yml\n---\n",
+        encoding="utf-8",
+    )
+    (info / "pipeline.yml").write_text(
+        "nodes:\n  - id: consumer\n    title: Overlay Consumer\n"
+        "    parameters:\n      - key: n_boot\n        cost_class: aggregate\n"
+        "        multiverse_eligible: true\nedges: []\n",
+        encoding="utf-8",
+    )
+    fig = compute._pipeline_dag_figure()
+    assert "discovered" in fig["layout"]["title"].lower()
+    ids = fig["data"][1]["text"]
+    assert "producer" in ids and "consumer" in ids
+    md = compute._pipeline_stage_params_md(focus_stage="consumer")
+    assert "n_boot" in md
+    assert "Overlay Consumer" in md
 
 
 def test_pipeline_stage_params_md_wrapper_paths(tmp_path: Path):
@@ -342,6 +374,4 @@ def test_pipeline_stage_params_md_wrapper_paths(tmp_path: Path):
     assert "Stage A" in md
 
     (info / "pipeline.yml").write_text("nodes: []\nedges: []\n", encoding="utf-8")
-    assert "Pipeline load failed" in compute._pipeline_stage_params_md(
-        focus_stage="a"
-    )
+    assert "Unknown stage" in compute._pipeline_stage_params_md(focus_stage="a")
