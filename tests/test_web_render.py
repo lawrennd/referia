@@ -988,6 +988,36 @@ class TestRenderViewer:
         assert "Exchange 1" in html
         assert 'open' not in wrapped.split(">")[0]
 
+    def test_collapse_keeps_nested_subheadings_inside(self):
+        """Deeper headings inside an LLM reply must not end the details early."""
+        md = (
+            "### User\n\n"
+            "ask\n\n"
+            "### LLM\n\n"
+            "intro\n\n"
+            "#### Mechanism\n\n"
+            "nested body that should stay collapsed\n\n"
+            "##### Even deeper\n\n"
+            "still inside\n\n"
+            "### User\n\n"
+            "next prompt\n"
+        )
+        html = render_viewer(
+            {"type": "Markdown", "collapse": {"headings": ["LLM"]}},
+            md,
+        )
+        assert html.count('<details class="viewer-heading-collapse"') == 1
+        details_start = html.index('<details class="viewer-heading-collapse"')
+        details_end = html.index("</details>", details_start)
+        wrapped = html[details_start:details_end]
+        assert "intro" in wrapped
+        assert "Mechanism" in wrapped
+        assert "nested body that should stay collapsed" in wrapped
+        assert "Even deeper" in wrapped
+        assert "still inside" in wrapped
+        assert "next prompt" not in wrapped
+        assert "ask" not in wrapped
+
     def test_collapse_absent_leaves_headings(self):
         html = render_viewer({"type": "Markdown"}, "### LLM\n\nsecret")
         assert "viewer-heading-collapse" not in html

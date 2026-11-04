@@ -1228,6 +1228,11 @@ def _collapse_matching_headings(html: str, view_spec: dict | None) -> str:
     CIP-0014: opt-in viewer collapse. Unmatched headings stay in the open
     flow. The original heading tag is omitted from the body so the summary
     is the only title (same as review ``type: Section``).
+
+    A collapsed section runs until the next heading at the *same or higher*
+    outline level (``h3`` closes at the next ``h1``–``h3``, not at a nested
+    ``h4``). LLM replies often introduce ``####`` subsections; those stay
+    inside the ``<details>`` instead of ending the collapse early.
     """
     options = _viewer_collapse_options(view_spec)
     if not options or not html:
@@ -1241,15 +1246,25 @@ def _collapse_matching_headings(html: str, view_spec: dict | None) -> str:
     open_attr = " open" if options["open"] else ""
     out: list[str] = [html[: matches[0].start()]]
     counts: dict[str, int] = {}
-    for i, match in enumerate(matches):
-        end = matches[i + 1].start() if i + 1 < len(matches) else len(html)
+    i = 0
+    while i < len(matches):
+        match = matches[i]
+        level = int(match.group(2))
         heading_html = match.group(1)
-        body = html[match.end() : end]
         text = _heading_plain_text(heading_html)
         if not _heading_matches(text, names):
+            # Peer cut-off: keep prior behaviour for open-flow headings.
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(html)
             out.append(heading_html)
-            out.append(body)
+            out.append(html[match.end() : end])
+            i += 1
             continue
+        # Include nested deeper headings inside this details block.
+        j = i + 1
+        while j < len(matches) and int(matches[j].group(2)) > level:
+            j += 1
+        end = matches[j].start() if j < len(matches) else len(html)
+        body = html[match.end() : end]
         label = " ".join(text.split()) or "Section"
         slug = re.sub(r"[^a-z0-9]+", "-", label.casefold()).strip("-") or "heading"
         counts[slug] = counts.get(slug, 0) + 1
@@ -1261,6 +1276,7 @@ def _collapse_matching_headings(html: str, view_spec: dict | None) -> str:
             f"{body}"
             f"</details>"
         )
+        i = j
     return "".join(out)
 
 
