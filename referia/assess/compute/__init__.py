@@ -263,8 +263,8 @@ class Compute(lynguine.assess.compute.Compute):
         import logging
 
         iface = getattr(self, "_interface", None)
+        role = PRODUCT_SIDECAR_ROLES.get(str(filename))
         if iface is not None:
-            role = PRODUCT_SIDECAR_ROLES.get(str(filename))
             if role:
                 declared = load_declared_yaml_rows(iface, role)
                 if declared is not None:
