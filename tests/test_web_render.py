@@ -1018,6 +1018,44 @@ class TestRenderViewer:
         assert "next prompt" not in wrapped
         assert "ask" not in wrapped
 
+    def test_collapse_peers_keep_same_level_content_headings_inside(self):
+        """Peer boundaries ignore ### content headings inside an LLM reply."""
+        md = (
+            "## Exchange 1\n\n"
+            "### User\n\n"
+            "ask\n\n"
+            "### LLM\n\n"
+            "intro\n\n"
+            "### 1. The mathematical connection\n\n"
+            "same-level body that should stay collapsed\n\n"
+            "## 2. A higher content heading\n\n"
+            "still inside the LLM details\n\n"
+            "### User\n\n"
+            "next prompt\n\n"
+            "## Exchange 2\n\n"
+            "### LLM\n\n"
+            "second reply\n"
+        )
+        html = render_viewer(
+            {
+                "type": "Markdown",
+                "collapse": {
+                    "headings": ["LLM"],
+                    "peers": ["User", "LLM", "Exchange"],
+                },
+            },
+            md,
+        )
+        assert html.count('<details class="viewer-heading-collapse"') == 2
+        first = html.split('<details class="viewer-heading-collapse"')[1]
+        first_body = first.split("</details>")[0]
+        assert "same-level body that should stay collapsed" in first_body
+        assert "still inside the LLM details" in first_body
+        assert "mathematical connection" in first_body
+        assert "next prompt" not in first_body
+        assert "second reply" not in first_body
+        assert "ask" not in first_body
+
     def test_collapse_absent_leaves_headings(self):
         html = render_viewer({"type": "Markdown"}, "### LLM\n\nsecret")
         assert "viewer-heading-collapse" not in html
