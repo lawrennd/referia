@@ -391,6 +391,10 @@ def test_study_root_from_info_dir(tmp_path):
         corpus, iface_directory=tmp_path / "study"
     ) == tmp_path / "study"
     assert study_root_from_info_dir(None) is None
+    # Non-corpus info dir → parent is study root.
+    info = tmp_path / "info"
+    info.mkdir()
+    assert study_root_from_info_dir(info) == tmp_path
 
 
 def test_compose_pipeline_manifest_discovers_edges(tmp_path):
@@ -435,6 +439,88 @@ def test_compose_falls_back_to_overlay_when_no_stages(tmp_path):
     m = compose_pipeline_manifest(tmp_path, overlay=MINI)
     assert m["source"] == "manifest"
     assert len(m["edges"]) == 2
+
+
+def test_compose_empty_without_discovery_or_overlay():
+    assert compose_pipeline_manifest() == {
+        "nodes": [],
+        "edges": [],
+        "source": "empty",
+    }
+
+
+def test_compose_overlay_only_node_and_string_knobs(tmp_path):
+    """Overlay stage absent from discovery + string parameter knobs."""
+    (tmp_path / "only.md").write_text(
+        "---\nlayout: referia\ntitle: Only\n"
+        "output:\n  directory: d\n  filename: a.yml\n---\n",
+        encoding="utf-8",
+    )
+    overlay = {
+        "nodes": [
+            {
+                "id": "only",
+                "title": "",  # fall back to discovered title
+                "parameters": ["seed"],  # string knob → display
+            },
+            {
+                "id": "chrome_only",
+                "title": "Chrome Only",
+                "parameters": [
+                    {
+                        "key": "axis_definitions",
+                        "cost_class": "aggregate",
+                        "multiverse_eligible": True,
+                        "paper_axis": "definitions",
+                    }
+                ],
+            },
+        ],
+        "edges": [],
+    }
+    m = compose_pipeline_manifest(tmp_path, overlay=overlay)
+    assert m["source"] == "discovered"
+    ids = {n["id"] for n in m["nodes"]}
+    assert "only" in ids and "chrome_only" in ids
+    only = next(n for n in m["nodes"] if n["id"] == "only")
+    # Empty overlay title normalises to id before merge.
+    assert only["title"] == "only"
+    assert only["parameters"][0]["key"] == "seed"
+    assert only["parameters"][0]["cost_class"] == "display"
+    chrome = next(n for n in m["nodes"] if n["id"] == "chrome_only")
+    assert chrome["title"] == "Chrome Only"
+
+
+def test_compose_adds_edge_endpoints_missing_from_stages(tmp_path):
+    from unittest.mock import patch
+
+    stages = [
+        {
+            "id": "a",
+            "meta": {"layout": "referia", "title": "A", "permalink": "/a/"},
+        }
+    ]
+    fake = {
+        "stages": ["a"],
+        "edges": [{"from": "a", "to": "ghost", "via": "x.yml"}],
+        "orphans": [],
+    }
+    with patch(
+        "referia.assess.compute.pipeline.discover_pipeline_edges",
+        return_value=fake,
+    ):
+        m = compose_pipeline_manifest(tmp_path, stages=stages)
+    assert m["source"] == "discovered"
+    assert {n["id"] for n in m["nodes"]} == {"a", "ghost"}
+    assert m["edges"][0]["to"] == "ghost"
+
+
+def test_load_pipeline_allows_empty_nodes_for_overlay():
+    m = load_pipeline_manifest(
+        data={"nodes": [], "edges": []}, allow_empty_nodes=True
+    )
+    assert m["nodes"] == []
+    assert m["edges"] == []
 
 
 def test_pipeline_stage_params_md_branches():
