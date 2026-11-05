@@ -308,6 +308,12 @@ def test_pipeline_manifest_path_and_load(tmp_path: Path):
 
     compute._interface = None
     assert compute._pipeline_manifest_path() is None
+    assert compute._study_root() is None
+    assert compute._load_pipeline_manifest() == {
+        "nodes": [],
+        "edges": [],
+        "source": "empty",
+    }
 
 
 def test_pipeline_dag_figure_wrapper_paths(tmp_path: Path):
@@ -375,3 +381,16 @@ def test_pipeline_stage_params_md_wrapper_paths(tmp_path: Path):
 
     (info / "pipeline.yml").write_text("nodes: []\nedges: []\n", encoding="utf-8")
     assert "Unknown stage" in compute._pipeline_stage_params_md(focus_stage="a")
+
+
+def test_pipeline_wrappers_surface_compose_failures(tmp_path: Path):
+    compute, _info = _compute(tmp_path)
+    with patch(
+        "referia.assess.compute.compose_pipeline_manifest",
+        side_effect=ValueError("bad overlay"),
+    ):
+        fig = compute._pipeline_dag_figure()
+        assert "Pipeline load failed" in fig["layout"]["title"]
+        assert "bad overlay" in fig["layout"]["title"]
+        md = compute._pipeline_stage_params_md(focus_stage="a")
+        assert "Pipeline load failed" in md
