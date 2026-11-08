@@ -85,9 +85,11 @@ def test_ensure_redact_pdf_writes_store_not_source(tmp_path, monkeypatch):
         assert terms[0]["value"] == "Alice Example"
         return {"matches": 1, "warnings": [], "dest": str(dest)}
 
+    # create=True: CI may still install lynguine without CIP-001A redact_pdf.
     with patch(
         "lynguine.access.documents.redact_pdf",
         side_effect=_fake_redact,
+        create=True,
     ):
         dest, result = reviewer.ensure_redact_pdf(0)
 
