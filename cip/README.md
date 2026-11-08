@@ -57,6 +57,7 @@ Each CIP can have one of the following statuses:
 - [CIP-001D](./cip001D.md): Populate-all as a resumable store write, not a long-lived page request (Proposed; REQ-0010)
 - [CIP-0023](./cip0023.md): Multiverse axis picker as a pipeline DAG with expandable parameters (In Progress; REQ-0015 / REQ-0010; Phase 1 merged)
 - [CIP-0024](./cip0024.md): Register sidecar product reads as declared interface stores (Proposed; REQ-0003 / REQ-0010 / REQ-0011; enables CIP-0023 Option B)
+- [CIP-0025](./cip0025.md): Paper author name redaction via front-matter extract (Proposed; REQ-001A; Phase 1 extends lynguine CIP-0013)
 
 ## Creating a Good CIP
 
