@@ -1719,6 +1719,84 @@ class TestDisplayLayout:
         assert "markedFlag" in fields
         assert "complete" in fields
 
+    def test_listing_row_fields_includes_summary_document_visible_if(self):
+        from referia.assess.web_review import listing_row_fields
+
+        class _Rev:
+            def get_review_specs(self):
+                return [{"type": "Checkbox", "field": "complete"}]
+
+            def get_display_detail_field(self):
+                return None
+
+            def list_document_entries(self, section="documents"):
+                if section == "summary_documents":
+                    return [
+                        {
+                            "n": 0,
+                            "type": "markdown",
+                            "label": "Summary",
+                            "visible_if": "readyForSummary",
+                        }
+                    ]
+                return []
+
+        fields = listing_row_fields(_Rev())
+        assert "readyForSummary" in fields
+
+    def test_listing_row_fields_document_entries_no_section_arg(self):
+        """Older list_document_entries() with no section still contributes gates."""
+        from referia.assess.web_review import listing_row_fields
+
+        class _Rev:
+            def get_review_specs(self):
+                return [{"type": "Checkbox", "field": "complete"}]
+
+            def get_display_detail_field(self):
+                return None
+
+            def list_document_entries(self):
+                return [
+                    {
+                        "n": 0,
+                        "type": "Email",
+                        "label": "Email feedback",
+                        "visible_if": {"field": "legacyFlag", "op": "truthy"},
+                    }
+                ]
+
+        fields = listing_row_fields(_Rev())
+        assert "legacyFlag" in fields
+
+    def test_listing_row_fields_document_entries_errors_are_nonfatal(self):
+        from referia.assess.web_review import listing_row_fields
+
+        class _RevBrokenSection:
+            def get_review_specs(self):
+                return [{"type": "Checkbox", "field": "complete"}]
+
+            def get_display_detail_field(self):
+                return None
+
+            def list_document_entries(self, section="documents"):
+                raise RuntimeError(f"boom:{section}")
+
+        fields = listing_row_fields(_RevBrokenSection())
+        assert "complete" in fields
+
+        class _RevBrokenFallback:
+            def get_review_specs(self):
+                return [{"type": "Checkbox", "field": "complete"}]
+
+            def get_display_detail_field(self):
+                return None
+
+            def list_document_entries(self):
+                raise RuntimeError("no-arg also broken")
+
+        fields = listing_row_fields(_RevBrokenFallback())
+        assert "complete" in fields
+
     def test_listing_row_fields_keeps_chrome_when_only_complete(self):
         from referia.assess.web_review import listing_row_fields
 
