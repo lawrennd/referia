@@ -5,11 +5,13 @@ import pytest
 from referia.assess.compute import Compute
 from referia.assess.compute.phrases import (
     _blank,
+    audit_unit_anonymisation,
     dialogue_doc_id,
     llm_extract_phrases,
     parse_extraction_payload,
     quote_support,
     segment_dialogue_units,
+    split_paragraph_units,
     stamp_dialogue_doc_ids,
     word_count_phrase,
 )
@@ -159,6 +161,69 @@ def test_llm_extract_phrases_registered():
     assert "llm_extract" in names
     assert "segment_dialogue_units" in names
     assert "stamp_dialogue_doc_ids" in names
+    assert "split_paragraph_units" in names
+    assert "audit_unit_anonymisation" in names
+
+
+def test_split_paragraph_units_delegates_to_lynguine():
+    body = (
+        "I’m Jordan Quill, a third-year undergraduate at Example Institute.\n\n"
+        "I enjoy machine learning research."
+    )
+    units = split_paragraph_units(
+        text=body,
+        mail_key="internship::jq",
+        candidate=True,
+        subject="Internship",
+        sender="Jordan Quill <applicant.example@gmail.com>",
+        date="2026-09-13",
+        min_chars=10,
+    )
+    assert units
+    assert all({"unit_id", "text", "extract_text", "unit_index"} <= set(u) for u in units)
+
+
+def test_audit_unit_anonymisation_returns_populate_tuple(monkeypatch):
+    """Wrapper maps lynguine audit dict → PopulateButton field tuple (no substrings)."""
+    import lynguine.util.text as lynguine_text
+
+    def _fake_audit(**kwargs):
+        extract = str(kwargs.get("extract_text") or "")
+        email_leak = "@" in extract
+        return {
+            "name_leak": False,
+            "email_leak": email_leak,
+            "phone_leak": "+1-555" in extract,
+            "url_leak": "https://" in extract,
+            "expected_name_source": "none",
+            "anonymise_ok": not email_leak,
+        }
+
+    # raising=False: CI may still resolve an older lynguine without this symbol.
+    monkeypatch.setattr(
+        lynguine_text,
+        "audit_extract_anonymisation",
+        _fake_audit,
+        raising=False,
+    )
+
+    leaks = audit_unit_anonymisation(
+        text="Hello",
+        extract_text=(
+            "Reach me at jordan.quill@example.com or +1-555-123-4567. "
+            "Profile: https://www.linkedin.com/in/jordan-quill-example/"
+        ),
+        sender="noreply@example.com",
+    )
+    assert leaks == (False, True, True, True, "none", False)
+    assert "jordan.quill@example.com" not in str(leaks)
+
+    ok = audit_unit_anonymisation(
+        text="I am interested in your research group and open projects.",
+        extract_text="I am interested in your research group and open projects.",
+        sender="applicant.example@gmail.com",
+    )
+    assert ok == (False, False, False, False, "none", True)
 
 
 def test_parse_json_object_list_and_invalid_json():
