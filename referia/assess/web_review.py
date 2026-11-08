@@ -1371,7 +1371,7 @@ class WebReviewer:
         return entries
 
     def list_pdf_entries(self) -> list[dict]:
-        """Describe ``localpdf`` / ``editpdf`` files for the current record.
+        """Describe ``localpdf`` / ``editpdf`` / ``redactpdf`` for the current record.
 
         Paths are resolved on the server; the returned dicts are metadata for
         the document panel.  Serving goes through ``/record-document/{kind}/{n}``.
@@ -1379,7 +1379,7 @@ class WebReviewer:
         :return: List of ``kind``, ``n``, ``label``, ``exists`` dicts.
         """
         entries: list[dict] = []
-        for kind in ("localpdf", "editpdf"):
+        for kind in ("localpdf", "editpdf", "redactpdf"):
             for n, view in enumerate(self._interface_section(kind)):
                 if not isinstance(view, dict):
                     continue
@@ -1397,7 +1397,7 @@ class WebReviewer:
         return entries
 
     def get_record_document(self, kind: str, n: int):
-        """Return the resolved PDF path for ``localpdf``/``editpdf`` entry *n*.
+        """Return the resolved PDF path for ``localpdf``/``editpdf``/``redactpdf``.
 
         :return: A :class:`~pathlib.Path` or ``None`` if missing or unresolvable.
         """
@@ -1414,6 +1414,8 @@ class WebReviewer:
                 path = self._resolve_local_file(view)
             elif kind == "editpdf":
                 path = self._resolve_editpdf_file(view)
+            elif kind == "redactpdf":
+                path = self._resolve_redactpdf_file(view)
             else:
                 return None
         except Exception as exc:
@@ -1808,6 +1810,144 @@ class WebReviewer:
         if dest is not None and dest.is_file():
             return dest
         return orig
+
+    def _redactpdf_dest(self, view: dict):
+        """Destination path for a ``redactpdf`` entry (may not exist yet)."""
+        from pathlib import Path
+
+        from referia.util.files import to_valid_file
+        from referia.util.misc import renderable
+
+        val = self._extract_file_value(view)
+        if not isinstance(val, str) or not val:
+            return None
+        if "storedirectory" not in view or "sourcedirectory" not in view:
+            raise ValueError(
+                "redactpdf entry requires sourcedirectory and storedirectory"
+            )
+        source_dir = self._resolve_config_relative_dir(view.get("sourcedirectory"))
+        store_dir = self._resolve_config_relative_dir(view.get("storedirectory"))
+        orig = source_dir / Path(val)
+        if "name" in view:
+            stub = str(view["name"]) + ".pdf"
+        elif renderable(view):
+            stub = self._data.view_to_tmpname(view) + ".pdf"
+        else:
+            stub = f"redacted_{orig.name}"
+        index = self.get_index()
+        dest_name = to_valid_file(str(index)) + "_" + to_valid_file(stub)
+        return store_dir / dest_name, orig
+
+    def _resolve_redactpdf_file(self, view: dict):
+        """Return the redacted view copy when prepared; otherwise ``None``.
+
+        Unlike ``editpdf``, we never fall back to the source — serving the
+        unredacted paper under a redactpdf slot would defeat the purpose.
+        """
+        dest_orig = self._redactpdf_dest(view)
+        if dest_orig is None:
+            return None
+        dest, _orig = dest_orig
+        return dest if dest.is_file() else None
+
+    def _redact_terms_from_view(self, view: dict) -> list:
+        """Build RedactTerms from ``terms_field``, ``terms``, or liquid."""
+        from referia.util.misc import renderable
+
+        raw_terms: list = []
+        if "terms_field" in view:
+            cell = self.get_value(view["terms_field"])
+            if cell is not None and str(cell).strip():
+                raw_terms.extend(
+                    p.strip()
+                    for p in str(cell).replace("|", ";").split(";")
+                    if p.strip()
+                )
+        if "terms" in view:
+            configured = view["terms"]
+            if isinstance(configured, str):
+                raw_terms.extend(
+                    p.strip()
+                    for p in configured.replace("|", ";").split(";")
+                    if p.strip()
+                )
+            elif isinstance(configured, list):
+                raw_terms.extend(configured)
+        if renderable(view) and "terms_field" not in view and "terms" not in view:
+            # Allow liquid-only term lists via the usual renderable keys.
+            rendered = self._data.view_to_value(view)
+            if isinstance(rendered, str) and rendered.strip():
+                raw_terms.extend(
+                    p.strip()
+                    for p in rendered.replace("|", ";").split(";")
+                    if p.strip()
+                )
+
+        terms: list = []
+        for item in raw_terms:
+            if isinstance(item, dict) and item.get("value"):
+                terms.append(item)
+            elif isinstance(item, str) and item.strip():
+                terms.append(
+                    {
+                        "value": item.strip(),
+                        "kind": "name",
+                        "match": "whole_word",
+                        "source": "manual",
+                    }
+                )
+        return terms
+
+    def ensure_redact_pdf(self, n: int):
+        """Apply ``redactpdf[n]`` into ``storedirectory`` via lynguine ``redact_pdf``.
+
+        Source under ``sourcedirectory`` is never modified. Returns
+        ``(dest_path, result_dict)`` where ``result_dict`` carries match counts
+        and warnings from lynguine.
+        """
+        import os
+        from pathlib import Path
+
+        views = self._interface_section("redactpdf")
+        if n < 0 or n >= len(views) or not isinstance(views[n], dict):
+            raise IndexError(f"No redactpdf entry at index {n}")
+        view = views[n]
+        dest_orig = self._redactpdf_dest(view)
+        if dest_orig is None:
+            raise FileNotFoundError(f"No file value for redactpdf[{n}]")
+        dest, orig = dest_orig
+        if not orig.is_file():
+            raise FileNotFoundError(f"Source PDF not found: {orig}")
+
+        terms = self._redact_terms_from_view(view)
+        max_pages = view.get("max_pages")
+        pages = view.get("pages")
+
+        try:
+            from lynguine.access.documents import redact_pdf
+        except ImportError as exc:
+            raise ImportError(
+                "lynguine.access.documents.redact_pdf is required for redactpdf "
+                "(CIP-001A). Install a lynguine build that includes it."
+            ) from exc
+
+        _orig_cwd = os.getcwd()
+        try:
+            os.chdir(self._directory)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            kwargs = {}
+            if max_pages is not None:
+                kwargs["max_pages"] = int(max_pages)
+            if pages is not None:
+                kwargs["pages"] = pages
+            # Always (re)build so term edits take effect; source stays untouched.
+            result = redact_pdf(orig, dest, terms, **kwargs)
+        finally:
+            os.chdir(_orig_cwd)
+
+        if not dest.is_file():
+            raise FileNotFoundError(f"Could not create redacted PDF at {dest}")
+        return dest.resolve(), result
 
     def _flatten_entries(
         self, entries: list, out: list, *, preserve_sections: bool = False

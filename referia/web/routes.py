@@ -50,6 +50,10 @@ All routes share a ``WebReviewer`` instance stored in ``app.state.reviewer``.
 ``POST /edit-pdf/{n}``
     Ensure ``editpdf[n]`` is copied/extracted; return a download link.
 
+``POST /redact-pdf/{n}``
+    Ensure ``redactpdf[n]`` is term-redacted into ``storedirectory`` (source
+    untouched); return a download link and zero-match warnings.
+
 Root-server mode (``app.state.root`` is a directory path)
 ----------------------------------------------------------
 The ``root_router`` mirrors every single-config route but prefixed with a
@@ -1435,6 +1439,13 @@ async def edit_pdf(request: Request, n: int):
     return _run_edit_pdf(reviewer, n)
 
 
+@router.post("/redact-pdf/{n}", response_class=HTMLResponse)
+async def redact_pdf_route(request: Request, n: int):
+    """Ensure ``redactpdf[n]`` exists (term redact into store) and return a link."""
+    reviewer = _reviewer(request)
+    return _run_redact_pdf(reviewer, n)
+
+
 @router.post("/populate/{field}", response_class=HTMLResponse)
 async def populate_field(request: Request, field: str):
     """Run the compute attached to a PopulateButton and refresh the target widget.
@@ -1577,7 +1588,7 @@ def _serve_record_document(
     """
     from fastapi import HTTPException
 
-    if kind not in {"localpdf", "editpdf"}:
+    if kind not in {"localpdf", "editpdf", "redactpdf"}:
         raise HTTPException(status_code=404, detail="Unknown document kind")
     _apply_index(reviewer, index)
     path = reviewer.get_record_document(kind, n)
@@ -2848,6 +2859,42 @@ def _run_edit_pdf(
     )
 
 
+def _run_redact_pdf(
+    reviewer, n: int, *, path_prefix: str = ""
+) -> HTMLResponse:
+    """Shared redact-pdf logic: term apply into storedirectory (source untouched)."""
+    try:
+        path, result = reviewer.ensure_redact_pdf(n)
+    except IndexError:
+        return HTMLResponse(
+            f'<span class="status-warning">&#9888; No redactpdf at index {int(n)}</span>'
+        )
+    except Exception as exc:
+        _log_route_error("Prepare redacted PDF", exc, n=n)
+        return HTMLResponse(_user_error_html("Prepare redacted PDF"))
+
+    href = None
+    if hasattr(reviewer, "document_download_href"):
+        href = reviewer.document_download_href(path)
+    if href is None:
+        href = f"/record-document/redactpdf/{int(n)}"
+    href = _prefix_href(href, path_prefix)
+    esc_href = _esc(href)
+    matches = (result or {}).get("matches", 0)
+    warnings = list((result or {}).get("warnings") or [])
+    warn_html = ""
+    if warnings:
+        joined = "; ".join(_esc(w) for w in warnings)
+        warn_html = (
+            f' <span class="status-warning">&#9888; {joined}</span>'
+        )
+    return HTMLResponse(
+        f'<span class="status-ok" data-auto-download="{esc_href}">'
+        f"&#10003; Redacted PDF ready ({int(matches)} matches). "
+        f'<a href="{esc_href}" download>Download</a></span>{warn_html}'
+    )
+
+
 # ===========================================================================
 # Root-server router
 #
@@ -3057,6 +3104,14 @@ async def root_generate_summary_document(request: Request, config_path: str, n: 
 async def root_edit_pdf(request: Request, config_path: str, n: int):
     reviewer = _root_reviewer(request, config_path)
     return _run_edit_pdf(
+        reviewer, n, path_prefix=_config_path_prefix(config_path)
+    )
+
+
+@root_router.post("/{config_path:path}/redact-pdf/{n}", response_class=HTMLResponse)
+async def root_redact_pdf(request: Request, config_path: str, n: int):
+    reviewer = _root_reviewer(request, config_path)
+    return _run_redact_pdf(
         reviewer, n, path_prefix=_config_path_prefix(config_path)
     )
 

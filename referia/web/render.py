@@ -2521,6 +2521,13 @@ def render_document_panel(
                 f'hx-swap="innerHTML focus-scroll:false" hx-disabled-elt="this">'
                 f"Prepare / download PDF</button>"
             )
+        if kind == "redactpdf":
+            parts.append(
+                f'<button type="button" class="widget-button redact-pdf-button" '
+                f'hx-post="/redact-pdf/{n}" hx-target="#status-bar" '
+                f'hx-swap="innerHTML focus-scroll:false" hx-disabled-elt="this">'
+                f"Prepare redacted view</button>"
+            )
         parts.append("</details>")
     parts.append("</div>")
     return "\n".join(parts)
