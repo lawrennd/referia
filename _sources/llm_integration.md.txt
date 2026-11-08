@@ -493,7 +493,9 @@ For implementation details, see:
 ## Support
 
 For issues or questions:
-- Check examples: `examples/llm_usage_example.py`
+- Serveable demos (primary UI): `examples/README.md` and `docs/examples/index.rst`
+- LLM YAML / API snippets: `examples/llm_integration_example.yml`, `examples/llm_usage_example.py`
+- Env keys: `cp examples/env_template.txt .env`
 - Review tests: `referia/tests/test_llm_integration.py`
 - See CIP-0006 for design decisions and architecture
 

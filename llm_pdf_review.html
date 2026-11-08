@@ -804,6 +804,12 @@
 <li class="toctree-l2"><a class="reference internal" href="inheritance.html#best-practices-for-developers">Best Practices for Developers</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="examples/index.html">Package examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples/index.html#serveable-demos">Serveable demos</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/index.html#llm-and-thesis-snippets">LLM and thesis snippets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples/index.html#retired-artefacts">Retired artefacts</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing to Referia</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="contributing.html#development-setup">Development Setup</a></li>
 <li class="toctree-l2"><a class="reference internal" href="contributing.html#code-structure">Code Structure</a></li>
@@ -1299,12 +1305,17 @@ cat<span class="w"> </span>.env<span class="w"> </span><span class="p">|</span><
 </section>
 <section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
-<p>See the <code class="docutils literal notranslate"><span class="pre">examples/</span></code> directory:</p>
+<p>Primary learning path: serveable package demos under <code class="docutils literal notranslate"><span class="pre">examples/</span></code>
+(<code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span> <span class="pre">referia</span> <span class="pre">serve</span> <span class="pre">--directory</span> <span class="pre">examples/&lt;name&gt;</span></code>). See
+<code class="docutils literal notranslate"><span class="pre">examples/README.md</span></code> and <code class="docutils literal notranslate"><span class="pre">docs/examples/index.rst</span></code>.</p>
+<p>LLM / thesis files below are <strong>snippets</strong> (copy into a real review
+directory with data and PDFs, then serve that directory):</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">examples/thesis_llm_review_example.yml</span></code> - Complete YAML configuration</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">examples/thesis_llm_review_example.py</span></code> - Programmatic usage</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">examples/llm_integration_example.yml</span></code> - General LLM examples</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">examples/llm_usage_example.py</span></code> - Python API examples</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">examples/thesis_llm_review_example.yml</span></code> — YAML with <code class="docutils literal notranslate"><span class="pre">llm_pdf_review</span></code> PopulateButtons</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">examples/thesis_llm_review_example.py</span></code> — optional programmatic sketch</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">examples/llm_integration_example.yml</span></code> — general LLM compute snippets</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">examples/llm_usage_example.py</span></code> — optional Python API illustration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">examples/env_template.txt</span></code> — API key template (<code class="docutils literal notranslate"><span class="pre">cp</span></code> to package-root <code class="docutils literal notranslate"><span class="pre">.env</span></code>)</p></li>
 </ul>
 </section>
 <section id="related-documentation">

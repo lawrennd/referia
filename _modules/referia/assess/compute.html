@@ -803,6 +803,12 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../inheritance.html#best-practices-for-developers">Best Practices for Developers</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples/index.html">Package examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/index.html#serveable-demos">Serveable demos</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/index.html#llm-and-thesis-snippets">LLM and thesis snippets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/index.html#retired-artefacts">Retired artefacts</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../../../contributing.html">Contributing to Referia</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../contributing.html#development-setup">Development Setup</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../contributing.html#code-structure">Code Structure</a></li>
@@ -874,6 +880,7 @@
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.phrases</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_extract_phrases</span><span class="p">,</span> <span class="n">segment_dialogue_units</span><span class="p">,</span> <span class="n">stamp_dialogue_doc_ids</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.embed</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_embed</span><span class="p">,</span> <span class="n">llm_embed_extraction_phrases</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.numeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">add</span><span class="p">,</span> <span class="n">subtract</span><span class="p">,</span> <span class="n">multiply</span><span class="p">,</span> <span class="n">gte</span><span class="p">,</span> <span class="n">lte</span><span class="p">,</span> <span class="n">matmul</span><span class="p">,</span> <span class="n">dot</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.compare</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">jsd</span><span class="p">,</span>
     <span class="n">run_basis_share_compare</span><span class="p">,</span>
@@ -1731,6 +1738,69 @@
                 <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;sum&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;function&quot;</span> <span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span>
                 <span class="s2">&quot;default_args&quot;</span> <span class="p">:</span> <span class="p">{},</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;add&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">add</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Element-wise or scalar addition (a + b). &quot;</span>
+                    <span class="s2">&quot;Interim assessment compute pending vongole.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;subtract&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">subtract</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Element-wise or scalar subtraction (a - b). &quot;</span>
+                    <span class="s2">&quot;Interim assessment compute pending vongole.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;multiply&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">multiply</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Element-wise or scalar multiplication (a * b). &quot;</span>
+                    <span class="s2">&quot;Interim assessment compute pending vongole.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;gte&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">gte</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Whether value &gt;= threshold (scalar or element-wise). &quot;</span>
+                    <span class="s2">&quot;Interim assessment compute pending vongole.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;lte&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">lte</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Whether value &lt;= threshold (scalar or element-wise). &quot;</span>
+                    <span class="s2">&quot;Interim assessment compute pending vongole.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;matmul&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">matmul</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Matrix product (a @ b) for criteria×weights layouts. &quot;</span>
+                    <span class="s2">&quot;Interim assessment compute pending vongole.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;dot&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">dot</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Dot product of two vectors (or last axes). &quot;</span>
+                    <span class="s2">&quot;Interim assessment compute pending vongole.&quot;</span>
+                <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
                 <span class="s2">&quot;name&quot;</span> <span class="p">:</span> <span class="s2">&quot;next_integer&quot;</span><span class="p">,</span>

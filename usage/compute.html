@@ -804,6 +804,12 @@
 <li class="toctree-l2"><a class="reference internal" href="../inheritance.html#best-practices-for-developers">Best Practices for Developers</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Package examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/index.html#serveable-demos">Serveable demos</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/index.html#llm-and-thesis-snippets">LLM and thesis snippets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples/index.html#retired-artefacts">Retired artefacts</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing to Referia</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../contributing.html#development-setup">Development Setup</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../contributing.html#code-structure">Code Structure</a></li>
@@ -927,7 +933,7 @@
 <section id="available-compute-functions">
 <h2>Available Compute Functions<a class="headerlink" href="#available-compute-functions" title="Link to this heading"></a></h2>
 <p>Referia includes all lynguine compute functions plus these review-specific functions:</p>
-<ol class="arabic simple">
+<ol class="arabic">
 <li><p><strong>Text Processing</strong>:
 - <code class="docutils literal notranslate"><span class="pre">word_count</span></code>: Count words in text
 - <code class="docutils literal notranslate"><span class="pre">text_summarizer</span></code>: Generate text summaries
@@ -941,6 +947,36 @@
 <li><p><strong>Visualization</strong>:
 - <code class="docutils literal notranslate"><span class="pre">histogram</span></code>: Create histograms
 - <code class="docutils literal notranslate"><span class="pre">bar_plot</span></code>: Create bar plots</p></li>
+<li><p><strong>Numeric primitives (interim assessment compute)</strong>:
+- <code class="docutils literal notranslate"><span class="pre">sum</span></code>, <code class="docutils literal notranslate"><span class="pre">max</span></code>, <code class="docutils literal notranslate"><span class="pre">len</span></code>, <code class="docutils literal notranslate"><span class="pre">map</span></code>: Aggregation helpers already in the registry
+- <code class="docutils literal notranslate"><span class="pre">add</span></code>, <code class="docutils literal notranslate"><span class="pre">subtract</span></code>, <code class="docutils literal notranslate"><span class="pre">multiply</span></code>: Scalar or element-wise arithmetic
+- <code class="docutils literal notranslate"><span class="pre">gte</span></code>, <code class="docutils literal notranslate"><span class="pre">lte</span></code>: Threshold compare (pass/fail style fields)
+- <code class="docutils literal notranslate"><span class="pre">matmul</span></code>, <code class="docutils literal notranslate"><span class="pre">dot</span></code>: Criteria×weights style products</p>
+<p>These live in referia until <strong>vongole</strong> exists (lynguine CIP-0007). They are
+<strong>not</strong> part of lynguine’s thin access registry.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">compute</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">multiply</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">weighted_score</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">a</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">score</span>
+<span class="w">      </span><span class="nt">b</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">weight</span>
+
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gte</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">passes_threshold</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">weighted_score</span>
+<span class="w">    </span><span class="nt">args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">threshold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50</span>
+
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">matmul</span>
+<span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">criteria_total</span>
+<span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">a</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">criteria_row</span>
+<span class="w">      </span><span class="nt">b</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">weight_vector</span>
+</pre></div>
+</div>
+<p>Runnable demo: <code class="docutils literal notranslate"><span class="pre">examples/numeric_scoring/</span></code> (see <a class="reference internal" href="../examples/index.html"><span class="doc">Package examples</span></a>).</p>
+</li>
 </ol>
 </section>
 <section id="example-configuration">
@@ -1013,6 +1049,13 @@
 </div>
 </li>
 </ol>
+</section>
+<section id="package-examples">
+<h2>Package examples<a class="headerlink" href="#package-examples" title="Link to this heading"></a></h2>
+<p>Runnable demos under <code class="docutils literal notranslate"><span class="pre">examples/</span></code> are listed in <a class="reference internal" href="../examples/index.html"><span class="doc">Package examples</span></a>.
+Open them with <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span> <span class="pre">referia</span> <span class="pre">serve</span> <span class="pre">--directory</span> <span class="pre">examples/&lt;name&gt;</span></code>.
+Offline numeric scoring (<code class="docutils literal notranslate"><span class="pre">add</span></code> / <code class="docutils literal notranslate"><span class="pre">multiply</span></code> / <code class="docutils literal notranslate"><span class="pre">gte</span></code>) lives in
+<code class="docutils literal notranslate"><span class="pre">examples/numeric_scoring/</span></code>.</p>
 </section>
 <section id="future-extensions">
 <h2>Future Extensions<a class="headerlink" href="#future-extensions" title="Link to this heading"></a></h2>
