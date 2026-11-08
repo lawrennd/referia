@@ -2202,11 +2202,13 @@ def _config_path_prefix(config_path: str) -> str:
     return f"/{clean}" if clean else ""
 
 
-def _build_populate_compute_spec(btn_spec: dict, field: str) -> dict | None:
+def _build_populate_compute_spec(btn_spec: dict, field: str) -> dict | list | None:
     """Extract or construct a compute spec from a PopulateButton widget spec.
 
-    Supports both YAML formats (see populate_field docstring).
-    Returns ``None`` if neither format provides enough information.
+    Supports both YAML formats (see populate_field docstring), including a
+    list of compute steps under ``args.compute`` (same as Jupyter
+    ``run_populate``). Returns ``None`` if neither format provides enough
+    information.
     """
     args = btn_spec.get("args", {})
     compute_spec = args.get("compute")
@@ -2227,6 +2229,32 @@ def _build_populate_compute_spec(btn_spec: dict, field: str) -> dict | None:
             }
 
     return compute_spec
+
+
+def _compute_output_fields(compute_spec, default_target: str) -> list[str]:
+    """Collect output field names from a dict or list compute spec."""
+    if isinstance(compute_spec, list):
+        cols: list[str] = []
+        for step in compute_spec:
+            if isinstance(step, dict):
+                cols.extend(_compute_output_fields(step, default_target))
+        # Preserve order, drop empties / placeholders.
+        seen: set[str] = set()
+        out: list[str] = []
+        for c in cols:
+            if not c or c == "_" or c in seen:
+                continue
+            seen.add(c)
+            out.append(c)
+        return out or [str(default_target)]
+    if isinstance(compute_spec, dict):
+        compute_fields = compute_spec.get("field", default_target)
+        if isinstance(compute_fields, list):
+            return [str(c) for c in compute_fields if c and c != "_"] or [
+                str(default_target)
+            ]
+        return [str(compute_fields)] if compute_fields else [str(default_target)]
+    return [str(default_target)]
 
 
 def _specs_with_options_field(reviewer, column: str) -> list[dict]:
@@ -2655,11 +2683,7 @@ def _run_populate_and_respond(
         )
 
     target = btn_spec.get("args", {}).get("target", field)
-    compute_fields = compute_spec.get("field", target)
-    if isinstance(compute_fields, list):
-        updated_cols = [str(c) for c in compute_fields if c and c != "_"]
-    else:
-        updated_cols = [str(compute_fields)] if compute_fields else [str(target)]
+    updated_cols = _compute_output_fields(compute_spec, target)
 
     if _populate_once(btn_spec):
         try:

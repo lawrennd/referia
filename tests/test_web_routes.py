@@ -1104,6 +1104,41 @@ class TestPostPopulate:
         # Plain string args must be wrapped as {"display": ...} view spec dicts
         assert cs["view_args"].get("text") == {"display": "{description}"}
 
+    def test_list_compute_calls_run_populate(self, populate_client):
+        """args.compute as a list of steps must reach run_populate unchanged."""
+        client, reviewer = populate_client
+        steps = [
+            {"field": "Total", "function": "add", "args": {"a": 1, "b": 2}},
+            {
+                "field": "Pass",
+                "function": "gte",
+                "args": {"a": "Total", "b": 3},
+                "refresh": True,
+            },
+        ]
+        reviewer.get_widget_specs.return_value = [
+            {"type": "Text", "field": "Total", "args": {}},
+            {"type": "Checkbox", "field": "Pass", "args": {}},
+            {
+                "type": "PopulateButton",
+                "field": "_compute_scores",
+                "args": {
+                    "description": "Compute scores",
+                    "target": "Total",
+                    "compute": steps,
+                },
+            },
+        ]
+        reviewer.get_review_specs.return_value = reviewer.get_widget_specs.return_value
+        reviewer.get_value.return_value = 3
+
+        response = client.post("/populate/_compute_scores")
+        assert response.status_code == 200
+        assert "failed" not in response.text.lower()
+        reviewer.run_populate.assert_called_once()
+        call_arg = reviewer.run_populate.call_args[0][0]
+        assert call_arg["compute"] == steps
+
     def test_populate_failure_omits_exception_text(self, populate_client):
         client, reviewer = populate_client
         reviewer.run_populate.side_effect = RuntimeError("internal compute boom")
