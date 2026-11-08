@@ -430,12 +430,18 @@ args:
 
 ## Examples
 
-See the `examples/` directory:
+Primary learning path: serveable package demos under `examples/`
+(`poetry run referia serve --directory examples/<name>`). See
+`examples/README.md` and `docs/examples/index.rst`.
 
-- `examples/thesis_llm_review_example.yml` - Complete YAML configuration
-- `examples/thesis_llm_review_example.py` - Programmatic usage
-- `examples/llm_integration_example.yml` - General LLM examples
-- `examples/llm_usage_example.py` - Python API examples
+LLM / thesis files below are **snippets** (copy into a real review
+directory with data and PDFs, then serve that directory):
+
+- `examples/thesis_llm_review_example.yml` — YAML with `llm_pdf_review` PopulateButtons
+- `examples/thesis_llm_review_example.py` — optional programmatic sketch
+- `examples/llm_integration_example.yml` — general LLM compute snippets
+- `examples/llm_usage_example.py` — optional Python API illustration
+- `examples/env_template.txt` — API key template (`cp` to package-root `.env`)
 
 ## Related Documentation
 

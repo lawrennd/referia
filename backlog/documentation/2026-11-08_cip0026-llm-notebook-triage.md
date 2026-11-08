@@ -1,7 +1,7 @@
 ---
 id: "2026-11-08_cip0026-llm-notebook-triage"
 title: "CIP-0026 Phase C: LLM / thesis / notebook triage"
-status: "Ready"
+status: "Completed"
 priority: "Low"
 created: "2026-11-08"
 last_updated: "2026-11-08"
@@ -30,10 +30,10 @@ stay accurate. Cross-link from examples index and LLM docs.
 
 ## Acceptance Criteria
 
-- [ ] Clear keep/update/retire decision for each `docs/examples/*.ipynb`
-- [ ] Checkpoints removed or ignored if not useful
-- [ ] LLM / thesis examples documented with serve-first guidance
-- [ ] `docs/llm_*.md` and examples index cross-links updated
+- [x] Clear keep/update/retire decision for each `docs/examples/*.ipynb`
+- [x] Checkpoints removed or ignored if not useful
+- [x] LLM / thesis examples documented with serve-first guidance
+- [x] `docs/llm_*.md` and examples index cross-links updated
 
 ## Implementation Notes
 
@@ -49,3 +49,10 @@ in the examples index if anything useful remains after retirement.
 ### 2026-11-08
 
 Task created; can parallelise with Phase A.
+
+**Decisions:**
+- Retire `docs/examples/test_*.ipynb` and tracked `.ipynb_checkpoints/`
+  (local pytest scratchpads with hardcoded paths).
+- Keep LLM / thesis YAML + `.py` as snippets; add `examples/README.md`
+  and serve-first headers; update Sphinx index + `docs/llm_*.md`.
+- No cheap serveable LLM directory (needs sample PDFs/data) — deferred.

@@ -184,6 +184,6 @@ poetry run referia serve --directory examples/topic_scatter_click
 # subject_grain_uq: bake scores first — see its README
 ```
 
-Sphinx lists them under *Package examples* (`docs/examples/index.rst`).
-Each directory README is the source of truth for layout and smoke checks.
+See `examples/README.md` for the full inventory (serveable demos vs LLM
+snippets). Sphinx mirrors that map in `docs/examples/index.rst`.
 

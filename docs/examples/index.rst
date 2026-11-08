@@ -14,6 +14,8 @@ environment at the package root:
 Use ``poetry run referia serve --root <path>`` when the point is a
 multi-config host that discovers several ``_referia.yml`` trees.
 
+The inventory and triage notes also live in ``examples/README.md``.
+
 Serveable demos
 ---------------
 
@@ -40,16 +42,21 @@ planned under CIP-0026 Phase B, once YAML numeric compute primitives
 LLM and thesis snippets
 -----------------------
 
-YAML and Python files under ``examples/`` (``llm_*.yml`` /
-``llm_*.py``, ``thesis_llm_review_example.*``) illustrate declarative
-LLM compute and the Python API. Prefer a serveable ``_referia.yml``
-directory when learning the reviewer UI; treat the ``.py`` scripts as
-optional API illustrations. Env setup: ``examples/env_template.txt``.
-See also ``docs/llm_integration.md`` and ``docs/llm_pdf_review.md``.
+These files are **snippets**, not drop-in ``--directory`` demos. Copy
+patterns into a real review tree, then serve that directory.
 
-Legacy notebooks
-----------------
+* ``examples/llm_integration_example.yml`` — declarative LLM compute
+* ``examples/thesis_llm_review_example.yml`` — ``llm_pdf_review`` PopulateButtons
+* ``examples/llm_usage_example.py`` / ``thesis_llm_review_example.py`` —
+  optional Python API illustrations
+* ``examples/env_template.txt`` — copy to package-root ``.env`` for keys
 
-``docs/examples/test_referia.ipynb`` and ``test_compute.ipynb`` are
-legacy Jupyter paths. Prefer the serveable demos above; notebook triage
-is CIP-0026 Phase C.
+Guides: ``docs/llm_integration.md``, ``docs/llm_pdf_review.md``.
+
+Retired artefacts
+-----------------
+
+``docs/examples/test_referia.ipynb`` and ``test_compute.ipynb`` (plus
+``.ipynb_checkpoints/``) were local pytest scratchpads with hardcoded
+developer paths. They were removed in CIP-0026 Phase C. Use the
+serveable demos above; unit tests live under ``tests/``.
