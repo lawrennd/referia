@@ -846,7 +846,9 @@
            <div itemprop="articleBody">
              
   <h1>Source code for lynguine.assess.data</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">keyword</span><span class="w"> </span><span class="kn">import</span> <span class="n">iskeyword</span>
@@ -888,7 +890,17 @@
 
 
 <span class="c1"># Access-spec keys that should become ints after Liquid render (e.g. mu limit).</span>
-<span class="n">_LIQUID_INT_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;limit&quot;</span><span class="p">,</span> <span class="s2">&quot;nrows&quot;</span><span class="p">,</span> <span class="s2">&quot;maxnum&quot;</span><span class="p">})</span>
+<span class="n">_LIQUID_INT_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;limit&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;nrows&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;maxnum&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;min_chars&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;max_units&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;min_unit_chars&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;max_units_per_message&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_parameter_liquid_context</span><span class="p">(</span><span class="n">interface</span><span class="p">):</span>
@@ -943,19 +955,33 @@
     <span class="k">return</span> <span class="n">ctx</span>
 
 
+<span class="c1"># Nested under Access specs: leave these alone so row-time Liquid</span>
+<span class="c1"># (render_liquid ``template:`` / row_args) is not emptied against parameters.</span>
+<span class="n">_LIQUID_SKIP_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;mapping&quot;</span><span class="p">,</span> <span class="s2">&quot;row_args&quot;</span><span class="p">,</span> <span class="s2">&quot;template&quot;</span><span class="p">})</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_liquid_expand_structure</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Recursively Liquid-render strings that contain ``{{`` against ``ctx``.</span>
 
 <span class="sd">    Integer-like results for known keys (``limit``, ``nrows``, …) are</span>
 <span class="sd">    coerced to ``int`` so readers that expect numbers keep working.</span>
+
+<span class="sd">    ``template`` / ``row_args`` / ``mapping`` are not expanded: those</span>
+<span class="sd">    ``{{ field }}`` strings bind per row at compute time, not against</span>
+<span class="sd">    the parameters context (missing names render empty in LAX mode and</span>
+<span class="sd">    collapse indexes such as ``mail_key`` to ``::``). Compute *args*</span>
+<span class="sd">    such as ``min_chars: &quot;{{ min_unit_chars }}&quot;`` still expand.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">ctx</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">obj</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">{</span>
-            <span class="n">name</span><span class="p">:</span> <span class="n">_liquid_expand_structure</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-        <span class="p">}</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_LIQUID_SKIP_KEYS</span><span class="p">:</span>
+                <span class="n">out</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">out</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">_liquid_expand_structure</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">_liquid_expand_structure</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">]</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;{{&quot;</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">:</span>
@@ -2137,28 +2163,43 @@
         <span class="c1"># Sort the items based on the key_order function</span>
         <span class="n">sorted_items</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">interface</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="n">key_order</span><span class="p">)</span>
 
+        <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_flow_item</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;Stamp base_directory / path roots on a flow access item.&quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="k">if</span> <span class="s2">&quot;base_directory&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s2">&quot;base_directory&quot;</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">:</span>
+                        <span class="n">item</span><span class="p">[</span><span class="s2">&quot;base_directory&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;base_directory&quot;</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">errmsg</span> <span class="o">=</span> <span class="s2">&quot;Base directory not found in interface or item.&quot;</span>
+                        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                <span class="n">_stamp_path_roots</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">_stamp_path_roots</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">item</span>
+
+        <span class="c1"># Explicit import: access/ has no __init__.py and package init only</span>
+        <span class="c1"># binds access.io, so access.download is unbound in a fresh process</span>
+        <span class="c1"># (e.g. the Phase5 server subprocess) unless imported here.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">..access.download</span><span class="w"> </span><span class="kn">import</span> <span class="n">materialise</span> <span class="k">as</span> <span class="n">_materialise_remote</span>
+
+        <span class="c1"># ods CIP-0003: materialise remotes on non-input slots first so a</span>
+        <span class="c1"># catalogue under cache: lands before input data_resources expand.</span>
+        <span class="c1"># Reads still follow key_order (input before empty cache creation).</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sorted_items</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">valid_data_types</span><span class="p">():</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;input&quot;</span><span class="p">]:</span>
+                <span class="k">continue</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="n">_prepare_flow_item</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+                <span class="n">_materialise_remote</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
+
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">sorted_items</span><span class="p">:</span>       
             <span class="c1"># Check if the interface key is a valid data key</span>
             <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">valid_data_types</span><span class="p">():</span> <span class="c1"># input, output, cache, parameters</span>
                 <span class="c1"># Augment the item with base_directory if it&#39;s not already present</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-                    <span class="k">if</span> <span class="s2">&quot;base_directory&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
-                        <span class="k">if</span> <span class="s2">&quot;base_directory&quot;</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">:</span>
-                            <span class="n">item</span><span class="p">[</span><span class="s2">&quot;base_directory&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;base_directory&quot;</span><span class="p">]</span>
-                        <span class="k">else</span><span class="p">:</span>   
-                            <span class="n">errmsg</span> <span class="o">=</span> <span class="s2">&quot;Base directory not found in interface or item.&quot;</span>
-                            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
-                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
-                    <span class="n">_stamp_path_roots</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
-                    <span class="n">_stamp_path_roots</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="s2">&quot;base_directory&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="s2">&quot;base_directory&quot;</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">:</span>
-                        <span class="n">item</span><span class="p">[</span><span class="s2">&quot;base_directory&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;base_directory&quot;</span><span class="p">]</span>
-                    <span class="k">else</span><span class="p">:</span>   
-                        <span class="n">errmsg</span> <span class="o">=</span> <span class="s2">&quot;Base directory not found in interface or item.&quot;</span>
-                        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
+                <span class="n">item</span> <span class="o">=</span> <span class="n">_prepare_flow_item</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
                 <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Adding data key </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> to the CustomDataFrame.&quot;</span><span class="p">)</span>
                 <span class="k">if</span> <span class="s2">&quot;mapping&quot;</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
                     <span class="n">mapping</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;mapping&quot;</span><span class="p">]</span>
@@ -2178,6 +2219,9 @@
                     <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
                 <span class="p">):</span>
                     <span class="n">read_item</span> <span class="o">=</span> <span class="n">_liquid_expand_access_details</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">liquid_ctx</span><span class="p">)</span>
+                <span class="c1"># CIP-0009: materialise remote: before data_exists / read_data.</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">read_item</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+                    <span class="n">_materialise_remote</span><span class="p">(</span><span class="n">read_item</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;input&quot;</span><span class="p">]:</span> <span class="c1"># allow creation of non-inputs if they don&#39;t exist</span>
                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
                         <span class="k">if</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">data_exists</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
@@ -2593,6 +2637,79 @@
         <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write_data</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">True</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_also_materialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_details</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write a side-car snapshot joined from input + output (etc.).</span>
+
+<span class="sd">        Used when Save should persist a review corpus (e.g. mu rows +</span>
+<span class="sd">        keep/drop scores → ``messages.yml``) without loading that file as</span>
+<span class="sd">        a partition (overlapping column names with input would clash).</span>
+
+<span class="sd">        Config under the parent store (usually ``output``)::</span>
+
+<span class="sd">            also_materialize:</span>
+<span class="sd">              type: yaml</span>
+<span class="sd">              directory: _data/corpus</span>
+<span class="sd">              filename: messages.yml</span>
+<span class="sd">              index: mail_key</span>
+<span class="sd">              columns: [message_id, subject, body, candidate, ...]</span>
+
+<span class="sd">        Join order prefers output/cache columns over input when names</span>
+<span class="sd">        overlap (so ``candidate`` from scores wins).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">parent_details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;also_materialize&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;columns&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;also_materialize requires a non-empty &quot;columns&quot; list.&#39;</span>
+            <span class="p">)</span>
+        <span class="n">combined</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_join_partitions</span><span class="p">(</span>
+            <span class="p">(</span><span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="s2">&quot;writedata&quot;</span><span class="p">,</span> <span class="s2">&quot;cache&quot;</span><span class="p">,</span> <span class="s2">&quot;input&quot;</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">combined</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;also_materialize: nothing to write (empty join).&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">combined</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">&quot;also_materialize: skipping missing columns &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">; have </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">combined</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">combined</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">keep</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;also_materialize columns none present on joined frame.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">write_df</span> <span class="o">=</span> <span class="n">combined</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">details</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+        <span class="c1"># Inherit path jail / base from the parent store or interface.</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;base_directory&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">parent_details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;base_directory&quot;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;base_directory&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">,</span> <span class="s2">&quot;get&quot;</span><span class="p">)</span>
+                <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">base</span><span class="p">:</span>
+            <span class="n">details</span><span class="p">[</span><span class="s2">&quot;base_directory&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">base</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">,</span> <span class="n">Interface</span><span class="p">):</span>
+            <span class="n">_stamp_path_roots</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="p">)</span>
+        <span class="n">details</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;also_materialize&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataframe_for_output_write</span><span class="p">(</span><span class="n">write_df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
+        <span class="c1"># Ensure the destination directory exists (corpus/ may be new).</span>
+        <span class="n">sub</span> <span class="o">=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;directory&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;.&quot;</span>
+        <span class="n">Path</span><span class="p">(</span><span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;base_directory&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">sub</span><span class="p">)</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span>
+            <span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Saving also_materialize snapshot &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;directory&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;filename&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="p">)</span>
+        <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write_data</span><span class="p">(</span><span class="n">write_df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">save_flows</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Save output, cache, and parameter stores, then the pack store.</span>
@@ -2625,7 +2742,16 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">write_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_write_frame_for_store</span><span class="p">(</span><span class="n">typ</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
             <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving data for flow type &#39;</span><span class="si">{</span><span class="n">typ</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="c1"># Side-car snapshots use the full parent mapping (including</span>
+            <span class="c1"># also_materialize); strip it from the primary write.</span>
+            <span class="n">also_spec</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;also_materialize&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+                <span class="n">also_spec</span> <span class="o">=</span> <span class="n">details</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;also_materialize&quot;</span><span class="p">)</span>
             <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write_data</span><span class="p">(</span><span class="n">write_df</span><span class="p">,</span> <span class="n">details</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">also_spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">parent</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">details</span><span class="p">)</span>
+                <span class="n">parent</span><span class="p">[</span><span class="s2">&quot;also_materialize&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">also_spec</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_write_also_materialize</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_write_pack_store</span><span class="p">()</span>
     
     <span class="k">def</span><span class="w"> </span><span class="nf">sort_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>

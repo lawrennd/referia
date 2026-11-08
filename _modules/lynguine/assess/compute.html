@@ -856,7 +856,11 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..config.interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interface</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..util.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">render_liquid</span><span class="p">,</span> <span class="n">split_paragraph_units</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..util.text</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">audit_extract_anonymisation</span><span class="p">,</span>
+    <span class="n">render_liquid</span><span class="p">,</span>
+    <span class="n">split_paragraph_units</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..util.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">isna</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..util.liquid</span><span class="w"> </span><span class="kn">import</span> <span class="n">url_escape</span><span class="p">,</span> <span class="n">markdownify</span><span class="p">,</span> <span class="n">relative_url</span><span class="p">,</span> <span class="n">absolute_url</span><span class="p">,</span> <span class="n">to_i</span>
@@ -1459,6 +1463,17 @@
                     <span class="s2">&quot;only candidate=true rows produce units. Sets listing &quot;</span>
                     <span class="s2">&quot;title/description and PII-redacts extract_text via &quot;</span>
                     <span class="s2">&quot;RedactTerms (CIP-001A).&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;audit_extract_anonymisation&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">audit_extract_anonymisation</span><span class="p">,</span>
+                <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Audit unit extract_text for residual contact PII &quot;</span>
+                    <span class="s2">&quot;(name / email / phone / profile URL). Returns flag &quot;</span>
+                    <span class="s2">&quot;dict only — never residual substrings.&quot;</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
