@@ -878,7 +878,13 @@
     <span class="n">subject_grain_seed_fit</span><span class="p">,</span>
     <span class="n">subject_grain_undo_split</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.phrases</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_extract_phrases</span><span class="p">,</span> <span class="n">segment_dialogue_units</span><span class="p">,</span> <span class="n">stamp_dialogue_doc_ids</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.phrases</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">audit_unit_anonymisation</span><span class="p">,</span>
+    <span class="n">llm_extract_phrases</span><span class="p">,</span>
+    <span class="n">segment_dialogue_units</span><span class="p">,</span>
+    <span class="n">split_paragraph_units</span><span class="p">,</span>
+    <span class="n">stamp_dialogue_doc_ids</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.embed</span><span class="w"> </span><span class="kn">import</span> <span class="n">llm_embed</span><span class="p">,</span> <span class="n">llm_embed_extraction_phrases</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.numeric</span><span class="w"> </span><span class="kn">import</span> <span class="n">add</span><span class="p">,</span> <span class="n">subtract</span><span class="p">,</span> <span class="n">multiply</span><span class="p">,</span> <span class="n">gte</span><span class="p">,</span> <span class="n">lte</span><span class="p">,</span> <span class="n">matmul</span><span class="p">,</span> <span class="n">dot</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.compare</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -2161,6 +2167,32 @@
                 <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
                     <span class="s2">&quot;document_segment then stamp_dialogue_doc_ids so pack &quot;</span>
                     <span class="s2">&quot;weights chatbot conversations, not Recollective dumps.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;split_paragraph_units&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">split_paragraph_units</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;only_candidates&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;min_chars&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+                    <span class="s2">&quot;max_units&quot;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Split a mail body into paragraph unit dicts &quot;</span>
+                    <span class="s2">&quot;(unit_id, text, extract_text, unit_index) for &quot;</span>
+                    <span class="s2">&quot;input.explode (CIP-0014). Skips candidate=false &quot;</span>
+                    <span class="s2">&quot;when only_candidates is true.&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;audit_unit_anonymisation&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">audit_unit_anonymisation</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Audit unit extract_text for residual contact PII. &quot;</span>
+                    <span class="s2">&quot;Returns (name_leak, email_leak, phone_leak, url_leak, &quot;</span>
+                    <span class="s2">&quot;expected_name_source, anonymise_ok); never residual &quot;</span>
+                    <span class="s2">&quot;substrings.&quot;</span>
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
