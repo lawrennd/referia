@@ -1838,17 +1838,59 @@ class WebReviewer:
         dest_name = to_valid_file(str(index)) + "_" + to_valid_file(stub)
         return store_dir / dest_name, orig
 
+    @staticmethod
+    def _redactpdf_auto_prepare(view: dict) -> bool:
+        """Whether ``redactpdf`` should prepare on resolve when the view is missing.
+
+        Opt-in via ``auto: true`` or ``prepare: auto`` / ``on_resolve``. Without
+        this flag, the document panel **Prepare redacted view** button remains
+        the only path (Phase A). Soft-fill terms first (Phase B precompute), then
+        auto-prepare builds the store copy before the reviewer reads.
+        """
+        auto = view.get("auto", False)
+        if auto in (True, "true", "yes", 1, "auto", "on_resolve"):
+            return True
+        prepare = view.get("prepare")
+        return prepare in (True, "auto", "on_resolve")
+
     def _resolve_redactpdf_file(self, view: dict):
         """Return the redacted view copy when prepared; otherwise ``None``.
 
         Unlike ``editpdf``, we never fall back to the source — serving the
         unredacted paper under a redactpdf slot would defeat the purpose.
+
+        When ``auto`` / ``prepare: auto`` is set and terms are present, missing
+        store copies are built via :meth:`ensure_redact_pdf` on resolve.
         """
         dest_orig = self._redactpdf_dest(view)
         if dest_orig is None:
             return None
         dest, _orig = dest_orig
-        return dest if dest.is_file() else None
+        if dest.is_file():
+            return dest
+        if not self._redactpdf_auto_prepare(view):
+            return None
+        if not self._redact_terms_from_view(view):
+            return None
+        views = self._interface_section("redactpdf")
+        n = None
+        for i, candidate in enumerate(views):
+            if not isinstance(candidate, dict):
+                continue
+            try:
+                if self._redactpdf_dest(candidate) == dest_orig:
+                    n = i
+                    break
+            except Exception:
+                continue
+        if n is None:
+            return None
+        try:
+            prepared, _result = self.ensure_redact_pdf(n)
+            return prepared
+        except Exception as exc:
+            log.debug("auto redactpdf prepare failed for index %s: %s", n, exc)
+            return None
 
     def _redact_terms_from_view(self, view: dict) -> list:
         """Build RedactTerms from ``terms_field``, ``terms``, or liquid."""
