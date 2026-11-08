@@ -180,14 +180,20 @@ def test_ensure_redact_pdf_dest_missing_after_call(tmp_path, monkeypatch):
 
 
 def test_ensure_redact_pdf_import_error(tmp_path, monkeypatch):
-    import sys
-    import types
+    import builtins
 
     reviewer, _, _ = _redact_setup(tmp_path)
     monkeypatch.chdir(tmp_path)
 
-    fake_mod = types.ModuleType("lynguine.access.documents")
-    with patch.dict(sys.modules, {"lynguine.access.documents": fake_mod}):
+    real_import = builtins.__import__
+
+    def _import(name, globals=None, locals=None, fromlist=(), level=0):
+        # ``from lynguine.access.documents import redact_pdf`` uses fromlist.
+        if fromlist and "redact_pdf" in fromlist:
+            raise ImportError("redact_pdf unavailable")
+        return real_import(name, globals, locals, fromlist, level)
+
+    with patch("builtins.__import__", side_effect=_import):
         with pytest.raises(ImportError, match="redact_pdf is required"):
             reviewer.ensure_redact_pdf(0)
 
