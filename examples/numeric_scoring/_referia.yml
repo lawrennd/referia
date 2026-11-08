@@ -1,0 +1,119 @@
+# CIP-0026 Phase B — offline numeric scoring with YAML compute primitives.
+# Interim assessment helpers (add / multiply / gte) pending vongole.
+referia_config_version: 2
+title: "CIP-0026 — numeric scoring"
+description: >
+  Weight criterion scores, sum a total, and threshold for pass/fail.
+  No LLM — pure multiply / add / gte via PopulateButton.
+date: 2026-11-08
+
+display:
+  layout: side_by_side
+
+input:
+  type: yaml
+  index: Name
+  filename: records.yml
+  directory: ./info
+
+output:
+  type: yaml
+  index: Name
+  filename: scores.yml
+  directory: ./info
+  columns:
+    - quality_weighted
+    - impact_weighted
+    - feasibility_weighted
+    - subtotal
+    - total
+    - passes
+    - notes
+
+viewer:
+  - liquid: |
+      ## {{ Title }}
+
+      Raw criteria (immutable input):
+
+      | Criterion | Score |
+      |-----------|------:|
+      | Quality | {{ quality }} |
+      | Impact | {{ impact }} |
+      | Feasibility | {{ feasibility }} |
+      | Weight | {{ weight }} |
+
+      Click **Compute scores** to write weighted fields, total, and pass flag
+      into the output store. Then **Save** and reload to confirm round-trip.
+
+review:
+  - type: FloatText
+    field: quality_weighted
+    args:
+      description: Quality × weight
+  - type: FloatText
+    field: impact_weighted
+    args:
+      description: Impact × weight
+  - type: FloatText
+    field: feasibility_weighted
+    args:
+      description: Feasibility × weight
+  - type: FloatText
+    field: total
+    args:
+      description: Total (weighted sum)
+  - type: Checkbox
+    field: passes
+    args:
+      description: Passes (total ≥ 20)
+  - type: Textarea
+    field: notes
+    args:
+      description: Notes
+  - type: PopulateButton
+    field: _compute_scores
+    args:
+      description: Compute scores
+      target: total
+      compute:
+        # refresh: true — Checkbox defaults seed passes=False, which would
+        # otherwise skip gte (lynguine treats False as already filled).
+        - function: multiply
+          field: quality_weighted
+          refresh: true
+          row_args:
+            a: quality
+            b: weight
+        - function: multiply
+          field: impact_weighted
+          refresh: true
+          row_args:
+            a: impact
+            b: weight
+        - function: multiply
+          field: feasibility_weighted
+          refresh: true
+          row_args:
+            a: feasibility
+            b: weight
+        - function: add
+          field: subtotal
+          refresh: true
+          row_args:
+            a: quality_weighted
+            b: impact_weighted
+        - function: add
+          field: total
+          refresh: true
+          row_args:
+            a: subtotal
+            b: feasibility_weighted
+        - function: gte
+          field: passes
+          refresh: true
+          row_args:
+            value: total
+          args:
+            threshold: 20
+  - type: SaveButton

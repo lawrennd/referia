@@ -181,6 +181,7 @@ Runnable demos under `examples/` open with the same CLI:
 ```bash
 poetry run referia serve --directory examples/overview_inline_list
 poetry run referia serve --directory examples/topic_scatter_click
+poetry run referia serve --directory examples/numeric_scoring
 # subject_grain_uq: bake scores first — see its README
 ```
 

@@ -1,0 +1,19 @@
+# Immutable criterion scores for the CIP-0026 numeric scoring demo.
+- Name: alice
+  Title: Alice — strong across criteria
+  quality: 8
+  impact: 7
+  feasibility: 6
+  weight: 1.0
+- Name: bob
+  Title: Bob — borderline after weighting
+  quality: 5
+  impact: 4
+  feasibility: 5
+  weight: 1.2
+- Name: cara
+  Title: Cara — below threshold
+  quality: 3
+  impact: 4
+  feasibility: 3
+  weight: 1.0

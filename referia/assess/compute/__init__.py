@@ -32,6 +32,7 @@ from .mppca import (
 )
 from .phrases import llm_extract_phrases, segment_dialogue_units, stamp_dialogue_doc_ids
 from .embed import llm_embed, llm_embed_extraction_phrases
+from .numeric import add, subtract, multiply, gte, lte, matmul, dot
 from .compare import (
     jsd,
     run_basis_share_compare,
@@ -872,6 +873,69 @@ class Compute(lynguine.assess.compute.Compute):
                 "name" : "sum",
                 "function" : lambda x: x.sum(),
                 "default_args" : {},
+            },
+            {
+                "name": "add",
+                "function": add,
+                "default_args": {},
+                "docstr": (
+                    "Element-wise or scalar addition (a + b). "
+                    "Interim assessment compute pending vongole."
+                ),
+            },
+            {
+                "name": "subtract",
+                "function": subtract,
+                "default_args": {},
+                "docstr": (
+                    "Element-wise or scalar subtraction (a - b). "
+                    "Interim assessment compute pending vongole."
+                ),
+            },
+            {
+                "name": "multiply",
+                "function": multiply,
+                "default_args": {},
+                "docstr": (
+                    "Element-wise or scalar multiplication (a * b). "
+                    "Interim assessment compute pending vongole."
+                ),
+            },
+            {
+                "name": "gte",
+                "function": gte,
+                "default_args": {},
+                "docstr": (
+                    "Whether value >= threshold (scalar or element-wise). "
+                    "Interim assessment compute pending vongole."
+                ),
+            },
+            {
+                "name": "lte",
+                "function": lte,
+                "default_args": {},
+                "docstr": (
+                    "Whether value <= threshold (scalar or element-wise). "
+                    "Interim assessment compute pending vongole."
+                ),
+            },
+            {
+                "name": "matmul",
+                "function": matmul,
+                "default_args": {},
+                "docstr": (
+                    "Matrix product (a @ b) for criteria×weights layouts. "
+                    "Interim assessment compute pending vongole."
+                ),
+            },
+            {
+                "name": "dot",
+                "function": dot,
+                "default_args": {},
+                "docstr": (
+                    "Dot product of two vectors (or last axes). "
+                    "Interim assessment compute pending vongole."
+                ),
             },
             {
                 "name" : "next_integer",

@@ -18,6 +18,7 @@ For a multi-config host, use `poetry run referia serve --root <path>`.
 | `overview_inline_list/` | Catalog / `inline_list` with Today and Year siblings |
 | `topic_scatter_click/` | Plotly click ↔ review field sync |
 | `subject_grain_uq/` | Soft MPPCA subject grain (bake scores first — see its README) |
+| `numeric_scoring/` | Offline `multiply` / `add` / `gte` scoring (no LLM) |
 
 Each directory has its own README with layout and smoke checks. Sphinx
 lists the same map in `docs/examples/index.rst`.
@@ -43,8 +44,3 @@ cp examples/env_template.txt .env   # then edit keys
 ```
 
 Guides: `docs/llm_integration.md`, `docs/llm_pdf_review.md`.
-
-## Planned
-
-- `numeric_scoring/` — offline YAML `add` / `multiply` / `gte` scoring
-  (CIP-0026 Phase B; depends on numeric compute primitives).

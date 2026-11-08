@@ -25,19 +25,13 @@ Directory                            Purpose                                    
 ``examples/overview_inline_list/``   Catalog / ``inline_list`` with Today and Year siblings       ``--directory examples/overview_inline_list``
 ``examples/topic_scatter_click/``    Plotly click ↔ review field sync                             ``--directory examples/topic_scatter_click``
 ``examples/subject_grain_uq/``       Soft MPPCA subject grain (bake scores first)                 ``--directory examples/subject_grain_uq``
+``examples/numeric_scoring/``        Offline ``multiply`` / ``add`` / ``gte`` scoring             ``--directory examples/numeric_scoring``
 ==================================== =========================================================== ================================================
 
 Each directory has a ``README.md`` with layout notes and what to verify.
 The catalog schedule guide documents the overview demo in more depth:
-:doc:`../usage/catalog_schedule`.
-
-Numeric scoring
----------------
-
-A miniature offline scoring demo (``examples/numeric_scoring/``) is
-planned under CIP-0026 Phase B, once YAML numeric compute primitives
-(``add`` / ``multiply`` / ``gte``, …) land. It will be linked from
-:doc:`../usage/compute` when available.
+:doc:`../usage/catalog_schedule`. Numeric primitives are documented in
+:doc:`../usage/compute`.
 
 LLM and thesis snippets
 -----------------------

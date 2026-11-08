@@ -1,10 +1,10 @@
 ---
 id: "2026-11-07_yaml-numeric-compute-primitives"
 title: "YAML numeric compute primitives (add/multiply/threshold)"
-status: "Proposed"
+status: "Completed"
 priority: "High"
 created: "2026-11-07"
-last_updated: "2026-11-07"
+last_updated: "2026-11-08"
 category: "features"
 related_cips: []
 owner: "lawrennd"
@@ -42,12 +42,12 @@ existing `sum` / `max` / `len` placement.
 
 ## Acceptance Criteria
 
-- [ ] Pure functions for `add`, `subtract`, `multiply` registered and callable from YAML `compute` / `PopulateButton`
-- [ ] Threshold compare registered (`gte`/`lte` or equivalent) returning a clear boolean or 0/1 suitable for scoring fields
-- [ ] Optional `matmul` or `dot` registered if a minimal ndarray/list API is practical without pulling new deps
-- [ ] Unit tests cover scalar and series/list inputs used by the compute arg resolver
-- [ ] No changes to lynguine’s `_compute_functions_list`
-- [ ] Docstring / registry `docstr` notes interim placement pending vongole
+- [x] Pure functions for `add`, `subtract`, `multiply` registered and callable from YAML `compute` / `PopulateButton`
+- [x] Threshold compare registered (`gte`/`lte` or equivalent) returning a clear boolean or 0/1 suitable for scoring fields
+- [x] Optional `matmul` or `dot` registered if a minimal ndarray/list API is practical without pulling new deps
+- [x] Unit tests cover scalar and series/list inputs used by the compute arg resolver
+- [x] No changes to lynguine’s `_compute_functions_list`
+- [x] Docstring / registry `docstr` notes interim placement pending vongole
 
 ## Implementation Notes
 
@@ -72,3 +72,14 @@ existing `sum` / `max` / `len` placement.
 
 Task created after inventory of live compute registries. Implementation deferred
 until this task is Ready and explicitly started.
+
+### 2026-11-08
+
+Implemented on `cip0026-examples-serve-numeric` (ported from worktree
+`referia-yaml-numeric` / `backlog-2026-11-07-yaml-numeric-compute-primitives`):
+
+- Module `referia/assess/compute/numeric.py` with `add`, `subtract`, `multiply`,
+  `gte`, `lte`, `matmul`, `dot`
+- Registry entries in `Compute._compute_functions_list()` (vongole-interim docstr)
+- Tests in `tests/test_compute_numeric.py`
+- Demo: `examples/numeric_scoring/` (CIP-0026 Phase B)

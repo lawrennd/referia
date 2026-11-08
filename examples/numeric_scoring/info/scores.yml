@@ -1,0 +1,25 @@
+# Seed output store — Populate fills weighted_* / total / passes; Save persists.
+- Name: alice
+  quality_weighted:
+  impact_weighted:
+  feasibility_weighted:
+  subtotal:
+  total:
+  passes:
+  notes:
+- Name: bob
+  quality_weighted:
+  impact_weighted:
+  feasibility_weighted:
+  subtotal:
+  total:
+  passes:
+  notes:
+- Name: cara
+  quality_weighted:
+  impact_weighted:
+  feasibility_weighted:
+  subtotal:
+  total:
+  passes:
+  notes:
