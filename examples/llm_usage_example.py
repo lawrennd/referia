@@ -2,25 +2,30 @@
 Example: Using LLM Integration in Referia
 ==========================================
 
-This example demonstrates how to use LLM capabilities programmatically.
+Optional programmatic API illustration. For the reviewer UI, prefer a
+serveable `_referia.yml` directory:
+
+    poetry run referia serve --directory path/to/review
+
+See examples/README.md for package demos; this script is not one of them.
 
 Prerequisites:
-    1. Install LLM dependencies: 
+    1. Install LLM dependencies:
        poetry install --with llm
-    
+
     2. Set up API keys (choose one method):
-       
+
        Method A - Using .env file (RECOMMENDED):
          cp examples/env_template.txt .env
          # Edit .env and add your OPENAI_API_KEY
-       
+
        Method B - Environment variables:
          export OPENAI_API_KEY="your-key-here"
          export ANTHROPIC_API_KEY="your-key-here"
 
 Usage:
-    python examples/llm_usage_example.py
-    
+    poetry run python examples/llm_usage_example.py
+
 Note:
     The .env file is automatically loaded when you import referia.util.llm
 """

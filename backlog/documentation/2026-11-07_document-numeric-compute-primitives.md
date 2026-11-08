@@ -1,10 +1,10 @@
 ---
 id: "2026-11-07_document-numeric-compute-primitives"
 title: "Document YAML numeric compute primitives in compute.rst"
-status: "Proposed"
+status: "Completed"
 priority: "Medium"
 created: "2026-11-07"
-last_updated: "2026-11-07"
+last_updated: "2026-11-08"
 category: "documentation"
 related_cips: []
 owner: "lawrennd"
@@ -38,10 +38,10 @@ Document:
 
 ## Acceptance Criteria
 
-- [ ] `docs/usage/compute.rst` lists the new primitives with brief descriptions
-- [ ] At least one YAML example for multiply and one for threshold compare
-- [ ] Callout states interim referia placement; long-term vongole / CIP-0007
-- [ ] Docs match the live registry names (no fictional aliases)
+- [x] `docs/usage/compute.rst` lists the new primitives with brief descriptions
+- [x] At least one YAML example for multiply and one for threshold compare
+- [x] Callout states interim referia placement; long-term vongole / CIP-0007
+- [x] Docs match the live registry names (no fictional aliases)
 
 ## Implementation Notes
 
@@ -60,3 +60,8 @@ Document:
 ### 2026-11-07
 
 Task created. Blocked on feature task implementation.
+
+### 2026-11-08
+
+Documented numeric primitives subsection in `docs/usage/compute.rst` with
+multiply / gte / matmul YAML examples and vongole-interim callout.

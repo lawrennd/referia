@@ -2,8 +2,13 @@
 """
 Example: Programmatic LLM-Based Thesis Review
 
-This script demonstrates how to use the LLM+PDF integration to
-automatically generate initial reviews for thesis chapters.
+Optional API sketch for llm_pdf_review. For interactive reviewing, copy
+patterns from thesis_llm_review_example.yml into a real review directory
+and run:
+
+    poetry run referia serve --directory path/to/review
+
+See examples/README.md. This script is not a serveable demo.
 """
 
 import pandas as pd
@@ -13,7 +18,7 @@ from lynguine.assess.data import CustomDataFrame
 
 # Setup: Make sure you have:
 # 1. Installed LLM dependencies: poetry install --with llm
-# 2. Set OPENAI_API_KEY or ANTHROPIC_API_KEY in .env file
+# 2. Set OPENAI_API_KEY or ANTHROPIC_API_KEY via examples/env_template.txt → .env
 
 print("=== Thesis Chapter LLM Review Example ===\n")
 

@@ -111,6 +111,39 @@ Referia includes all lynguine compute functions plus these review-specific funct
    - ``histogram``: Create histograms
    - ``bar_plot``: Create bar plots
 
+4. **Numeric primitives (interim assessment compute)**:
+   - ``sum``, ``max``, ``len``, ``map``: Aggregation helpers already in the registry
+   - ``add``, ``subtract``, ``multiply``: Scalar or element-wise arithmetic
+   - ``gte``, ``lte``: Threshold compare (pass/fail style fields)
+   - ``matmul``, ``dot``: Criteria×weights style products
+
+   These live in referia until **vongole** exists (lynguine CIP-0007). They are
+   **not** part of lynguine's thin access registry.
+
+   .. code-block:: yaml
+
+       compute:
+         - function: multiply
+           field: weighted_score
+           row_args:
+             a: score
+             b: weight
+
+         - function: gte
+           field: passes_threshold
+           row_args:
+             value: weighted_score
+           args:
+             threshold: 50
+
+         - function: matmul
+           field: criteria_total
+           row_args:
+             a: criteria_row
+             b: weight_vector
+
+   Runnable demo: ``examples/numeric_scoring/`` (see :doc:`../examples/index`).
+
 Example Configuration
 ------------------
 
@@ -184,6 +217,14 @@ For more advanced usage, you can:
              args:
                column: word_count
                bins: 10
+
+Package examples
+----------------
+
+Runnable demos under ``examples/`` are listed in :doc:`../examples/index`.
+Open them with ``poetry run referia serve --directory examples/<name>``.
+Offline numeric scoring (``add`` / ``multiply`` / ``gte``) lives in
+``examples/numeric_scoring/``.
 
 Future Extensions
 --------------

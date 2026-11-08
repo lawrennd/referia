@@ -1,13 +1,15 @@
 # Example: Using LLM to Auto-Generate Thesis Chapter Reviews
 #
-# This configuration demonstrates how to use llm_pdf_review to automatically
-# generate initial comments for thesis chapters. The LLM extracts text from 
-# each chapter PDF and generates contextual reviews.
+# Snippet (not a serveable --directory demo). Demonstrates llm_pdf_review
+# PopulateButtons for thesis chapters. Copy into a real review directory
+# with input data and PDFs, then:
+#   poetry run referia serve --directory path/to/review
+# See examples/README.md for the serveable demos.
 #
 # Setup:
-# 1. Install LLM dependencies: cd referia && poetry install --with llm
-# 2. Set API key in .env file: OPENAI_API_KEY=your-key-here
-# 3. Run referia with this config
+# 1. Install LLM dependencies: poetry install --with llm
+# 2. Set API key: cp examples/env_template.txt .env  # then edit
+# 3. Adapt paths/fields below to your review tree and serve that directory
 
 title: "PhD Thesis Assessment with LLM Auto-Review"
 date: 2025-11-06

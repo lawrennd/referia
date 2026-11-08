@@ -1,27 +1,30 @@
 # Example Configuration for LLM Integration
 # ============================================
 #
-# This example demonstrates how to use LLM capabilities in referia's compute framework.
-# 
+# Snippet (not a serveable --directory demo). Copy patterns into a real
+# review `_referia.yml`, then open that directory with:
+#   poetry run referia serve --directory path/to/review
+# See examples/README.md for the serveable demos.
+#
 # Prerequisites:
-#   1. Install LLM dependencies: 
+#   1. Install LLM dependencies:
 #      poetry install --with llm
 #
 #   2. Set up API keys (choose one method):
-#      
+#
 #      Method A - Using .env file (RECOMMENDED):
 #        cp examples/env_template.txt .env
 #        # Edit .env and add your OPENAI_API_KEY
-#      
+#
 #      Method B - Environment variables:
 #        export OPENAI_API_KEY="your-key-here"
 #        export ANTHROPIC_API_KEY="your-key-here"
 #
-# Usage:
+# Optional API illustration:
 #   from referia.config.interface import Interface
 #   from referia.assess.compute import Compute
 #   from lynguine.assess.data import CustomDataFrame
-#   
+#
 #   interface = Interface.from_file("llm_integration_example.yml")
 #   compute = Compute(interface)
 #   data = CustomDataFrame.from_csv("reviews.csv")
