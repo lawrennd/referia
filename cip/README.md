@@ -59,6 +59,7 @@ Each CIP can have one of the following statuses:
 - [CIP-0024](./cip0024.md): Register sidecar product reads as declared interface stores (Proposed; REQ-0003 / REQ-0010 / REQ-0011; enables CIP-0023 Option B)
 - [CIP-0025](./cip0025.md): PDF term redaction in review — paper front matter as a term source (Proposed; REQ-001A redaction-only; apply → lynguine CIP-001A; extract optional HOW)
 - [CIP-0026](./cip0026.md): Refresh referia examples around `referia serve` and numeric compute (Implemented; REQ-0008 / REQ-0004 / REQ-0006)
+- [CIP-0027](./cip0027.md): Migrate developer packaging from Poetry to uv (Proposed; parallel to lynguine CIP-001B; REQ-000A)
 
 ## Creating a Good CIP
 
