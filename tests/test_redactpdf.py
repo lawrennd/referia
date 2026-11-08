@@ -105,6 +105,114 @@ def test_redactpdf_auto_skips_without_terms(tmp_path, monkeypatch):
         assert reviewer.get_record_document("redactpdf", 0) is None
 
 
+@pytest.mark.parametrize(
+    "flag",
+    [
+        {"auto": "true"},
+        {"auto": "yes"},
+        {"auto": 1},
+        {"auto": "auto"},
+        {"auto": "on_resolve"},
+        {"prepare": True},
+        {"prepare": "auto"},
+        {"prepare": "on_resolve"},
+    ],
+)
+def test_redactpdf_auto_prepare_flag_variants(tmp_path, monkeypatch, flag):
+    """Cover truthy auto/prepare strings accepted by _redactpdf_auto_prepare."""
+    reviewer, _, _ = _redact_setup(tmp_path, extra_view=flag)
+    monkeypatch.chdir(tmp_path)
+    view = reviewer._interface_section("redactpdf")[0]
+    assert reviewer._redactpdf_auto_prepare(view) is True
+
+    def _fake_redact(source, dest, terms, **kwargs):
+        Path(dest).write_bytes(b"%PDF-flag%\n")
+        return {"matches": 1, "warnings": [], "dest": str(dest)}
+
+    with patch(
+        "lynguine.access.documents.redact_pdf",
+        side_effect=_fake_redact,
+        create=True,
+    ):
+        assert reviewer.get_record_document("redactpdf", 0) is not None
+
+
+def test_redactpdf_auto_prepare_rejects_unknown_flags(tmp_path):
+    from referia.assess.web_review import WebReviewer
+
+    assert WebReviewer._redactpdf_auto_prepare({"auto": "maybe", "prepare": "later"}) is False
+    assert WebReviewer._redactpdf_auto_prepare({}) is False
+    reviewer, _, _ = _redact_setup(tmp_path)
+    view = reviewer._interface_section("redactpdf")[0]
+    assert reviewer._redactpdf_auto_prepare(view) is False
+
+
+def test_redactpdf_auto_returns_none_when_ensure_fails(tmp_path, monkeypatch):
+    reviewer, _, _ = _redact_setup(tmp_path, extra_view={"auto": True})
+    monkeypatch.chdir(tmp_path)
+
+    with patch.object(
+        reviewer, "ensure_redact_pdf", side_effect=RuntimeError("boom")
+    ):
+        assert reviewer.get_record_document("redactpdf", 0) is None
+
+
+def test_redactpdf_auto_skips_non_dict_and_broken_dest_entries(
+    tmp_path, monkeypatch
+):
+    """Match loop skips non-dicts and candidates whose dest lookup raises."""
+    reviewer, _, _ = _redact_setup(tmp_path, extra_view={"auto": True})
+    monkeypatch.chdir(tmp_path)
+    good = reviewer._interface_section("redactpdf")[0]
+    noisy = ["skip-me", {"field": "broken"}, good]
+
+    real_dest = reviewer._redactpdf_dest
+
+    def _dest(view):
+        if view is good:
+            return real_dest(view)
+        raise ValueError("broken candidate")
+
+    def _fake_redact(source, dest, terms, **kwargs):
+        Path(dest).write_bytes(b"%PDF-skip%\n")
+        return {"matches": 1, "warnings": [], "dest": str(dest)}
+
+    with patch.object(reviewer, "_interface_section", return_value=noisy), patch.object(
+        reviewer, "_redactpdf_dest", side_effect=_dest
+    ), patch(
+        "lynguine.access.documents.redact_pdf",
+        side_effect=_fake_redact,
+        create=True,
+    ):
+        # Call resolve directly: get_record_document also uses _interface_section.
+        dest = reviewer._resolve_redactpdf_file(good)
+    assert dest is not None
+    assert dest.read_bytes() == b"%PDF-skip%\n"
+
+
+def test_redactpdf_auto_returns_none_when_index_unmatched(tmp_path, monkeypatch):
+    """If no candidate dest matches, auto-prepare cannot pick an index."""
+    reviewer, _, _ = _redact_setup(tmp_path, extra_view={"auto": True})
+    monkeypatch.chdir(tmp_path)
+    view = reviewer._interface_section("redactpdf")[0]
+    real_dest = reviewer._redactpdf_dest(view)
+    calls = {"n": 0}
+
+    def _never_match(candidate):
+        # First call is resolve's own dest lookup; later calls are the match loop.
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return real_dest
+        return (real_dest[0].with_name("other.pdf"), real_dest[1])
+
+    with patch.object(reviewer, "_redactpdf_dest", side_effect=_never_match), patch(
+        "lynguine.access.documents.redact_pdf",
+        side_effect=AssertionError("must not redact"),
+        create=True,
+    ):
+        assert reviewer._resolve_redactpdf_file(view) is None
+
+
 def test_ensure_redact_pdf_writes_store_not_source(tmp_path, monkeypatch):
     reviewer, src, _ = _redact_setup(
         tmp_path, extra_view={"max_pages": 2, "pages": [0]}
