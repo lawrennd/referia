@@ -183,7 +183,30 @@ def test_split_paragraph_units_delegates_to_lynguine():
     assert all({"unit_id", "text", "extract_text", "unit_index"} <= set(u) for u in units)
 
 
-def test_audit_unit_anonymisation_returns_populate_tuple():
+def test_audit_unit_anonymisation_returns_populate_tuple(monkeypatch):
+    """Wrapper maps lynguine audit dict → PopulateButton field tuple (no substrings)."""
+    import lynguine.util.text as lynguine_text
+
+    def _fake_audit(**kwargs):
+        extract = str(kwargs.get("extract_text") or "")
+        email_leak = "@" in extract
+        return {
+            "name_leak": False,
+            "email_leak": email_leak,
+            "phone_leak": "+1-555" in extract,
+            "url_leak": "https://" in extract,
+            "expected_name_source": "none",
+            "anonymise_ok": not email_leak,
+        }
+
+    # raising=False: CI may still resolve an older lynguine without this symbol.
+    monkeypatch.setattr(
+        lynguine_text,
+        "audit_extract_anonymisation",
+        _fake_audit,
+        raising=False,
+    )
+
     leaks = audit_unit_anonymisation(
         text="Hello",
         extract_text=(

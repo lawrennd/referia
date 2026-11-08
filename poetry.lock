@@ -3087,7 +3087,7 @@ parquet = ["pyarrow (>=19.0.0,<27)"]
 type = "git"
 url = "https://github.com/lawrennd/lynguine.git"
 reference = "main"
-resolved_reference = "e0928885657338edef7e78b08d1958815b6ccccb"
+resolved_reference = "16ba0e9319d001043f990aa29471337dd2d52390"
 
 [[package]]
 name = "markdown"
