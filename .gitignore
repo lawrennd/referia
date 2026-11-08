@@ -113,3 +113,4 @@ notebooks/llm_test/
 # VibeSafe requirements scaffolding (commit reqXXXX_*.md when you create them)
 requirements/README.md
 requirements/requirement_template.md
+worktrees/

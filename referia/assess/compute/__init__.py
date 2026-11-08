@@ -30,7 +30,13 @@ from .mppca import (
     subject_grain_seed_fit,
     subject_grain_undo_split,
 )
-from .phrases import llm_extract_phrases, segment_dialogue_units, stamp_dialogue_doc_ids
+from .phrases import (
+    audit_unit_anonymisation,
+    llm_extract_phrases,
+    segment_dialogue_units,
+    split_paragraph_units,
+    stamp_dialogue_doc_ids,
+)
 from .embed import llm_embed, llm_embed_extraction_phrases
 from .numeric import add, subtract, multiply, gte, lte, matmul, dot
 from .compare import (
@@ -1296,6 +1302,32 @@ class Compute(lynguine.assess.compute.Compute):
                 "docstr": (
                     "document_segment then stamp_dialogue_doc_ids so pack "
                     "weights chatbot conversations, not Recollective dumps."
+                ),
+            },
+            {
+                "name": "split_paragraph_units",
+                "function": split_paragraph_units,
+                "default_args": {
+                    "only_candidates": True,
+                    "min_chars": 40,
+                    "max_units": 12,
+                },
+                "docstr": (
+                    "Split a mail body into paragraph unit dicts "
+                    "(unit_id, text, extract_text, unit_index) for "
+                    "input.explode (CIP-0014). Skips candidate=false "
+                    "when only_candidates is true."
+                ),
+            },
+            {
+                "name": "audit_unit_anonymisation",
+                "function": audit_unit_anonymisation,
+                "default_args": {},
+                "docstr": (
+                    "Audit unit extract_text for residual contact PII. "
+                    "Returns (name_leak, email_leak, phone_leak, url_leak, "
+                    "expected_name_source, anonymise_ok); never residual "
+                    "substrings."
                 ),
             },
             {

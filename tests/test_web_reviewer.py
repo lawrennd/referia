@@ -420,6 +420,24 @@ class TestPersistence:
         with patch("referia.assess.data.CustomDataFrame.from_flow", return_value=mock_new_data):
             reviewer.load_flows(reload=True)
 
+    def test_load_flows_clears_liquid_rows_cache(self):
+        """Reload must drop cached cohort ``rows`` so summary viewers refresh."""
+        import os
+        from unittest.mock import MagicMock, patch
+
+        reviewer, data, _ = _build_reviewer()
+        reviewer._directory = os.getcwd()
+        reviewer._liquid_rows_cache = [{"crsid": "stale", "totalDisplay": "0"}]
+
+        mock_new_data = MagicMock()
+        mock_new_data.index = list(data.index)
+        mock_new_data.get_index.return_value = data.index[0]
+
+        with patch("referia.assess.data.CustomDataFrame.from_flow", return_value=mock_new_data):
+            reviewer.load_flows(reload=True)
+
+        assert reviewer._liquid_rows_cache is None
+
     # ------------------------------------------------------------------
     # chdir tests — the fix for "first save works, later saves don't"
     # ------------------------------------------------------------------
@@ -1674,6 +1692,32 @@ class TestDisplayLayout:
         assert "title" in fields
         assert "config_url" in fields
 
+    def test_listing_row_fields_includes_document_visible_if(self):
+        """Create email buttons gate on documents.visible_if (e.g. markedFlag)."""
+        from referia.assess.web_review import listing_row_fields
+
+        class _Rev:
+            def get_review_specs(self):
+                return [{"type": "Checkbox", "field": "complete"}]
+
+            def get_display_detail_field(self):
+                return None
+
+            def list_document_entries(self, section="documents"):
+                if section != "documents":
+                    return []
+                return [
+                    {
+                        "n": 0,
+                        "type": "Email",
+                        "label": "Email feedback",
+                        "visible_if": {"field": "markedFlag", "op": "truthy"},
+                    }
+                ]
+
+        fields = listing_row_fields(_Rev())
+        assert "markedFlag" in fields
+        assert "complete" in fields
 
     def test_listing_row_fields_keeps_chrome_when_only_complete(self):
         from referia.assess.web_review import listing_row_fields

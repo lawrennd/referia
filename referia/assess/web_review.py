@@ -189,6 +189,9 @@ def listing_row_fields(reviewer) -> set[str] | None:
     ``extraction_phrases``, source ``text``). Listing HTML must not copy
     those per row — CIP-0020 windows paint, not Access. ``None`` keeps
     today's full-row walk when the review has no field widgets.
+
+    Also walks ``documents`` / ``summary_documents`` action ``visible_if``
+    gates (e.g. ``markedFlag`` for Create email buttons).
     """
     wanted: set[str] = set(LISTING_CHROME_FIELDS)
 
@@ -224,6 +227,21 @@ def listing_row_fields(reviewer) -> set[str] | None:
         detail = None
     if isinstance(detail, str) and detail.strip():
         wanted.add(detail.strip())
+    # Document action buttons (Create Word / Create email) live outside review
+    # specs; their visible_if fields must still be on each listing row.
+    list_docs = getattr(reviewer, "list_document_entries", None)
+    if callable(list_docs):
+        for section in ("documents", "summary_documents"):
+            try:
+                _walk(list_docs(section))
+            except TypeError:
+                if section == "documents":
+                    try:
+                        _walk(list_docs())
+                    except Exception:
+                        pass
+            except Exception:
+                pass
     return wanted or None
 
 
@@ -1246,6 +1264,9 @@ class WebReviewer:
         self._register_review_computes()
         self._ensure_compute_target_columns()
         self._field_defaults = self._build_field_defaults()
+        # Cohort Liquid ``{% for row in rows %}`` must not keep pre-reload
+        # totals after scores CSV / joined data change on disk.
+        self._liquid_rows_cache = None
 
         indices = list(self._data.index)
         if current_index is not None and current_index in indices:

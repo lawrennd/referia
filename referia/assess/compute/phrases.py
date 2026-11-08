@@ -23,6 +23,8 @@ __all__ = [
     "dialogue_doc_id",
     "stamp_dialogue_doc_ids",
     "segment_dialogue_units",
+    "split_paragraph_units",
+    "audit_unit_anonymisation",
 ]
 
 
@@ -145,6 +147,34 @@ def segment_dialogue_units(path: str, **kwargs: Any) -> list[dict[str, Any]]:
         filename=kwargs.get("filename"),
         format=kwargs.get("format"),
         min_unit_words=kwargs.get("min_unit_words"),
+    )
+
+
+def split_paragraph_units(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+    """Delegate to lynguine (Access ``input.compute`` uses that registry)."""
+    from lynguine.util.text import split_paragraph_units as _split
+
+    return _split(*args, **kwargs)
+
+
+def audit_unit_anonymisation(*args: Any, **kwargs: Any) -> tuple[
+    bool, bool, bool, bool, str, bool
+]:
+    """Thin wrapper: lynguine audit → multi-field PopulateButton tuple.
+
+    Field order: name_leak, email_leak, phone_leak, url_leak,
+    expected_name_source, anonymise_ok. Never returns residual substrings.
+    """
+    from lynguine.util.text import audit_extract_anonymisation as _audit
+
+    result = _audit(*args, **kwargs)
+    return (
+        bool(result["name_leak"]),
+        bool(result["email_leak"]),
+        bool(result["phone_leak"]),
+        bool(result["url_leak"]),
+        str(result["expected_name_source"]),
+        bool(result["anonymise_ok"]),
     )
 
 
