@@ -19,6 +19,7 @@ For a multi-config host, use `poetry run referia serve --root <path>`.
 | `topic_scatter_click/` | Plotly click ↔ review field sync |
 | `subject_grain_uq/` | Soft MPPCA subject grain (bake scores first — see its README) |
 | `numeric_scoring/` | Offline `multiply` / `add` / `gte` scoring (no LLM) |
+| `pdf_term_redaction/` | Soft-fill authors → `redactpdf` auto-prepare (CIP-0025) |
 
 Each directory has its own README with layout and smoke checks. Sphinx
 lists the same map in `docs/examples/index.rst`.

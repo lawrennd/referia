@@ -1,0 +1,85 @@
+referia_config_version: 2
+strict_columns: false
+title: "Example — PDF author redaction (CIP-0025 Phase B)"
+date: 2026-11-08
+current: true
+author: Neil D. Lawrence
+description: >
+  Soft-fill author names into RedactTerms via extract_paper_frontmatter, then
+  auto-prepare a redacted PDF view under pdfs/. Point LocalDocumentLink at a
+  PDF under files/ and run `referia serve` from this directory.
+
+input:
+  index: Name
+  type: csv
+  filename: allocation.csv
+  directory: ./info
+  header: 0
+  mapping:
+    LocalDocumentLink: LocalDocumentLink
+    RedactTerms: RedactTerms
+
+output:
+  index: Name
+  type: csv
+  directory: ./info
+  filename: scores.csv
+  header: 0
+  columns:
+    - Notes
+    - RedactTerms
+    - Timestamp
+  mapping:
+    Notes: Notes
+    RedactTerms: RedactTerms
+
+viewer:
+- liquid: |
+    ## PDF term redaction
+
+    Terms (edit if soft-fill missed a name): `{{RedactTerms}}`
+
+redactpdf:
+- sourcedirectory: ./files
+  storedirectory: ./pdfs
+  field: LocalDocumentLink
+  terms_field: RedactTerms
+  name: paper (authors redacted)
+  max_pages: 2
+  auto: true
+
+review:
+- type: precompute
+  specifications:
+    - field: paper
+      function: extract_paper_frontmatter
+      refresh: false
+      row_args:
+        path: LocalDocumentLink
+      args:
+        strategy: auto
+        root: ./files
+        on_sparse_text: warn
+    - field: RedactTerms
+      function: render_liquid
+      refresh: false
+      row_args:
+        paper: paper
+      args:
+        template: "{{ paper.authors | join: '; ' }}"
+- field: RedactTerms
+  type: Textarea
+  args:
+    value: ""
+    description: "Semicolon-separated author names to redact"
+    layout:
+      width: "800px"
+- field: Notes
+  type: Textarea
+  args:
+    value: ""
+    description: "Review notes"
+    layout:
+      width: "800px"
+
+timestamp_field: Timestamp

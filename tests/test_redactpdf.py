@@ -52,6 +52,59 @@ def test_redactpdf_resolve_missing_until_prepared(tmp_path, monkeypatch):
     assert entries[0]["exists"] is False
 
 
+def test_redactpdf_auto_prepares_on_resolve_when_terms_present(tmp_path, monkeypatch):
+    """Phase B convenience: auto/prepare builds the store copy on resolve."""
+    reviewer, src, _ = _redact_setup(tmp_path, extra_view={"auto": True, "max_pages": 2})
+    monkeypatch.chdir(tmp_path)
+    before = src.read_bytes()
+    calls = {"n": 0}
+
+    def _fake_redact(source, dest, terms, **kwargs):
+        calls["n"] += 1
+        Path(dest).write_bytes(b"%PDF-auto%\n")
+        assert terms[0]["value"] == "Alice Example"
+        assert kwargs.get("max_pages") == 2
+        return {"matches": 1, "warnings": [], "dest": str(dest)}
+
+    with patch(
+        "lynguine.access.documents.redact_pdf",
+        side_effect=_fake_redact,
+        create=True,
+    ):
+        dest = reviewer.get_record_document("redactpdf", 0)
+
+    assert dest is not None
+    assert dest.is_file()
+    assert dest.read_bytes() == b"%PDF-auto%\n"
+    assert src.read_bytes() == before
+    assert calls["n"] == 1
+    # Second resolve must not rebuild when the store copy already exists.
+    with patch(
+        "lynguine.access.documents.redact_pdf",
+        side_effect=_fake_redact,
+        create=True,
+    ):
+        again = reviewer.get_record_document("redactpdf", 0)
+    assert again == dest
+    assert calls["n"] == 1
+
+
+def test_redactpdf_auto_skips_without_terms(tmp_path, monkeypatch):
+    reviewer, _, _ = _redact_setup(
+        tmp_path,
+        col_vals={"LocalDocumentLink": "paper.pdf", "RedactTerms": ""},
+        extra_view={"auto": True},
+    )
+    monkeypatch.chdir(tmp_path)
+
+    with patch(
+        "lynguine.access.documents.redact_pdf",
+        side_effect=AssertionError("must not redact without terms"),
+        create=True,
+    ):
+        assert reviewer.get_record_document("redactpdf", 0) is None
+
+
 def test_ensure_redact_pdf_writes_store_not_source(tmp_path, monkeypatch):
     reviewer, src, _ = _redact_setup(
         tmp_path, extra_view={"max_pages": 2, "pages": [0]}
