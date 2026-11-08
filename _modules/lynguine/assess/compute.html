@@ -850,13 +850,14 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..config.interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interface</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..util.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">render_liquid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..util.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">render_liquid</span><span class="p">,</span> <span class="n">split_paragraph_units</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..util.misc</span><span class="w"> </span><span class="kn">import</span> <span class="n">isna</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..util.liquid</span><span class="w"> </span><span class="kn">import</span> <span class="n">url_escape</span><span class="p">,</span> <span class="n">markdownify</span><span class="p">,</span> <span class="n">relative_url</span><span class="p">,</span> <span class="n">absolute_url</span><span class="p">,</span> <span class="n">to_i</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..access.documents.segment</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">document_segment</span><span class="p">,</span>
     <span class="n">extract_form_fields</span><span class="p">,</span>
+    <span class="n">extract_paper_frontmatter</span><span class="p">,</span>
     <span class="n">extract_references</span><span class="p">,</span>
 <span class="p">)</span>
 
@@ -1438,6 +1439,23 @@
                 <span class="p">),</span>
             <span class="p">},</span>
             <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;split_paragraph_units&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">split_paragraph_units</span><span class="p">,</span>
+                <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;only_candidates&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                    <span class="s2">&quot;min_chars&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span>
+                    <span class="s2">&quot;max_units&quot;</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Split a text body into paragraph unit dicts for &quot;</span>
+                    <span class="s2">&quot;input.explode (CIP-0014). When only_candidates is true, &quot;</span>
+                    <span class="s2">&quot;only candidate=true rows produce units. Sets listing &quot;</span>
+                    <span class="s2">&quot;title/description and PII-redacts extract_text via &quot;</span>
+                    <span class="s2">&quot;RedactTerms (CIP-001A).&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
                 <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;extract_references&quot;</span><span class="p">,</span>
                 <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">extract_references</span><span class="p">,</span>
                 <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
@@ -1463,6 +1481,20 @@
                 <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
                     <span class="s2">&quot;Extract a single structured form_fields record from a PDF &quot;</span>
                     <span class="s2">&quot;(CIP-0013 YAML strategies / form_fields engine).&quot;</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;extract_paper_frontmatter&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">extract_paper_frontmatter</span><span class="p">,</span>
+                <span class="s2">&quot;context&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;strategy&quot;</span><span class="p">:</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;reader&quot;</span><span class="p">:</span> <span class="s2">&quot;pdf&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;on_sparse_text&quot;</span><span class="p">:</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s2">&quot;Extract title and authors from an academic PDF first page &quot;</span>
+                    <span class="s2">&quot;(CIP-0013 paper_frontmatter aspect / academic_paper_front.v1).&quot;</span>
                 <span class="p">),</span>
             <span class="p">},</span>
         <span class="p">]</span>

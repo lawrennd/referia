@@ -881,6 +881,103 @@
         <span class="n">_stamp_path_roots</span><span class="p">(</span><span class="n">details</span><span class="p">[</span><span class="s2">&quot;specifications&quot;</span><span class="p">],</span> <span class="n">interface</span><span class="p">)</span>
 
 
+<span class="c1"># Access-spec keys that should become ints after Liquid render (e.g. mu limit).</span>
+<span class="n">_LIQUID_INT_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;limit&quot;</span><span class="p">,</span> <span class="s2">&quot;nrows&quot;</span><span class="p">,</span> <span class="s2">&quot;maxnum&quot;</span><span class="p">})</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parameter_liquid_context</span><span class="p">(</span><span class="n">interface</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a Liquid render context from constants/parameters before Access.</span>
+
+<span class="sd">    Input specs may template fields such as ``query:`` or ``filename:``</span>
+<span class="sd">    against stage knobs. Parameters normally load *after* input in</span>
+<span class="sd">    ``from_flow``; this helper reads them first into a plain dict so</span>
+<span class="sd">    Access can expand templates without changing join order.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+
+    <span class="n">ctx</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;constants&quot;</span><span class="p">,</span> <span class="s2">&quot;global_consts&quot;</span><span class="p">,</span> <span class="s2">&quot;parameters&quot;</span><span class="p">,</span> <span class="s2">&quot;globals&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">interface</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">details</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;base_directory&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">details</span> <span class="ow">and</span> <span class="s2">&quot;base_directory&quot;</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">:</span>
+            <span class="n">details</span><span class="p">[</span><span class="s2">&quot;base_directory&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;base_directory&quot;</span><span class="p">]</span>
+        <span class="n">_stamp_path_roots</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;constants&quot;</span><span class="p">,</span> <span class="s2">&quot;global_consts&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">data_exists</span><span class="p">(</span>
+                <span class="n">details</span>
+            <span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">df</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="n">details</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Skipping Liquid context for </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+            <span class="n">idx_field</span> <span class="o">=</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">idx_field</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">idx_field</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">idx_field</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s2">&quot;select&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">details</span><span class="p">[</span><span class="s2">&quot;select&quot;</span><span class="p">]]</span>
+                <span class="n">series</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="k">else</span> <span class="n">row</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">series</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">continue</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
+            <span class="n">series</span> <span class="o">=</span> <span class="n">df</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">series</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="ow">and</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">ctx</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">ctx</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_liquid_expand_structure</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Recursively Liquid-render strings that contain ``{{`` against ``ctx``.</span>
+
+<span class="sd">    Integer-like results for known keys (``limit``, ``nrows``, …) are</span>
+<span class="sd">    coerced to ``int`` so readers that expect numbers keep working.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ctx</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">obj</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="n">_liquid_expand_structure</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">_liquid_expand_structure</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;{{&quot;</span> <span class="ow">in</span> <span class="n">obj</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">liquid</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">lq</span>
+
+        <span class="n">rendered</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">lq</span><span class="o">.</span><span class="n">Environment</span><span class="p">(</span><span class="n">tolerance</span><span class="o">=</span><span class="n">lq</span><span class="o">.</span><span class="n">Mode</span><span class="o">.</span><span class="n">LAX</span><span class="p">)</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="o">**</span><span class="n">ctx</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_LIQUID_INT_KEYS</span><span class="p">:</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">rendered</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">rendered</span>
+        <span class="k">return</span> <span class="n">rendered</span>
+    <span class="k">return</span> <span class="n">obj</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_liquid_expand_access_details</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="n">ctx</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Deep-copy Access details and expand Liquid against parameter context.&quot;&quot;&quot;</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ctx</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">details</span>
+    <span class="n">expanded</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">details</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_liquid_expand_structure</span><span class="p">(</span><span class="n">expanded</span><span class="p">,</span> <span class="n">ctx</span><span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_parameter_assign_kwargs</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Keyword args for ``DataFrame.assign`` from a parameter Series.</span>
 
@@ -2015,6 +2112,9 @@
         <span class="n">cdf</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">({},</span> <span class="n">compute</span><span class="o">=</span><span class="n">compute</span><span class="p">,</span> <span class="n">interface</span><span class="o">=</span><span class="n">interface</span><span class="p">)</span>
 
         <span class="n">found_data</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># Parameters load after input in key_order; pre-read them so Access</span>
+        <span class="c1"># specs can Liquid-template query:/filename:/limit: against knobs.</span>
+        <span class="n">liquid_ctx</span> <span class="o">=</span> <span class="n">_parameter_liquid_context</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
 
         <span class="c1"># Create a function to determine the processing order</span>
         <span class="k">def</span><span class="w"> </span><span class="nf">key_order</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
@@ -2063,6 +2163,15 @@
                     <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
                 <span class="n">found_data</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="c1"># Pure Access input: expand {{param}} before read_data.</span>
+                <span class="n">read_item</span> <span class="o">=</span> <span class="n">item</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="n">liquid_ctx</span>
+                    <span class="ow">and</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;input&quot;</span><span class="p">]</span>
+                    <span class="ow">and</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span>
+                    <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+                <span class="p">):</span>
+                    <span class="n">read_item</span> <span class="o">=</span> <span class="n">_liquid_expand_access_details</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">liquid_ctx</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;input&quot;</span><span class="p">]:</span> <span class="c1"># allow creation of non-inputs if they don&#39;t exist</span>
                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
                         <span class="k">if</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">data_exists</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
@@ -2095,7 +2204,9 @@
                             <span class="sa">f</span><span class="s2">&quot;Item data descriptions must be in the form of a dictionary unless they are of type </span><span class="se">\&quot;</span><span class="s2">input</span><span class="se">\&quot;</span><span class="s2">, when a list is valid and implies an </span><span class="se">\&quot;</span><span class="s2">hstack</span><span class="se">\&quot;</span><span class="s2"> type is needed. The type of item you have provided for the key </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2"> is </span><span class="se">\&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span>
                         <span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">newdf</span> <span class="o">=</span> <span class="n">cdf</span><span class="o">.</span><span class="n">_finalize_df</span><span class="p">(</span><span class="o">*</span><span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="n">strict_columns</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                    <span class="n">newdf</span> <span class="o">=</span> <span class="n">cdf</span><span class="o">.</span><span class="n">_finalize_df</span><span class="p">(</span>
+                        <span class="o">*</span><span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="n">read_item</span><span class="p">),</span> <span class="n">strict_columns</span><span class="o">=</span><span class="kc">False</span>
+                    <span class="p">)</span>
 
                 <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
                     <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Adding parameter type with key </span><span class="se">\&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">.&quot;</span><span class="p">)</span>
