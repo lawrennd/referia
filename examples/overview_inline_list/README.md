@@ -20,13 +20,17 @@ overview_inline_list/
 
 ## Run
 
-From the referia package environment:
+From the referia package root:
 
 ```bash
-# Single-config mode (this directory is the review root)
-referia-web examples/overview_inline_list
-# or: python -m referia.web.app examples/overview_inline_list
+poetry install   # once
+poetry run referia serve --directory examples/overview_inline_list
+# Open the printed URL (default http://127.0.0.1:8000)
 ```
+
+This directory is the review root (single-config mode). For a multi-config
+host that discovers several `_referia.yml` trees, use
+`poetry run referia serve --root <path>` instead.
 
 Mark rows complete / set status, then **Save**. Scores land in
 `info/overview-scores.yml` keyed by `sourceDirectory`.

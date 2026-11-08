@@ -31,13 +31,14 @@ subject_grain_uq/
     └── scores.yml        # focus / R / planes / controls (output; gitignored)
 ```
 
-Regenerate `scores.yml` before first serve:
+Regenerate `scores.yml` before first serve. From the referia package root:
 
 ```bash
-poetry install --with llm
+poetry install --with llm   # once (LLM extras for live naming / embeddings)
 poetry run python examples/subject_grain_uq/build_records.py
 # Offline: add --synthetic
 poetry run referia serve --directory examples/subject_grain_uq
+# Open the printed URL (default http://127.0.0.1:8000)
 ```
 
 Put `OPENAI_API_KEY` in the referia package-root `.env` (or `~/.env`) only if

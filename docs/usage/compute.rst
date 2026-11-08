@@ -185,6 +185,14 @@ For more advanced usage, you can:
                column: word_count
                bins: 10
 
+Package examples
+----------------
+
+Runnable demos under ``examples/`` are listed in :doc:`../examples/index`.
+Open them with ``poetry run referia serve --directory examples/<name>``.
+A miniature offline numeric scoring demo (``add`` / ``multiply`` /
+``gte``, …) is planned as CIP-0026 Phase B once those primitives land.
+
 Future Extensions
 --------------
 
