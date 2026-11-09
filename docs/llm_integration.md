@@ -10,7 +10,7 @@ Get started in 3 simple steps:
 
 ```bash
 # 1. Install LLM dependencies
-poetry install --with llm
+uv sync --extra llm --group dev
 
 # 2. Set up your API key using .env file
 cp examples/env_template.txt .env
@@ -34,7 +34,7 @@ That's it! Your LLM integration is ready to use.
 LLM capabilities are optional. To install the required dependencies:
 
 ```bash
-poetry install --with llm
+uv sync --extra llm --group dev
 ```
 
 This installs (all **LangChain 1.x** — migrated from 0.3.x via [CIP-000D](../cip/cip000D.md)):
@@ -446,7 +446,7 @@ print(f"Cost: ${summary['total_cost']:.4f}")
 
 Install LLM dependencies:
 ```bash
-poetry install --with llm
+uv sync --extra llm --group dev
 ```
 
 ### "API key not found"

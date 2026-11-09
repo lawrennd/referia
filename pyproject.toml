@@ -1,128 +1,100 @@
-[tool.poetry.scripts]
-referia = "referia.cli:main"
-
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
 
-[tool.poetry.dev-dependencies]
-pytest = "^9.0.3"
-pytest-cov = "^4.0"
-pytest-mock = "^3.3.1"  
-deepdiff = "^8.6.2"
-sphinx = "^8.2.3"
-sphinx-rtd-theme = "^3.0.2"
-myst-parser = "^4.0.1"
-toml = ">=0.10.2"
-
-[tool.poetry]
+[project]
 name = "referia"
 version = "0.2.0"
 description = "Library for processing data using jupyter notebooks."
-authors = ["Neil D. Lawrence <email@domain.here>"]
-license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/lawrennd/referia"
+license = "MIT"
+authors = [
+    { name = "Neil D. Lawrence", email = "lawrennd@gmail.com" },
+]
+requires-python = ">=3.11,<4.0"
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy"
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+    "XlsxWriter",
+    "pandas",
+    # spaCy 3.8 / Thinc 8.3; lynguine requires NumPy 2 (thinc#939 is resolved)
+    "numpy>=2.0.0",
+    "scikit-learn>=1.3",
+    "jupyter",
+    "matplotlib",
+    "unidecode",
+    "wordcloud",
+    "thinc",
+    "spacy>=3.8.0,<3.9.0",
+    # spaCy model: https://github.com/explosion/spacy-models/releases/
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0.tar.gz",
+    "pillow",
+    "google-auth-oauthlib",
+    "pypandoc",
+    "pypdftk",
+    "pdfannots",
+    "lynguine[documents,parquet]",
+    "gspread-pandas; sys_platform == 'darwin'",
+    "appscript; sys_platform == 'darwin'",
+    "fastapi",
+    "uvicorn[standard]",
+    "jinja2",
+    "python-multipart",
+    "aiofiles",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<4.0"
-XlsxWriter = "*"
-pandas = "*"
-numpy = ">=2.0.0" # spaCy 3.8 / Thinc 8.3; lynguine requires NumPy 2 (thinc#939 is resolved)
-scikit-learn = ">=1.3"
-jupyter = "*"
-matplotlib = "*"
-unidecode = "*"
-wordcloud = "*"
-thinc = "*"
-spacy = ">=3.8.0,<3.9.0"
-# spacy models, releases are found here: https://github.com/explosion/spacy-models/releases/. See also the poetry add command in the github workflow.
-en_core_web_sm = {url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0.tar.gz"}
-pillow = "*"
-google-auth-oauthlib = "*"
-pypandoc = "*"
-pypdftk = "*"
-pdfannots = "*"
-lynguine = { git = "https://github.com/lawrennd/lynguine.git", branch = "main", extras = ["documents", "parquet"] }#lynguine = "*"
-# You can include platform-specific dependencies like this:
-# Note: This is just an example, you might need to adjust for actual requirements.
-gspread_pandas = { version = "*", platform = "darwin" }
-appscript = { version = "*", platform = "darwin" }
-fastapi = "*"
-uvicorn = {version = "*", extras = ["standard"]}
-jinja2 = "*"
-python-multipart = "*"
-aiofiles = "*"
-POT = {version = "^0.9.0", optional = true}
-# LLM integration (optional — poetry install --extras llm / pip install 'referia[llm]')
-langchain = {version = "^1.3.9", optional = true}
-langchain-core = {version = "^1.2.22", optional = true}
-langchain-openai = {version = "^1.1.14", optional = true}
-langchain-anthropic = {version = "^1.4.6", optional = true}
-langchain-text-splitters = {version = "^1.1.2", optional = true}
-openai = {version = "^2.26.0", optional = true}
-anthropic = {version = ">=0.96.0,<1.0.0", optional = true}
-tenacity = {version = "^9.0.0", optional = true}
-diskcache = {version = "^5.6.0", optional = true}
-python-dotenv = {version = "^1.0.0", optional = true}
-
-[tool.poetry.extras]
-distance = ["POT"]
+[project.optional-dependencies]
+distance = [
+    "POT>=0.9.0",
+]
+# Install: pip install 'referia[llm]' or: uv sync --extra llm
 llm = [
-    "langchain",
-    "langchain-core",
-    "langchain-openai",
-    "langchain-anthropic",
-    "langchain-text-splitters",
-    "openai",
-    "anthropic",
-    "tenacity",
-    "diskcache",
-    "python-dotenv",
+    "langchain>=1.3.9,<2",
+    "langchain-core>=1.2.22,<2",
+    "langchain-openai>=1.1.14,<2",
+    "langchain-anthropic>=1.4.6,<2",
+    "langchain-text-splitters>=1.1.2,<2",
+    "openai>=2.26.0,<3",
+    "anthropic>=0.96.0,<1.0.0",
+    "tenacity>=9.0.0,<10",
+    "diskcache>=5.6.0,<6",
+    "python-dotenv>=1.0.0,<2",
 ]
 
-# The docs group remains for local development but the dependencies
-# are duplicated in dev-dependencies to ensure they're installed in CI
-[tool.poetry.group.docs]
-optional = true
+[project.urls]
+Homepage = "https://github.com/lawrennd/referia"
 
-[tool.poetry.group.docs.dependencies]
-sphinx = "^8.2.3"
-sphinx-rtd-theme = "^3.0.2"
-myst-parser = "^4.0.1"
-toml = ">=0.10.2"
+[project.scripts]
+referia = "referia.cli:main"
 
-# Keep --with llm working for existing checkout instructions.
-[tool.poetry.group.llm]
-optional = true
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3,<10",
+    "pytest-cov>=4.0,<7",
+    "pytest-mock>=3.3.1,<4",
+    "deepdiff>=8.6.2,<9",
+]
+docs = [
+    "sphinx>=8.2.3,<9",
+    "sphinx-rtd-theme>=3.0.2,<4",
+    "myst-parser>=4.0.1,<5",
+]
 
-[tool.poetry.group.llm.dependencies]
-langchain = "^1.3.9"
-langchain-core = "^1.2.22"
-langchain-openai = "^1.1.14"
-langchain-anthropic = "^1.4.6"
-langchain-text-splitters = "^1.1.2"
-openai = "^2.26.0"
-anthropic = ">=0.96.0,<1.0.0"
-tenacity = "^9.0.0"
-diskcache = "^5.6.0"
-python-dotenv = "^1.0.0"
+[tool.uv.sources]
+lynguine = { git = "https://github.com/lawrennd/lynguine.git", branch = "main" }
 
-[tool.poetry.group.dev.dependencies]
-# Documentation dependencies have been moved to dev-dependencies section
+[tool.hatch.metadata]
+# Required for the spaCy model URL pin in project.dependencies.
+allow-direct-references = true
 
-[build]
-# Include if you have any build scripts, though this is rare
-script = "path/to/script"
-
+[tool.hatch.build.targets.wheel]
+packages = ["referia"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "referia/tests"]

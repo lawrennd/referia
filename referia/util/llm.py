@@ -251,7 +251,7 @@ class LLMManager:
         """
         if not LANGCHAIN_AVAILABLE:
             raise LLMConfigError(
-                "LangChain is not installed. Install with: poetry install --extras llm "
+                "LangChain is not installed. Install with: uv sync --extra llm --group dev "
                 "(or: pip install 'referia[llm]')"
             )
         
@@ -272,7 +272,7 @@ class LLMManager:
             if self.cache_enabled and not DISKCACHE_AVAILABLE:
                 logger.warning(
                     "Cache requested but diskcache not available. "
-                    "Install with: poetry install --extras llm "
+                    "Install with: uv sync --extra llm --group dev "
                     "(or: pip install 'referia[llm]')"
                 )
         
@@ -464,7 +464,7 @@ class LLMManager:
             from openai import OpenAI
         except ImportError as exc:
             raise LLMConfigError(
-                "openai is not installed. Install with: poetry install --extras llm "
+                "openai is not installed. Install with: uv sync --extra llm --group dev "
                 "(or: pip install 'referia[llm]')"
             ) from exc
 
