@@ -34,10 +34,10 @@ subject_grain_uq/
 Regenerate `scores.yml` before first serve. From the referia package root:
 
 ```bash
-poetry install --with llm   # once (LLM extras for live naming / embeddings)
-poetry run python examples/subject_grain_uq/build_records.py
+uv sync --extra llm --group dev   # once (LLM extras for live naming / embeddings)
+uv run python examples/subject_grain_uq/build_records.py
 # Offline: add --synthetic
-poetry run referia serve --directory examples/subject_grain_uq
+uv run referia serve --directory examples/subject_grain_uq
 # Open the printed URL (default http://127.0.0.1:8000)
 ```
 

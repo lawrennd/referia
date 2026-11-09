@@ -15,7 +15,7 @@ This feature combines PDF text extraction with LLM capabilities to automatically
 ```bash
 # Install LLM dependencies
 cd referia
-poetry install --with llm
+uv sync --extra llm --group dev
 ```
 
 ### 2. API Key Setup
@@ -431,7 +431,7 @@ args:
 ## Examples
 
 Primary learning path: serveable package demos under `examples/`
-(`poetry run referia serve --directory examples/<name>`). See
+(`uv run referia serve --directory examples/<name>`). See
 `examples/README.md` and `docs/examples/index.rst`.
 
 LLM / thesis files below are **snippets** (copy into a real review

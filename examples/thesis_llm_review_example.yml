@@ -3,11 +3,11 @@
 # Snippet (not a serveable --directory demo). Demonstrates llm_pdf_review
 # PopulateButtons for thesis chapters. Copy into a real review directory
 # with input data and PDFs, then:
-#   poetry run referia serve --directory path/to/review
+#   uv run referia serve --directory path/to/review
 # See examples/README.md for the serveable demos.
 #
 # Setup:
-# 1. Install LLM dependencies: poetry install --with llm
+# 1. Install LLM dependencies: uv sync --extra llm --group dev
 # 2. Set API key: cp examples/env_template.txt .env  # then edit
 # 3. Adapt paths/fields below to your review tree and serve that directory
 

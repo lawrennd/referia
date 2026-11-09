@@ -2086,7 +2086,7 @@ class Compute(lynguine.assess.compute.Compute):
         
         These functions provide Large Language Model capabilities for text analysis,
         generation, summarisation, and transformation. They require the LLM dependencies
-        to be installed (poetry install --with llm) and appropriate API keys configured.
+        to be installed (uv sync --extra llm --group dev) and appropriate API keys configured.
         
         :return: A list of dictionaries, each containing:
                  

@@ -20,8 +20,8 @@ topic_scatter_click/
 From the referia package root:
 
 ```bash
-poetry install   # once
-poetry run referia serve --directory examples/topic_scatter_click
+uv sync --group dev   # once
+uv run referia serve --directory examples/topic_scatter_click
 # Open the printed URL (default http://127.0.0.1:8000)
 ```
 

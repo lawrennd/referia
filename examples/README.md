@@ -4,12 +4,12 @@ Learn referia from these directories. The primary surface is the web
 reviewer:
 
 ```bash
-poetry install   # once, from the referia package root
-poetry run referia serve --directory examples/<name>
+uv sync --group dev   # once, from the referia package root
+uv run referia serve --directory examples/<name>
 # Open the printed URL (default http://127.0.0.1:8000)
 ```
 
-For a multi-config host, use `poetry run referia serve --root <path>`.
+For a multi-config host, use `uv run referia serve --root <path>`.
 
 ## Serveable demos
 
@@ -40,7 +40,7 @@ directory, then serve that directory.
 | `env_template.txt` | Copy to package-root `.env` for API keys |
 
 ```bash
-poetry install --with llm
+uv sync --extra llm --group dev
 cp examples/env_template.txt .env   # then edit keys
 ```
 
