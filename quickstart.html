@@ -861,19 +861,19 @@ and demonstrate how referia extends lynguine’s functionality.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
 
 <span class="c1"># Load configuration from a YAML file</span>
-<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;review_config.yml&quot;</span><span class="p">)</span>
+<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">"review_config.yml"</span><span class="p">)</span>
 
 <span class="c1"># Create a compute object</span>
 <span class="n">compute</span> <span class="o">=</span> <span class="n">Compute</span><span class="p">(</span><span class="n">interface</span><span class="o">=</span><span class="n">interface</span><span class="p">)</span>
 
 <span class="c1"># Load review data</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">&quot;reviews.csv&quot;</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">"reviews.csv"</span><span class="p">)</span>
 
 <span class="c1"># Run computations on the data</span>
 <span class="n">compute</span><span class="o">.</span><span class="n">run_all</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
 
 <span class="c1"># Access computed results</span>
-<span class="n">results</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s2">&quot;records&quot;</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s2">"records"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -930,16 +930,16 @@ and demonstrate how referia extends lynguine’s functionality.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">referia.util.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">word_count</span><span class="p">,</span> <span class="n">named_entities</span>
 
 <span class="c1"># Count words in a text</span>
-<span class="n">word_count</span> <span class="o">=</span> <span class="n">word_count</span><span class="p">(</span><span class="s2">&quot;This is a sample review text.&quot;</span><span class="p">)</span>
+<span class="n">word_count</span> <span class="o">=</span> <span class="n">word_count</span><span class="p">(</span><span class="s2">"This is a sample review text."</span><span class="p">)</span>
 
 <span class="c1"># Extract named entities</span>
-<span class="n">entities</span> <span class="o">=</span> <span class="n">named_entities</span><span class="p">(</span><span class="s2">&quot;John Smith reviewed the paper.&quot;</span><span class="p">)</span>
+<span class="n">entities</span> <span class="o">=</span> <span class="n">named_entities</span><span class="p">(</span><span class="s2">"John Smith reviewed the paper."</span><span class="p">)</span>
 
 <span class="c1"># Plotting</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">referia.util.plot</span><span class="w"> </span><span class="kn">import</span> <span class="n">histogram</span>
 
 <span class="c1"># Create a histogram of word counts</span>
-<span class="n">histogram</span><span class="p">(</span><span class="n">word_counts</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Word Count Distribution&quot;</span><span class="p">)</span>
+<span class="n">histogram</span><span class="p">(</span><span class="n">word_counts</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">"Word Count Distribution"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -966,7 +966,7 @@ and demonstrate how referia extends lynguine’s functionality.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

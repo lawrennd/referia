@@ -872,10 +872,10 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example of the inheritance relationship</span>
 <span class="n">compute</span> <span class="o">=</span> <span class="n">referia</span><span class="o">.</span><span class="n">assess</span><span class="o">.</span><span class="n">compute</span><span class="o">.</span><span class="n">Compute</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
 
-<span class="c1"># This will call lynguine&#39;s implementation of run_all</span>
+<span class="c1"># This will call lynguine's implementation of run_all</span>
 <span class="n">compute</span><span class="o">.</span><span class="n">run_all</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
 
-<span class="c1"># This uses referia&#39;s extended function registry</span>
+<span class="c1"># This uses referia's extended function registry</span>
 <span class="n">functions</span> <span class="o">=</span> <span class="n">compute</span><span class="o">.</span><span class="n">_compute_functions_list</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -888,13 +888,13 @@
 <li><p><strong>Data Processing</strong>: Core data processing methods from lynguine are used and extended</p></li>
 <li><p><strong>Storage</strong>: Data storage mechanisms are inherited from lynguine</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Using lynguine&#39;s CustomDataFrame in referia</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Using lynguine's CustomDataFrame in referia</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
 
 <span class="c1"># Load data</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">&quot;reviews.csv&quot;</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">"reviews.csv"</span><span class="p">)</span>
 
-<span class="c1"># Process data using referia&#39;s compute framework</span>
+<span class="c1"># Process data using referia's compute framework</span>
 <span class="n">compute</span><span class="o">.</span><span class="n">run_all</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -907,15 +907,15 @@
 <li><p><strong>Configuration Files</strong>: The format is extended to include review-specific settings</p></li>
 <li><p><strong>Context</strong>: <code class="docutils literal notranslate"><span class="pre">lynguine.config.context.Context</span></code> is used directly in referia</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Using referia&#39;s extended interface class</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Using referia's extended interface class</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">referia.config.interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interface</span>
 
 <span class="c1"># Load configuration</span>
-<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;review_config.yml&quot;</span><span class="p">)</span>
+<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">"review_config.yml"</span><span class="p">)</span>
 
-<span class="c1"># Access configuration with lynguine&#39;s dictionary-like syntax</span>
-<span class="n">input_config</span> <span class="o">=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;input&quot;</span><span class="p">]</span>
-<span class="n">review_config</span> <span class="o">=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">]</span>
+<span class="c1"># Access configuration with lynguine's dictionary-like syntax</span>
+<span class="n">input_config</span> <span class="o">=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">"input"</span><span class="p">]</span>
+<span class="n">review_config</span> <span class="o">=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">"review"</span><span class="p">]</span>
 </pre></div>
 </div>
 </section>
@@ -927,7 +927,7 @@
 <li><p><strong>Assessment</strong>: Evaluation and scoring of reviews</p></li>
 <li><p><strong>Document Processing</strong>: Text extraction and analysis for review documents</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Using referia&#39;s review functionality</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Using referia's review functionality</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">referia.assess.review</span><span class="w"> </span><span class="kn">import</span> <span class="n">Review</span>
 
 <span class="c1"># Create a review object</span>
@@ -967,7 +967,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

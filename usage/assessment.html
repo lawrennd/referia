@@ -866,7 +866,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">referia.config.interface</span><span class="w"> </span><span class="kn">import</span> <span class="n">Interface</span>
 
 <span class="c1"># Load review configuration</span>
-<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;review_process.yml&quot;</span><span class="p">)</span>
+<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">"review_process.yml"</span><span class="p">)</span>
 
 <span class="c1"># Create a review manager</span>
 <span class="n">review</span> <span class="o">=</span> <span class="n">Review</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
@@ -893,13 +893,13 @@
 <span class="w">  </span><span class="nt">criteria</span><span class="p">:</span>
 <span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">clarity</span>
 <span class="w">      </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
-<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;How</span><span class="nv"> </span><span class="s">clear</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">submission?&quot;</span>
+<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">"How</span><span class="nv"> </span><span class="s">clear</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">submission?"</span>
 <span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">methodology</span>
 <span class="w">      </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.4</span>
-<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;How</span><span class="nv"> </span><span class="s">sound</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">methodology?&quot;</span>
+<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">"How</span><span class="nv"> </span><span class="s">sound</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">methodology?"</span>
 <span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">impact</span>
 <span class="w">      </span><span class="nt">weight</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
-<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;What</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">potential</span><span class="nv"> </span><span class="s">impact?&quot;</span>
+<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">"What</span><span class="nv"> </span><span class="s">is</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">potential</span><span class="nv"> </span><span class="s">impact?"</span>
 
 <span class="w">  </span><span class="nt">scoring</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">scale</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1-5</span>
@@ -928,16 +928,16 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">referia.assess.review</span><span class="w"> </span><span class="kn">import</span> <span class="n">process_reviews</span>
 
 <span class="c1"># Load submission data</span>
-<span class="n">submissions</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">&quot;submissions.csv&quot;</span><span class="p">)</span>
+<span class="n">submissions</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">"submissions.csv"</span><span class="p">)</span>
 
 <span class="c1"># Load reviewer data</span>
-<span class="n">reviewers</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">&quot;reviewers.csv&quot;</span><span class="p">)</span>
+<span class="n">reviewers</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">"reviewers.csv"</span><span class="p">)</span>
 
 <span class="c1"># Process reviews</span>
 <span class="n">reviews</span> <span class="o">=</span> <span class="n">process_reviews</span><span class="p">(</span><span class="n">submissions</span><span class="p">,</span> <span class="n">reviewers</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
 
 <span class="c1"># Calculate scores</span>
-<span class="n">scores</span> <span class="o">=</span> <span class="n">calculate_scores</span><span class="p">(</span><span class="n">reviews</span><span class="p">,</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">][</span><span class="s2">&quot;criteria&quot;</span><span class="p">])</span>
+<span class="n">scores</span> <span class="o">=</span> <span class="n">calculate_scores</span><span class="p">(</span><span class="n">reviews</span><span class="p">,</span> <span class="n">interface</span><span class="p">[</span><span class="s2">"review"</span><span class="p">][</span><span class="s2">"criteria"</span><span class="p">])</span>
 </pre></div>
 </div>
 </section>
@@ -947,13 +947,13 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">referia.assess.review</span><span class="w"> </span><span class="kn">import</span> <span class="n">score_reviews</span>
 
 <span class="c1"># Score reviews against criteria</span>
-<span class="n">scores</span> <span class="o">=</span> <span class="n">score_reviews</span><span class="p">(</span><span class="n">reviews</span><span class="p">,</span> <span class="n">criteria</span><span class="o">=</span><span class="n">interface</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">][</span><span class="s2">&quot;criteria&quot;</span><span class="p">])</span>
+<span class="n">scores</span> <span class="o">=</span> <span class="n">score_reviews</span><span class="p">(</span><span class="n">reviews</span><span class="p">,</span> <span class="n">criteria</span><span class="o">=</span><span class="n">interface</span><span class="p">[</span><span class="s2">"review"</span><span class="p">][</span><span class="s2">"criteria"</span><span class="p">])</span>
 
 <span class="c1"># Calculate overall scores</span>
 <span class="n">overall_scores</span> <span class="o">=</span> <span class="n">calculate_overall_scores</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
 
 <span class="c1"># Determine acceptance based on threshold</span>
-<span class="n">acceptance</span> <span class="o">=</span> <span class="n">overall_scores</span> <span class="o">&gt;=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">][</span><span class="s2">&quot;scoring&quot;</span><span class="p">][</span><span class="s2">&quot;passing_threshold&quot;</span><span class="p">]</span>
+<span class="n">acceptance</span> <span class="o">=</span> <span class="n">overall_scores</span> <span class="o">&gt;=</span> <span class="n">interface</span><span class="p">[</span><span class="s2">"review"</span><span class="p">][</span><span class="s2">"scoring"</span><span class="p">][</span><span class="s2">"passing_threshold"</span><span class="p">]</span>
 </pre></div>
 </div>
 </section>
@@ -966,7 +966,7 @@
 <span class="n">report</span> <span class="o">=</span> <span class="n">generate_summary_report</span><span class="p">(</span><span class="n">reviews</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
 
 <span class="c1"># Export report to file</span>
-<span class="n">report</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;review_summary.csv&quot;</span><span class="p">)</span>
+<span class="n">report</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">"review_summary.csv"</span><span class="p">)</span>
 
 <span class="c1"># Generate detailed feedback for authors</span>
 <span class="n">feedback</span> <span class="o">=</span> <span class="n">generate_author_feedback</span><span class="p">(</span><span class="n">reviews</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
@@ -1008,19 +1008,19 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Complete workflow example</span>
 
 <span class="c1"># 1. Load configuration</span>
-<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;review_process.yml&quot;</span><span class="p">)</span>
+<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">"review_process.yml"</span><span class="p">)</span>
 
 <span class="c1"># 2. Create review manager</span>
 <span class="n">review</span> <span class="o">=</span> <span class="n">Review</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
 
 <span class="c1"># 3. Load submission data</span>
-<span class="n">review</span><span class="o">.</span><span class="n">load_submissions</span><span class="p">(</span><span class="s2">&quot;submissions.csv&quot;</span><span class="p">)</span>
+<span class="n">review</span><span class="o">.</span><span class="n">load_submissions</span><span class="p">(</span><span class="s2">"submissions.csv"</span><span class="p">)</span>
 
 <span class="c1"># 4. Load reviewer data</span>
-<span class="n">review</span><span class="o">.</span><span class="n">load_reviewers</span><span class="p">(</span><span class="s2">&quot;reviewers.csv&quot;</span><span class="p">)</span>
+<span class="n">review</span><span class="o">.</span><span class="n">load_reviewers</span><span class="p">(</span><span class="s2">"reviewers.csv"</span><span class="p">)</span>
 
 <span class="c1"># 5. Assign reviewers to submissions</span>
-<span class="n">review</span><span class="o">.</span><span class="n">assign_reviewers</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;balanced&quot;</span><span class="p">)</span>
+<span class="n">review</span><span class="o">.</span><span class="n">assign_reviewers</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">"balanced"</span><span class="p">)</span>
 
 <span class="c1"># 6. Process reviews</span>
 <span class="n">review</span><span class="o">.</span><span class="n">process_reviews</span><span class="p">()</span>
@@ -1033,7 +1033,7 @@
 <span class="n">feedback</span> <span class="o">=</span> <span class="n">review</span><span class="o">.</span><span class="n">generate_feedback</span><span class="p">()</span>
 
 <span class="c1"># 9. Export results</span>
-<span class="n">review</span><span class="o">.</span><span class="n">export_results</span><span class="p">(</span><span class="s2">&quot;review_results.csv&quot;</span><span class="p">)</span>
+<span class="n">review</span><span class="o">.</span><span class="n">export_results</span><span class="p">(</span><span class="s2">"review_results.csv"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -1047,7 +1047,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

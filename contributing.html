@@ -862,10 +862,10 @@ git<span class="w"> </span>clone<span class="w"> </span>https://github.com/lawre
 <li><p>Install both packages in development mode. For referia, include the
 <code class="docutils literal notranslate"><span class="pre">llm</span></code> group so topic naming and related populate actions work:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>lynguine
-poetry<span class="w"> </span>install
+uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>dev
 
 <span class="nb">cd</span><span class="w"> </span>../referia
-poetry<span class="w"> </span>install<span class="w"> </span>--extras<span class="w"> </span>llm
+uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>llm<span class="w"> </span>--group<span class="w"> </span>dev
 </pre></div>
 </div>
 </li>
@@ -891,20 +891,20 @@ poetry<span class="w"> </span>install<span class="w"> </span>--extras<span class
 <ol class="arabic">
 <li><p><strong>Class Documentation</strong>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyClass</span><span class="p">(</span><span class="n">lynguine</span><span class="o">.</span><span class="n">SomeClass</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    MyClass extends lynguine.SomeClass with additional functionality.</span>
 
 <span class="sd">    This class inherits core methods X, Y, Z from the parent class</span>
 <span class="sd">    and adds/overrides methods A, B, C.</span>
 
 <span class="sd">    See :py:class:`lynguine.SomeClass` for inherited functionality.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 </pre></div>
 </div>
 </li>
 <li><p><strong>Method Documentation</strong>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">some_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param1</span><span class="p">,</span> <span class="n">param2</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Short description of method.</span>
 
 <span class="sd">    This method extends the parent class method with additional functionality.</span>
@@ -917,13 +917,13 @@ poetry<span class="w"> </span>install<span class="w"> </span>--extras<span class
 <span class="sd">    :rtype: return type</span>
 
 <span class="sd">    See :py:meth:`lynguine.SomeClass.some_method` for base implementation.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 </pre></div>
 </div>
 </li>
 <li><p><strong>Overridden Methods</strong>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">overridden_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param1</span><span class="p">,</span> <span class="n">param2</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Short description of overridden method.</span>
 
 <span class="sd">    This method overrides the parent class implementation to [explain why].</span>
@@ -936,7 +936,7 @@ poetry<span class="w"> </span>install<span class="w"> </span>--extras<span class
 <span class="sd">    :rtype: return type</span>
 
 <span class="sd">    Overrides: :py:meth:`lynguine.SomeClass.overridden_method`</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 </pre></div>
 </div>
 </li>
@@ -989,13 +989,13 @@ poetry<span class="w"> </span>install<span class="w"> </span>--extras<span class
 <ol class="arabic">
 <li><p>Make sure you have all the required dependencies installed:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># From the repository root</span>
-poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>dev
+uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>docs<span class="w"> </span>--group<span class="w"> </span>dev
 </pre></div>
 </div>
 </li>
 <li><p>Navigate to the docs directory and build the HTML documentation:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>docs
-poetry<span class="w"> </span>run<span class="w"> </span>make<span class="w"> </span>html
+uv<span class="w"> </span>run<span class="w"> </span>make<span class="w"> </span>html
 </pre></div>
 </div>
 </li>
@@ -1004,7 +1004,7 @@ poetry<span class="w"> </span>run<span class="w"> </span>make<span class="w"> </
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># In docs/conf.py</span>
 <span class="n">intersphinx_mapping</span> <span class="o">=</span> <span class="p">{</span>
     <span class="c1"># ...</span>
-    <span class="s1">&#39;lynguine&#39;</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;/path/to/your/lynguine/docs/_build/html&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+    <span class="s1">'lynguine'</span><span class="p">:</span> <span class="p">(</span><span class="s1">'/path/to/your/lynguine/docs/_build/html'</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -1023,7 +1023,7 @@ poetry<span class="w"> </span>run<span class="w"> </span>make<span class="w"> </
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

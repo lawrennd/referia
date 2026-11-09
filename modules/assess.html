@@ -904,11 +904,11 @@ parent class and should not be reimplemented here.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
 
 <span class="c1"># Create compute instance</span>
-<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="s2">&quot;path/to/config.yml&quot;</span><span class="p">)</span>
+<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="s2">"path/to/config.yml"</span><span class="p">)</span>
 <span class="n">compute</span> <span class="o">=</span> <span class="n">Compute</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
 
 <span class="c1"># Create data</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">({</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Sample text for analysis&quot;</span><span class="p">]})</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">({</span><span class="s2">"text"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"Sample text for analysis"</span><span class="p">]})</span>
 
 <span class="c1"># Run computations</span>
 <span class="n">compute</span><span class="o">.</span><span class="n">run_all</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
@@ -1033,7 +1033,7 @@ the Reviewer class, it allows for automatic updates to dependent values
 when input values change.</p>
 </div>
 <p><strong>Example</strong>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">compute</span><span class="o">.</span><span class="n">run_onchange</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;score&#39;</span><span class="p">)</span>  <span class="c1"># When the &#39;score&#39; column changes</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">compute</span><span class="o">.</span><span class="n">run_onchange</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">'score'</span><span class="p">)</span>  <span class="c1"># When the 'score' column changes</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -1285,10 +1285,10 @@ based on the context configuration.</p>
 These are available through the <code class="docutils literal notranslate"><span class="pre">_compute_functions_list</span></code> method and include:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example of registering a compute function</span>
 <span class="p">{</span>
-  <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;word_count&quot;</span><span class="p">,</span>
-  <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="n">word_count</span><span class="p">,</span>
-  <span class="s2">&quot;default_args&quot;</span><span class="p">:</span> <span class="p">{},</span>
-  <span class="s2">&quot;docstr&quot;</span><span class="p">:</span> <span class="s2">&quot;Count words in text.&quot;</span>
+  <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"word_count"</span><span class="p">,</span>
+  <span class="s2">"function"</span><span class="p">:</span> <span class="n">word_count</span><span class="p">,</span>
+  <span class="s2">"default_args"</span><span class="p">:</span> <span class="p">{},</span>
+  <span class="s2">"docstr"</span><span class="p">:</span> <span class="s2">"Count words in text."</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -1300,11 +1300,11 @@ These are available through the <code class="docutils literal notranslate"><span
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
 
 <span class="c1"># Create compute instance</span>
-<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="s2">&quot;path/to/config.yml&quot;</span><span class="p">)</span>
+<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="s2">"path/to/config.yml"</span><span class="p">)</span>
 <span class="n">compute</span> <span class="o">=</span> <span class="n">Compute</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
 
 <span class="c1"># Create data</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">({</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Sample text for analysis&quot;</span><span class="p">]})</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">({</span><span class="s2">"text"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"Sample text for analysis"</span><span class="p">]})</span>
 
 <span class="c1"># Run computations</span>
 <span class="n">compute</span><span class="o">.</span><span class="n">run_all</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
@@ -1370,17 +1370,17 @@ data storage, computation, and specialized data handling for review processes.</
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">referia.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
 
 <span class="c1"># Create a basic data frame</span>
-<span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Sample review text&quot;</span><span class="p">],</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
+<span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"Sample review text"</span><span class="p">],</span> <span class="s2">"score"</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">]}</span>
 <span class="n">df</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 <span class="c1"># Add a column</span>
-<span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s2">&quot;reviewer&quot;</span><span class="p">,</span> <span class="s2">&quot;User 1&quot;</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s2">"reviewer"</span><span class="p">,</span> <span class="s2">"User 1"</span><span class="p">)</span>
 
 <span class="c1"># Add a series row</span>
-<span class="n">df</span><span class="o">.</span><span class="n">add_series_row</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="s2">&quot;review2&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="s2">&quot;Second review&quot;</span><span class="p">,</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">})</span>
+<span class="n">df</span><span class="o">.</span><span class="n">add_series_row</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="s2">"review2"</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">{</span><span class="s2">"text"</span><span class="p">:</span> <span class="s2">"Second review"</span><span class="p">,</span> <span class="s2">"score"</span><span class="p">:</span> <span class="mi">5</span><span class="p">})</span>
 
 <span class="c1"># Access data</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">get_value_column</span><span class="p">(</span><span class="s2">&quot;text&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">get_value_column</span><span class="p">(</span><span class="s2">"text"</span><span class="p">))</span>
 </pre></div>
 </div>
 <div class="admonition seealso">
@@ -1419,21 +1419,21 @@ mapping management, and compute operations.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
 <span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a dataframe</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]},</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="s1">&#39;c&#39;</span><span class="p">]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">'A'</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]},</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s1">'a'</span><span class="p">,</span> <span class="s1">'b'</span><span class="p">,</span> <span class="s1">'c'</span><span class="p">]))</span>
 <span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Add columns using direct assignment (default: cache type)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;B&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="p">[</span><span class="s1">'B'</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Add columns with explicit type using add_column()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">&#39;output_col&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> <span class="n">colspec</span><span class="o">=</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">&#39;cache_col&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">])</span>  <span class="c1"># Default colspec=&#39;cache&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">'output_col'</span><span class="p">,</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> <span class="n">colspec</span><span class="o">=</span><span class="s1">'output'</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">'cache_col'</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">])</span>  <span class="c1"># Default colspec='cache'</span>
 <span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Drop columns</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">drop_column</span><span class="p">(</span><span class="s1">&#39;cache_col&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">drop_column</span><span class="p">(</span><span class="s1">'cache_col'</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Check column types</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">get_column_type</span><span class="p">(</span><span class="s1">&#39;output_col&#39;</span><span class="p">)</span>
-<span class="go">&#39;output&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">get_column_type</span><span class="p">(</span><span class="s1">'output_col'</span><span class="p">)</span>
+<span class="go">'output'</span>
 </pre></div>
 </div>
 <p>Working with flow-based processing:</p>
@@ -1441,10 +1441,10 @@ mapping management, and compute operations.</p>
 <span class="gp">&gt;&gt;&gt;</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create from interface with explicit mappings</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="p">({</span>
-<span class="gp">... </span>    <span class="s1">&#39;input&#39;</span><span class="p">:</span> <span class="p">{</span>
-<span class="gp">... </span>        <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;yaml&#39;</span><span class="p">,</span>
-<span class="gp">... </span>        <span class="s1">&#39;filename&#39;</span><span class="p">:</span> <span class="s1">&#39;data.yml&#39;</span><span class="p">,</span>
-<span class="gp">... </span>        <span class="s1">&#39;mapping&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;jobTitle&#39;</span><span class="p">:</span> <span class="s1">&#39;job_title&#39;</span><span class="p">}</span>
+<span class="gp">... </span>    <span class="s1">'input'</span><span class="p">:</span> <span class="p">{</span>
+<span class="gp">... </span>        <span class="s1">'type'</span><span class="p">:</span> <span class="s1">'yaml'</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s1">'filename'</span><span class="p">:</span> <span class="s1">'data.yml'</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s1">'mapping'</span><span class="p">:</span> <span class="p">{</span><span class="s1">'jobTitle'</span><span class="p">:</span> <span class="s1">'job_title'</span><span class="p">}</span>
 <span class="gp">... </span>    <span class="p">}</span>
 <span class="gp">... </span><span class="p">})</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">cdf</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_flow</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
@@ -1899,7 +1899,7 @@ Pandas Series, NumPy array, list, and dictionary to the CustomDataFrame format.<
 
 <dl class="py property">
 <dt class="sig sig-object py">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v3.1)"><span class="pre">Series</span></a></em></dt>
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">CustomDataFrame.</span></span><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Series</span></em></dt>
 <dd><p>Property to return the data types of the columns across all sub-DataFrames.
 :return: A Series containing the data types of the columns.</p>
 </dd></dl>
@@ -3115,8 +3115,8 @@ Must be a valid type from CustomDataFrame.types.</p></li>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">&#39;new_col&#39;</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">&#39;output_col&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">colspec</span><span class="o">=</span><span class="s1">&#39;output&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">'new_col'</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">add_column</span><span class="p">(</span><span class="s1">'output_col'</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">colspec</span><span class="o">=</span><span class="s1">'output'</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -3136,7 +3136,7 @@ and the column specifications.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">drop_column</span><span class="p">(</span><span class="s1">&#39;unwanted_col&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">drop_column</span><span class="p">(</span><span class="s1">'unwanted_col'</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -3342,7 +3342,7 @@ and the column specifications.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">drop_column</span><span class="p">(</span><span class="s1">&#39;unwanted_col&#39;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">df</span><span class="o">.</span><span class="n">drop_column</span><span class="p">(</span><span class="s1">'unwanted_col'</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -3503,7 +3503,7 @@ that the new row is selected.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><em>DataFrame</em></a>) – The DataFrame to augment with.</p></li>
+<li><p><strong>df</strong> (<em>DataFrame</em>) – The DataFrame to augment with.</p></li>
 <li><p><strong>colspecs</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a>) – The colspecs to use.</p></li>
 </ul>
 </dd>
@@ -3709,7 +3709,7 @@ Pandas Series, NumPy array, list, and dictionary to the CustomDataFrame format.<
 
 <dl class="py property">
 <dt class="sig sig-object py" id="referia.assess.data.CustomDataFrame.dtypes">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Series.html#pandas.Series" title="(in pandas v3.1)"><span class="pre">Series</span></a></em><a class="headerlink" href="#referia.assess.data.CustomDataFrame.dtypes" title="Link to this definition"></a></dt>
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dtypes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Series</span></em><a class="headerlink" href="#referia.assess.data.CustomDataFrame.dtypes" title="Link to this definition"></a></dt>
 <dd><p>Property to return the data types of the columns across all sub-DataFrames.
 :return: A Series containing the data types of the columns.</p>
 </dd></dl>
@@ -3777,7 +3777,7 @@ Pandas Series, NumPy array, list, and dictionary to the CustomDataFrame format.<
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><em>DataFrame</em></a>) – DataFrame to create from.</p></li>
+<li><p><strong>df</strong> (<em>DataFrame</em>) – DataFrame to create from.</p></li>
 <li><p><strong>colspecs</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a>) – dictionary of the column specifications.</p></li>
 </ul>
 </dd>
@@ -3907,7 +3907,7 @@ the focus.</p>
 <dd class="field-odd"><p>The subindices that are the focus for the DataFrame.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.Index.html#pandas.Index" title="(in pandas v3.1)"><em>Index</em></a></p>
+<dd class="field-even"><p><em>Index</em></p>
 </dd>
 </dl>
 </dd></dl>
@@ -3921,7 +3921,7 @@ the focus.</p>
 <dd class="field-odd"><p>The subseries that is the focus for the DataFrame.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><em>DataFrame</em></a></p>
+<dd class="field-even"><p><em>DataFrame</em></p>
 </dd>
 </dl>
 </dd></dl>
@@ -4879,7 +4879,7 @@ columns are still broadcast onto every row via <code class="docutils literal not
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.1)"><em>DataFrame</em></a>) – A pandas DataFrame to update an existing data frame with.</p></li>
+<li><p><strong>df</strong> (<em>DataFrame</em>) – A pandas DataFrame to update an existing data frame with.</p></li>
 <li><p><strong>colspecs</strong> (<a class="reference external" href="https://docs.python.org/3/builtins/stdtypes.html#dict" title="(in Python v3.15)"><em>dict</em></a>) – The column specifications to use.</p></li>
 </ul>
 </dd>
@@ -5061,10 +5061,10 @@ handles events, data updates, and view rendering.</p>
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
 
 <span class="c1"># Create data</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">({</span><span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Sample review text&quot;</span><span class="p">],</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">]})</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="p">({</span><span class="s2">"text"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"Sample review text"</span><span class="p">],</span> <span class="s2">"score"</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">]})</span>
 
 <span class="c1"># Load interface configuration</span>
-<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="s2">&quot;review_config.yml&quot;</span><span class="p">)</span>
+<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="p">(</span><span class="n">config_file</span><span class="o">=</span><span class="s2">"review_config.yml"</span><span class="p">)</span>
 
 <span class="c1"># Create reviewer</span>
 <span class="n">reviewer</span> <span class="o">=</span> <span class="n">Reviewer</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">interface</span><span class="o">=</span><span class="n">interface</span><span class="p">)</span>
@@ -5119,7 +5119,7 @@ are created.</p>
 </dd>
 </dl>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Set a default value for a field</span>
-<span class="n">reviewer</span><span class="o">.</span><span class="n">set_default_field_value</span><span class="p">(</span><span class="s2">&quot;comment&quot;</span><span class="p">,</span> <span class="s2">&quot;No comment provided&quot;</span><span class="p">)</span>
+<span class="n">reviewer</span><span class="o">.</span><span class="n">set_default_field_value</span><span class="p">(</span><span class="s2">"comment"</span><span class="p">,</span> <span class="s2">"No comment provided"</span><span class="p">)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -5414,13 +5414,13 @@ special template types that reference UI components or data views.</p>
 <p>If no “use” key is present, the template is processed as a standard
 data view template.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example: Render content from viewer</span>
-<span class="n">content</span> <span class="o">=</span> <span class="n">reviewer</span><span class="o">.</span><span class="n">template_to_value</span><span class="p">({</span><span class="s2">&quot;use&quot;</span><span class="p">:</span> <span class="s2">&quot;viewer&quot;</span><span class="p">})</span>
+<span class="n">content</span> <span class="o">=</span> <span class="n">reviewer</span><span class="o">.</span><span class="n">template_to_value</span><span class="p">({</span><span class="s2">"use"</span><span class="p">:</span> <span class="s2">"viewer"</span><span class="p">})</span>
 
 <span class="c1"># Example: Render content from review widgets</span>
-<span class="n">content</span> <span class="o">=</span> <span class="n">reviewer</span><span class="o">.</span><span class="n">template_to_value</span><span class="p">({</span><span class="s2">&quot;use&quot;</span><span class="p">:</span> <span class="s2">&quot;review&quot;</span><span class="p">})</span>
+<span class="n">content</span> <span class="o">=</span> <span class="n">reviewer</span><span class="o">.</span><span class="n">template_to_value</span><span class="p">({</span><span class="s2">"use"</span><span class="p">:</span> <span class="s2">"review"</span><span class="p">})</span>
 
 <span class="c1"># Example: Render content from a custom view template</span>
-<span class="n">content</span> <span class="o">=</span> <span class="n">reviewer</span><span class="o">.</span><span class="n">template_to_value</span><span class="p">({</span><span class="s2">&quot;display&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="s2">&quot;comments&quot;</span><span class="p">}})</span>
+<span class="n">content</span> <span class="o">=</span> <span class="n">reviewer</span><span class="o">.</span><span class="n">template_to_value</span><span class="p">({</span><span class="s2">"display"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"field"</span><span class="p">:</span> <span class="s2">"comments"</span><span class="p">}})</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -5480,11 +5480,11 @@ across multiple data indices</p></li>
 </div>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example document configuration</span>
 <span class="n">doc_config</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;markdown&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;header&quot;</span><span class="p">:</span> <span class="s2">&quot;# Review Summary&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;body&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;use&quot;</span><span class="p">:</span> <span class="s2">&quot;review&quot;</span><span class="p">},</span>
-    <span class="s2">&quot;footer&quot;</span><span class="p">:</span> <span class="s2">&quot;Generated on {{date}}&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="s2">&quot;review_{{index}}.md&quot;</span>
+    <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"markdown"</span><span class="p">,</span>
+    <span class="s2">"header"</span><span class="p">:</span> <span class="s2">"# Review Summary"</span><span class="p">,</span>
+    <span class="s2">"body"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"use"</span><span class="p">:</span> <span class="s2">"review"</span><span class="p">},</span>
+    <span class="s2">"footer"</span><span class="p">:</span> <span class="s2">"Generated on {{date}}"</span><span class="p">,</span>
+    <span class="s2">"filename"</span><span class="p">:</span> <span class="s2">"review_{{index}}.md"</span>
 <span class="p">}</span>
 
 <span class="c1"># Generate the document</span>
@@ -5845,7 +5845,7 @@ size=&quot;6.0, 8.0&quot;;
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

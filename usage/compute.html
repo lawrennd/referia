@@ -872,13 +872,13 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">lynguine.assess.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomDataFrame</span>
 
 <span class="c1"># Load configuration</span>
-<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">&quot;review_config.yml&quot;</span><span class="p">)</span>
+<span class="n">interface</span> <span class="o">=</span> <span class="n">Interface</span><span class="o">.</span><span class="n">from_file</span><span class="p">(</span><span class="s2">"review_config.yml"</span><span class="p">)</span>
 
 <span class="c1"># Create a compute object</span>
 <span class="n">compute</span> <span class="o">=</span> <span class="n">Compute</span><span class="p">(</span><span class="n">interface</span><span class="o">=</span><span class="n">interface</span><span class="p">)</span>
 
 <span class="c1"># Load data</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">&quot;reviews.csv&quot;</span><span class="p">)</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">CustomDataFrame</span><span class="o">.</span><span class="n">from_csv</span><span class="p">(</span><span class="s2">"reviews.csv"</span><span class="p">)</span>
 
 <span class="c1"># Run all computations on the data</span>
 <span class="n">compute</span><span class="o">.</span><span class="n">run_all</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span>
@@ -897,7 +897,7 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Using inherited methods</span>
 
 <span class="c1"># Prepare a compute entry</span>
-<span class="n">compute_entry</span> <span class="o">=</span> <span class="n">compute</span><span class="o">.</span><span class="n">prep</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="s2">&quot;word_count&quot;</span><span class="p">},</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+<span class="n">compute_entry</span> <span class="o">=</span> <span class="n">compute</span><span class="o">.</span><span class="n">prep</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="p">{</span><span class="s2">"function"</span><span class="p">:</span> <span class="s2">"word_count"</span><span class="p">},</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
 
 <span class="c1"># Run a single computation</span>
 <span class="n">compute</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">compute_entry</span><span class="p">)</span>
@@ -925,8 +925,8 @@
 
 <span class="c1"># Use referia-specific compute functions</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">referia.util.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">word_count</span><span class="p">,</span> <span class="n">named_entities</span>
-<span class="n">word_count_result</span> <span class="o">=</span> <span class="n">word_count</span><span class="p">(</span><span class="s2">&quot;Sample text&quot;</span><span class="p">)</span>
-<span class="n">entities</span> <span class="o">=</span> <span class="n">named_entities</span><span class="p">(</span><span class="s2">&quot;John reviewed the paper&quot;</span><span class="p">)</span>
+<span class="n">word_count_result</span> <span class="o">=</span> <span class="n">word_count</span><span class="p">(</span><span class="s2">"Sample text"</span><span class="p">)</span>
+<span class="n">entities</span> <span class="o">=</span> <span class="n">named_entities</span><span class="p">(</span><span class="s2">"John reviewed the paper"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -1019,12 +1019,12 @@
     <span class="k">return</span> <span class="n">score</span>
 
 <span class="c1"># Register the function</span>
-<span class="n">interface</span><span class="p">[</span><span class="s2">&quot;compute&quot;</span><span class="p">][</span><span class="s2">&quot;compute&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-    <span class="s2">&quot;function&quot;</span><span class="p">:</span> <span class="s2">&quot;custom_review_score&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="s2">&quot;score&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;column&quot;</span><span class="p">:</span> <span class="s2">&quot;review_text&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;criteria_weight&quot;</span><span class="p">:</span> <span class="mf">0.7</span>
+<span class="n">interface</span><span class="p">[</span><span class="s2">"compute"</span><span class="p">][</span><span class="s2">"compute"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+    <span class="s2">"function"</span><span class="p">:</span> <span class="s2">"custom_review_score"</span><span class="p">,</span>
+    <span class="s2">"field"</span><span class="p">:</span> <span class="s2">"score"</span><span class="p">,</span>
+    <span class="s2">"args"</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">"column"</span><span class="p">:</span> <span class="s2">"review_text"</span><span class="p">,</span>
+        <span class="s2">"criteria_weight"</span><span class="p">:</span> <span class="mf">0.7</span>
     <span class="p">}</span>
 <span class="p">})</span>
 </pre></div>
@@ -1053,7 +1053,7 @@
 <section id="package-examples">
 <h2>Package examples<a class="headerlink" href="#package-examples" title="Link to this heading"></a></h2>
 <p>Runnable demos under <code class="docutils literal notranslate"><span class="pre">examples/</span></code> are listed in <a class="reference internal" href="../examples/index.html"><span class="doc">Package examples</span></a>.
-Open them with <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span> <span class="pre">referia</span> <span class="pre">serve</span> <span class="pre">--directory</span> <span class="pre">examples/&lt;name&gt;</span></code>.
+Open them with <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">referia</span> <span class="pre">serve</span> <span class="pre">--directory</span> <span class="pre">examples/&lt;name&gt;</span></code>.
 Offline numeric scoring (<code class="docutils literal notranslate"><span class="pre">add</span></code> / <code class="docutils literal notranslate"><span class="pre">multiply</span></code> / <code class="docutils literal notranslate"><span class="pre">gte</span></code>) lives in
 <code class="docutils literal notranslate"><span class="pre">examples/numeric_scoring/</span></code>.</p>
 </section>
@@ -1080,7 +1080,7 @@ Offline numeric scoring (<code class="docutils literal notranslate"><span class=
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

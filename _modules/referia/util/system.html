@@ -852,16 +852,16 @@
 <div class="viewcode-block" id="most_recent_screen_shot">
 <a class="viewcode-back" href="../../../modules/util.html#referia.util.system.most_recent_screen_shot">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">most_recent_screen_shot</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Return the most recent screenshot file name.</span>
 
 <span class="sd">    :return: The most recent screenshot file name.</span>
 <span class="sd">    :rtype: str</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     
-    <span class="n">directory_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">&quot;$HOME/Desktop/&quot;</span><span class="p">)</span>
+    <span class="n">directory_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="s2">"$HOME/Desktop/"</span><span class="p">)</span>
     <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">directory_name</span><span class="p">)</span> 
-             <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Screenshot [0-9]+-[0-9]+-[0-9]+ at [0-9]+\.[0-9]+\.[0-9]+\.png&quot;</span><span class="p">,</span> <span class="n">f</span><span class="p">)]</span>
+             <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">"Screenshot [0-9]+-[0-9]+-[0-9]+ at [0-9]+\.[0-9]+\.[0-9]+\.png"</span><span class="p">,</span> <span class="n">f</span><span class="p">)]</span>
     <span class="n">files</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
     
     <span class="k">return</span> <span class="n">files</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
@@ -875,7 +875,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

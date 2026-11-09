@@ -856,7 +856,7 @@
 <h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h2>
 <p>Get started in 3 simple steps:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Install LLM dependencies</span>
-poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>llm
+uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>llm<span class="w"> </span>--group<span class="w"> </span>dev
 
 <span class="c1"># 2. Set up your API key using .env file</span>
 cp<span class="w"> </span>examples/env_template.txt<span class="w"> </span>.env
@@ -877,7 +877,7 @@ nano<span class="w"> </span>.env<span class="w">  </span><span class="c1"># Add 
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
 <p>LLM capabilities are optional. To install the required dependencies:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>llm
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>llm<span class="w"> </span>--group<span class="w"> </span>dev
 </pre></div>
 </div>
 <p>This installs (all <strong>LangChain 1.x</strong> — migrated from 0.3.x via <span class="xref myst">CIP-000D</span>):</p>
@@ -924,10 +924,10 @@ nano<span class="w"> </span>.env
 <h4>Option 2: Environment Variables<a class="headerlink" href="#option-2-environment-variables" title="Link to this heading"></a></h4>
 <p>Set your API key as an environment variable:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># For OpenAI</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-openai-key&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">"your-openai-key"</span>
 
 <span class="c1"># For Anthropic</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-anthropic-key&quot;</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">ANTHROPIC_API_KEY</span><span class="o">=</span><span class="s2">"your-anthropic-key"</span>
 </pre></div>
 </div>
 <p>To make these permanent, add them to your shell profile (<code class="docutils literal notranslate"><span class="pre">~/.zshrc</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code>).</p>
@@ -937,8 +937,8 @@ nano<span class="w"> </span>.env
 <p>You can also specify keys directly in your interface configuration, but this is <strong>not recommended</strong> for security reasons:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">llm</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">api_keys</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">openai</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sk-your-key&quot;</span><span class="w">  </span><span class="c1"># Don&#39;t commit this!</span>
-<span class="w">    </span><span class="nt">anthropic</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sk-ant-your-key&quot;</span>
+<span class="w">    </span><span class="nt">openai</span><span class="p">:</span><span class="w"> </span><span class="s">"sk-your-key"</span><span class="w">  </span><span class="c1"># Don't commit this!</span>
+<span class="w">    </span><span class="nt">anthropic</span><span class="p">:</span><span class="w"> </span><span class="s">"sk-ant-your-key"</span>
 </pre></div>
 </div>
 </section>
@@ -947,8 +947,8 @@ nano<span class="w"> </span>.env
 <h3>Configuration File<a class="headerlink" href="#configuration-file" title="Link to this heading"></a></h3>
 <p>Add an <code class="docutils literal notranslate"><span class="pre">llm</span></code> section to your interface configuration:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">llm</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">default_provider</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;openai&quot;</span><span class="w">  </span><span class="c1"># or &quot;anthropic&quot;</span>
-<span class="w">  </span><span class="nt">default_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">  </span><span class="nt">default_provider</span><span class="p">:</span><span class="w"> </span><span class="s">"openai"</span><span class="w">  </span><span class="c1"># or "anthropic"</span>
+<span class="w">  </span><span class="nt">default_model</span><span class="p">:</span><span class="w"> </span><span class="s">"gpt-4o-mini"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="c1"># Optional: API keys in config (not recommended - use environment variables)</span>
 <span class="w">  </span><span class="c1"># api_keys:</span>
@@ -960,7 +960,7 @@ nano<span class="w"> </span>.env
 <span class="w">  </span>
 <span class="w">  </span><span class="c1"># Caching</span>
 <span class="w">  </span><span class="nt">cache_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="w">  </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.llm_cache&quot;</span>
+<span class="w">  </span><span class="nt">cache_dir</span><span class="p">:</span><span class="w"> </span><span class="s">".llm_cache"</span>
 <span class="w">  </span><span class="nt">cache_ttl</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span><span class="w">  </span><span class="c1"># 1 hour</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="c1"># Budget enforcement (optional)</span>
@@ -980,10 +980,10 @@ nano<span class="w"> </span>.env
 <span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prompt_text</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">"gpt-4o-mini"</span>
 <span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
 <span class="w">      </span><span class="nt">max_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
-<span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">helpful</span><span class="nv"> </span><span class="s">assistant.&quot;</span>
+<span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="s">"You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">helpful</span><span class="nv"> </span><span class="s">assistant."</span>
 </pre></div>
 </div>
 <p><strong>Arguments:</strong></p>
@@ -1004,7 +1004,7 @@ nano<span class="w"> </span>.env
 <span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">"gpt-4o-mini"</span>
 <span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
 <span class="w">      </span><span class="nt">max_tokens</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">150</span>
 </pre></div>
@@ -1027,8 +1027,8 @@ nano<span class="w"> </span>.env
 <span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">document_text</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">extraction_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3-5</span><span class="nv"> </span><span class="s">key</span><span class="nv"> </span><span class="s">points</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">bullet</span><span class="nv"> </span><span class="s">list&quot;</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">extraction_type</span><span class="p">:</span><span class="w"> </span><span class="s">"3-5</span><span class="nv"> </span><span class="s">key</span><span class="nv"> </span><span class="s">points</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">bullet</span><span class="nv"> </span><span class="s">list"</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">"gpt-4o-mini"</span>
 <span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.2</span>
 </pre></div>
 </div>
@@ -1049,8 +1049,8 @@ nano<span class="w"> </span>.env
 <span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">categories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;positive&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;negative&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;neutral&quot;</span><span class="p p-Indicator">]</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">categories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"positive"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"negative"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"neutral"</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">"gpt-4o-mini"</span>
 <span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span>
 </pre></div>
 </div>
@@ -1072,9 +1072,9 @@ nano<span class="w"> </span>.env
 <span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">user_message</span>
 <span class="w">      </span><span class="nt">context</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">conversation_history</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">"gpt-4o-mini"</span>
 <span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
-<span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">helpful</span><span class="nv"> </span><span class="s">assistant.&quot;</span>
+<span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="s">"You</span><span class="nv"> </span><span class="s">are</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">helpful</span><span class="nv"> </span><span class="s">assistant."</span>
 </pre></div>
 </div>
 <p><strong>Arguments:</strong></p>
@@ -1120,10 +1120,10 @@ nano<span class="w"> </span>.env
 <span class="n">summary</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_cost_summary</span><span class="p">()</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
 <span class="c1"># {</span>
-<span class="c1">#   &quot;total_calls&quot;: 5,</span>
-<span class="c1">#   &quot;total_tokens&quot;: 2500,</span>
-<span class="c1">#   &quot;total_cost&quot;: 0.0042,</span>
-<span class="c1">#   &quot;budget_remaining&quot;: 0.9958</span>
+<span class="c1">#   "total_calls": 5,</span>
+<span class="c1">#   "total_tokens": 2500,</span>
+<span class="c1">#   "total_cost": 0.0042,</span>
+<span class="c1">#   "budget_remaining": 0.9958</span>
 <span class="c1"># }</span>
 </pre></div>
 </div>
@@ -1197,7 +1197,7 @@ nano<span class="w"> </span>.env
 <section id="example-1-review-summarisation">
 <h3>Example 1: Review Summarisation<a class="headerlink" href="#example-1-review-summarisation" title="Link to this heading"></a></h3>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">llm</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">default_model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">  </span><span class="nt">default_model</span><span class="p">:</span><span class="w"> </span><span class="s">"gpt-4o-mini"</span>
 <span class="w">  </span><span class="nt">cache_enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 
 <span class="nt">compute</span><span class="p">:</span>
@@ -1219,7 +1219,7 @@ nano<span class="w"> </span>.env
 <span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">categories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;positive&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;negative&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;neutral&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;mixed&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">categories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"positive"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"negative"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"neutral"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"mixed"</span><span class="p p-Indicator">]</span>
 <span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span>
 </pre></div>
 </div>
@@ -1233,7 +1233,7 @@ nano<span class="w"> </span>.env
 <span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">extraction_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3-5</span><span class="nv"> </span><span class="s">main</span><span class="nv"> </span><span class="s">points</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">bullet</span><span class="nv"> </span><span class="s">list&quot;</span>
+<span class="w">      </span><span class="nt">extraction_type</span><span class="p">:</span><span class="w"> </span><span class="s">"3-5</span><span class="nv"> </span><span class="s">main</span><span class="nv"> </span><span class="s">points</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">bullet</span><span class="nv"> </span><span class="s">list"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="c1"># Step 2: Generate response based on key points</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_complete</span>
@@ -1241,7 +1241,7 @@ nano<span class="w"> </span>.env
 <span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">key_points</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Draft</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">addressing</span><span class="nv"> </span><span class="s">these</span><span class="nv"> </span><span class="s">key</span><span class="nv"> </span><span class="s">points.&quot;</span>
+<span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="s">"Draft</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">response</span><span class="nv"> </span><span class="s">addressing</span><span class="nv"> </span><span class="s">these</span><span class="nv"> </span><span class="s">key</span><span class="nv"> </span><span class="s">points."</span>
 <span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
 </pre></div>
 </div>
@@ -1254,7 +1254,7 @@ nano<span class="w"> </span>.env
 <span class="w">    </span><span class="nt">row_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">text</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">review_text</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;claude-3-haiku-20240307&quot;</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">"claude-3-haiku-20240307"</span>
 <span class="w">      </span><span class="nt">temperature</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.3</span>
 </pre></div>
 </div>
@@ -1266,20 +1266,20 @@ nano<span class="w"> </span>.env
 
 <span class="c1"># Get manager</span>
 <span class="n">manager</span> <span class="o">=</span> <span class="n">get_llm_manager</span><span class="p">({</span>
-    <span class="s2">&quot;cache_enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="s2">&quot;budget_per_run&quot;</span><span class="p">:</span> <span class="mf">0.50</span>
+    <span class="s2">"cache_enabled"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s2">"budget_per_run"</span><span class="p">:</span> <span class="mf">0.50</span>
 <span class="p">})</span>
 
 <span class="c1"># Make a call</span>
 <span class="n">response</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">call</span><span class="p">(</span>
-    <span class="n">prompt</span><span class="o">=</span><span class="s2">&quot;Summarise this text: ...&quot;</span><span class="p">,</span>
-    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;gpt-4o-mini&quot;</span><span class="p">,</span>
+    <span class="n">prompt</span><span class="o">=</span><span class="s2">"Summarise this text: ..."</span><span class="p">,</span>
+    <span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o-mini"</span><span class="p">,</span>
     <span class="n">temperature</span><span class="o">=</span><span class="mf">0.3</span>
 <span class="p">)</span>
 
 <span class="c1"># Check costs</span>
 <span class="n">summary</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">get_cost_summary</span><span class="p">()</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cost: $</span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">&#39;total_cost&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Cost: $</span><span class="si">{</span><span class="n">summary</span><span class="p">[</span><span class="s1">'total_cost'</span><span class="p">]</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -1288,14 +1288,14 @@ nano<span class="w"> </span>.env
 <section id="langchain-is-not-installed">
 <h3>“LangChain is not installed”<a class="headerlink" href="#langchain-is-not-installed" title="Link to this heading"></a></h3>
 <p>Install LLM dependencies:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>llm
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>llm<span class="w"> </span>--group<span class="w"> </span>dev
 </pre></div>
 </div>
 </section>
 <section id="api-key-not-found">
 <h3>“API key not found”<a class="headerlink" href="#api-key-not-found" title="Link to this heading"></a></h3>
 <p>Set your API key:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">&quot;your-key&quot;</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">"your-key"</span>
 </pre></div>
 </div>
 </section>
@@ -1364,7 +1364,7 @@ nano<span class="w"> </span>.env
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

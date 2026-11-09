@@ -875,8 +875,8 @@
 <span class="n">ctxt</span> <span class="o">=</span> <span class="n">Context</span><span class="p">()</span>
 <span class="n">log</span> <span class="o">=</span> <span class="n">Logger</span><span class="p">(</span>
     <span class="n">name</span><span class="o">=</span><span class="vm">__name__</span><span class="p">,</span>
-    <span class="n">level</span><span class="o">=</span><span class="n">ctxt</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;logging&quot;</span><span class="p">][</span><span class="s2">&quot;level&quot;</span><span class="p">],</span>
-    <span class="n">filename</span><span class="o">=</span><span class="n">ctxt</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;logging&quot;</span><span class="p">][</span><span class="s2">&quot;filename&quot;</span><span class="p">],</span>
+    <span class="n">level</span><span class="o">=</span><span class="n">ctxt</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"logging"</span><span class="p">][</span><span class="s2">"level"</span><span class="p">],</span>
+    <span class="n">filename</span><span class="o">=</span><span class="n">ctxt</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"logging"</span><span class="p">][</span><span class="s2">"filename"</span><span class="p">],</span>
 <span class="p">)</span>
 
 
@@ -887,7 +887,7 @@
     <span class="n">GSPREAD_AVAILABILE</span><span class="o">=</span><span class="kc">False</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">nodes</span><span class="p">(</span><span class="n">user_file</span><span class="o">=</span><span class="s2">&quot;_referia.yml&quot;</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">nodes</span><span class="p">(</span><span class="n">user_file</span><span class="o">=</span><span class="s2">"_referia.yml"</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">"."</span><span class="p">):</span>
     <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">directory</span><span class="p">),</span> <span class="n">user_file</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
         <span class="k">return</span> <span class="p">[]</span>
@@ -896,14 +896,14 @@
 
     <span class="n">conf</span> <span class="o">=</span> <span class="n">read_config_mapping</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="s2">&quot;title&quot;</span> <span class="ow">in</span> <span class="n">conf</span><span class="p">:</span>
-        <span class="n">key</span> <span class="o">=</span> <span class="n">to_valid_var</span><span class="p">(</span><span class="n">conf</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="s2">"title"</span> <span class="ow">in</span> <span class="n">conf</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">to_valid_var</span><span class="p">(</span><span class="n">conf</span><span class="p">[</span><span class="s2">"title"</span><span class="p">])</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">key</span> <span class="o">=</span> <span class="n">to_valid_var</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
 
     <span class="n">chain</span> <span class="o">=</span> <span class="p">[(</span><span class="n">key</span><span class="p">,</span> <span class="n">directory</span><span class="p">)]</span>
-    <span class="k">if</span> <span class="s2">&quot;inherit&quot;</span> <span class="ow">in</span> <span class="n">conf</span><span class="p">:</span>
-        <span class="n">chain</span> <span class="o">+=</span> <span class="n">nodes</span><span class="p">(</span><span class="n">user_file</span><span class="o">=</span><span class="n">user_file</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="n">conf</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">][</span><span class="s2">&quot;directory&quot;</span><span class="p">])</span> 
+    <span class="k">if</span> <span class="s2">"inherit"</span> <span class="ow">in</span> <span class="n">conf</span><span class="p">:</span>
+        <span class="n">chain</span> <span class="o">+=</span> <span class="n">nodes</span><span class="p">(</span><span class="n">user_file</span><span class="o">=</span><span class="n">user_file</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="n">conf</span><span class="p">[</span><span class="s2">"inherit"</span><span class="p">][</span><span class="s2">"directory"</span><span class="p">])</span> 
     <span class="k">return</span> <span class="n">chain</span>
 
     
@@ -914,17 +914,17 @@
 <a class="viewcode-back" href="../../../modules/config.html#referia.config.interface.Interface.default_config_file">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">default_config_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the default configuration file name</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="s2">&quot;_referia.yml&quot;</span></div>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="s2">"_referia.yml"</span></div>
 
 
 <div class="viewcode-block" id="Interface.from_file">
 <a class="viewcode-back" href="../../../modules/config.html#referia.config.interface.Interface.from_file">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">user_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Load ``_referia.md`` when the default yml name is missing.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">user_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="s2">"."</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Load ``_referia.md`` when the default yml name is missing."""</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">referia.config.files</span><span class="w"> </span><span class="kn">import</span> <span class="n">REFERIA_CONFIG_FILENAMES</span><span class="p">,</span> <span class="n">config_filename</span>
 
         <span class="k">if</span> <span class="n">user_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -941,14 +941,14 @@
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_read_yaml_or_empty</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">raise_error_if_not_found</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Read YAML or markdown-frontmatter configs.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Read YAML or markdown-frontmatter configs."""</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">referia.config.files</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_config_mapping</span>
 
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">data</span> <span class="o">=</span> <span class="n">read_config_mapping</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-                <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Error reading yaml file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;, error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'Error reading yaml file "</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">", error: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s1">'</span>
                 <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
             <span class="k">if</span> <span class="n">field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -956,10 +956,10 @@
                     <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">field</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s1">&#39;Field &quot;</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">&quot; specified but not found in file &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+                        <span class="sa">f</span><span class="s1">'Field "</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s1">" specified but not found in file "</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">"'</span>
                     <span class="p">)</span>
             <span class="k">if</span> <span class="n">data</span> <span class="o">==</span> <span class="p">{}</span> <span class="ow">and</span> <span class="n">raise_error_if_not_found</span><span class="p">:</span>
-                <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;No data found in &quot;</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+                <span class="n">errmsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'No data found in "</span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s1">".'</span>
                 <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">errmsg</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">data</span>
@@ -979,7 +979,7 @@
         <span class="n">version_enforcement</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Initialise the interface object. The referia interface is converted to a linguine interface.</span>
 
 <span class="sd">        :param data: The data to be loaded in.</span>
@@ -991,7 +991,7 @@
 <span class="sd">        :param version_enforcement: ``off`` / ``warn`` / ``error``; default from</span>
 <span class="sd">            ``REFERIA_CONFIG_VERSION_ENFORCEMENT`` (currently warn).</span>
 <span class="sd">        :return: None</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">inspect</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">=</span> <span class="n">directory</span>
@@ -1012,37 +1012,37 @@
             <span class="n">allow_unversioned</span><span class="o">=</span><span class="n">allow_unversioned</span><span class="p">,</span>
         <span class="p">)</span>
 
-        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Normalising referia config dialect to lynguine form.&quot;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Normalising referia config dialect to lynguine form."</span><span class="p">)</span>
         <span class="n">normalise_referia_config</span><span class="p">(</span>
             <span class="n">data</span><span class="p">,</span> <span class="n">directory</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span> <span class="n">user_file</span><span class="o">=</span><span class="n">user_file</span>
         <span class="p">)</span>
 
         <span class="c1"># Referia-only label; do not pass through as a lynguine data key.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_referia_config_version</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;referia_config_version&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_referia_config_version</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"referia_config_version"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
         <span class="c1"># Load templates if present (CIP-0006: Template Expansion)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">if</span> <span class="s2">&quot;templates&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Loading templates from configuration&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_load_templates</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">],</span> <span class="n">directory</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"templates"</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Loading templates from configuration"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_load_templates</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"templates"</span><span class="p">],</span> <span class="n">directory</span><span class="p">)</span>
 
         <span class="c1"># Expand templates in review section if present</span>
-        <span class="k">if</span> <span class="s2">&quot;review&quot;</span> <span class="ow">in</span> <span class="n">data</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">:</span>
-            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Expanding templates in review section&quot;</span><span class="p">)</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expand_templates_in_review</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s2">"review"</span> <span class="ow">in</span> <span class="n">data</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">"Expanding templates in review section"</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"review"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expand_templates_in_review</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"review"</span><span class="p">])</span>
 
         <span class="c1"># Store expanded config for inspection (useful for testing)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_config</span> <span class="o">=</span> <span class="n">data</span>
 
         <span class="c1"># create suffices for timestamp columns</span>
-        <span class="k">if</span> <span class="s2">&quot;modified_suffix&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;modified_suffix&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;modified&quot;</span>
+        <span class="k">if</span> <span class="s2">"modified_suffix"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"modified_suffix"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"modified"</span>
 
-        <span class="k">if</span> <span class="s2">&quot;created_suffix&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;created_suffix&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;created&quot;</span>
+        <span class="k">if</span> <span class="s2">"created_suffix"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"created_suffix"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"created"</span>
 
-        <span class="k">if</span> <span class="s2">&quot;review&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expand_review_cluster</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;review&quot;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s2">"review"</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">"review"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expand_review_cluster</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"review"</span><span class="p">])</span>
 
         <span class="c1"># Extract all fields from the review interface</span>
         <span class="n">review_columns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_review_write_fields</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
@@ -1050,90 +1050,90 @@
         <span class="n">created_columns</span> <span class="o">=</span> <span class="p">{}</span>
 
         <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">review_columns</span><span class="o">.</span><span class="n">copy</span><span class="p">():</span>
-            <span class="n">modified_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">column</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;modified_suffix&quot;</span><span class="p">]</span>
-            <span class="n">created_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">column</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;created_suffix&quot;</span><span class="p">]</span>
+            <span class="n">modified_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">column</span> <span class="o">+</span> <span class="s2">"_"</span> <span class="o">+</span> <span class="n">data</span><span class="p">[</span><span class="s2">"modified_suffix"</span><span class="p">]</span>
+            <span class="n">created_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">column</span> <span class="o">+</span> <span class="s2">"_"</span> <span class="o">+</span> <span class="n">data</span><span class="p">[</span><span class="s2">"created_suffix"</span><span class="p">]</span>
 
-        <span class="n">output_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="s2">&quot;series&quot;</span><span class="p">]</span>
+        <span class="n">output_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"output"</span><span class="p">,</span> <span class="s2">"series"</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">output_type</span> <span class="ow">in</span> <span class="n">output_types</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">output_type</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-                <span class="k">if</span> <span class="s2">&quot;columns&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">]</span> <span class="ow">and</span> <span class="n">review_columns</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s2">"columns"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">]</span> <span class="ow">and</span> <span class="n">review_columns</span><span class="p">:</span>
                     <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;No columns specified in </span><span class="si">{</span><span class="n">output_type</span><span class="si">}</span><span class="s2">, &quot;</span>
-                        <span class="s2">&quot;auto-generating from review fields&quot;</span>
+                        <span class="sa">f</span><span class="s2">"No columns specified in </span><span class="si">{</span><span class="n">output_type</span><span class="si">}</span><span class="s2">, "</span>
+                        <span class="s2">"auto-generating from review fields"</span>
                     <span class="p">)</span>
-                    <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">&quot;columns&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">review_columns</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">"columns"</span><span class="p">]</span> <span class="o">=</span> <span class="n">review_columns</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-                <span class="k">if</span> <span class="s2">&quot;columns&quot;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">]:</span>
-                    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">&quot;columns&quot;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="s2">"columns"</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">]:</span>
+                    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">"columns"</span><span class="p">]:</span>
                         <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">modified_columns</span><span class="p">:</span>
                             <span class="k">if</span> <span class="p">(</span>
                                 <span class="n">modified_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
-                                <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">&quot;columns&quot;</span><span class="p">]</span>
+                                <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">"columns"</span><span class="p">]</span>
                             <span class="p">):</span>
-                                <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">&quot;columns&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">"columns"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                                     <span class="n">modified_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
                                 <span class="p">)</span>
                                 <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                                    <span class="sa">f</span><span class="s1">&#39;Adding column as &quot;</span><span class="si">{</span><span class="n">modified_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot; &#39;</span>
-                                    <span class="sa">f</span><span class="s1">&#39;to &quot;</span><span class="si">{</span><span class="n">output_type</span><span class="si">}</span><span class="s1">&quot; outputs.&#39;</span>
+                                    <span class="sa">f</span><span class="s1">'Adding column as "</span><span class="si">{</span><span class="n">modified_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="si">}</span><span class="s1">" '</span>
+                                    <span class="sa">f</span><span class="s1">'to "</span><span class="si">{</span><span class="n">output_type</span><span class="si">}</span><span class="s1">" outputs.'</span>
                                 <span class="p">)</span>
                         <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">created_columns</span><span class="p">:</span>
                             <span class="k">if</span> <span class="p">(</span>
                                 <span class="n">created_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
-                                <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">&quot;columns&quot;</span><span class="p">]</span>
+                                <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">"columns"</span><span class="p">]</span>
                             <span class="p">):</span>
-                                <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">&quot;columns&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                                <span class="n">data</span><span class="p">[</span><span class="n">output_type</span><span class="p">][</span><span class="s2">"columns"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                                     <span class="n">created_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
                                 <span class="p">)</span>
                                 <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-                                    <span class="sa">f</span><span class="s1">&#39;Adding column as &quot;</span><span class="si">{</span><span class="n">created_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot; &#39;</span>
-                                    <span class="sa">f</span><span class="s1">&#39;to &quot;</span><span class="si">{</span><span class="n">output_type</span><span class="si">}</span><span class="s1">&quot; outputs.&#39;</span>
+                                    <span class="sa">f</span><span class="s1">'Adding column as "</span><span class="si">{</span><span class="n">created_columns</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="si">}</span><span class="s1">" '</span>
+                                    <span class="sa">f</span><span class="s1">'to "</span><span class="si">{</span><span class="n">output_type</span><span class="si">}</span><span class="s1">" outputs.'</span>
                                 <span class="p">)</span>
 
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="s1">&#39;End conversion of &quot;referia&quot; form into &quot;linguine&quot; standard form.&#39;</span>
+            <span class="s1">'End conversion of "referia" form into "linguine" standard form.'</span>
         <span class="p">)</span>
 
         <span class="c1"># Forward path-jail kwargs expected by lynguine Interface.from_file.</span>
         <span class="c1"># Older lynguine builds only accept data/directory/user_file.</span>
         <span class="n">parent_params</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">signature</span><span class="p">(</span><span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span>
         <span class="n">parent_kwargs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span>
-            <span class="s2">&quot;directory&quot;</span><span class="p">:</span> <span class="n">directory</span><span class="p">,</span>
-            <span class="s2">&quot;user_file&quot;</span><span class="p">:</span> <span class="n">user_file</span><span class="p">,</span>
+            <span class="s2">"data"</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span>
+            <span class="s2">"directory"</span><span class="p">:</span> <span class="n">directory</span><span class="p">,</span>
+            <span class="s2">"user_file"</span><span class="p">:</span> <span class="n">user_file</span><span class="p">,</span>
         <span class="p">}</span>
-        <span class="k">if</span> <span class="s2">&quot;allowed_roots&quot;</span> <span class="ow">in</span> <span class="n">parent_params</span> <span class="ow">and</span> <span class="n">allowed_roots</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">parent_kwargs</span><span class="p">[</span><span class="s2">&quot;allowed_roots&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">allowed_roots</span>
-        <span class="k">if</span> <span class="s2">&quot;unbounded_paths&quot;</span> <span class="ow">in</span> <span class="n">parent_params</span><span class="p">:</span>
-            <span class="n">parent_kwargs</span><span class="p">[</span><span class="s2">&quot;unbounded_paths&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">unbounded_paths</span>
-        <span class="k">if</span> <span class="s2">&quot;cwd_sandbox&quot;</span> <span class="ow">in</span> <span class="n">parent_params</span><span class="p">:</span>
-            <span class="n">parent_kwargs</span><span class="p">[</span><span class="s2">&quot;cwd_sandbox&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cwd_sandbox</span>
+        <span class="k">if</span> <span class="s2">"allowed_roots"</span> <span class="ow">in</span> <span class="n">parent_params</span> <span class="ow">and</span> <span class="n">allowed_roots</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">parent_kwargs</span><span class="p">[</span><span class="s2">"allowed_roots"</span><span class="p">]</span> <span class="o">=</span> <span class="n">allowed_roots</span>
+        <span class="k">if</span> <span class="s2">"unbounded_paths"</span> <span class="ow">in</span> <span class="n">parent_params</span><span class="p">:</span>
+            <span class="n">parent_kwargs</span><span class="p">[</span><span class="s2">"unbounded_paths"</span><span class="p">]</span> <span class="o">=</span> <span class="n">unbounded_paths</span>
+        <span class="k">if</span> <span class="s2">"cwd_sandbox"</span> <span class="ow">in</span> <span class="n">parent_params</span><span class="p">:</span>
+            <span class="n">parent_kwargs</span><span class="p">[</span><span class="s2">"cwd_sandbox"</span><span class="p">]</span> <span class="o">=</span> <span class="n">cwd_sandbox</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">parent_params</span><span class="p">:</span>
                 <span class="n">parent_kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 
-        <span class="c1"># Snapshot this node&#39;s own viewer/review before lynguine inherit</span>
+        <span class="c1"># Snapshot this node's own viewer/review before lynguine inherit</span>
         <span class="c1"># deletes ignored keys from *parent* ``_data`` (CIP-0018).</span>
-        <span class="n">viewer</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;viewer&quot;</span><span class="p">)</span>
+        <span class="n">viewer</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"viewer"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">viewer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_layer_viewer</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">viewer</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_layer_viewer</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">viewer</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_layer_viewer</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewer</span><span class="p">]</span>
-        <span class="n">review</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;review&quot;</span><span class="p">)</span>
+        <span class="n">review</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"review"</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">review</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_layer_review</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">review</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_layer_review</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">review</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_layer_review</span> <span class="o">=</span> <span class="p">[</span><span class="n">review</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_layer_title</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;title&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_layer_title</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"title"</span><span class="p">)</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">parent_kwargs</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_load_templates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">templates_config</span><span class="p">,</span> <span class="n">directory</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Load template definitions from inline or external sources.</span>
 <span class="sd">        </span>
 <span class="sd">        Part of CIP-0006: Template Expansion System</span>
@@ -1143,13 +1143,13 @@
 <span class="sd">        :param directory: Base directory for resolving template file paths</span>
 <span class="sd">        :type directory: str</span>
 <span class="sd">        :return: None (templates stored in self._templates)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">for</span> <span class="n">template_name</span><span class="p">,</span> <span class="n">template_def</span> <span class="ow">in</span> <span class="n">templates_config</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading template: </span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Loading template: </span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             
-            <span class="k">if</span> <span class="s1">&#39;file&#39;</span> <span class="ow">in</span> <span class="n">template_def</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s1">'file'</span> <span class="ow">in</span> <span class="n">template_def</span><span class="p">:</span>
                 <span class="c1"># External template - load from file</span>
-                <span class="n">template_path</span> <span class="o">=</span> <span class="n">template_def</span><span class="p">[</span><span class="s1">&#39;file&#39;</span><span class="p">]</span>
+                <span class="n">template_path</span> <span class="o">=</span> <span class="n">template_def</span><span class="p">[</span><span class="s1">'file'</span><span class="p">]</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">template_path</span><span class="p">):</span>
                     <span class="c1"># Resolve relative path from config directory</span>
                     <span class="n">template_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">template_path</span><span class="p">)</span>
@@ -1157,15 +1157,15 @@
                 
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">template_path</span><span class="p">):</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Template file for &#39;</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">&#39; not found: </span><span class="si">{</span><span class="n">template_path</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Template file for '</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">' not found: </span><span class="si">{</span><span class="n">template_path</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
                 
                 <span class="k">try</span><span class="p">:</span>
-                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">template_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">template_path</span><span class="p">,</span> <span class="s1">'r'</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
                         <span class="n">template_content</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">Loader</span><span class="o">=</span><span class="n">yaml</span><span class="o">.</span><span class="n">FullLoader</span><span class="p">)</span>
                 <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">YAMLError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Error parsing YAML in template file &#39;</span><span class="si">{</span><span class="n">template_path</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Error parsing YAML in template file '</span><span class="si">{</span><span class="n">template_path</span><span class="si">}</span><span class="s2">': </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
                 
                 <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">[</span><span class="n">template_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">template_content</span>
@@ -1175,27 +1175,27 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">[</span><span class="n">template_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">template_def</span>
             
             <span class="c1"># Validate template structure</span>
-            <span class="k">if</span> <span class="s1">&#39;pattern&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">[</span><span class="n">template_name</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="s1">'pattern'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">[</span><span class="n">template_name</span><span class="p">]:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Template &#39;</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">&#39; must have a &#39;pattern&#39; key. &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;Found keys: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">[</span><span class="n">template_name</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Template '</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">' must have a 'pattern' key. "</span>
+                    <span class="sa">f</span><span class="s2">"Found keys: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">[</span><span class="n">template_name</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">"</span>
                 <span class="p">)</span>
             
-            <span class="n">pattern</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">[</span><span class="n">template_name</span><span class="p">][</span><span class="s1">&#39;pattern&#39;</span><span class="p">]</span>
+            <span class="n">pattern</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">[</span><span class="n">template_name</span><span class="p">][</span><span class="s1">'pattern'</span><span class="p">]</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;Template &#39;</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">&#39; pattern must be a list, &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">"Template '</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">' pattern must be a list, "</span>
+                    <span class="sa">f</span><span class="s2">"got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">"</span>
                 <span class="p">)</span>
             
-            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully loaded template &#39;</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">&#39; with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span><span class="si">}</span><span class="s2"> elements&quot;</span><span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Successfully loaded template '</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">' with </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span><span class="si">}</span><span class="s2"> elements"</span><span class="p">)</span>
     
     <span class="k">def</span><span class="w"> </span><span class="nf">_expand_templates_in_review</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">review</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_depth</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">expansion_chain</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Recursively expand template references in review section.</span>
 <span class="sd">        </span>
 <span class="sd">        Part of CIP-0006: Template Expansion System</span>
-<span class="sd">        Supports nested templates where a template&#39;s pattern can reference other templates.</span>
+<span class="sd">        Supports nested templates where a template's pattern can reference other templates.</span>
 <span class="sd">        </span>
 <span class="sd">        :param review: Review configuration (may contain template references)</span>
 <span class="sd">        :type review: list</span>
@@ -1207,40 +1207,40 @@
 <span class="sd">        :type expansion_chain: list or None</span>
 <span class="sd">        :return: Expanded review configuration</span>
 <span class="sd">        :rtype: list</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="n">expansion_chain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">expansion_chain</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="k">if</span> <span class="n">depth</span> <span class="o">&gt;</span> <span class="n">max_depth</span><span class="p">:</span>
-            <span class="n">chain_str</span> <span class="o">=</span> <span class="s2">&quot; -&gt; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expansion_chain</span><span class="p">)</span>
+            <span class="n">chain_str</span> <span class="o">=</span> <span class="s2">" -&gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expansion_chain</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Maximum template nesting depth (</span><span class="si">{</span><span class="n">max_depth</span><span class="si">}</span><span class="s2">) exceeded. &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;Expansion chain: </span><span class="si">{</span><span class="n">chain_str</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">"Maximum template nesting depth (</span><span class="si">{</span><span class="n">max_depth</span><span class="si">}</span><span class="s2">) exceeded. "</span>
+                <span class="sa">f</span><span class="s2">"Expansion chain: </span><span class="si">{</span><span class="n">chain_str</span><span class="si">}</span><span class="s2">"</span>
             <span class="p">)</span>
         
         <span class="n">expanded_review</span> <span class="o">=</span> <span class="p">[]</span>
         
         <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">review</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;template&#39;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">'template'</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
                 <span class="c1"># This is a template reference - expand it</span>
-                <span class="n">template_name</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;template&#39;</span><span class="p">]</span>
-                <span class="n">instances</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;instances&#39;</span><span class="p">,</span> <span class="p">[])</span>
+                <span class="n">template_name</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s1">'template'</span><span class="p">]</span>
+                <span class="n">instances</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'instances'</span><span class="p">,</span> <span class="p">[])</span>
                 
                 <span class="k">if</span> <span class="n">template_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Template &#39;</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">&#39; referenced but not defined. &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;Available templates: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Template '</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">' referenced but not defined. "</span>
+                        <span class="sa">f</span><span class="s2">"Available templates: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
                 
                 <span class="c1"># Check for circular reference</span>
                 <span class="k">if</span> <span class="n">template_name</span> <span class="ow">in</span> <span class="n">expansion_chain</span><span class="p">:</span>
-                    <span class="n">chain_str</span> <span class="o">=</span> <span class="s2">&quot; -&gt; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expansion_chain</span> <span class="o">+</span> <span class="p">[</span><span class="n">template_name</span><span class="p">])</span>
+                    <span class="n">chain_str</span> <span class="o">=</span> <span class="s2">" -&gt; "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">expansion_chain</span> <span class="o">+</span> <span class="p">[</span><span class="n">template_name</span><span class="p">])</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Circular template reference detected: </span><span class="si">{</span><span class="n">chain_str</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Circular template reference detected: </span><span class="si">{</span><span class="n">chain_str</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
                 
                 <span class="c1"># Check if template instance has visible_if condition</span>
-                <span class="n">template_visible_if</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;visible_if&#39;</span><span class="p">)</span>
+                <span class="n">template_visible_if</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'visible_if'</span><span class="p">)</span>
                 
                 <span class="c1"># Expand each instance</span>
                 <span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">instances</span><span class="p">:</span>
@@ -1254,8 +1254,8 @@
                         <span class="k">for</span> <span class="n">expanded_entry</span> <span class="ow">in</span> <span class="n">expanded_entries</span><span class="p">:</span>
                             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expanded_entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
                                 <span class="c1"># Add visible_if to each widget (unless it already has one)</span>
-                                <span class="k">if</span> <span class="s1">&#39;visible_if&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">expanded_entry</span><span class="p">:</span>
-                                    <span class="n">expanded_entry</span><span class="p">[</span><span class="s1">&#39;visible_if&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">template_visible_if</span>
+                                <span class="k">if</span> <span class="s1">'visible_if'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">expanded_entry</span><span class="p">:</span>
+                                    <span class="n">expanded_entry</span><span class="p">[</span><span class="s1">'visible_if'</span><span class="p">]</span> <span class="o">=</span> <span class="n">template_visible_if</span>
                     
                     <span class="c1"># Recursively expand any nested template references</span>
                     <span class="n">nested_expanded</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expand_templates_in_review</span><span class="p">(</span>
@@ -1272,7 +1272,7 @@
         <span class="k">return</span> <span class="n">expanded_review</span>
     
     <span class="k">def</span><span class="w"> </span><span class="nf">_expand_template_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template_name</span><span class="p">,</span> <span class="n">instance_params</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Expand a single template instance with parameter substitution.</span>
 <span class="sd">        </span>
 <span class="sd">        Part of CIP-0006: Template Expansion System</span>
@@ -1283,9 +1283,9 @@
 <span class="sd">        :type instance_params: dict</span>
 <span class="sd">        :return: List of expanded entries</span>
 <span class="sd">        :rtype: list</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">template</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_templates</span><span class="p">[</span><span class="n">template_name</span><span class="p">]</span>
-        <span class="n">pattern</span> <span class="o">=</span> <span class="n">template</span><span class="p">[</span><span class="s1">&#39;pattern&#39;</span><span class="p">]</span>
+        <span class="n">pattern</span> <span class="o">=</span> <span class="n">template</span><span class="p">[</span><span class="s1">'pattern'</span><span class="p">]</span>
         
         <span class="c1"># Deep copy pattern and substitute parameters</span>
         <span class="n">expanded_pattern</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_substitute_parameters</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">instance_params</span><span class="p">,</span> <span class="n">template_name</span><span class="p">)</span>
@@ -1293,7 +1293,7 @@
         <span class="k">return</span> <span class="n">expanded_pattern</span>
     
     <span class="k">def</span><span class="w"> </span><span class="nf">_substitute_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">template_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Recursively substitute parameters in an object structure.</span>
 <span class="sd">        </span>
 <span class="sd">        Part of CIP-0006: Template Expansion System</span>
@@ -1308,37 +1308,37 @@
 <span class="sd">        :type template_name: str</span>
 <span class="sd">        :return: Object with parameters substituted</span>
 <span class="sd">        :rtype: same type as obj</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
         <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
         
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="c1"># Find all %param% placeholders for template parameters</span>
             <span class="c1"># This syntax is distinct from {{liquid}} and {display} to avoid confusion</span>
-            <span class="c1"># Note: The regex won&#39;t match %% (escaped percent), only %word%</span>
-            <span class="n">placeholders</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;%(\w+)%&#39;</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
+            <span class="c1"># Note: The regex won't match %% (escaped percent), only %word%</span>
+            <span class="n">placeholders</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s1">'%(\w+)%'</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span>
             
             <span class="c1"># Check for missing parameters</span>
             <span class="k">for</span> <span class="n">placeholder</span> <span class="ow">in</span> <span class="n">placeholders</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">placeholder</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
-                    <span class="n">template_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot; in template &#39;</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span> <span class="k">if</span> <span class="n">template_name</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+                    <span class="n">template_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">" in template '</span><span class="si">{</span><span class="n">template_name</span><span class="si">}</span><span class="s2">'"</span> <span class="k">if</span> <span class="n">template_name</span> <span class="k">else</span> <span class="s2">""</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                        <span class="sa">f</span><span class="s2">&quot;Parameter &#39;%</span><span class="si">{</span><span class="n">placeholder</span><span class="si">}</span><span class="s2">%&#39; is required</span><span class="si">{</span><span class="n">template_info</span><span class="si">}</span><span class="s2"> &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;but not provided in instance. &quot;</span>
-                        <span class="sa">f</span><span class="s2">&quot;Available parameters: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="sa">f</span><span class="s2">"Parameter '%</span><span class="si">{</span><span class="n">placeholder</span><span class="si">}</span><span class="s2">%' is required</span><span class="si">{</span><span class="n">template_info</span><span class="si">}</span><span class="s2"> "</span>
+                        <span class="sa">f</span><span class="s2">"but not provided in instance. "</span>
+                        <span class="sa">f</span><span class="s2">"Available parameters: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">"</span>
                     <span class="p">)</span>
             
             <span class="c1"># Substitute all parameters</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">obj</span>
             <span class="k">for</span> <span class="n">param_name</span><span class="p">,</span> <span class="n">param_value</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="n">placeholder</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;%</span><span class="si">{</span><span class="n">param_name</span><span class="si">}</span><span class="s2">%&quot;</span>
+                <span class="n">placeholder</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"%</span><span class="si">{</span><span class="n">param_name</span><span class="si">}</span><span class="s2">%"</span>
                 <span class="c1"># Convert to string if needed</span>
                 <span class="n">param_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">param_value</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">param_value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">param_value</span>
                 <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">placeholder</span><span class="p">,</span> <span class="n">param_str</span><span class="p">)</span>
             
             <span class="c1"># After substitution, unescape %% to % (following Windows batch convention)</span>
             <span class="c1"># This allows literal % signs to be included as %%</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%%</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;%&#39;</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'</span><span class="si">%%</span><span class="s1">'</span><span class="p">,</span> <span class="s1">'%'</span><span class="p">)</span>
             
             <span class="k">return</span> <span class="n">result</span>
         
@@ -1365,377 +1365,377 @@
         
     <span class="nd">@classmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_expand_review_cluster</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">review</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Expand the review section of the interface into a linguine form.</span>
 
 <span class="sd">        :param review: The review section of the interface.</span>
 <span class="sd">        :type review: dict</span>
 <span class="sd">        :return: The expanded review section.</span>
 <span class="sd">        :rtype: dict</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">expanded_review</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">review</span><span class="p">:</span>
             <span class="n">cluster</span> <span class="o">=</span> <span class="p">{}</span>
-            <span class="k">if</span> <span class="s2">&quot;type&quot;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;group&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">"type"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"group"</span><span class="p">:</span>
                     
-                    <span class="c1">#raise ValueError(&quot;Got here&quot;)</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;group&quot;</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_group_review</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Section&quot;</span><span class="p">:</span>
+                    <span class="c1">#raise ValueError("Got here")</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"group"</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_group_review</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Section"</span><span class="p">:</span>
                     <span class="c1"># Collapsible widget group: title + nested entries/children.</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Section&quot;</span>
-                    <span class="k">if</span> <span class="s2">&quot;title&quot;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
-                        <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span>
-                    <span class="k">elif</span> <span class="s2">&quot;liquid&quot;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
-                        <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;title&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;liquid&quot;</span><span class="p">]</span>
-                    <span class="k">if</span> <span class="s2">&quot;entries&quot;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
-                        <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span>
-                    <span class="k">elif</span> <span class="s2">&quot;children&quot;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
-                        <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_group_review</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"Section"</span>
+                    <span class="k">if</span> <span class="s2">"title"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                        <span class="n">cluster</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]</span>
+                    <span class="k">elif</span> <span class="s2">"liquid"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                        <span class="n">cluster</span><span class="p">[</span><span class="s2">"title"</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"liquid"</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="s2">"entries"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                        <span class="n">cluster</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">]</span>
+                    <span class="k">elif</span> <span class="s2">"children"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                        <span class="n">cluster</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_group_review</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="n">cluster</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
                     <span class="c1"># Preserve chrome flags (open, collapse) — otherwise</span>
                     <span class="c1"># listing cache buttons cannot stay outside &lt;details&gt;.</span>
-                    <span class="n">args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;args&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
-                    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;open&quot;</span><span class="p">,</span> <span class="s2">&quot;collapse&quot;</span><span class="p">,</span> <span class="s2">&quot;collapsible&quot;</span><span class="p">):</span>
+                    <span class="n">args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"args"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span>
+                    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"open"</span><span class="p">,</span> <span class="s2">"collapse"</span><span class="p">,</span> <span class="s2">"collapsible"</span><span class="p">):</span>
                         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">entry</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">args</span><span class="p">:</span>
                             <span class="n">args</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
                     <span class="k">if</span> <span class="n">args</span><span class="p">:</span>
-                        <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span>
-                <span class="k">elif</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span>
-                        <span class="s2">&quot;Criterion&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;CriterionComment&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;CriterionCommentDate&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;CriterionCommentRedAmberGreen&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;CriterionCommentRaisesMeetsLowers&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;CriterionCommentRaisesMeetsLowersFlag&quot;</span><span class="p">,</span>
-                        <span class="s2">&quot;CriterionCommentScore&quot;</span>
+                        <span class="n">cluster</span><span class="p">[</span><span class="s2">"args"</span><span class="p">]</span> <span class="o">=</span> <span class="n">args</span>
+                <span class="k">elif</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span>
+                        <span class="s2">"Criterion"</span><span class="p">,</span>
+                        <span class="s2">"CriterionComment"</span><span class="p">,</span>
+                        <span class="s2">"CriterionCommentDate"</span><span class="p">,</span>
+                        <span class="s2">"CriterionCommentRedAmberGreen"</span><span class="p">,</span>
+                        <span class="s2">"CriterionCommentRaisesMeetsLowers"</span><span class="p">,</span>
+                        <span class="s2">"CriterionCommentRaisesMeetsLowersFlag"</span><span class="p">,</span>
+                        <span class="s2">"CriterionCommentScore"</span>
                 <span class="p">]:</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;composite&quot;</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_composite_review</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>                    
-                <span class="k">elif</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;load&quot;</span><span class="p">:</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;load&quot;</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;filename&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">extract_full_filename</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;details&quot;</span><span class="p">])</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_load_review</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;loop&quot;</span><span class="p">:</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;loop&quot;</span>
-                    <span class="k">if</span> <span class="s2">&quot;start&quot;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
-                        <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;start&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;start&quot;</span><span class="p">]</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"composite"</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_composite_review</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>                    
+                <span class="k">elif</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"load"</span><span class="p">:</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"load"</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"filename"</span><span class="p">]</span> <span class="o">=</span> <span class="n">extract_full_filename</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">"details"</span><span class="p">])</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_load_review</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"loop"</span><span class="p">:</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"loop"</span>
+                    <span class="k">if</span> <span class="s2">"start"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                        <span class="n">cluster</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"start"</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Missing start entry in loop&quot;</span><span class="p">)</span>                        
-                    <span class="k">if</span> <span class="s2">&quot;stop&quot;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
-                        <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;stop&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;stop&quot;</span><span class="p">]</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Missing start entry in loop"</span><span class="p">)</span>                        
+                    <span class="k">if</span> <span class="s2">"stop"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                        <span class="n">cluster</span><span class="p">[</span><span class="s2">"stop"</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"stop"</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Missing stop entry in loop&quot;</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="s2">&quot;step&quot;</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
-                        <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;step&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;step&quot;</span><span class="p">]</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Missing stop entry in loop"</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="s2">"step"</span> <span class="ow">in</span> <span class="n">entry</span><span class="p">:</span>
+                        <span class="n">cluster</span><span class="p">[</span><span class="s2">"step"</span><span class="p">]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">"step"</span><span class="p">]</span>
                     <span class="n">tmp</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-                    <span class="n">body</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="s2">&quot;body&quot;</span><span class="p">]</span>
+                    <span class="n">body</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="s2">"body"</span><span class="p">]</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">body</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
                         <span class="n">body</span> <span class="o">=</span> <span class="p">[</span><span class="n">body</span><span class="p">]</span>
-                    <span class="n">tmp</span><span class="p">[</span><span class="s2">&quot;children&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">body</span>
-                    <span class="k">del</span> <span class="n">tmp</span><span class="p">[</span><span class="s2">&quot;body&quot;</span><span class="p">]</span>
-                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_group_review</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="c1"># expand loop review only used when start and stop known at run-time.                        </span>
+                    <span class="n">tmp</span><span class="p">[</span><span class="s2">"children"</span><span class="p">]</span> <span class="o">=</span> <span class="n">body</span>
+                    <span class="k">del</span> <span class="n">tmp</span><span class="p">[</span><span class="s2">"body"</span><span class="p">]</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">]</span> <span class="o">=</span> <span class="n">expand_group_review</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="c1"># expand loop review only used when start and stop known at run-time.                        </span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">cluster</span> <span class="o">=</span> <span class="n">entry</span>
             <span class="c1"># Call recursively to expand the review section.      </span>
-            <span class="k">if</span> <span class="s2">&quot;entries&quot;</span> <span class="ow">in</span> <span class="n">cluster</span><span class="p">:</span>
-                <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_expand_review_cluster</span><span class="p">(</span><span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="s2">"entries"</span> <span class="ow">in</span> <span class="n">cluster</span><span class="p">:</span>
+                <span class="n">cluster</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_expand_review_cluster</span><span class="p">(</span><span class="n">cluster</span><span class="p">[</span><span class="s2">"entries"</span><span class="p">])</span>
             <span class="n">expanded_review</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span>
             
         <span class="k">return</span> <span class="n">expanded_review</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_process_parent</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Process the parent interface.</span>
 
 <span class="sd">        :return: None</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         
-        <span class="n">default_append</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span>
-        <span class="n">default_ignore</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;compute&quot;</span><span class="p">,</span> <span class="s2">&quot;review&quot;</span><span class="p">]</span>
-        <span class="n">inherit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;inherit&quot;</span><span class="p">]</span>
+        <span class="n">default_append</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"viewer"</span><span class="p">]</span>
+        <span class="n">default_ignore</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"compute"</span><span class="p">,</span> <span class="s2">"review"</span><span class="p">]</span>
+        <span class="n">inherit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"inherit"</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="s2">&quot;append&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">:</span>
-            <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;append&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_append</span>
+        <span class="k">if</span> <span class="s2">"append"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">:</span>
+            <span class="n">inherit</span><span class="p">[</span><span class="s2">"append"</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_append</span>
 
-        <span class="k">if</span> <span class="s2">&quot;ignore&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">:</span>
-            <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_ignore</span>
+        <span class="k">if</span> <span class="s2">"ignore"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">:</span>
+            <span class="n">inherit</span><span class="p">[</span><span class="s2">"ignore"</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_ignore</span>
 
         <span class="k">for</span> <span class="n">ignore</span> <span class="ow">in</span> <span class="n">default_ignore</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">ignore</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]:</span>
-                <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ignore</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ignore</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">"ignore"</span><span class="p">]:</span>
+                <span class="n">inherit</span><span class="p">[</span><span class="s2">"ignore"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ignore</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">append</span> <span class="ow">in</span> <span class="n">default_append</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">append</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">append</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;append&quot;</span><span class="p">]:</span>
-                <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;append&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">append</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">append</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">"ignore"</span><span class="p">]</span> <span class="ow">and</span> <span class="n">append</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">"append"</span><span class="p">]:</span>
+                <span class="n">inherit</span><span class="p">[</span><span class="s2">"append"</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">append</span><span class="p">)</span>
 
-        <span class="n">reuse</span> <span class="o">=</span> <span class="n">inherit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;reuse&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="n">reuse</span> <span class="o">=</span> <span class="n">inherit</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"reuse"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reuse</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">reuse</span> <span class="o">=</span> <span class="p">[</span><span class="n">reuse</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">reuse</span><span class="p">:</span>
-            <span class="k">while</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]:</span>
-                <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">while</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">"ignore"</span><span class="p">]:</span>
+                <span class="n">inherit</span><span class="p">[</span><span class="s2">"ignore"</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
         <span class="c1"># Add links to parent assessment by placing in viewer, unless the</span>
         <span class="c1"># child owns chrome (`inherit.ignore` includes `viewer`; CIP-001C).</span>
-        <span class="k">if</span> <span class="s2">&quot;viewer&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">&quot;ignore&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="s2">"viewer"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inherit</span><span class="p">[</span><span class="s2">"ignore"</span><span class="p">]:</span>
             <span class="n">viewelem</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;display&quot;</span><span class="p">:</span> <span class="p">(</span>
-                    <span class="s1">&#39;Parent assesser available &lt;a href=&quot;&#39;</span>
+                <span class="s2">"display"</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="s1">'Parent assesser available &lt;a href="'</span>
                     <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span>
                         <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent</span><span class="o">.</span><span class="n">_directory</span><span class="p">),</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_directory</span><span class="p">,</span>
                     <span class="p">)</span>
-                    <span class="o">+</span> <span class="s1">&#39;&quot; target=&quot;_blank&quot;&gt;here&lt;/a&gt;.&#39;</span>
+                    <span class="o">+</span> <span class="s1">'" target="_blank"&gt;here&lt;/a&gt;.'</span>
                 <span class="p">),</span>
                 <span class="n">PARENT_ASSESSOR_LINK_KEY</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
             <span class="p">}</span>
-            <span class="k">if</span> <span class="s2">&quot;viewer&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">"viewer"</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"viewer"</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"viewer"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"viewer"</span><span class="p">]</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"viewer"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"viewer"</span><span class="p">]]</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">&quot;viewer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="s2">"viewer"</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">viewelem</span><span class="p">]</span>
 
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_process_parent</span><span class="p">()</span>
 
 <div class="viewcode-block" id="Interface.interface_layers">
 <a class="viewcode-back" href="../../../modules/config.html#referia.config.interface.Interface.interface_layers">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">interface_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Root-first inherit layers from each node&#39;s own ``_data``.</span>
+<span class="w">        </span><span class="sd">"""Root-first inherit layers from each node's own ``_data``.</span>
 
 <span class="sd">        Returns a list of :class:`~referia.config.inherit_view.InterfaceLayer`</span>
 <span class="sd">        (title, directory, viewer, review, writable, is_self).  Does not use</span>
 <span class="sd">        lynguine ``__getitem__`` for ``viewer`` / ``review`` (those lists are</span>
 <span class="sd">        already merged and drop provenance). CIP-0018.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="n">collect_interface_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
 </div>
 
 
             
 <span class="k">def</span><span class="w"> </span><span class="nf">expand_load_review</span><span class="p">(</span><span class="n">details</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Extract details from a separate file where they&#39;re specified.</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Extract details from a separate file where they're specified.</span>
 
 <span class="sd">    :param details: The details of the scoring element.</span>
 <span class="sd">    :type details: dict</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="c1"># This is a link to a widget specification stored in a file</span>
-    <span class="k">if</span> <span class="s2">&quot;details&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Load reviewer needs to provide load details as entry under </span><span class="se">\&quot;</span><span class="s2">details</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">df</span><span class="p">,</span>  <span class="n">newdetails</span> <span class="o">=</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="n">details</span><span class="p">[</span><span class="s2">&quot;details&quot;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="s2">"details"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Load reviewer needs to provide load details as entry under </span><span class="se">\"</span><span class="s2">details</span><span class="se">\"</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">df</span><span class="p">,</span>  <span class="n">newdetails</span> <span class="o">=</span> <span class="n">access</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read_data</span><span class="p">(</span><span class="n">details</span><span class="p">[</span><span class="s2">"details"</span><span class="p">])</span>
     <span class="n">return_details</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">series</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
         <span class="n">return_details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">remove_nan</span><span class="p">(</span><span class="n">series</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()))</span>
     <span class="k">return</span> <span class="n">return_details</span>                      
 
 <span class="k">def</span><span class="w"> </span><span class="nf">expand_group_review</span><span class="p">(</span><span class="n">details</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Extract details that are clustered together in a group.</span>
 
 <span class="sd">    :param details: The details of the scoring element.</span>
 <span class="sd">    :type details: dict</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="s2">&quot;children&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;group reviewer needs to provide a list of children under </span><span class="se">\&quot;</span><span class="s2">children</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="s2">"children"</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"group reviewer needs to provide a list of children under </span><span class="se">\"</span><span class="s2">children</span><span class="se">\"</span><span class="s2">"</span><span class="p">)</span>
     <span class="n">return_details</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;children&quot;</span><span class="p">]:</span>
-        <span class="k">if</span> <span class="s2">&quot;name&quot;</span> <span class="ow">in</span> <span class="n">child</span> <span class="ow">and</span> <span class="s2">&quot;name&quot;</span> <span class="ow">in</span> <span class="n">details</span> <span class="ow">and</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">child</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="n">child</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;prefix&quot;</span> <span class="ow">in</span> <span class="n">details</span> <span class="ow">and</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="s2">&quot;prefix&quot;</span> <span class="ow">in</span> <span class="n">child</span><span class="p">:</span>
-                <span class="n">child</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">child</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="s2">&quot;field&quot;</span> <span class="ow">in</span> <span class="n">child</span><span class="p">:</span>
-                <span class="n">child</span><span class="p">[</span><span class="s2">&quot;field&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">child</span><span class="p">[</span><span class="s2">&quot;field&quot;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">details</span><span class="p">[</span><span class="s2">"children"</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="s2">"name"</span> <span class="ow">in</span> <span class="n">child</span> <span class="ow">and</span> <span class="s2">"name"</span> <span class="ow">in</span> <span class="n">details</span> <span class="ow">and</span> <span class="n">details</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">child</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="o">+</span> <span class="s2">"-"</span> <span class="o">+</span> <span class="n">child</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"prefix"</span> <span class="ow">in</span> <span class="n">details</span> <span class="ow">and</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">"prefix"</span> <span class="ow">in</span> <span class="n">child</span><span class="p">:</span>
+                <span class="n">child</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span> <span class="o">+</span> <span class="n">child</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">"field"</span> <span class="ow">in</span> <span class="n">child</span><span class="p">:</span>
+                <span class="n">child</span><span class="p">[</span><span class="s2">"field"</span><span class="p">]</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span> <span class="o">+</span> <span class="n">child</span><span class="p">[</span><span class="s2">"field"</span><span class="p">]</span>
         <span class="n">return_details</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">return_details</span>
 
 <span class="k">def</span><span class="w"> </span><span class="nf">expand_composite_review</span><span class="p">(</span><span class="n">details</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Extract details for a predefined composition of widgets.</span>
 
 <span class="sd">    :param details: The details of the scoring element.</span>
 <span class="sd">    :type details: dict</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Criterion&quot;</span><span class="p">:</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"Criterion"</span><span class="p">:</span>
         <span class="n">value</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">display</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">tally</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">liquid</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">lis</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">join</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;criterion&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;criterion&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;display&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">display</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;display&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;liquid&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">liquid</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;liquid&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;tally&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">tally</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;tally&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;list&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">lis</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;list&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;join&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">liquid</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;join&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;width&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">width</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;width&quot;</span><span class="p">]</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"criterion"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"criterion"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"display"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">display</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"display"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"liquid"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">liquid</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"liquid"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"tally"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">tally</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"tally"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"list"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">lis</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"list"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"join"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">liquid</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"join"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"width"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"width"</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">width</span> <span class="o">=</span> <span class="s2">&quot;800px&quot;</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="s2">"800px"</span>
 
         <span class="n">criterion</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot; Criterion&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Markdown&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;layout&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="n">width</span><span class="p">},</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">" Criterion"</span><span class="p">,</span>
+            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"Markdown"</span><span class="p">,</span>
+            <span class="s2">"args"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"layout"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"width"</span><span class="p">:</span> <span class="n">width</span><span class="p">},</span>
             <span class="p">}</span>
         <span class="p">}</span>
         <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">criterion</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">][</span><span class="s2">&quot;value&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="n">criterion</span><span class="p">[</span><span class="s2">"args"</span><span class="p">][</span><span class="s2">"value"</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
         <span class="k">if</span> <span class="n">display</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">criterion</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">][</span><span class="s2">&quot;display&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">display</span>
+            <span class="n">criterion</span><span class="p">[</span><span class="s2">"args"</span><span class="p">][</span><span class="s2">"display"</span><span class="p">]</span> <span class="o">=</span> <span class="n">display</span>
         <span class="k">if</span> <span class="n">liquid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">criterion</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">][</span><span class="s2">&quot;liquid&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">liquid</span>
+            <span class="n">criterion</span><span class="p">[</span><span class="s2">"args"</span><span class="p">][</span><span class="s2">"liquid"</span><span class="p">]</span> <span class="o">=</span> <span class="n">liquid</span>
         <span class="k">if</span> <span class="n">tally</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">criterion</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">][</span><span class="s2">&quot;tally&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tally</span>
+            <span class="n">criterion</span><span class="p">[</span><span class="s2">"args"</span><span class="p">][</span><span class="s2">"tally"</span><span class="p">]</span> <span class="o">=</span> <span class="n">tally</span>
         <span class="k">if</span> <span class="n">join</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">criterion</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">][</span><span class="s2">&quot;join&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">join</span>
+            <span class="n">criterion</span><span class="p">[</span><span class="s2">"args"</span><span class="p">][</span><span class="s2">"join"</span><span class="p">]</span> <span class="o">=</span> <span class="n">join</span>
         <span class="k">if</span> <span class="n">lis</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">criterion</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">][</span><span class="s2">&quot;list&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lis</span>
+            <span class="n">criterion</span><span class="p">[</span><span class="s2">"args"</span><span class="p">][</span><span class="s2">"list"</span><span class="p">]</span> <span class="o">=</span> <span class="n">lis</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">criterion</span><span class="p">]</span>
 
-    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;CriterionComment&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"CriterionComment"</span><span class="p">:</span>
         <span class="n">criterion</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">))</span>
-        <span class="n">criterion</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Criterion&quot;</span>
-        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span>
+        <span class="n">criterion</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"Criterion"</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="s2">&quot;width&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">width</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;width&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"width"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"width"</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">width</span> <span class="o">=</span> <span class="s2">&quot;800px&quot;</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="s2">"800px"</span>
             
         <span class="n">comment</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot; Comment&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Textarea&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Comment&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;layout&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="n">width</span><span class="p">},</span>
+            <span class="s2">"field"</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">" Comment"</span><span class="p">,</span>
+            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"Textarea"</span><span class="p">,</span>
+            <span class="s2">"args"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"value"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+                <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Comment"</span><span class="p">,</span>
+                <span class="s2">"layout"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"width"</span><span class="p">:</span> <span class="n">width</span><span class="p">},</span>
             <span class="p">}</span>
         <span class="p">}</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">criterion</span><span class="p">,</span> <span class="n">comment</span><span class="p">]</span>
 
-    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;CriterionCommentDate&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"CriterionCommentDate"</span><span class="p">:</span>
         <span class="n">criterion</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">))</span>
-        <span class="n">criterion</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;CriterionComment&quot;</span>
-        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span>
+        <span class="n">criterion</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"CriterionComment"</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span>
         <span class="n">date</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot; Date&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;DatePicker&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Date&quot;</span><span class="p">,</span>
+            <span class="s2">"field"</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">" Date"</span><span class="p">,</span>
+            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"DatePicker"</span><span class="p">,</span>
+            <span class="s2">"args"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Date"</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">}</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">criterion</span><span class="p">,</span> <span class="n">date</span><span class="p">]</span>
 
 
-    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;CriterionCommentRedAmberGreen&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"CriterionCommentRedAmberGreen"</span><span class="p">:</span>
         <span class="n">criterioncomment</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">))</span>
-        <span class="n">criterioncomment</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;CriterionComment&quot;</span>
+        <span class="n">criterioncomment</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"CriterionComment"</span>
 
-        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span>
         <span class="n">expectation</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot; Traffic&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Dropdown&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;placeholder&quot;</span><span class="p">:</span> <span class="s2">&quot;Traffic Signal&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;options&quot;</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;Red&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;Amber&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;Green&quot;</span><span class="p">,</span>
+            <span class="s2">"field"</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">" Traffic"</span><span class="p">,</span>
+            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"Dropdown"</span><span class="p">,</span>
+            <span class="s2">"args"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"placeholder"</span><span class="p">:</span> <span class="s2">"Traffic Signal"</span><span class="p">,</span>
+                <span class="s2">"options"</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">""</span><span class="p">,</span>
+                    <span class="s2">"Red"</span><span class="p">,</span>
+                    <span class="s2">"Amber"</span><span class="p">,</span>
+                    <span class="s2">"Green"</span><span class="p">,</span>
                 <span class="p">],</span>
-                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Traffic Signal&quot;</span><span class="p">,</span>
+                <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Traffic Signal"</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">}</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">criterioncomment</span><span class="p">,</span> <span class="n">expectation</span><span class="p">]</span>
     
-    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;CriterionCommentRaisesMeetsLowers&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"CriterionCommentRaisesMeetsLowers"</span><span class="p">:</span>
         <span class="n">criterioncomment</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">))</span>
-        <span class="n">criterioncomment</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;CriterionComment&quot;</span>
+        <span class="n">criterioncomment</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"CriterionComment"</span>
 
-        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span>
         <span class="n">expectation</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot; Expectation&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Dropdown&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;placeholder&quot;</span><span class="p">:</span> <span class="s2">&quot;Against expectations&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;options&quot;</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="s2">&quot;&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;Raises&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;Meets&quot;</span><span class="p">,</span>
-                    <span class="s2">&quot;Lowers&quot;</span><span class="p">,</span>
+            <span class="s2">"field"</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">" Expectation"</span><span class="p">,</span>
+            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"Dropdown"</span><span class="p">,</span>
+            <span class="s2">"args"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"placeholder"</span><span class="p">:</span> <span class="s2">"Against expectations"</span><span class="p">,</span>
+                <span class="s2">"options"</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">""</span><span class="p">,</span>
+                    <span class="s2">"Raises"</span><span class="p">,</span>
+                    <span class="s2">"Meets"</span><span class="p">,</span>
+                    <span class="s2">"Lowers"</span><span class="p">,</span>
                 <span class="p">],</span>
-                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Expectation&quot;</span><span class="p">,</span>
+                <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Expectation"</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">}</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">criterioncomment</span><span class="p">,</span> <span class="n">expectation</span><span class="p">]</span>
 
-    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;CriterionCommentRaisesMeetsLowersFlag&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"CriterionCommentRaisesMeetsLowersFlag"</span><span class="p">:</span>
         <span class="n">criterioncommentraisesmeetslowers</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">))</span>
-        <span class="n">criterioncommentraisesmeetslowers</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;CriterionCommentRaisesMeetsLowers&quot;</span>
+        <span class="n">criterioncommentraisesmeetslowers</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"CriterionCommentRaisesMeetsLowers"</span>
 
-        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span>
         <span class="n">flag</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot; Flag&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;Flag&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Flag&quot;</span><span class="p">,</span>
+            <span class="s2">"field"</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">" Flag"</span><span class="p">,</span>
+            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"Flag"</span><span class="p">,</span>
+            <span class="s2">"args"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"value"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Flag"</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="p">}</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">criterioncommentraisesmeetslowers</span><span class="p">,</span> <span class="n">flag</span><span class="p">]</span>
 
     
-    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;CriterionCommentScore&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">details</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"CriterionCommentScore"</span><span class="p">:</span>
         <span class="n">criterioncomment</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">details</span><span class="p">))</span>
-        <span class="n">criterioncomment</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;CriterionComment&quot;</span>
-        <span class="k">if</span> <span class="s2">&quot;width&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">width</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;width&quot;</span><span class="p">]</span>
+        <span class="n">criterioncomment</span><span class="p">[</span><span class="s2">"type"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"CriterionComment"</span>
+        <span class="k">if</span> <span class="s2">"width"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"width"</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">width</span> <span class="o">=</span> <span class="s2">&quot;800px&quot;</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="s2">"800px"</span>
 
-        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;prefix&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="s2">&quot;min&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">minval</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">]</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"prefix"</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"min"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">minval</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"min"</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">minval</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">if</span> <span class="s2">&quot;max&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">maxval</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"max"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">maxval</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"max"</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">maxval</span> <span class="o">=</span> <span class="mi">10</span>
-        <span class="k">if</span> <span class="s2">&quot;step&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">step</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;step&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"step"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">step</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"step"</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">step</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="k">if</span> <span class="s2">&quot;value&quot;</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">"value"</span> <span class="ow">in</span> <span class="n">details</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">details</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(((</span><span class="n">maxval</span><span class="o">-</span><span class="n">minval</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">/</span><span class="n">step</span><span class="p">)</span><span class="o">*</span><span class="n">step</span> <span class="o">+</span> <span class="n">minval</span>
 
         <span class="n">slider</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot; Score&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;FloatSlider&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="n">minval</span><span class="p">,</span>
-                <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="n">maxval</span><span class="p">,</span>
-                <span class="s2">&quot;step&quot;</span><span class="p">:</span> <span class="n">step</span><span class="p">,</span>
-                <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span>
-                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Score&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;layout&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="n">width</span><span class="p">},</span>
+            <span class="s2">"field"</span><span class="p">:</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">" Score"</span><span class="p">,</span>
+            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"FloatSlider"</span><span class="p">,</span>
+            <span class="s2">"args"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"min"</span><span class="p">:</span> <span class="n">minval</span><span class="p">,</span>
+                <span class="s2">"max"</span><span class="p">:</span> <span class="n">maxval</span><span class="p">,</span>
+                <span class="s2">"step"</span><span class="p">:</span> <span class="n">step</span><span class="p">,</span>
+                <span class="s2">"value"</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span>
+                <span class="s2">"description"</span><span class="p">:</span> <span class="s2">"Score"</span><span class="p">,</span>
+                <span class="s2">"layout"</span><span class="p">:</span> <span class="p">{</span><span class="s2">"width"</span><span class="p">:</span> <span class="n">width</span><span class="p">},</span>
             <span class="p">}</span>
         <span class="p">}</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">criterioncomment</span><span class="p">,</span> <span class="n">slider</span><span class="p">]</span>
@@ -1748,7 +1748,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

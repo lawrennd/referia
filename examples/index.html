@@ -851,14 +851,14 @@
   <section id="package-examples">
 <h1>Package examples<a class="headerlink" href="#package-examples" title="Link to this heading"></a></h1>
 <p>Runnable demos live under <code class="docutils literal notranslate"><span class="pre">examples/</span></code> in the referia repository. The
-canonical way to open a demo is <code class="docutils literal notranslate"><span class="pre">referia</span> <span class="pre">serve</span></code> from a poetry
+canonical way to open a demo is <code class="docutils literal notranslate"><span class="pre">referia</span> <span class="pre">serve</span></code> from a uv
 environment at the package root:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>poetry<span class="w"> </span>install<span class="w">   </span><span class="c1"># once</span>
-poetry<span class="w"> </span>run<span class="w"> </span>referia<span class="w"> </span>serve<span class="w"> </span>--directory<span class="w"> </span>examples/&lt;name&gt;
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>dev<span class="w">   </span><span class="c1"># once</span>
+uv<span class="w"> </span>run<span class="w"> </span>referia<span class="w"> </span>serve<span class="w"> </span>--directory<span class="w"> </span>examples/&lt;name&gt;
 <span class="c1"># Open the printed URL (default http://127.0.0.1:8000)</span>
 </pre></div>
 </div>
-<p>Use <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span> <span class="pre">referia</span> <span class="pre">serve</span> <span class="pre">--root</span> <span class="pre">&lt;path&gt;</span></code> when the point is a
+<p>Use <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">referia</span> <span class="pre">serve</span> <span class="pre">--root</span> <span class="pre">&lt;path&gt;</span></code> when the point is a
 multi-config host that discovers several <code class="docutils literal notranslate"><span class="pre">_referia.yml</span></code> trees.</p>
 <p>The inventory and triage notes also live in <code class="docutils literal notranslate"><span class="pre">examples/README.md</span></code>.</p>
 <section id="serveable-demos">
@@ -927,7 +927,7 @@ serveable demos above; unit tests live under <code class="docutils literal notra
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

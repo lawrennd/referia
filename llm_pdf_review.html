@@ -863,7 +863,7 @@
 <h3>1. Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h3>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install LLM dependencies</span>
 <span class="nb">cd</span><span class="w"> </span>referia
-poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>llm
+uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>llm<span class="w"> </span>--group<span class="w"> </span>dev
 </pre></div>
 </div>
 </section>
@@ -892,7 +892,7 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">  </span><span class="c1"># Your existing review structure...</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Markdown</span>
-<span class="w">    </span><span class="nt">liquid</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;###</span><span class="nv"> </span><span class="s">Chapter</span><span class="nv"> </span><span class="s">1&quot;</span>
+<span class="w">    </span><span class="nt">liquid</span><span class="p">:</span><span class="w"> </span><span class="s">"###</span><span class="nv"> </span><span class="s">Chapter</span><span class="nv"> </span><span class="s">1"</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">layout</span><span class="p">:</span>
 <span class="w">        </span><span class="nt">width</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">800px</span>
@@ -900,7 +900,7 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Textarea</span>
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch1GeneralComments</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span>
-<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General</span><span class="nv"> </span><span class="s">Comments&quot;</span>
+<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">"General</span><span class="nv"> </span><span class="s">Comments"</span>
 <span class="w">      </span><span class="nt">layout</span><span class="p">:</span>
 <span class="w">        </span><span class="nt">width</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">800px</span>
 <span class="w">  </span>
@@ -913,10 +913,10 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_pdf_review</span>
 <span class="w">        </span><span class="nt">view_args</span><span class="p">:</span>
 <span class="w">          </span><span class="nt">filename</span><span class="p">:</span>
-<span class="w">            </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch1.pdf&quot;</span>
+<span class="w">            </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch1.pdf"</span>
 <span class="w">        </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">          </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$HOME/Documents/theses/examined</span>
-<span class="w">          </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;general&quot;</span>
+<span class="w">          </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"general"</span>
 <span class="w">          </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gpt-4o-mini</span>
 </pre></div>
 </div>
@@ -941,9 +941,9 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chapter_text</span>
 <span class="w">    </span><span class="nt">view_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">filename</span><span class="p">:</span>
-<span class="w">        </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch1.pdf&quot;</span>
+<span class="w">        </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch1.pdf"</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;$HOME/Documents/theses/examined&quot;</span>
+<span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="s">"$HOME/Documents/theses/examined"</span>
 <span class="w">      </span><span class="nt">max_chars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">50000</span>
 </pre></div>
 </div>
@@ -1002,11 +1002,11 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch1GeneralComments</span>
 <span class="w">    </span><span class="nt">view_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">filename</span><span class="p">:</span>
-<span class="w">        </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch1.pdf&quot;</span>
+<span class="w">        </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch1.pdf"</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;$HOME/Documents/theses/examined&quot;</span>
-<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;general&quot;</span>
-<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gpt-4o-mini&quot;</span>
+<span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="s">"$HOME/Documents/theses/examined"</span>
+<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"general"</span>
+<span class="w">      </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="s">"gpt-4o-mini"</span>
 <span class="w">      </span><span class="nt">max_chars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30000</span>
 </pre></div>
 </div>
@@ -1020,7 +1020,7 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Textarea</span>
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch1GeneralComments</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span>
-<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General&quot;</span>
+<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">"General"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PopulateButton</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
@@ -1038,7 +1038,7 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Textarea</span>
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch1GeneralComments</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span>
-<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;General</span><span class="nv"> </span><span class="s">(LLM-assisted)&quot;</span>
+<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">"General</span><span class="nv"> </span><span class="s">(LLM-assisted)"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PopulateButton</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
@@ -1047,16 +1047,16 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_pdf_review</span><span class="w">  </span><span class="c1"># Auto-generates initial review</span>
 <span class="w">        </span><span class="nt">view_args</span><span class="p">:</span>
 <span class="w">          </span><span class="nt">filename</span><span class="p">:</span>
-<span class="w">            </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch1.pdf&quot;</span>
+<span class="w">            </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch1.pdf"</span>
 <span class="w">        </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">          </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$HOME/Documents/theses/examined</span>
-<span class="w">          </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;general&quot;</span>
+<span class="w">          </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"general"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="c1"># Detailed comments - from your PDF annotations</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Textarea</span>
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch1DetailedComments</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span><span class="w"> </span>
-<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Annotations&quot;</span>
+<span class="w">      </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">"Annotations"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PopulateButton</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
@@ -1065,10 +1065,10 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">        </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pdf_extract_comments</span><span class="w">  </span><span class="c1"># Keep existing annotation extraction</span>
 <span class="w">        </span><span class="nt">view_args</span><span class="p">:</span>
 <span class="w">          </span><span class="nt">filename</span><span class="p">:</span>
-<span class="w">            </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch1.pdf&quot;</span>
+<span class="w">            </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch1.pdf"</span>
 <span class="w">        </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">          </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$HOME/Documents/theses/examined</span>
-<span class="w">          </span><span class="nt">comment_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;Highlight&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;StrikeOut&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">          </span><span class="nt">comment_types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"Highlight"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"StrikeOut"</span><span class="p p-Indicator">]</span>
 </pre></div>
 </div>
 </section>
@@ -1083,7 +1083,7 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch3_methodology_review</span>
 <span class="w">    </span><span class="nt">view_args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">filename</span><span class="p">:</span>
-<span class="w">        </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch3.pdf&quot;</span>
+<span class="w">        </span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch3.pdf"</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$HOME/Documents/theses/examined</span>
 <span class="w">      </span><span class="nt">system_prompt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
@@ -1104,28 +1104,28 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_pdf_review</span>
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch1_general</span>
 <span class="w">    </span><span class="nt">view_args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch1.pdf&quot;</span><span class="p p-Indicator">}</span>
+<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch1.pdf"</span><span class="p p-Indicator">}</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$HOME/Documents/theses/examined</span>
-<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;general&quot;</span>
+<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"general"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="c1"># Strengths</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_pdf_review</span>
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch1_strengths</span>
 <span class="w">    </span><span class="nt">view_args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch1.pdf&quot;</span><span class="p p-Indicator">}</span>
+<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch1.pdf"</span><span class="p p-Indicator">}</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$HOME/Documents/theses/examined</span>
-<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;strengths&quot;</span>
+<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"strengths"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="c1"># Areas for improvement</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_pdf_review</span>
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch1_weaknesses</span>
 <span class="w">    </span><span class="nt">view_args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch1.pdf&quot;</span><span class="p p-Indicator">}</span>
+<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch1.pdf"</span><span class="p p-Indicator">}</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$HOME/Documents/theses/examined</span>
-<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;weaknesses&quot;</span>
+<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"weaknesses"</span>
 </pre></div>
 </div>
 </section>
@@ -1137,18 +1137,18 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_pdf_review</span>
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch1_summary</span>
 <span class="w">    </span><span class="nt">view_args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch1.pdf&quot;</span><span class="p p-Indicator">}</span>
+<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch1.pdf"</span><span class="p p-Indicator">}</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$HOME/Documents/theses/examined</span>
-<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;summary&quot;</span>
+<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"summary"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">function</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm_pdf_review</span>
 <span class="w">    </span><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ch2_summary</span>
 <span class="w">    </span><span class="nt">view_args</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{Name}_thesis_ch2.pdf&quot;</span><span class="p p-Indicator">}</span>
+<span class="w">      </span><span class="nt">filename</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">display</span><span class="p">:</span><span class="w"> </span><span class="s">"{Name}_thesis_ch2.pdf"</span><span class="p p-Indicator">}</span>
 <span class="w">    </span><span class="nt">args</span><span class="p">:</span>
 <span class="w">      </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$HOME/Documents/theses/examined</span>
-<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;summary&quot;</span>
+<span class="w">      </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"summary"</span>
 <span class="w">  </span>
 <span class="w">  </span><span class="c1"># ... repeat for all chapters</span>
 </pre></div>
@@ -1187,12 +1187,12 @@ poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="
 <section id="start-with-summaries">
 <h3>1. Start with Summaries<a class="headerlink" href="#start-with-summaries" title="Link to this heading"></a></h3>
 <p>Begin by generating summaries to get oriented:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;summary&quot;</span><span class="w">  </span><span class="c1"># Start here</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"summary"</span><span class="w">  </span><span class="c1"># Start here</span>
 </pre></div>
 </div>
 <p>Then move to more detailed reviews:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;general&quot;</span><span class="w">  </span><span class="c1"># Balanced review</span>
-<span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;technical&quot;</span><span class="w">  </span><span class="c1"># Deep dive</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"general"</span><span class="w">  </span><span class="c1"># Balanced review</span>
+<span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"technical"</span><span class="w">  </span><span class="c1"># Deep dive</span>
 </pre></div>
 </div>
 </section>
@@ -1263,7 +1263,7 @@ cat<span class="w"> </span>.env<span class="w"> </span><span class="p">|</span><
 
 <span class="c1"># Make sure there are no quotes around the key in .env</span>
 <span class="c1"># Good: OPENAI_API_KEY=sk-proj-...</span>
-<span class="c1"># Bad:  OPENAI_API_KEY=&quot;sk-proj-...&quot;</span>
+<span class="c1"># Bad:  OPENAI_API_KEY="sk-proj-..."</span>
 </pre></div>
 </div>
 </section>
@@ -1288,7 +1288,7 @@ cat<span class="w"> </span>.env<span class="w"> </span><span class="p">|</span><
 <p>Or reduce costs:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">args</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">max_chars</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">20000</span><span class="w">  </span><span class="c1"># Reduce context</span>
-<span class="w">  </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;summary&quot;</span><span class="w">  </span><span class="c1"># Shorter reviews</span>
+<span class="w">  </span><span class="nt">review_type</span><span class="p">:</span><span class="w"> </span><span class="s">"summary"</span><span class="w">  </span><span class="c1"># Shorter reviews</span>
 </pre></div>
 </div>
 </section>
@@ -1306,7 +1306,7 @@ cat<span class="w"> </span>.env<span class="w"> </span><span class="p">|</span><
 <section id="examples">
 <h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
 <p>Primary learning path: serveable package demos under <code class="docutils literal notranslate"><span class="pre">examples/</span></code>
-(<code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span> <span class="pre">referia</span> <span class="pre">serve</span> <span class="pre">--directory</span> <span class="pre">examples/&lt;name&gt;</span></code>). See
+(<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">referia</span> <span class="pre">serve</span> <span class="pre">--directory</span> <span class="pre">examples/&lt;name&gt;</span></code>). See
 <code class="docutils literal notranslate"><span class="pre">examples/README.md</span></code> and <code class="docutils literal notranslate"><span class="pre">docs/examples/index.rst</span></code>.</p>
 <p>LLM / thesis files below are <strong>snippets</strong> (copy into a real review
 directory with data and PDFs, then serve that directory):</p>
@@ -1346,7 +1346,7 @@ directory with data and PDFs, then serve that directory):</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2023, Neil D. Lawrence &lt;email@domain.here&gt;.</p>
+    <p>&#169; Copyright 2023, Neil D. Lawrence.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
