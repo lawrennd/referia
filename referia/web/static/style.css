@@ -172,6 +172,18 @@ main {
     max-width: 400px;
 }
 
+.index-select:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+.record-load-indicator {
+    margin-left: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--colour-accent);
+    white-space: nowrap;
+}
+
 .nav-actions {
     margin-left: auto;
     display: flex;
