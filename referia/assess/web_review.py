@@ -726,7 +726,10 @@ class WebReviewer:
                             ts = pd.to_datetime(raw, errors="coerce")
                         except Exception:
                             ts = pd.NaT
+                        # Undated rows stay visible so schedule gaps can be
+                        # filled (seasonal catalog: missing when/due/event).
                         if pd.isna(ts):
+                            kept.append(idx)
                             continue
                         if after:
                             try:
