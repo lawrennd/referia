@@ -6,9 +6,9 @@ multilogue notebook 03 Access. Embeddings use OpenAI when ``OPENAI_API_KEY``
 is present (repo-root ``.env``); otherwise pass ``--synthetic`` for the
 planted English bank.
 
-    poetry install --with llm
-    poetry run python examples/subject_grain_uq/build_records.py
-    poetry run python examples/subject_grain_uq/build_records.py --synthetic
+    uv sync --extra llm --group dev
+    uv run python examples/subject_grain_uq/build_records.py
+    uv run python examples/subject_grain_uq/build_records.py --synthetic
 """
 
 from __future__ import annotations
@@ -249,7 +249,7 @@ def embed_phrases(
         from openai import OpenAI
     except ImportError as exc:
         raise RuntimeError(
-            "openai package not installed. Run: poetry install --with llm"
+            "openai package not installed. Run: uv sync --extra llm --group dev"
         ) from exc
 
     client = OpenAI(api_key=key)

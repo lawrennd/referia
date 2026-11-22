@@ -2,16 +2,16 @@ Package examples
 ================
 
 Runnable demos live under ``examples/`` in the referia repository. The
-canonical way to open a demo is ``referia serve`` from a poetry
+canonical way to open a demo is ``referia serve`` from a uv
 environment at the package root:
 
 .. code-block:: bash
 
-   poetry install   # once
-   poetry run referia serve --directory examples/<name>
+   uv sync --group dev   # once
+   uv run referia serve --directory examples/<name>
    # Open the printed URL (default http://127.0.0.1:8000)
 
-Use ``poetry run referia serve --root <path>`` when the point is a
+Use ``uv run referia serve --root <path>`` when the point is a
 multi-config host that discovers several ``_referia.yml`` trees.
 
 The inventory and triage notes also live in ``examples/README.md``.

@@ -2,25 +2,29 @@
 
 import os
 import sys
+import tomllib
 from pathlib import Path
-import toml  # You might need to install the 'toml' package
 
 # Assuming your docs are in a 'docs' folder at the root of your project
 root_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(root_dir))
 
-# Load the project metadata from the pyproject.toml file
-pyproject = toml.load(root_dir / 'pyproject.toml')
-project_metadata = pyproject['tool']['poetry']
+# Load the project metadata from the pyproject.toml file (PEP 621)
+with (root_dir / "pyproject.toml").open("rb") as f:
+    project_metadata = tomllib.load(f)["project"]
 
 # -- Project information -----------------------------------------------------
 
-project = project_metadata['name']
-author = project_metadata['authors'][0]  # Adjust if you have multiple authors
+project = project_metadata["name"]
+_authors = project_metadata.get("authors") or []
+if _authors and isinstance(_authors[0], dict):
+    author = _authors[0].get("name") or _authors[0].get("email") or "Unknown"
+else:
+    author = str(_authors[0]) if _authors else "Unknown"
 copyright = f"2023, {author}"
 
-release = project_metadata['version']
-version = '.'.join(release.split('.')[:2])  # Major.Minor version
+release = project_metadata["version"]
+version = ".".join(release.split(".")[:2])  # Major.Minor version
 
 # -- General configuration ---------------------------------------------------
 

@@ -17,8 +17,7 @@ pip install referia
 Or, when working from source:
 
 ```bash
-poetry install --extras llm
-# equivalent: poetry install --with llm
+uv sync --extra llm --group dev
 ```
 
 Or, when installing into another project’s venv from GitHub:
@@ -30,7 +29,7 @@ pip install "referia[llm] @ git+https://github.com/lawrennd/referia.git"
 The optional `llm` extra pulls in LangChain and the OpenAI/Anthropic
 clients used by topic naming, extract, and related populate actions. Without
 it, those widgets fail with `LangChain is not installed`. For a docs-only
-or non-LLM checkout, omit the extra (`poetry install` / `pip install referia`).
+or non-LLM checkout, omit the extra (`uv sync --group dev` / `pip install referia`).
 
 ## Quick start
 
@@ -179,9 +178,9 @@ Annotation data with a sub-index (e.g. time series of assessments for the same i
 Runnable demos under `examples/` open with the same CLI:
 
 ```bash
-poetry run referia serve --directory examples/overview_inline_list
-poetry run referia serve --directory examples/topic_scatter_click
-poetry run referia serve --directory examples/numeric_scoring
+uv run referia serve --directory examples/overview_inline_list
+uv run referia serve --directory examples/topic_scatter_click
+uv run referia serve --directory examples/numeric_scoring
 # subject_grain_uq: bake scores first — see its README
 ```
 

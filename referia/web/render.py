@@ -1178,6 +1178,16 @@ def render_viewer(
     )
 
 
+def _fold_heading_names(raw_names: Any) -> set[str] | None:
+    """Normalise a heading-name list/string to a casefolded set, or ``None``."""
+    if isinstance(raw_names, str):
+        raw_names = [raw_names]
+    if not isinstance(raw_names, (list, tuple)):
+        return None
+    folded = {str(name).strip().casefold() for name in raw_names if str(name).strip()}
+    return folded or None
+
+
 def _viewer_collapse_options(view_spec: dict | None) -> dict[str, Any] | None:
     """Return normalised ``collapse:`` options, or ``None`` when inactive.
 
@@ -1185,23 +1195,35 @@ def _viewer_collapse_options(view_spec: dict | None) -> dict[str, Any] | None:
 
         collapse:
           headings: [LLM]
+          peers: [User, LLM, Exchange]  # optional; see below
           default: closed   # or open
+
+    When ``peers`` is set, a collapsed section ends only at a heading whose
+    text matches that peer list (any outline level). Same-level or higher
+    content headings inside an LLM reply — ``### 1. …``, ``## Summary`` —
+    stay inside the ``<details>`` instead of ending it early. Without
+    ``peers``, behaviour is unchanged: end at the next same-or-higher
+    heading.
     """
     if not isinstance(view_spec, dict):
         return None
     raw = view_spec.get("collapse")
     if not isinstance(raw, dict):
         return None
-    names = raw.get("headings") or raw.get("heading") or []
-    if isinstance(names, str):
-        names = [names]
-    if not isinstance(names, (list, tuple)):
-        return None
-    folded = {str(name).strip().casefold() for name in names if str(name).strip()}
+    folded = _fold_heading_names(raw.get("headings") or raw.get("heading") or [])
     if not folded:
         return None
+    peers = None
+    if "peers" in raw or "peer" in raw:
+        peers = _fold_heading_names(raw.get("peers") or raw.get("peer") or [])
+        if peers is None:
+            peers = set()
     default = str(raw.get("default") or "closed").strip().casefold()
-    return {"headings": folded, "open": default in {"open", "opened", "true"}}
+    return {
+        "headings": folded,
+        "peers": peers,
+        "open": default in {"open", "opened", "true"},
+    }
 
 
 def _heading_plain_text(heading_html: str) -> str:
@@ -1222,6 +1244,33 @@ def _heading_matches(text: str, names: set[str]) -> bool:
     return first in names
 
 
+def _collapse_section_end(
+    matches: list[Any],
+    start: int,
+    level: int,
+    peers: set[str] | None,
+) -> int:
+    """Index of the first heading that ends a collapsed section, or ``len``.
+
+    Without ``peers``, stop at the next same-or-higher outline level.
+    With ``peers``, stop only at a peer-named heading (any level); other
+    headings stay inside regardless of level.
+    """
+    j = start + 1
+    while j < len(matches):
+        next_level = int(matches[j].group(2))
+        next_text = _heading_plain_text(matches[j].group(1))
+        if peers is not None:
+            if _heading_matches(next_text, peers):
+                return j
+            j += 1
+            continue
+        if next_level <= level:
+            return j
+        j += 1
+    return j
+
+
 def _collapse_matching_headings(html: str, view_spec: dict | None) -> str:
     """Wrap configured headings and their following siblings in ``<details>``.
 
@@ -1229,10 +1278,12 @@ def _collapse_matching_headings(html: str, view_spec: dict | None) -> str:
     flow. The original heading tag is omitted from the body so the summary
     is the only title (same as review ``type: Section``).
 
-    A collapsed section runs until the next heading at the *same or higher*
-    outline level (``h3`` closes at the next ``h1``–``h3``, not at a nested
-    ``h4``). LLM replies often introduce ``####`` subsections; those stay
-    inside the ``<details>`` instead of ending the collapse early.
+    Default cut-off: next heading at the *same or higher* outline level
+    (``h3`` closes at the next ``h1``–``h3``, not at a nested ``h4``).
+
+    With ``collapse.peers``, cut-off is peer-named headings only, so LLM
+    replies that introduce ``###`` / ``##`` content subsections stay
+    collapsed until the next ``User`` / ``LLM`` / ``Exchange`` (etc.).
     """
     options = _viewer_collapse_options(view_spec)
     if not options or not html:
@@ -1243,6 +1294,7 @@ def _collapse_matching_headings(html: str, view_spec: dict | None) -> str:
         return html
 
     names = options["headings"]
+    peers = options["peers"]
     open_attr = " open" if options["open"] else ""
     out: list[str] = [html[: matches[0].start()]]
     counts: dict[str, int] = {}
@@ -1259,10 +1311,7 @@ def _collapse_matching_headings(html: str, view_spec: dict | None) -> str:
             out.append(html[match.end() : end])
             i += 1
             continue
-        # Include nested deeper headings inside this details block.
-        j = i + 1
-        while j < len(matches) and int(matches[j].group(2)) > level:
-            j += 1
+        j = _collapse_section_end(matches, i, level, peers)
         end = matches[j].start() if j < len(matches) else len(html)
         body = html[match.end() : end]
         label = " ".join(text.split()) or "Section"

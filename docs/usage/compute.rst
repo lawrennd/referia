@@ -222,7 +222,7 @@ Package examples
 ----------------
 
 Runnable demos under ``examples/`` are listed in :doc:`../examples/index`.
-Open them with ``poetry run referia serve --directory examples/<name>``.
+Open them with ``uv run referia serve --directory examples/<name>``.
 Offline numeric scoring (``add`` / ``multiply`` / ``gte``) lives in
 ``examples/numeric_scoring/``.
 

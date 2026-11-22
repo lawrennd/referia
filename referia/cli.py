@@ -3,11 +3,11 @@
 Usage::
 
     # Single-config mode (original):
-    poetry run referia serve [--config _referia.yml] [--directory .] \\
+    uv run referia serve [--config _referia.yml] [--directory .] \\
                              [--host 127.0.0.1] [--port 8000]
 
     # Root-server mode (multi-config):
-    poetry run referia serve --root ~/OneDrive/referia/ [--host 127.0.0.1] [--port 8000]
+    uv run referia serve --root ~/OneDrive/referia/ [--host 127.0.0.1] [--port 8000]
 """
 
 import argparse
@@ -172,7 +172,7 @@ def _serve(args):
     except ImportError:
         print(
             "uvicorn is required to run the web interface.  "
-            "Install it with:  poetry install",
+            "Install it with:  uv sync --group dev",
             file=sys.stderr,
         )
         sys.exit(1)

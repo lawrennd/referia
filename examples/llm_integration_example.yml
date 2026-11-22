@@ -3,12 +3,12 @@
 #
 # Snippet (not a serveable --directory demo). Copy patterns into a real
 # review `_referia.yml`, then open that directory with:
-#   poetry run referia serve --directory path/to/review
+#   uv run referia serve --directory path/to/review
 # See examples/README.md for the serveable demos.
 #
 # Prerequisites:
 #   1. Install LLM dependencies:
-#      poetry install --with llm
+#      uv sync --extra llm --group dev
 #
 #   2. Set up API keys (choose one method):
 #

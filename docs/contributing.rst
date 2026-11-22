@@ -19,10 +19,10 @@ Development Setup
    .. code-block:: bash
 
        cd lynguine
-       poetry install
+       uv sync --group dev
        
        cd ../referia
-       poetry install --extras llm
+       uv sync --extra llm --group dev
 
 3. Run tests to ensure everything is working:
 
@@ -154,14 +154,14 @@ To build the documentation:
    .. code-block:: bash
 
       # From the repository root
-      poetry install --with dev
+      uv sync --group docs --group dev
 
 2. Navigate to the docs directory and build the HTML documentation:
 
    .. code-block:: bash
 
       cd docs
-      poetry run make html
+      uv run make html
 
 3. The built documentation will be available in ``docs/_build/html/``.
 

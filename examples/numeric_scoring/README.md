@@ -20,8 +20,8 @@ numeric_scoring/
 From the referia package root:
 
 ```bash
-poetry install   # once
-poetry run referia serve --directory examples/numeric_scoring
+uv sync --group dev   # once
+uv run referia serve --directory examples/numeric_scoring
 # Open the printed URL (default http://127.0.0.1:8000)
 ```
 
