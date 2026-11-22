@@ -729,9 +729,14 @@ def _render_index_selector(indices: list, current_index: Any) -> str:
         '        hx-get="/record"\n'
         '        hx-trigger="change"\n'
         '        hx-target="#review-panel"\n'
-        '        hx-swap="innerHTML focus-scroll:false">\n'
+        '        hx-swap="innerHTML focus-scroll:false"\n'
+        '        hx-indicator="#record-load-indicator"\n'
+        '        hx-disabled-elt="this">\n'
         f"{options}\n"
         "</select>"
+        '<span id="record-load-indicator" class="htmx-indicator record-load-indicator">'
+        "Loading record…"
+        "</span>"
     )
 
 
@@ -791,7 +796,7 @@ def _panel_with_oob_status(templates, request, ctx: dict, status_html: str) -> H
     else:
         text = str(body)
     oob = (
-        f'<div id="status-bar" class="status-bar" hx-swap-oob="true">'
+        f'<div id="status-bar" class="status-bar" role="status" aria-live="polite" hx-swap-oob="true">'
         f"{status_html}</div>"
     )
     return HTMLResponse(text + oob)
@@ -1132,8 +1137,51 @@ async def index(
     )
 
 
+# Fixed catalog (same rule as ``_load_failure_detail``): never ``str(exc)``.
+_PRECOMPUTE_AUTHOR_NOTE = (
+    '<span class="status-warning">'
+    "Author extract failed; redaction terms were not filled."
+    "</span>"
+)
+_PRECOMPUTE_GENERIC_NOTE = (
+    '<span class="status-warning">A precompute step failed. See server log.</span>'
+)
+
+
+def _precompute_status_html(reviewer) -> str:
+    """Take notices from the last compute run and return status-bar HTML.
+
+    Empty when nothing failed. The browser text is a fixed string.
+    """
+    compute = getattr(reviewer, "compute", None)
+    notices = list(getattr(compute, "on_error_notices", None) or [])
+    if compute is not None:
+        compute.on_error_notices = []
+    if not notices:
+        return ""
+    if any(
+        isinstance(item, dict) and item.get("function") == "extract_paper_frontmatter"
+        for item in notices
+    ):
+        return _PRECOMPUTE_AUTHOR_NOTE
+    return _PRECOMPUTE_GENERIC_NOTE
+
+
+def _record_panel_response(request: Request, reviewer, prefix: str = "") -> HTMLResponse:
+    """Review panel, plus a status-bar update when precompute stored a failure."""
+    ctx = _panel_response_context(reviewer, prefix, request=request)
+    status = _precompute_status_html(reviewer)
+    # Always update the bar: a warning stays up, a clean record clears it.
+    return _panel_with_oob_status(_templates(request), request, ctx, status)
+
+
 def _apply_index(reviewer, index: str | None) -> None:
-    """Set *index* on *reviewer*, mapping missing labels to HTTP 404."""
+    """Set *index* on *reviewer*, mapping missing labels to HTTP 404.
+
+    Any other error (a precompute step that was not marked ``on_error: empty``)
+    is logged and swallowed so the record panel still renders. A notice is
+    recorded when the compute layer did not already leave one.
+    """
     if index is None:
         return
     from fastapi import HTTPException
@@ -1142,6 +1190,14 @@ def _apply_index(reviewer, index: str | None) -> None:
         reviewer.set_index(index)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Index not found") from exc
+    except Exception:
+        log.exception("Selecting index %s failed during precompute", index)
+        compute = getattr(reviewer, "compute", None)
+        if compute is None:
+            return
+        notices = getattr(compute, "on_error_notices", None)
+        if not notices:
+            compute.on_error_notices = [{"function": "", "index": index}]
 
 
 @router.get("/record", response_class=HTMLResponse)
@@ -1153,8 +1209,7 @@ async def get_record(request: Request, index: str | None = None):
     """
     reviewer = _reviewer(request)
     _apply_index(reviewer, index)
-    ctx = _panel_response_context(reviewer, request=request)
-    return _templates(request).TemplateResponse(request, "review_panel.html", ctx)
+    return _record_panel_response(request, reviewer)
 
 
 @router.get("/listing-page", response_class=HTMLResponse)
@@ -2935,8 +2990,7 @@ async def root_get_record(request: Request, config_path: str, index: str | None 
     reviewer = _root_reviewer(request, config_path)
     _apply_index(reviewer, index)
     prefix = _config_path_prefix(config_path)
-    ctx = _panel_response_context(reviewer, prefix, request=request)
-    return _templates(request).TemplateResponse(request, "review_panel.html", ctx)
+    return _record_panel_response(request, reviewer, prefix)
 
 
 @root_router.get("/{config_path:path}/listing-page", response_class=HTMLResponse)

@@ -94,6 +94,10 @@ if OSX:
                 recipient = ap.k.to_recipient
             elif type_ == 'cc':
                 recipient = ap.k.cc_recipient
+            elif type_ == 'bcc':
+                recipient = ap.k.bcc_recipient
+            else:
+                raise ValueError(f"unknown recipient type {type_!r}")
 
             msg.make(new=recipient,
                      with_properties={ap.k.email_address: {ap.k.address: email}})
@@ -250,18 +254,49 @@ class Sys():
         if "title" in args:
             email_args["subject"] = args["title"]
         if "attach" in args:
-            margs = {"filename": args["attach"]}
-            email_args["attach"] = extract_full_filename(margs)
+            email_args["attach"] = self._normalize_attach_paths(args["attach"])
 
         for recips in ["to", "cc", "bcc"]:
             if recips in args:
-                email_args[recips] = args[recips]
+                email_args[recips] = self._normalize_recipient_list(args[recips])
         if "to" in email_args:
             to = email_args["to"]
         else:
             to = "unknown address"
         log.debug(f"Drafting email to \"{to}\".")
         self.draft_email(**email_args)
+
+    @staticmethod
+    def _normalize_recipient_list(value):
+        """Accept a list or a comma/semicolon/newline-separated string."""
+        if value is None or value == "":
+            return []
+        if isinstance(value, list):
+            items = value
+        else:
+            text = str(value).replace(";", ",").replace("\n", ",")
+            items = [part.strip() for part in text.split(",")]
+        return [item for item in items if item]
+
+    @staticmethod
+    def _normalize_attach_paths(value):
+        """Accept one path, a list of paths, or newline/comma-separated paths."""
+        if value is None or value == "":
+            return []
+        if isinstance(value, list):
+            raw_items = value
+        else:
+            text = str(value).replace(",", "\n")
+            raw_items = [part.strip() for part in text.split("\n")]
+        paths = []
+        for item in raw_items:
+            if not item:
+                continue
+            if isinstance(item, dict):
+                paths.append(extract_full_filename(item))
+            else:
+                paths.append(extract_full_filename({"filename": str(item)}))
+        return paths
 
 
     def create_document_content(self, document, **args):

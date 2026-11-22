@@ -99,6 +99,8 @@ class TestGetRoot:
     def test_html_contains_index_selector(self, client):
         response = client.get("/")
         assert 'id="index-select"' in response.text
+        assert 'id="record-load-indicator"' in response.text
+        assert 'hx-indicator="#record-load-indicator"' in response.text
 
     def test_html_lists_all_indices_as_options(self, client):
         response = client.get("/")

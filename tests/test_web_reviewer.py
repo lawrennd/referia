@@ -2103,6 +2103,42 @@ class TestRowsAndFilters:
         assert reviewer.get_filter_state()["complete"] == "any"
         assert set(reviewer.working_indices()) == {"a", "b"}
 
+    def test_date_range_keeps_undated_rows(self):
+        """A When window must not hide rows with empty due/event (no when)."""
+        reviewer, _, storage = _build_reviewer(
+            index_vals=["in_window", "undated", "outside"],
+            col_vals={"complete": False, "due": None, "event": None},
+            review=[
+                {"type": "Checkbox", "field": "complete"},
+                {"type": "DatePicker", "field": "due"},
+                {"type": "DatePicker", "field": "event"},
+            ],
+            extra={
+                "display": {
+                    "layout": "inline_list",
+                    "filter_defaults": {
+                        "complete": False,
+                        "when": {
+                            "after": "2026-09-01",
+                            "before": "2026-11-01",
+                        },
+                    },
+                },
+                "filters": [
+                    {"field": "complete", "type": "boolean"},
+                    {"field": "when", "type": "date_range"},
+                ],
+            },
+        )
+        storage[("in_window", "complete")] = False
+        storage[("in_window", "due")] = "2026-10-15"
+        storage[("undated", "complete")] = False
+        storage[("undated", "due")] = None
+        storage[("undated", "event")] = None
+        storage[("outside", "complete")] = False
+        storage[("outside", "due")] = "2025-01-01"
+        assert set(reviewer.working_indices()) == {"in_window", "undated"}
+
     def test_checkbox_default_applies_when_missing(self):
         reviewer, _, storage = _build_reviewer(
             index_vals=["a"],

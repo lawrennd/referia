@@ -182,9 +182,12 @@
         if (bar.innerHTML.trim() !== "") {
           bar.classList.add("visible");
           clearTimeout(bar._timer);
-          bar._timer = setTimeout(function () {
-            bar.classList.remove("visible");
-          }, 3000);
+          /* A precompute warning stays until the next record load clears it. */
+          if (!bar.querySelector(".status-warning")) {
+            bar._timer = setTimeout(function () {
+              bar.classList.remove("visible");
+            }, 3000);
+          }
           var auto = bar.querySelector("[data-auto-download]");
           if (auto) {
             var url = auto.getAttribute("data-auto-download");

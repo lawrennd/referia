@@ -1975,7 +1975,7 @@ class TestInlineListing:
         assert 'class="inline-listing"' in html
         assert 'class="complete-check"' in html
         assert "complete-check-label" in html
-        assert "Done" in html
+        assert "Complete" in html
         assert "Select all filtered" in html
         assert 'hx-post="/field-bulk/complete"' in html
         assert "select-all-entry" in html
@@ -1992,6 +1992,64 @@ class TestInlineListing:
         assert "SaveButton" not in html
         # select-all + two row checkboxes
         assert html.count('type="checkbox"') == 3
+
+    def test_select_all_for_every_checkbox_field(self):
+        from referia.web.render import render_inline_listing
+
+        html = render_inline_listing(
+            [
+                {
+                    "index": "a",
+                    "data": {
+                        "title": "One",
+                        "complete": False,
+                        "llm_ok": True,
+                        "body": "Hello body",
+                        "draft": "",
+                    },
+                },
+                {
+                    "index": "b",
+                    "data": {
+                        "title": "Two",
+                        "complete": False,
+                        "llm_ok": False,
+                        "body": "Other",
+                        "draft": "Thanks.",
+                    },
+                },
+            ],
+            [
+                {
+                    "type": "Checkbox",
+                    "field": "complete",
+                    "args": {"description": "Done"},
+                },
+                {
+                    "type": "Checkbox",
+                    "field": "llm_ok",
+                    "args": {"description": "OK for LLM to see body"},
+                },
+                {
+                    "type": "Textarea",
+                    "field": "draft",
+                    "args": {"description": "Draft reply", "rows": 4},
+                },
+            ],
+            detail_field="body",
+        )
+        assert 'hx-post="/field-bulk/complete"' in html
+        assert 'hx-post="/field-bulk/llm_ok"' in html
+        assert "OK for LLM to see body" in html
+        assert html.count('class="inline-entry select-all-entry"') == 2
+        assert 'id="select-all-llm_ok"' in html
+        assert "entry-extra-collapse" in html
+        assert "Draft reply" in html
+        assert "Hello body" in html
+        # Body details before the draft collapse.
+        body_at = html.find('data-detail-field="body"')
+        draft_at = html.find("entry-extra-collapse")
+        assert body_at != -1 and draft_at != -1 and body_at < draft_at
 
     def test_empty_listing_message(self):
         from referia.web.render import render_inline_listing
