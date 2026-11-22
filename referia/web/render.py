@@ -1693,13 +1693,42 @@ def _split_review_specs_for_listing(
     return complete_spec, extras
 
 
+def _listing_bulk_checkbox_specs(specs: list[dict]) -> list[dict]:
+    """Checkbox/Flag review fields that get listing select-all chrome.
+
+    ``complete`` stays first when present; other booleans (e.g. ``llm_ok``)
+    follow review order so each can bulk-toggle the filtered working set.
+    """
+    complete_spec, extras = _split_review_specs_for_listing(specs)
+    bulk: list[dict] = []
+    if complete_spec is not None:
+        bulk.append(complete_spec)
+    for spec in extras:
+        if spec.get("type") in {"Checkbox", "Flag"} and spec.get("field"):
+            bulk.append(spec)
+    return bulk
+
+
+def _checkbox_bulk_label(spec: dict) -> str:
+    """Human label for a select-all / leading checkbox control."""
+    args = spec.get("args") or {}
+    label = args.get("description") if isinstance(args, dict) else None
+    if label:
+        return str(label)
+    field = str(spec.get("field") or "").strip()
+    if field == "complete":
+        return "Done"
+    return field.replace("_", " ").strip().title() or "Flag"
+
+
 def render_complete_checkbox(
     value: Any,
     *,
     record_index: Any,
     field: str = "complete",
+    label: str = "Done",
 ) -> str:
-    """Leading complete toggle for a listing row (checkbox + Done label)."""
+    """Leading complete toggle for a listing row (checkbox + label)."""
     checked = " checked" if _checkbox_checked(value) else ""
     token = _record_index_ctx.set(record_index)
     try:
@@ -1707,12 +1736,13 @@ def render_complete_checkbox(
             f'widget-{_widget_dom_id(field)}-'
             f'{_widget_dom_id(str(record_index))}'
         )
+        safe_label = _escape(label)
         return (
             f'<div class="widget-container complete-toggle" id="{dom}">'
-            f'<label class="complete-check" title="Mark complete">'
+            f'<label class="complete-check" title="Mark {safe_label}">'
             f'<input type="checkbox" {_htmx_field_attrs(field)} '
-            f'value="true"{checked} aria-label="Complete">'
-            f'<span class="complete-check-label">Done</span>'
+            f'value="true"{checked} aria-label="{safe_label}">'
+            f'<span class="complete-check-label">{safe_label}</span>'
             f"</label></div>"
         )
     finally:
@@ -1720,32 +1750,34 @@ def render_complete_checkbox(
 
 
 def render_select_all_checkbox(
-    all_complete: bool,
+    all_checked: bool,
     *,
     field: str = "complete",
+    label: str = "Done",
     count: int = 0,
 ) -> str:
     """Listing-row control that sets *field* on every filtered index."""
-    checked = " checked" if all_complete else ""
+    checked = " checked" if all_checked else ""
     col = _escape(field)
     col_url = _url_path_segment(field)
+    safe_label = _escape(label)
     n = int(count)
-    noun = "config" if n == 1 else "configs"
+    noun = "row" if n == 1 else "rows"
     return (
         f'<div class="widget-container complete-toggle" id="select-all-{_widget_dom_id(field)}">'
-        f'<label class="complete-check" title="Set Done on all filtered rows">'
+        f'<label class="complete-check" title="Set {safe_label} on all filtered rows">'
         f'<input type="checkbox" name="{col}" value="true"{checked} '
-        f'aria-label="Select all filtered" '
+        f'aria-label="Select all filtered: {safe_label}" '
         f'hx-post="/field-bulk/{col_url}" '
         f'hx-trigger="change" '
         f'hx-target="#review-panel" '
         f'hx-swap="innerHTML">'
-        f'<span class="complete-check-label">Done</span>'
+        f'<span class="complete-check-label">{safe_label}</span>'
         f"</label></div>"
         f'<div class="entry-main">'
         f'<span class="entry-title">Select all filtered</span>'
         f'<span class="badge-meta">{n} {noun}</span>'
-        f'<span class="desc">Sets Done on every config matching the current filters.</span>'
+        f'<span class="desc">Sets {safe_label} on every row matching the current filters.</span>'
         f"</div>"
     )
 
@@ -2179,9 +2211,9 @@ def render_inline_listing(
     ``index``, ``data`` (row dict), optional ``href``, optional ``group``.
     A leading Complete checkbox is promoted when ``review`` has
     ``field: complete``; remaining widgets render as compact extras.
-    When a complete field exists, a select-all row is prepended.
-    PopulateButtons also get a listing-chrome ``… all`` row that posts
-    ``/populate-all/{field}``.
+    Every Checkbox/Flag in ``review`` gets a select-all chrome row
+    (``complete``, ``llm_ok``, …). PopulateButtons also get a
+    listing-chrome ``… all`` row that posts ``/populate-all/{field}``.
 
     *group_by* controls section heading style (``directory`` adds a trailing
     slash; ``version`` does not).
@@ -2203,6 +2235,7 @@ def render_inline_listing(
     *htmx* False is Jupyter: Load more / Prev / Next as ordinary links.
     """
     complete_spec, extra_specs = _split_review_specs_for_listing(review_specs)
+    bulk_checkbox_specs = _listing_bulk_checkbox_specs(review_specs)
     populate_specs = [
         spec for spec in extra_specs if spec.get("type") == "PopulateButton"
     ]
@@ -2214,6 +2247,9 @@ def render_inline_listing(
     detail_key = str(detail_field).strip() if detail_field else ""
     complete_field = (
         str(complete_spec.get("field")) if complete_spec else "complete"
+    )
+    complete_label = (
+        _checkbox_bulk_label(complete_spec) if complete_spec else "Done"
     )
 
     # Group by entry["group"] preserving first-seen order.
@@ -2244,22 +2280,26 @@ def render_inline_listing(
         sections.append('<p class="no-rows">No rows match the current filters.</p>')
         sections.append("</div>")
         return "\n".join(sections)
-    if not fragment and (complete_spec is not None or populate_specs):
+    if not fragment and (bulk_checkbox_specs or populate_specs):
         sections.append('<section class="select-all-section">')
         sections.append("<ul>")
-        if complete_spec is not None:
-            all_done = all(
-                bool((entry.get("data") or {}).get(complete_field))
+        n_filtered = (
+            working_count if working_count is not None else len(entries)
+        )
+        for spec in bulk_checkbox_specs:
+            field = str(spec.get("field") or "")
+            label = _checkbox_bulk_label(spec)
+            all_checked = all(
+                _checkbox_checked((entry.get("data") or {}).get(field))
                 for entry in entries
             )
             sections.append('<li class="inline-entry select-all-entry">')
             sections.append(
                 render_select_all_checkbox(
-                    all_done,
-                    field=complete_field,
-                    count=(
-                        working_count if working_count is not None else len(entries)
-                    ),
+                    all_checked,
+                    field=field,
+                    label=label,
+                    count=n_filtered,
                 )
             )
             sections.append("</li>")
@@ -2311,7 +2351,10 @@ def render_inline_listing(
             if complete_spec is not None:
                 row_sections.append(
                     render_complete_checkbox(
-                        complete_val, record_index=idx, field=complete_field
+                        complete_val,
+                        record_index=idx,
+                        field=complete_field,
+                        label=complete_label,
                     )
                 )
             row_sections.append('<div class="entry-main">')
